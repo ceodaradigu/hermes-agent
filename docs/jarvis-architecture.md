@@ -36,3 +36,20 @@ No es multi-tenant ni producto comercial. Es una infraestructura personal, con p
 3. Añadir auditoría persistente de aprobaciones
 4. Orquestación por misiones y toolsets mínimos
 5. Interfaz command center desacoplada
+
+## Fase 2: Gateway API mínima
+
+Se añade una API local mínima en `jarvis/api/` para crear y consultar tareas sin frontend.
+
+- `GET /health`
+- `POST /tasks`
+- `GET /tasks/{task_id}`
+- `GET /tasks`
+- `POST /tasks/{task_id}/cancel`
+
+Comportamiento MVP:
+- Estado y tareas en memoria (sin base de datos).
+- `PolicyEngine` evalúa el prompt antes de ejecutar.
+- `denied` => tarea `failed` y no ejecuta Hermes.
+- `requires_approval` => crea `ApprovalRequest`, deja la tarea en `pending_approval` con `approval_request_id` y no ejecuta Hermes.
+- `allowed` => ejecuta `HermesRuntimeAdapter` de forma síncrona en la misma request.
