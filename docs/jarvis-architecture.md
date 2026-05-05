@@ -37,7 +37,6 @@ No es multi-tenant ni producto comercial. Es una infraestructura personal, con p
 4. Orquestación por misiones y toolsets mínimos
 5. Interfaz command center desacoplada
 
-
 ## Fase 2: Gateway API mínima
 
 Se añade una API local mínima en `jarvis/api/` para crear y consultar tareas sin frontend.
