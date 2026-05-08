@@ -60,3 +60,11 @@ Y ver `docs/roadmap/pr-future-asset-factory.md` para el roadmap de la Asset Fact
 Este PR introduce una abstracción mínima para runtime de voz en `jarvis/voice/` con `VoiceSynthesisRequest`, `VoiceSynthesisResult`, el contrato `VoiceAdapter` y un `MockVoiceAdapter` seguro para desarrollo y tests.
 
 No integra motores reales ni genera audio real. La integración efectiva con GPT-SoVITS y VoxCPM queda explícitamente para un PR posterior, manteniendo este cambio pequeño, testeable y sin dependencias pesadas.
+
+## PR #6 — GPT-SoVITS HTTP Adapter
+Este PR añade un adapter HTTP desacoplado para GPT-SoVITS en `jarvis/voice/gpt_sovits_adapter.py`, basado en el contrato `VoiceAdapter`.
+
+- No levanta GPT-SoVITS real.
+- No descarga modelos.
+- GPT-SoVITS debe correr como sidecar local (o servicio externo equivalente).
+- Los tests usan mocks/fakes y no realizan llamadas de red reales.
