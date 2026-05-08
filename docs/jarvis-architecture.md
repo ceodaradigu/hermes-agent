@@ -53,3 +53,29 @@ Comportamiento MVP:
 - `denied` => tarea `failed` y no ejecuta Hermes.
 - `requires_approval` => crea `ApprovalRequest`, deja la tarea en `pending_approval` con `approval_request_id` y no ejecuta Hermes.
 - `allowed` => ejecuta `HermesRuntimeAdapter` de forma síncrona en la misma request.
+## PR #4 — Mission Control MVP
+
+Se añade Mission Control como capa por encima de tasks/runtime, sin reemplazar los endpoints existentes de `/tasks`.
+
+### Endpoints
+
+- `POST /missions`
+- `GET /missions`
+- `GET /missions/{mission_id}`
+- `POST /missions/{mission_id}/steps`
+- `POST /missions/{mission_id}/cancel`
+
+### Límites del MVP
+
+- Sin UI.
+- Sin WebSocket.
+- Sin base de datos (estado en memoria).
+- Sin endpoint de aprobar/rechazar approvals en esta fase.
+
+### Seguridad y gobernanza
+
+Cada step de misión pasa por `PolicyEngine` antes de ejecutar Hermes:
+
+- `allowed` => ejecuta Hermes.
+- `requires_approval` => crea `ApprovalRequest` y no ejecuta Hermes.
+- `denied` => bloquea ejecución y marca error.
