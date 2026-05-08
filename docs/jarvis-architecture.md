@@ -70,3 +70,12 @@ Este PR añade un adapter HTTP desacoplado para GPT-SoVITS en `jarvis/voice/gpt_
 - No descarga modelos.
 - GPT-SoVITS debe correr como sidecar local (o servicio externo equivalente).
 - Los tests usan mocks/fakes y no realizan llamadas de red reales.
+
+## PR #7 — Voice TTS API endpoint
+Este PR añade un endpoint interno mínimo `POST /voice/tts` para síntesis de voz en JARVIS.
+
+- Evalúa `PolicyEngine` antes de sintetizar cualquier texto.
+- Usa `MockVoiceAdapter` por defecto cuando no se inyecta un adapter.
+- Permite inyectar un adapter real (por ejemplo GPT-SoVITS) sin hacerlo obligatorio.
+- No publica audio.
+- No devuelve `audio_bytes` en JSON (solo `has_audio_bytes`).

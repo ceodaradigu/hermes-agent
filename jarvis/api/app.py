@@ -13,6 +13,8 @@ from jarvis.mission_control import MissionControl
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
+from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
+from jarvis.voice.mock_adapter import MockVoiceAdapter
 
 
 class CreateTaskRequest(BaseModel):
@@ -26,6 +28,25 @@ class CreateMissionStepRequest(BaseModel):
 class CancelTaskResponse(BaseModel):
     task_id: str
     status: str
+
+
+class VoiceTTSRequest(BaseModel):
+    text: str
+    voice_id: Optional[str] = None
+    language: str = "es"
+    output_format: str = "wav"
+    metadata: Optional[dict] = None
+
+
+class VoiceTTSResponse(BaseModel):
+    provider: str
+    content_type: str
+    audio_path: Optional[str] = None
+    has_audio_bytes: bool
+    duration_seconds: Optional[float] = None
+    metadata: dict
+    status: Optional[str] = None
+    approval_request_id: Optional[str] = None
 
 
 @dataclass
@@ -80,12 +101,14 @@ def create_app(
     approval_gateway: Optional[ApprovalGateway] = None,
     adapter_factory: Optional[Callable[[], HermesRuntimeAdapter]] = None,
     task_store: Optional[InMemoryTaskStore] = None,
+    voice_adapter: Optional[VoiceAdapter] = None,
 ) -> FastAPI:
     app = FastAPI(title="JARVIS Gateway API", version="0.1.0")
 
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
+    app.state.voice_adapter = voice_adapter or MockVoiceAdapter()
     app.state.task_store = task_store or InMemoryTaskStore()
     app.state.mission_control = MissionControl(
         mission_store=None,
@@ -189,6 +212,52 @@ def create_app(
     @app.get("/tasks")
     def list_tasks() -> list[dict]:
         return [asdict(task) for task in app.state.task_store.list()]
+
+    @app.post("/voice/tts", response_model=VoiceTTSResponse)
+    def voice_tts(payload: VoiceTTSRequest) -> VoiceTTSResponse:
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text must be non-empty")
+        if not payload.language or not payload.language.strip():
+            raise HTTPException(status_code=400, detail="language must be non-empty")
+
+        decision = app.state.policy_engine.classify_action(text)
+        if decision.decision == PolicyDecision.DENIED:
+            raise HTTPException(status_code=403, detail=f"voice_tts denied: {decision.reason}")
+        if decision.decision == PolicyDecision.REQUIRES_APPROVAL:
+            approval = app.state.approval_gateway.create_request(
+                action=text,
+                rationale="Voice TTS request requires human approval before synthesis.",
+            )
+            return VoiceTTSResponse(
+                provider="mock",
+                content_type="application/json",
+                has_audio_bytes=False,
+                metadata={"policy_reason": decision.reason},
+                status="pending_approval",
+                approval_request_id=approval.request_id,
+            )
+
+        try:
+            request = VoiceSynthesisRequest(
+                text=text,
+                voice_id=payload.voice_id,
+                language=payload.language.strip(),
+                output_format=payload.output_format,
+                metadata=payload.metadata or {},
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        result = app.state.voice_adapter.synthesize(request)
+        return VoiceTTSResponse(
+            provider=result.provider,
+            content_type=result.content_type,
+            audio_path=str(result.audio_path) if result.audio_path else None,
+            has_audio_bytes=result.audio_bytes is not None,
+            duration_seconds=result.duration_seconds,
+            metadata=result.metadata,
+        )
 
     @app.post("/tasks/{task_id}/cancel", response_model=CancelTaskResponse)
     def cancel_task(task_id: str) -> CancelTaskResponse:
