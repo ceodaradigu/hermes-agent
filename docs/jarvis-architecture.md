@@ -44,3 +44,6 @@ Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 - Sin endpoint de approve/reject.
 - Sin interfaz de usuario.
 - Sin WebSocket.
+
+## Roadmap futuro (Command Center)
+Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
