@@ -19,6 +19,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Detect JARVIS-only PR changes
+        if: github.event_name == 'pull_request'
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            jarvis_scope:
+              - 'jarvis/**'
+              - 'tests/jarvis/**'
+              - 'docs/**'
+            outside_scope:
+              - '!jarvis/**'
+              - '!tests/jarvis/**'
+              - '!docs/**'
+              - '**'
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
@@ -34,7 +50,18 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[all,dev]"
 
-      - name: Run tests
+      - name: Run JARVIS tests (PRs with JARVIS/docs-only changes)
+        if: github.event_name == 'pull_request' && steps.changes.outputs.jarvis_scope == 'true' && steps.changes.outputs.outside_scope != 'true'
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/jarvis -q
+        env:
+          OPENROUTER_API_KEY: ""
+          OPENAI_API_KEY: ""
+          NOUS_API_KEY: ""
+
+      - name: Run full test suite
+        if: github.event_name != 'pull_request' || !(steps.changes.outputs.jarvis_scope == 'true' && steps.changes.outputs.outside_scope != 'true')
         run: |
           source .venv/bin/activate
           python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --tb=short -n auto
