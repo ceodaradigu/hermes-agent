@@ -79,3 +79,11 @@ Este PR añade un endpoint interno mínimo `POST /voice/tts` para síntesis de v
 - Permite inyectar un adapter real (por ejemplo GPT-SoVITS) sin hacerlo obligatorio.
 - No publica audio.
 - No devuelve `audio_bytes` en JSON (solo `has_audio_bytes`).
+
+## PR #8 — Voice config factory
+Este PR agrega una factory de configuración en `jarvis/voice/factory.py` para seleccionar el motor de voz vía variables de entorno.
+
+- JARVIS puede seleccionar `mock` o `gpt-sovits` usando `JARVIS_VOICE_PROVIDER`.
+- `mock` se mantiene como default seguro.
+- `gpt-sovits` sigue operando como sidecar local (o servicio externo equivalente).
+- La factory solo construye el adapter configurado: no levanta motores, no descarga modelos y no realiza llamadas de red.
