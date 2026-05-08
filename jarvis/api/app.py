@@ -14,7 +14,7 @@ from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
-from jarvis.voice.mock_adapter import MockVoiceAdapter
+from jarvis.voice.factory import create_voice_adapter_from_env
 
 
 class CreateTaskRequest(BaseModel):
@@ -108,7 +108,7 @@ def create_app(
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
-    app.state.voice_adapter = voice_adapter or MockVoiceAdapter()
+    app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.task_store = task_store or InMemoryTaskStore()
     app.state.mission_control = MissionControl(
         mission_store=None,
