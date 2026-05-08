@@ -87,3 +87,4 @@ Este PR agrega una factory de configuración en `jarvis/voice/factory.py` para s
 - `mock` se mantiene como default seguro.
 - `gpt-sovits` sigue operando como sidecar local (o servicio externo equivalente).
 - La factory solo construye el adapter configurado: no levanta motores, no descarga modelos y no realiza llamadas de red.
+- Guía de configuración por variables de entorno: `docs/integrations/voice-env-configuration.md`.
