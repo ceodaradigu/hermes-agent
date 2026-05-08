@@ -55,3 +55,8 @@ Y ver `docs/roadmap/pr-future-content-youtube-factory.md` para la propuesta de C
 Y ver `docs/roadmap/pr-future-money-roi-engine.md` para el roadmap del Money Engine / ROI Engine, centrado en priorización por retorno, protección de atención humana y `Approval Gate` para gasto o compromisos financieros.
 
 Y ver `docs/roadmap/pr-future-asset-factory.md` para el roadmap de la Asset Factory, enfocada en transformar oportunidades en activos medibles y monetizables con `Approval Gate` en acciones sensibles.
+
+## PR #5 — VoiceAdapter base
+Este PR introduce una abstracción mínima para runtime de voz en `jarvis/voice/` con `VoiceSynthesisRequest`, `VoiceSynthesisResult`, el contrato `VoiceAdapter` y un `MockVoiceAdapter` seguro para desarrollo y tests.
+
+No integra motores reales ni genera audio real. La integración efectiva con GPT-SoVITS y VoxCPM queda explícitamente para un PR posterior, manteniendo este cambio pequeño, testeable y sin dependencias pesadas.
