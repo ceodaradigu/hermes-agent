@@ -34,3 +34,6 @@ croniter
 python-telegram-bot[webhooks]>=22.6
 discord.py>=2.0
 aiohttp>=3.9.0
+
+# Test runner parallelization (required by pyproject pytest addopts: -n auto)
+pytest-xdist
