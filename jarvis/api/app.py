@@ -9,12 +9,17 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from jarvis.mission_control import MissionControl
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 
 
 class CreateTaskRequest(BaseModel):
+    prompt: str
+
+
+class CreateMissionStepRequest(BaseModel):
     prompt: str
 
 
@@ -42,13 +47,7 @@ class InMemoryTaskStore:
 
     def create(self, prompt: str) -> TaskRecord:
         now = _now_iso()
-        task = TaskRecord(
-            task_id=str(uuid4()),
-            prompt=prompt,
-            status="pending",
-            created_at=now,
-            updated_at=now,
-        )
+        task = TaskRecord(task_id=str(uuid4()), prompt=prompt, status="pending", created_at=now, updated_at=now)
         with self._lock:
             self._items[task.task_id] = task
         return task
@@ -71,7 +70,6 @@ class InMemoryTaskStore:
         return task
 
 
-
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -89,10 +87,54 @@ def create_app(
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.task_store = task_store or InMemoryTaskStore()
+    app.state.mission_control = MissionControl(
+        mission_store=None,
+        policy_engine=app.state.policy_engine,
+        approval_gateway=app.state.approval_gateway,
+        adapter_factory=app.state.adapter_factory,
+    )
 
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.post("/missions")
+    def create_mission() -> dict:
+        mission = app.state.mission_control.create_mission()
+        return asdict(mission)
+
+    @app.get("/missions")
+    def list_missions() -> list[dict]:
+        return [asdict(m) for m in app.state.mission_control.list_missions()]
+
+    @app.get("/missions/{mission_id}")
+    def get_mission(mission_id: str) -> dict:
+        try:
+            mission = app.state.mission_control.get_mission(mission_id)
+            steps = app.state.mission_control.store.list_steps(mission_id)
+            return {**asdict(mission), "steps": [asdict(s) for s in steps]}
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+
+    @app.post("/missions/{mission_id}/steps")
+    def add_mission_step(mission_id: str, payload: CreateMissionStepRequest) -> dict:
+        prompt = payload.prompt.strip()
+        if not prompt:
+            raise HTTPException(status_code=400, detail="prompt must be non-empty")
+        try:
+            step = app.state.mission_control.add_step(mission_id, prompt)
+            mission = app.state.mission_control.get_mission(mission_id)
+            return {"mission": asdict(mission), "step": asdict(step)}
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+
+    @app.post("/missions/{mission_id}/cancel")
+    def cancel_mission(mission_id: str) -> dict:
+        try:
+            mission = app.state.mission_control.cancel_mission(mission_id)
+            return asdict(mission)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
 
     @app.post("/tasks")
     def create_task(payload: CreateTaskRequest) -> dict:

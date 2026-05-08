@@ -6,50 +6,41 @@ JARVIS es un sistema personal de agentes IA para uso exclusivo de David, orienta
 ## Qué papel tiene Hermes
 Hermes Agent actúa como runtime interno de ejecución (conversación + tools). JARVIS añade una capa ligera de integración y gobernanza, sin reescribir Hermes ni alterar su comportamiento base.
 
-## Por qué JARVIS no es un SaaS público
-No es multi-tenant ni producto comercial. Es una infraestructura personal, con políticas de riesgo específicas y control humano explícito.
+## Qué es Mission Control (MVP)
+Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 
-## Acciones que requieren aprobación
-- usar credenciales
-- leer `.env`
-- borrar archivos
-- instalar paquetes
-- publicar en producción
-- comprar dominios
-- lanzar campañas de pago
-- enviar emails masivos
-- aceptar términos
-- pagos
-- bancos
-- DNI o datos legales
+- Mantiene misiones y pasos en memoria (sin DB).
+- Evalúa **cada step** con `PolicyEngine` antes de invocar Hermes.
+- Ejecuta Hermes solo cuando policy devuelve `allowed`.
+- Mantiene endpoints `/tasks` existentes intactos.
 
-## Acciones prohibidas siempre
-- exfiltrar secretos
-- saltarse aprobaciones
-- ocultar acciones al usuario
-- modificar claves/credenciales sin aprobación
-- borrar el sistema o hacer comandos destructivos globales
+## API Mission Control (sin UI, sin WebSocket)
+- `POST /missions`
+- `GET /missions`
+- `GET /missions/{mission_id}`
+- `POST /missions/{mission_id}/steps`
+- `POST /missions/{mission_id}/cancel`
 
-## Fases siguientes
-1. Base segura mínima (adapter + policy + approval en memoria)
-2. Integrar policy checks en orquestación de tareas
-3. Añadir auditoría persistente de aprobaciones
-4. Orquestación por misiones y toolsets mínimos
-5. Interfaz command center desacoplada
+## Reglas de ejecución de steps
+1. **denied**
+   - no ejecuta Hermes;
+   - step queda `denied`;
+   - `mission.status = blocked`.
 
-## Fase 2: Gateway API mínima
+2. **requires_approval**
+   - no ejecuta Hermes;
+   - crea `ApprovalRequest`;
+   - step queda `pending_approval` con `approval_request_id`;
+   - `mission.status = pending_approval`.
 
-Se añade una API local mínima en `jarvis/api/` para crear y consultar tareas sin frontend.
+3. **allowed**
+   - ejecuta Hermes exactamente una vez por step;
+   - step queda `completed` si no hay error.
 
-- `GET /health`
-- `POST /tasks`
-- `GET /tasks/{task_id}`
-- `GET /tasks`
-- `POST /tasks/{task_id}/cancel`
+4. Si existe cualquier step `pending_approval`, la misión **no** debe quedar en `running`.
 
-Comportamiento MVP:
-- Estado y tareas en memoria (sin base de datos).
-- `PolicyEngine` evalúa el prompt antes de ejecutar.
-- `denied` => tarea `failed` y no ejecuta Hermes.
-- `requires_approval` => crea `ApprovalRequest`, deja la tarea en `pending_approval` con `approval_request_id` y no ejecuta Hermes.
-- `allowed` => ejecuta `HermesRuntimeAdapter` de forma síncrona en la misma request.
+## Fuera de alcance MVP
+- Sin persistencia en base de datos.
+- Sin endpoint de approve/reject.
+- Sin interfaz de usuario.
+- Sin WebSocket.
