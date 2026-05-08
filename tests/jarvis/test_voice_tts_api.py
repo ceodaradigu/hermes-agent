@@ -27,6 +27,11 @@ def _client(**kwargs):
     return TestClient(create_app(**kwargs))
 
 
+class DummyRuntimeAdapter:
+    def run(self, message: str, **kwargs):
+        return {"ok": True}
+
+
 def test_voice_tts_uses_mock_adapter_by_default():
     client = _client()
 
@@ -115,7 +120,7 @@ def test_voice_tts_empty_language_returns_clear_400():
 
 
 def test_tasks_and_missions_still_work_with_voice_changes():
-    client = _client()
+    client = _client(adapter_factory=lambda: DummyRuntimeAdapter())
 
     task = client.post("/tasks", json={"prompt": "resumen corto"})
     mission = client.post("/missions")
