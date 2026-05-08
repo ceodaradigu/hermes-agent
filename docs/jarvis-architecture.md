@@ -49,3 +49,5 @@ Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
 También ver `docs/roadmap/pr-future-voice-runtime-adapter.md` para el roadmap de integración de voz mediante adapters desacoplados, manteniendo `PolicyEngine`, `ApprovalGateway` y control humano en acciones sensibles.
+
+Y ver `docs/roadmap/pr-future-content-youtube-factory.md` para la propuesta de Content / YouTube Factory orientada a activos monetizables, con `Approval Gate` obligatorio para publicación, gasto y uso de identidad.
