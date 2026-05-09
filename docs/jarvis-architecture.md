@@ -90,3 +90,11 @@ Este PR agrega una factory de configuración en `jarvis/voice/factory.py` para s
 - `gpt-sovits` sigue operando como sidecar local (o servicio externo equivalente).
 - La factory solo construye el adapter configurado: no levanta motores, no descarga modelos y no realiza llamadas de red.
 - Guía de configuración por variables de entorno: `docs/integrations/voice-env-configuration.md`.
+
+## PR #10 — Voice provider status endpoint
+Este PR añade un endpoint interno mínimo `GET /voice/status` para diagnosticar el provider de voz activo.
+
+- Permite ver qué provider está configurado (`mock`, `gpt-sovits` o `unknown`) y si está listo para sintetizar.
+- No sintetiza audio.
+- No llama al sidecar GPT-SoVITS ni realiza validaciones de red.
+- No expone rutas sensibles como `ref_audio_path` ni contenido sensible como `prompt_text`.
