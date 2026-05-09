@@ -32,7 +32,7 @@ class RecordingVoiceAdapter:
 
 
 def test_voice_audio_storage_init_does_not_create_base_dir(tmp_path):
-    base_dir = tmp_path / "hermes_test"
+    base_dir = tmp_path / "voice_storage_base"
 
     VoiceAudioStorage(base_dir=base_dir)
 
