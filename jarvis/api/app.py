@@ -15,6 +15,8 @@ from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.factory import create_voice_adapter_from_env
+from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
+from jarvis.voice.mock_adapter import MockVoiceAdapter
 
 
 class CreateTaskRequest(BaseModel):
@@ -258,6 +260,42 @@ def create_app(
             duration_seconds=result.duration_seconds,
             metadata=result.metadata,
         )
+
+    @app.get("/voice/status")
+    def voice_status() -> dict:
+        adapter = app.state.voice_adapter
+
+        if isinstance(adapter, MockVoiceAdapter):
+            return {
+                "provider": "mock",
+                "configured": True,
+                "can_synthesize": True,
+                "details": {},
+            }
+
+        if isinstance(adapter, GPTSoVITSAdapter):
+            has_base_url = bool(adapter.base_url and adapter.base_url.strip())
+            has_ref_audio_path = bool(adapter.ref_audio_path and str(adapter.ref_audio_path).strip())
+            has_prompt_text = bool(adapter.prompt_text and str(adapter.prompt_text).strip())
+            return {
+                "provider": "gpt-sovits",
+                "configured": has_base_url,
+                "can_synthesize": has_base_url and has_ref_audio_path,
+                "details": {
+                    "base_url": adapter.base_url,
+                    "has_ref_audio_path": has_ref_audio_path,
+                    "has_prompt_text": has_prompt_text,
+                    "prompt_lang": adapter.prompt_lang,
+                    "timeout_seconds": adapter.timeout_seconds,
+                },
+            }
+
+        return {
+            "provider": "unknown",
+            "configured": False,
+            "can_synthesize": False,
+            "details": {"class_name": adapter.__class__.__name__},
+        }
 
     @app.post("/tasks/{task_id}/cancel", response_model=CancelTaskResponse)
     def cancel_task(task_id: str) -> CancelTaskResponse:
