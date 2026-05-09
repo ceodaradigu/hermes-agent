@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from jarvis.api.app import create_app
 from jarvis.voice.base import VoiceSynthesisResult
+from jarvis.voice.storage import VoiceAudioStorage
 
 
 class RecordingVoiceAdapter:
@@ -99,6 +100,88 @@ def test_voice_tts_preserves_metadata_and_uses_injected_adapter():
     assert data["metadata"]["adapter"] == "recording"
     assert len(adapter.calls) == 1
     assert adapter.calls[0].output_format == "ogg"
+
+
+def test_voice_tts_sanitizes_sensitive_metadata_keys():
+    adapter = RecordingVoiceAdapter()
+    client = _client(voice_adapter=adapter)
+
+    response = client.post(
+        "/voice/tts",
+        json={
+            "text": "hola",
+            "metadata": {
+                "source": "unit-test",
+                "ref_audio_path": "/tmp/ref.wav",
+                "prompt_text": "texto sensible",
+                "api_key": "abc",
+                "access_token": "def",
+                "db_password": "ghi",
+                "client_secret": "jkl",
+                "output_path": "/tmp/out.wav",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    metadata = response.json()["metadata"]
+    assert metadata["source"] == "unit-test"
+    assert metadata["adapter"] == "recording"
+    assert "ref_audio_path" not in metadata
+    assert "prompt_text" not in metadata
+    assert "api_key" not in metadata
+    assert "access_token" not in metadata
+    assert "db_password" not in metadata
+    assert "client_secret" not in metadata
+    assert "output_path" not in metadata
+
+
+def test_voice_tts_sanitizes_adapter_added_sensitive_metadata():
+    class SensitiveMetadataAdapter:
+        def synthesize(self, request):
+            return VoiceSynthesisResult(
+                content_type="audio/wav",
+                provider="sensitive",
+                audio_bytes=b"abc",
+                metadata={
+                    "source": request.metadata["source"],
+                    "base_url": "http://127.0.0.1:9880",
+                    "ref_audio_path": "/tmp/ref.wav",
+                    "prompt_text": "texto sensible",
+                    "prompt_lang": "es",
+                    "service_token": "secret-token",
+                    "password": "secret-password",
+                },
+            )
+
+    client = _client(voice_adapter=SensitiveMetadataAdapter())
+
+    response = client.post("/voice/tts", json={"text": "hola", "metadata": {"source": "unit-test"}})
+
+    assert response.status_code == 200
+    metadata = response.json()["metadata"]
+    assert metadata == {"source": "unit-test", "prompt_lang": "es"}
+
+
+def test_voice_tts_sanitizing_does_not_remove_response_audio_path(tmp_path):
+    adapter = RecordingVoiceAdapter()
+    storage = VoiceAudioStorage(tmp_path)
+    client = _client(voice_adapter=adapter, voice_audio_storage=storage)
+
+    response = client.post(
+        "/voice/tts",
+        json={
+            "text": "hola",
+            "save_audio": True,
+            "metadata": {"source": "unit-test", "ref_audio_path": "/tmp/ref.wav"},
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["audio_path"]
+    assert data["has_audio_bytes"] is True
+    assert data["metadata"] == {"source": "unit-test", "adapter": "recording"}
 
 
 def test_voice_tts_invalid_output_format_returns_clear_400():
