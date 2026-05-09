@@ -99,6 +99,25 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _sanitize_voice_metadata(metadata: dict) -> dict:
+    blocked_exact = {"base_url", "prompt_text"}
+    blocked_substrings = ("secret", "token", "key", "password")
+    sanitized = {}
+
+    for key, value in metadata.items():
+        key_text = str(key)
+        key_lower = key_text.lower()
+        if key_lower in blocked_exact:
+            continue
+        if key_lower.endswith("_path"):
+            continue
+        if any(blocked in key_lower for blocked in blocked_substrings):
+            continue
+        sanitized[key] = value
+
+    return sanitized
+
+
 def create_app(
     *,
     policy_engine: Optional[PolicyEngine] = None,
@@ -266,7 +285,7 @@ def create_app(
             audio_path=audio_path,
             has_audio_bytes=result.audio_bytes is not None,
             duration_seconds=result.duration_seconds,
-            metadata=result.metadata,
+            metadata=_sanitize_voice_metadata(result.metadata),
         )
 
     @app.get("/voice/status")
