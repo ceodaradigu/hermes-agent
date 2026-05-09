@@ -75,14 +75,15 @@ def test_voice_audio_storage_disallows_traversal_in_base_dir(tmp_path):
 
 def test_voice_tts_save_audio_false_does_not_write(tmp_path):
     adapter = RecordingVoiceAdapter(audio_bytes=b"hello")
-    storage = VoiceAudioStorage(tmp_path)
+    base_dir = tmp_path / "voice_storage_base"
+    storage = VoiceAudioStorage(base_dir)
     client = TestClient(create_app(voice_adapter=adapter, voice_audio_storage=storage))
 
     response = client.post("/voice/tts", json={"text": "hola", "save_audio": False})
 
     assert response.status_code == 200
     assert response.json()["audio_path"] is None
-    assert list(tmp_path.iterdir()) == []
+    assert not base_dir.exists()
 
 
 def test_voice_tts_save_audio_true_writes_and_returns_audio_path(tmp_path):
@@ -113,7 +114,8 @@ def test_voice_tts_no_audio_bytes_does_not_fail_and_uses_adapter_audio_path(tmp_
 
 def test_voice_tts_denied_or_pending_approval_do_not_save(tmp_path):
     adapter = RecordingVoiceAdapter(audio_bytes=b"hello")
-    client = TestClient(create_app(voice_adapter=adapter, voice_audio_storage=VoiceAudioStorage(tmp_path)))
+    base_dir = tmp_path / "voice_storage_base"
+    client = TestClient(create_app(voice_adapter=adapter, voice_audio_storage=VoiceAudioStorage(base_dir)))
 
     denied = client.post("/voice/tts", json={"text": "rm -rf /", "save_audio": True})
     pending = client.post("/voice/tts", json={"text": "leer .env", "save_audio": True})
@@ -121,7 +123,7 @@ def test_voice_tts_denied_or_pending_approval_do_not_save(tmp_path):
     assert denied.status_code == 403
     assert pending.status_code == 200
     assert pending.json()["status"] == "pending_approval"
-    assert list(tmp_path.iterdir()) == []
+    assert not base_dir.exists()
 
 
 def test_injected_storage_is_used(tmp_path):
