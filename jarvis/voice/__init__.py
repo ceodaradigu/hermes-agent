@@ -2,6 +2,7 @@ from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest, VoiceSynthesi
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.factory import create_voice_adapter_from_env
+from jarvis.voice.storage import VoiceAudioStorage
 
 __all__ = [
     "VoiceAdapter",
@@ -10,4 +11,5 @@ __all__ = [
     "MockVoiceAdapter",
     "GPTSoVITSAdapter",
     "create_voice_adapter_from_env",
+    "VoiceAudioStorage",
 ]

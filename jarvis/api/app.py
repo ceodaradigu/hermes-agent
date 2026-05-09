@@ -17,6 +17,7 @@ from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
+from jarvis.voice.storage import VoiceAudioStorage
 
 
 class CreateTaskRequest(BaseModel):
@@ -38,6 +39,7 @@ class VoiceTTSRequest(BaseModel):
     language: str = "es"
     output_format: str = "wav"
     metadata: Optional[dict] = None
+    save_audio: bool = False
 
 
 class VoiceTTSResponse(BaseModel):
@@ -104,6 +106,7 @@ def create_app(
     adapter_factory: Optional[Callable[[], HermesRuntimeAdapter]] = None,
     task_store: Optional[InMemoryTaskStore] = None,
     voice_adapter: Optional[VoiceAdapter] = None,
+    voice_audio_storage: Optional[VoiceAudioStorage] = None,
 ) -> FastAPI:
     app = FastAPI(title="JARVIS Gateway API", version="0.1.0")
 
@@ -112,6 +115,7 @@ def create_app(
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.task_store = task_store or InMemoryTaskStore()
+    app.state.voice_audio_storage = voice_audio_storage or VoiceAudioStorage()
     app.state.mission_control = MissionControl(
         mission_store=None,
         policy_engine=app.state.policy_engine,
@@ -252,10 +256,14 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(exc))
 
         result = app.state.voice_adapter.synthesize(request)
+        audio_path = str(result.audio_path) if result.audio_path else None
+        if payload.save_audio and result.audio_bytes is not None:
+            audio_path = app.state.voice_audio_storage.save_audio(result.audio_bytes, request.output_format)
+
         return VoiceTTSResponse(
             provider=result.provider,
             content_type=result.content_type,
-            audio_path=str(result.audio_path) if result.audio_path else None,
+            audio_path=audio_path,
             has_audio_bytes=result.audio_bytes is not None,
             duration_seconds=result.duration_seconds,
             metadata=result.metadata,
