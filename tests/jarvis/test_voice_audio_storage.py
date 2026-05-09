@@ -29,6 +29,14 @@ class RecordingVoiceAdapter:
         )
 
 
+
+
+def test_voice_audio_storage_init_does_not_create_base_dir(tmp_path):
+    base_dir = tmp_path / "hermes_test"
+
+    VoiceAudioStorage(base_dir=base_dir)
+
+    assert not base_dir.exists()
 def test_voice_audio_storage_creates_directory_on_save(tmp_path):
     base = tmp_path / "nested" / "voice_outputs"
     storage = VoiceAudioStorage(base)
