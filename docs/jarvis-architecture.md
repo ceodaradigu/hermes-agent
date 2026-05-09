@@ -98,3 +98,12 @@ Este PR añade un endpoint interno mínimo `GET /voice/status` para diagnosticar
 - No sintetiza audio.
 - No llama al sidecar GPT-SoVITS ni realiza validaciones de red.
 - No expone rutas sensibles como `ref_audio_path` ni contenido sensible como `prompt_text`.
+
+## PR #11 — Voice local audio storage
+Este PR añade almacenamiento local opcional y seguro para audio generado por `POST /voice/tts`.
+
+- `save_audio` es opcional en la request y por defecto es `false`.
+- Cuando `save_audio=true` y el adapter devuelve `audio_bytes`, JARVIS guarda el audio en una carpeta local controlada (`.jarvis/voice_outputs` por defecto o inyectada para tests).
+- No publica audio ni agrega UI/streaming.
+- La respuesta JSON no expone `audio_bytes`; solo devuelve `audio_path` cuando existe.
+- El almacenamiento valida formato (`wav/mp3/ogg`) y evita path traversal.
