@@ -29,9 +29,13 @@ class RecordingVoiceAdapter:
         )
 
 
-def test_voice_audio_storage_creates_directory(tmp_path):
+def test_voice_audio_storage_creates_directory_on_save(tmp_path):
     base = tmp_path / "nested" / "voice_outputs"
-    VoiceAudioStorage(base)
+    storage = VoiceAudioStorage(base)
+    assert not base.exists()
+
+    storage.save_audio(b"data", "wav")
+
     assert base.exists()
 
 
