@@ -54,6 +54,8 @@ Para la guía específica de operación de GPT-SoVITS como sidecar local o servi
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
 
+Voice audio storage runbook: guía para validar almacenamiento local con `save_audio` y `.jarvis/voice_outputs` en `docs/integrations/voice-audio-storage-runbook.md`.
+
 Y ver `docs/roadmap/pr-future-content-youtube-factory.md` para la propuesta de Content / YouTube Factory orientada a activos monetizables, con `Approval Gate` obligatorio para publicación, gasto y uso de identidad.
 
 Y ver `docs/roadmap/pr-future-money-roi-engine.md` para el roadmap del Money Engine / ROI Engine, centrado en priorización por retorno, protección de atención humana y `Approval Gate` para gasto o compromisos financieros.
