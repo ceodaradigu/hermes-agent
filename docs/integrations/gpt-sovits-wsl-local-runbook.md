@@ -156,12 +156,40 @@ cd /mnt/c/Users/diazd/Desktop/JARVIS/hermes-agent
 source venv/bin/activate
 ```
 
-Configurar las variables locales necesarias para apuntar al sidecar GPT-SoVITS.
+Opción recomendada: usar el helper local desde la raíz del repo.
+
+```bash
+./scripts/local/start-jarvis-gpt-sovits.sh
+```
+
+El helper no arranca GPT-SoVITS. Solo comprueba que el sidecar ya responde en `/docs`, valida que existe el WAV de referencia configurado y arranca JARVIS apuntando al provider `gpt-sovits`.
+
+Defaults del helper:
+
+```bash
+JARVIS_VOICE_PROVIDER=gpt-sovits
+JARVIS_GPT_SOVITS_BASE_URL=http://127.0.0.1:9880
+JARVIS_GPT_SOVITS_REF_AUDIO_PATH=/mnt/c/Users/diazd/Desktop/JARVIS/test-voice.wav
+JARVIS_GPT_SOVITS_PROMPT_LANG=en
+JARVIS_GPT_SOVITS_TIMEOUT_SECONDS=60
+JARVIS_HOST=127.0.0.1
+JARVIS_PORT=8000
+```
+
+Todas esas variables se pueden sobreescribir antes de ejecutar el script:
+
+```bash
+JARVIS_GPT_SOVITS_REF_AUDIO_PATH=/ruta/local/voz-autorizada.wav \
+JARVIS_PORT=8010 \
+./scripts/local/start-jarvis-gpt-sovits.sh
+```
+
+Opción manual: configurar las variables locales necesarias para apuntar al sidecar GPT-SoVITS.
 
 Ejemplo:
 
 ```bash
-export JARVIS_VOICE_PROVIDER=gpt_sovits
+export JARVIS_VOICE_PROVIDER=gpt-sovits
 export JARVIS_GPT_SOVITS_BASE_URL=http://127.0.0.1:9880
 export JARVIS_GPT_SOVITS_PROMPT_LANG=en
 ```
