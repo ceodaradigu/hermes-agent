@@ -616,6 +616,59 @@ La herramienta envía frases de activación o control a `/voice/runtime/control`
 
 Esto permite probar el flujo push-to-talk de forma manual sin micrófono real, sin wake word real, sin STT real, sin reproducción de audio, sin threads, sin servicios en segundo plano y sin autoarranque.
 
+## PR #20 — Voice Runtime intent routing + user language profile
+
+Se añadió clasificación local de intenciones para `/voice/runtime/transcript` mediante un `VoiceIntentRouter` determinista y sin servicios externos.
+
+La base incluye un perfil lingüístico inicial de David, detección simple de intención, slots, idioma aproximado y tono (`urgent`, `frustrated`, `exploratory`, `direct`, `neutral`).
+
+El resultado queda preparado para aprendizaje futuro, pero no aprende automáticamente, no guarda datos persistentes y no llama a modelos externos.
+
+Este PR no ejecuta tareas ni misiones reales, no conecta con MissionControl, no conecta con Hermes runtime y mantiene `executed=false` en todos los intents. Tampoco implementa micrófono real, wake word real, STT real, reproducción de audio, threads, servicios en segundo plano ni autoarranque.
+
+## PR #20 — David understanding profile
+
+El intent routing y el UserUnderstandingProfile deben respetar `docs/jarvis-north-star.md`. La voz es solo una entrada: el objetivo es que JARVIS aprenda progresivamente a entender a David como operador personal completo, no solo clasificar frases.
+
+JARVIS debe evolucionar de entender comandos a entender a David.
+
+La capa de perfil debe preparar aprendizaje progresivo sobre preferencias, objetivos, estilo de decisión, forma de hablar, tolerancia al riesgo, patrones de frustración, objetivos de monetización y necesidades reales.
+
+Ese aprendizaje futuro debe organizarse en tres capas:
+
+1. Communication layer
+   - Cómo habla David.
+   - Expresiones habituales.
+   - Idioma.
+   - Tono.
+   - Frases equivalentes.
+
+2. Intent and context layer
+   - Qué suele querer realmente.
+   - Qué objetivo de fondo puede haber detrás de una frase.
+   - Si el contexto parece negocio, técnica, seguridad, aprendizaje, automatización o monetización.
+
+3. Personal operator layer
+   - Cómo ayudarle mejor.
+   - Priorización.
+   - Estilo de ejecución.
+   - Tolerancia al riesgo.
+   - Foco.
+   - Monetización.
+   - Necesidad real.
+   - Contradicciones.
+   - Cuándo debe actuar como Contrarian Agent.
+
+El aprendizaje debe ser privado, controlado, auditable y explícito.
+
+JARVIS no debe inventar certezas sobre David ni inferir información privada no dada.
+
+Cuando haya baja confianza, ambigüedad, riesgo de autoengaño o posible mala priorización, JARVIS debe preguntar o actuar como Contrarian Agent.
+
+ApprovalGateway sigue siendo obligatorio para acciones sensibles.
+
+Esta PR solo deja una estructura local inicial (`UserUnderstandingProfile` / `DavidUnderstandingProfile`) para representar esas señales. No hay memoria persistente todavía, no hay lectura de archivos externos, no hay APIs externas y no hay aprendizaje automático persistente.
+
 ### PR futura 1
 
 Documento de diseño y threat model.

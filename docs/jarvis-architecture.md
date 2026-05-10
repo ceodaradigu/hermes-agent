@@ -48,9 +48,13 @@ Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 ## Roadmap futuro (Command Center)
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
+JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.
+
 También ver `docs/roadmap/pr-future-voice-runtime-adapter.md` para el roadmap de integración de voz mediante adapters desacoplados, manteniendo `PolicyEngine`, `ApprovalGateway` y control humano en acciones sensibles.
 
 Always-on local voice runtime: diseño futuro para wake word, STT multidioma, TTS multidioma, reproducción local, frontend opcional, autoarranque opt-in, modos de escucha y ApprovalGateway obligatorio para acciones sensibles en `docs/roadmap/always-on-local-voice-runtime.md`.
+
+David Understanding Profile: capa futura para que JARVIS aprenda progresivamente cómo piensa, decide, habla, prioriza y monetiza David, manteniendo privacidad, transparencia, aclaraciones cuando haya baja confianza y ApprovalGateway para acciones sensibles.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 

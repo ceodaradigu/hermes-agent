@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from jarvis.voice.intent_router import VoiceIntentRouter
+
 
 class VoiceRuntimeMode(str, Enum):
     OFF = "off"
@@ -51,7 +53,9 @@ class VoiceRuntime:
         input_language: str = "es",
         output_language: str = "es",
         wake_words: tuple[str, ...] = ("jarvis", "hola jarvis"),
+        intent_router: VoiceIntentRouter | None = None,
     ) -> None:
+        self._intent_router = intent_router or VoiceIntentRouter()
         self._state = VoiceRuntimeState(
             mode=self._coerce_mode(mode),
             enabled=enabled,
@@ -98,12 +102,7 @@ class VoiceRuntime:
 
     def handle_transcript(self, text: str) -> dict[str, Any]:
         self._state.last_transcript = text
-        self._state.last_intent = {
-            "status": "pending",
-            "intent": "unsupported",
-            "transcript": text,
-            "executed": False,
-        }
+        self._state.last_intent = self._intent_router.classify(text).to_dict()
         return self._state.last_intent
 
     @staticmethod
