@@ -669,6 +669,22 @@ ApprovalGateway sigue siendo obligatorio para acciones sensibles.
 
 Esta PR solo deja una estructura local inicial (`UserUnderstandingProfile` / `DavidUnderstandingProfile`) para representar esas señales. No hay memoria persistente todavía, no hay lectura de archivos externos, no hay APIs externas y no hay aprendizaje automático persistente.
 
+## PR #21 — User Understanding feedback API
+
+Se añadió una API interna para capturar correcciones explícitas de David cuando JARVIS interprete mal una instrucción.
+
+Endpoints:
+
+- `GET /voice/runtime/feedback`.
+- `POST /voice/runtime/feedback`.
+- `DELETE /voice/runtime/feedback`.
+
+El feedback prepara aprendizaje futuro del `UserUnderstandingProfile`, pero por ahora solo vive en memoria durante la vida del proceso.
+
+No hay persistencia, no se escribe memoria en disco, no se leen archivos externos, no se aplica automáticamente al router y no se ejecutan tareas reales.
+
+Este flujo respeta `docs/jarvis-north-star.md`: el aprendizaje debe ser explícito, privado, controlado, revisable y auditable antes de cualquier memoria automática.
+
 ### PR futura 1
 
 Documento de diseño y threat model.

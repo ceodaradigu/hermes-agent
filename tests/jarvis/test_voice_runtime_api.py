@@ -24,6 +24,7 @@ def test_voice_runtime_status_returns_initial_state():
     assert data["input_language"] == "es"
     assert data["output_language"] == "es"
     assert data["wake_words"] == ["jarvis", "hola jarvis"]
+    assert data["feedback_count"] == 0
 
 
 def test_voice_runtime_start_enables_wake_word_mode():

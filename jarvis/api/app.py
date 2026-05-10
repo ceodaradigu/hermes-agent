@@ -62,6 +62,15 @@ class VoiceRuntimeTextRequest(BaseModel):
     text: str
 
 
+class VoiceRuntimeFeedbackRequest(BaseModel):
+    original_text: str
+    interpreted_intent: Optional[str] = None
+    corrected_intent: str
+    correction_note: Optional[str] = None
+    preferred_next_step: Optional[str] = None
+    confidence_before: Optional[str] = None
+
+
 @dataclass
 class TaskRecord:
     task_id: str
@@ -138,6 +147,7 @@ def _voice_runtime_state_payload(state: VoiceRuntimeState) -> dict:
         "last_transcript": state.last_transcript,
         "last_intent": state.last_intent,
         "wake_words": list(state.wake_words),
+        "feedback_count": state.feedback_count,
     }
 
 
@@ -393,6 +403,42 @@ def create_app(
             "result": result,
             "state": _voice_runtime_state_payload(app.state.voice_runtime.status()),
         }
+
+    @app.get("/voice/runtime/feedback")
+    def voice_runtime_feedback_list() -> dict:
+        feedback = [item.to_dict() for item in app.state.voice_runtime.list_feedback()]
+        return {
+            "feedback": feedback,
+            "feedback_count": len(feedback),
+        }
+
+    @app.post("/voice/runtime/feedback")
+    def voice_runtime_feedback_add(payload: VoiceRuntimeFeedbackRequest) -> dict:
+        original_text = payload.original_text.strip()
+        corrected_intent = payload.corrected_intent.strip()
+        if not original_text:
+            raise HTTPException(status_code=400, detail="original_text must be non-empty")
+        if not corrected_intent:
+            raise HTTPException(status_code=400, detail="corrected_intent must be non-empty")
+
+        feedback = app.state.voice_runtime.add_feedback(
+            original_text=original_text,
+            interpreted_intent=payload.interpreted_intent,
+            corrected_intent=corrected_intent,
+            correction_note=payload.correction_note,
+            preferred_next_step=payload.preferred_next_step,
+            confidence_before=payload.confidence_before,
+        )
+        return {
+            "feedback": feedback.to_dict(),
+            "feedback_count": app.state.voice_runtime.status().feedback_count,
+            "applied_persistently": feedback.applied_persistently,
+        }
+
+    @app.delete("/voice/runtime/feedback")
+    def voice_runtime_feedback_clear() -> dict:
+        app.state.voice_runtime.clear_feedback()
+        return {"feedback_count": app.state.voice_runtime.status().feedback_count}
 
     @app.post("/tasks/{task_id}/cancel", response_model=CancelTaskResponse)
     def cancel_task(task_id: str) -> CancelTaskResponse:
