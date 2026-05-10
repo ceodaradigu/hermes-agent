@@ -274,7 +274,15 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
-        result = app.state.voice_adapter.synthesize(request)
+        try:
+            result = app.state.voice_adapter.synthesize(request)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        except Exception:
+            raise HTTPException(status_code=502, detail="voice synthesis failed")
+
         audio_path = str(result.audio_path) if result.audio_path else None
         if payload.save_audio and result.audio_bytes is not None:
             audio_path = app.state.voice_audio_storage.save_audio(result.audio_bytes, request.output_format)

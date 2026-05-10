@@ -24,6 +24,16 @@ class RecordingVoiceAdapter:
         )
 
 
+class FailingVoiceAdapter:
+    def __init__(self, exc):
+        self.exc = exc
+        self.calls = []
+
+    def synthesize(self, request):
+        self.calls.append(request)
+        raise self.exc
+
+
 def _client(**kwargs):
     return TestClient(create_app(**kwargs))
 
@@ -100,6 +110,40 @@ def test_voice_tts_preserves_metadata_and_uses_injected_adapter():
     assert data["metadata"]["adapter"] == "recording"
     assert len(adapter.calls) == 1
     assert adapter.calls[0].output_format == "ogg"
+
+
+def test_voice_tts_adapter_runtime_error_returns_503():
+    adapter = FailingVoiceAdapter(RuntimeError("Failed to connect to GPT-SoVITS service"))
+    client = _client(voice_adapter=adapter)
+
+    response = client.post("/voice/tts", json={"text": "hola"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Failed to connect to GPT-SoVITS service"
+    assert len(adapter.calls) == 1
+
+
+def test_voice_tts_adapter_value_error_returns_400():
+    adapter = FailingVoiceAdapter(ValueError("bad config"))
+    client = _client(voice_adapter=adapter)
+
+    response = client.post("/voice/tts", json={"text": "hola"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "bad config"
+    assert len(adapter.calls) == 1
+
+
+def test_voice_tts_adapter_unexpected_error_returns_generic_502():
+    adapter = FailingVoiceAdapter(Exception("boom"))
+    client = _client(voice_adapter=adapter)
+
+    response = client.post("/voice/tts", json={"text": "hola"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "voice synthesis failed"
+    assert "boom" not in response.text
+    assert len(adapter.calls) == 1
 
 
 def test_voice_tts_sanitizes_sensitive_metadata_keys():
