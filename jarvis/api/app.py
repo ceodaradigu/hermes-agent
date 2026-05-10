@@ -17,6 +17,7 @@ from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
+from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
 
 
@@ -51,6 +52,14 @@ class VoiceTTSResponse(BaseModel):
     metadata: dict
     status: Optional[str] = None
     approval_request_id: Optional[str] = None
+
+
+class VoiceRuntimeModeRequest(BaseModel):
+    mode: str
+
+
+class VoiceRuntimeTextRequest(BaseModel):
+    text: str
 
 
 @dataclass
@@ -118,6 +127,20 @@ def _sanitize_voice_metadata(metadata: dict) -> dict:
     return sanitized
 
 
+def _voice_runtime_state_payload(state: VoiceRuntimeState) -> dict:
+    return {
+        "mode": state.mode.value,
+        "enabled": state.enabled,
+        "frontend_required": state.frontend_required,
+        "input_language": state.input_language,
+        "output_language": state.output_language,
+        "last_error": state.last_error,
+        "last_transcript": state.last_transcript,
+        "last_intent": state.last_intent,
+        "wake_words": list(state.wake_words),
+    }
+
+
 def create_app(
     *,
     policy_engine: Optional[PolicyEngine] = None,
@@ -126,6 +149,7 @@ def create_app(
     task_store: Optional[InMemoryTaskStore] = None,
     voice_adapter: Optional[VoiceAdapter] = None,
     voice_audio_storage: Optional[VoiceAudioStorage] = None,
+    voice_runtime: Optional[VoiceRuntime] = None,
 ) -> FastAPI:
     app = FastAPI(title="JARVIS Gateway API", version="0.1.0")
 
@@ -133,6 +157,7 @@ def create_app(
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
+    app.state.voice_runtime = voice_runtime or VoiceRuntime()
     app.state.task_store = task_store or InMemoryTaskStore()
     app.state.voice_audio_storage = voice_audio_storage or VoiceAudioStorage()
     app.state.mission_control = MissionControl(
@@ -330,6 +355,43 @@ def create_app(
             "configured": False,
             "can_synthesize": False,
             "details": {"class_name": adapter.__class__.__name__},
+        }
+
+    @app.get("/voice/runtime/status")
+    def voice_runtime_status() -> dict:
+        return _voice_runtime_state_payload(app.state.voice_runtime.status())
+
+    @app.post("/voice/runtime/start")
+    def voice_runtime_start() -> dict:
+        return _voice_runtime_state_payload(app.state.voice_runtime.start())
+
+    @app.post("/voice/runtime/stop")
+    def voice_runtime_stop() -> dict:
+        return _voice_runtime_state_payload(app.state.voice_runtime.stop())
+
+    @app.post("/voice/runtime/mode")
+    def voice_runtime_set_mode(payload: VoiceRuntimeModeRequest) -> dict:
+        try:
+            state = app.state.voice_runtime.set_mode(payload.mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _voice_runtime_state_payload(state)
+
+    @app.post("/voice/runtime/control")
+    def voice_runtime_control(payload: VoiceRuntimeTextRequest) -> dict:
+        result = app.state.voice_runtime.handle_control_phrase(payload.text)
+        return {
+            "recognized": result["handled"],
+            "result": result,
+            "state": _voice_runtime_state_payload(app.state.voice_runtime.status()),
+        }
+
+    @app.post("/voice/runtime/transcript")
+    def voice_runtime_transcript(payload: VoiceRuntimeTextRequest) -> dict:
+        result = app.state.voice_runtime.handle_transcript(payload.text)
+        return {
+            "result": result,
+            "state": _voice_runtime_state_payload(app.state.voice_runtime.status()),
         }
 
     @app.post("/tasks/{task_id}/cancel", response_model=CancelTaskResponse)

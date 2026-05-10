@@ -593,6 +593,21 @@ El runtime permite arrancar/parar el estado interno, cambiar modo, reconocer fra
 
 Este PR no implementa micrófono real, wake word real, STT real, reproducción de audio, servicios en segundo plano ni autoarranque.
 
+## PR #18 — Voice Runtime API endpoints
+
+Se añadieron endpoints internos para consultar y controlar el estado del Voice Runtime:
+
+- `GET /voice/runtime/status`.
+- `POST /voice/runtime/start`.
+- `POST /voice/runtime/stop`.
+- `POST /voice/runtime/mode`.
+- `POST /voice/runtime/control`.
+- `POST /voice/runtime/transcript`.
+
+Estos endpoints permiten probar el contrato del runtime, cambiar modos, procesar frases de control simuladas y guardar transcripciones como intent pendiente/no soportado.
+
+Este PR no implementa micrófono real, wake word real, STT real, reproducción de audio, threads, servicios en segundo plano ni autoarranque.
+
 ### PR futura 1
 
 Documento de diseño y threat model.
