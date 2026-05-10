@@ -50,6 +50,8 @@ Para la fase posterior al Command Center base, ver la propuesta de **Dominion / 
 
 También ver `docs/roadmap/pr-future-voice-runtime-adapter.md` para el roadmap de integración de voz mediante adapters desacoplados, manteniendo `PolicyEngine`, `ApprovalGateway` y control humano en acciones sensibles.
 
+Always-on local voice runtime: diseño futuro para wake word, STT multidioma, TTS multidioma, reproducción local, frontend opcional, autoarranque opt-in, modos de escucha y ApprovalGateway obligatorio para acciones sensibles en `docs/roadmap/always-on-local-voice-runtime.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
