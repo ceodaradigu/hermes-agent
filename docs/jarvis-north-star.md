@@ -99,6 +99,8 @@ Nunca debe ejecutar automáticamente:
 - aprender qué cosas frustran o ayudan a David.
 - mejorar clasificación de intención con feedback.
 
+El aprendizaje debe empezar por feedback explícito, controlado y revisable antes de cualquier memoria automática.
+
 ### No permitido sin diseño explícito
 - aprender de forma opaca.
 - guardar información sensible sin consentimiento.

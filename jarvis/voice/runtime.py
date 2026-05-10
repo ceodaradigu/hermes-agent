@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any
 
 from jarvis.voice.intent_router import VoiceIntentRouter
+from jarvis.voice.understanding_feedback import UserUnderstandingFeedback, UserUnderstandingFeedbackStore
 
 
 class VoiceRuntimeMode(str, Enum):
@@ -25,6 +26,7 @@ class VoiceRuntimeState:
     last_transcript: str | None
     last_intent: dict[str, Any] | None
     wake_words: tuple[str, ...]
+    feedback_count: int = 0
 
 
 class VoiceRuntime:
@@ -54,8 +56,10 @@ class VoiceRuntime:
         output_language: str = "es",
         wake_words: tuple[str, ...] = ("jarvis", "hola jarvis"),
         intent_router: VoiceIntentRouter | None = None,
+        feedback_store: UserUnderstandingFeedbackStore | None = None,
     ) -> None:
         self._intent_router = intent_router or VoiceIntentRouter()
+        self._feedback_store = feedback_store or UserUnderstandingFeedbackStore()
         self._state = VoiceRuntimeState(
             mode=self._coerce_mode(mode),
             enabled=enabled,
@@ -66,6 +70,7 @@ class VoiceRuntime:
             last_transcript=None,
             last_intent=None,
             wake_words=wake_words,
+            feedback_count=self._feedback_store.count(),
         )
 
     def status(self) -> VoiceRuntimeState:
@@ -104,6 +109,36 @@ class VoiceRuntime:
         self._state.last_transcript = text
         self._state.last_intent = self._intent_router.classify(text).to_dict()
         return self._state.last_intent
+
+    def add_feedback(
+        self,
+        *,
+        original_text: str,
+        corrected_intent: str,
+        interpreted_intent: str | None = None,
+        correction_note: str | None = None,
+        preferred_next_step: str | None = None,
+        confidence_before: str | None = None,
+        source: str = "user",
+    ) -> UserUnderstandingFeedback:
+        feedback = self._feedback_store.add_feedback(
+            original_text=original_text,
+            interpreted_intent=interpreted_intent,
+            corrected_intent=corrected_intent,
+            correction_note=correction_note,
+            preferred_next_step=preferred_next_step,
+            confidence_before=confidence_before,
+            source=source,
+        )
+        self._state.feedback_count = self._feedback_store.count()
+        return feedback
+
+    def list_feedback(self) -> list[UserUnderstandingFeedback]:
+        return self._feedback_store.list_feedback()
+
+    def clear_feedback(self) -> None:
+        self._feedback_store.clear()
+        self._state.feedback_count = self._feedback_store.count()
 
     @staticmethod
     def _coerce_mode(mode: VoiceRuntimeMode | str) -> VoiceRuntimeMode:

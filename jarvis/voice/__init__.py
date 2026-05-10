@@ -11,6 +11,7 @@ from jarvis.voice.intent_router import (
     VoiceUserLanguageProfile,
 )
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeMode, VoiceRuntimeState
+from jarvis.voice.understanding_feedback import UserUnderstandingFeedback, UserUnderstandingFeedbackStore
 
 __all__ = [
     "VoiceAdapter",
@@ -28,4 +29,6 @@ __all__ = [
     "VoiceUserLanguageProfile",
     "UserUnderstandingProfile",
     "DavidUnderstandingProfile",
+    "UserUnderstandingFeedback",
+    "UserUnderstandingFeedbackStore",
 ]
