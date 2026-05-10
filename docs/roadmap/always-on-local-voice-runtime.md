@@ -576,6 +576,23 @@ GET /voice/runtime/events
 
 ## Roadmap propuesto
 
+## PR #17 — Voice Runtime interface
+
+Se añadió una interfaz interna inicial para el Voice Runtime en `jarvis/voice/runtime.py`.
+
+Esta base define modos, estado y transiciones de control para futuros PRs:
+
+- `off`.
+- `wake_word`.
+- `listening`.
+- `processing`.
+- `speaking`.
+- `error`.
+
+El runtime permite arrancar/parar el estado interno, cambiar modo, reconocer frases de control simuladas y guardar transcripciones como intent pendiente/no soportado.
+
+Este PR no implementa micrófono real, wake word real, STT real, reproducción de audio, servicios en segundo plano ni autoarranque.
+
 ### PR futura 1
 
 Documento de diseño y threat model.
