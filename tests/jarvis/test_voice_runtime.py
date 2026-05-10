@@ -120,9 +120,7 @@ def test_handle_transcript_stores_transcript_without_executing_real_work():
 
     assert runtime.status().last_transcript == "crea una landing"
     assert runtime.status().last_intent == result
-    assert result == {
-        "status": "pending",
-        "intent": "unsupported",
-        "transcript": "crea una landing",
-        "executed": False,
-    }
+    assert result["status"] == "pending"
+    assert result["intent"] == "create_asset"
+    assert result["transcript"] == "crea una landing"
+    assert result["executed"] is False

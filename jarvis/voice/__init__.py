@@ -3,6 +3,13 @@ from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.storage import VoiceAudioStorage
+from jarvis.voice.intent_router import (
+    DavidUnderstandingProfile,
+    UserUnderstandingProfile,
+    VoiceIntent,
+    VoiceIntentRouter,
+    VoiceUserLanguageProfile,
+)
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeMode, VoiceRuntimeState
 
 __all__ = [
@@ -16,4 +23,9 @@ __all__ = [
     "VoiceRuntime",
     "VoiceRuntimeMode",
     "VoiceRuntimeState",
+    "VoiceIntent",
+    "VoiceIntentRouter",
+    "VoiceUserLanguageProfile",
+    "UserUnderstandingProfile",
+    "DavidUnderstandingProfile",
 ]

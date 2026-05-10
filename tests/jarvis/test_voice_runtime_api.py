@@ -92,6 +92,15 @@ def test_voice_runtime_control_wake_phrase_changes_to_listening():
     assert data["state"]["mode"] == "listening"
 
 
+def test_voice_runtime_control_still_works_after_intent_router_changes():
+    client = _client()
+
+    response = client.post("/voice/runtime/control", json={"text": "hola jarvis"})
+
+    assert response.status_code == 200
+    assert response.json()["recognized"] is True
+
+
 def test_voice_runtime_transcript_stores_last_transcript():
     client = _client()
 
@@ -100,7 +109,7 @@ def test_voice_runtime_transcript_stores_last_transcript():
     assert response.status_code == 200
     data = response.json()
     assert data["result"]["status"] == "pending"
-    assert data["result"]["intent"] == "unsupported"
+    assert data["result"]["intent"] == "create_asset"
     assert data["result"]["executed"] is False
     assert data["state"]["last_transcript"] == "crea una landing para X"
     assert data["state"]["last_intent"] == data["result"]
@@ -138,3 +147,12 @@ def test_voice_tts_still_works_with_mock_provider():
     data = response.json()
     assert data["provider"] == "mock"
     assert data["has_audio_bytes"] is True
+
+
+def test_voice_tts_mock_still_works_after_intent_router_changes():
+    client = _client()
+
+    response = client.post("/voice/tts", json={"text": "hola jarvis"})
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "mock"
