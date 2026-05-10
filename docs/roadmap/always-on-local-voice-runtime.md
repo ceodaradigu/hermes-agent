@@ -608,6 +608,14 @@ Estos endpoints permiten probar el contrato del runtime, cambiar modos, procesar
 
 Este PR no implementa micrófono real, wake word real, STT real, reproducción de audio, threads, servicios en segundo plano ni autoarranque.
 
+## PR #19 — Push-to-talk CLI local
+
+Se añadió `scripts/local/voice-runtime-push-to-talk.sh` como herramienta local para simular entradas de voz enviando texto a los endpoints internos del Voice Runtime.
+
+La herramienta envía frases de activación o control a `/voice/runtime/control` y texto normal a `/voice/runtime/transcript`.
+
+Esto permite probar el flujo push-to-talk de forma manual sin micrófono real, sin wake word real, sin STT real, sin reproducción de audio, sin threads, sin servicios en segundo plano y sin autoarranque.
+
 ### PR futura 1
 
 Documento de diseño y threat model.
