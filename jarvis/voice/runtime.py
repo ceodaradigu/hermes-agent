@@ -9,6 +9,10 @@ from jarvis.voice.understanding_feedback import (
     UserUnderstandingFeedback,
     UserUnderstandingFeedbackStore,
 )
+from jarvis.voice.understanding_memory import (
+    UserUnderstandingMemoryProposal,
+    UserUnderstandingMemoryProposalStore,
+)
 
 
 class VoiceRuntimeMode(str, Enum):
@@ -33,6 +37,7 @@ class VoiceRuntimeState:
     wake_words: tuple[str, ...]
     feedback_count: int = 0
     applied_feedback_count: int = 0
+    memory_proposal_count: int = 0
 
 
 class VoiceRuntime:
@@ -64,10 +69,12 @@ class VoiceRuntime:
         intent_router: VoiceIntentRouter | None = None,
         feedback_store: UserUnderstandingFeedbackStore | None = None,
         applied_feedback_store: UserUnderstandingAppliedFeedbackStore | None = None,
+        memory_proposal_store: UserUnderstandingMemoryProposalStore | None = None,
     ) -> None:
         self._intent_router = intent_router or VoiceIntentRouter()
         self._feedback_store = feedback_store or UserUnderstandingFeedbackStore()
         self._applied_feedback_store = applied_feedback_store or UserUnderstandingAppliedFeedbackStore()
+        self._memory_proposal_store = memory_proposal_store or UserUnderstandingMemoryProposalStore()
         self._state = VoiceRuntimeState(
             mode=self._coerce_mode(mode),
             enabled=enabled,
@@ -80,6 +87,7 @@ class VoiceRuntime:
             wake_words=wake_words,
             feedback_count=self._feedback_store.count(),
             applied_feedback_count=self._applied_feedback_store.count(),
+            memory_proposal_count=self._memory_proposal_store.count(),
         )
 
     def status(self) -> VoiceRuntimeState:
@@ -185,6 +193,52 @@ class VoiceRuntime:
     def clear_applied_feedback(self) -> None:
         self._applied_feedback_store.clear()
         self._state.applied_feedback_count = self._applied_feedback_store.count()
+
+    @property
+    def memory_proposal_store(self) -> UserUnderstandingMemoryProposalStore:
+        return self._memory_proposal_store
+
+    def propose_memory_from_applied_feedback(
+        self,
+        rule: UserUnderstandingAppliedFeedbackRule,
+    ) -> UserUnderstandingMemoryProposal:
+        proposal = self._memory_proposal_store.propose_from_feedback_rule(rule)
+        self._state.memory_proposal_count = self._memory_proposal_store.count()
+        return proposal
+
+    def list_memory_proposals(self) -> list[UserUnderstandingMemoryProposal]:
+        return self._memory_proposal_store.list_proposals()
+
+    def get_memory_proposal(self, proposal_id: str) -> UserUnderstandingMemoryProposal:
+        return self._memory_proposal_store.get_proposal(proposal_id)
+
+    def review_memory_proposal(self, proposal_id: str) -> UserUnderstandingMemoryProposal:
+        return self._memory_proposal_store.mark_reviewed(proposal_id)
+
+    def approve_memory_proposal(
+        self,
+        proposal_id: str,
+        approved_by: str = "David",
+    ) -> UserUnderstandingMemoryProposal:
+        return self._memory_proposal_store.approve(proposal_id, approved_by=approved_by)
+
+    def disable_memory_proposal(
+        self,
+        proposal_id: str,
+        reason: str = "",
+    ) -> UserUnderstandingMemoryProposal:
+        return self._memory_proposal_store.disable(proposal_id, reason=reason)
+
+    def delete_memory_proposal(
+        self,
+        proposal_id: str,
+        reason: str = "",
+    ) -> UserUnderstandingMemoryProposal:
+        return self._memory_proposal_store.delete(proposal_id, reason=reason)
+
+    def clear_memory_proposals(self) -> None:
+        self._memory_proposal_store.clear()
+        self._state.memory_proposal_count = self._memory_proposal_store.count()
 
     @staticmethod
     def _coerce_mode(mode: VoiceRuntimeMode | str) -> VoiceRuntimeMode:

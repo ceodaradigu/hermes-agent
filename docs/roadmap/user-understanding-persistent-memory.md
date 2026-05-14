@@ -141,6 +141,31 @@ Alcance:
 
 Este paso prepara la siguiente fase: una API de proposals en memoria. La persistencia real sigue fuera de alcance hasta que exista un flujo explicito de revision, aprobacion, auditoria y reversibilidad.
 
+## PR #33 — In-memory memory proposals API
+
+Se exponen endpoints internos para gestionar propuestas de User Understanding memory durante la sesion actual:
+
+- `GET /voice/runtime/memory/proposals`
+- `POST /voice/runtime/memory/proposals/from-applied-feedback`
+- `GET /voice/runtime/memory/proposals/{proposal_id}`
+- `POST /voice/runtime/memory/proposals/{proposal_id}/review`
+- `POST /voice/runtime/memory/proposals/{proposal_id}/approve`
+- `POST /voice/runtime/memory/proposals/{proposal_id}/disable`
+- `DELETE /voice/runtime/memory/proposals/{proposal_id}`
+- `DELETE /voice/runtime/memory/proposals`
+
+Alcance:
+
+- No persiste propuestas.
+- No escribe memoria en disco.
+- `approve` solo aprueba dentro del store de propuestas en memoria.
+- `approve` no aplica memoria al router.
+- `approve` no cambia comportamiento del runtime ni clasificacion de transcripts.
+- No conecta con MissionControl ni Hermes runtime.
+- No ejecuta tareas ni crea misiones reales.
+
+Este paso prepara el siguiente flujo de revision: review workflow/CLI para inspeccionar, aprobar, desactivar y eliminar propuestas antes de disenar persistencia.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.
@@ -167,18 +192,13 @@ La memoria persistente futura no debe guardar:
 
 Tampoco debe enviar memorias a APIs externas sin un diseno explicito, aprobado y documentado. Cualquier exportacion, sincronizacion o uso externo debe tratarse como una capacidad nueva con revision de seguridad propia.
 
-## 10. Endpoints futuros propuestos
+## 10. Endpoints persistentes futuros propuestos
 
-Solo propuestos, no implementar en esta fase:
+Los endpoints en memoria de PR #33 ya existen para proposals. Endpoints persistentes y de auditoria siguen siendo futuros:
 
-- `GET /voice/runtime/memory/proposals`
-- `POST /voice/runtime/memory/proposals`
-- `POST /voice/runtime/memory/proposals/{id}/approve`
-- `POST /voice/runtime/memory/proposals/{id}/disable`
-- `DELETE /voice/runtime/memory/proposals/{id}`
 - `GET /voice/runtime/memory/audit`
 
-Estos endpoints deberian exponer propuestas, aprobaciones, desactivaciones, eliminaciones y auditoria sin ejecutar acciones reales ni saltarse `PolicyEngine` o `ApprovalGateway`.
+Los endpoints persistentes deberian exponer auditoria sin ejecutar acciones reales ni saltarse `PolicyEngine` o `ApprovalGateway`.
 
 ## 11. CLI futuro propuesto
 

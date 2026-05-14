@@ -20,7 +20,7 @@ from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
-from jarvis.voice.understanding_feedback import UserUnderstandingFeedback
+from jarvis.voice.understanding_feedback import UserUnderstandingAppliedFeedbackRule, UserUnderstandingFeedback
 
 
 class CreateTaskRequest(BaseModel):
@@ -80,6 +80,19 @@ class VoiceRuntimeFeedbackPreviewRequest(BaseModel):
     correction_note: Optional[str] = None
     preferred_next_step: Optional[str] = None
     confidence_before: Optional[str] = None
+
+
+class VoiceRuntimeMemoryProposalFromAppliedFeedbackRequest(BaseModel):
+    original_text: str
+    corrected_intent: str
+    suggested_alias: Optional[str] = None
+    reason: Optional[str] = None
+    source: str = "user_reviewed_feedback"
+    applied_persistently: bool = False
+
+
+class VoiceRuntimeMemoryProposalDisableRequest(BaseModel):
+    reason: Optional[str] = None
 
 
 @dataclass
@@ -160,6 +173,7 @@ def _voice_runtime_state_payload(state: VoiceRuntimeState) -> dict:
         "wake_words": list(state.wake_words),
         "feedback_count": state.feedback_count,
         "applied_feedback_count": state.applied_feedback_count,
+        "memory_proposal_count": state.memory_proposal_count,
     }
 
 
@@ -518,6 +532,97 @@ def create_app(
     def voice_runtime_feedback_clear() -> dict:
         app.state.voice_runtime.clear_feedback()
         return {"feedback_count": app.state.voice_runtime.status().feedback_count}
+
+    @app.get("/voice/runtime/memory/proposals")
+    def voice_runtime_memory_proposals_list() -> dict:
+        proposals = [proposal.to_dict() for proposal in app.state.voice_runtime.list_memory_proposals()]
+        return {
+            "proposals": proposals,
+            "memory_proposal_count": len(proposals),
+        }
+
+    @app.post("/voice/runtime/memory/proposals/from-applied-feedback")
+    def voice_runtime_memory_proposal_from_applied_feedback(
+        payload: VoiceRuntimeMemoryProposalFromAppliedFeedbackRequest,
+    ) -> dict:
+        original_text = payload.original_text.strip()
+        corrected_intent = payload.corrected_intent.strip()
+        if not original_text:
+            raise HTTPException(status_code=400, detail="original_text must be non-empty")
+        if not corrected_intent:
+            raise HTTPException(status_code=400, detail="corrected_intent must be non-empty")
+
+        rule = UserUnderstandingAppliedFeedbackRule(
+            original_text=original_text,
+            corrected_intent=corrected_intent,
+            suggested_alias=(payload.suggested_alias or "").strip() or None,
+            reason=(payload.reason or "").strip(),
+            source=(payload.source or "user_reviewed_feedback").strip() or "user_reviewed_feedback",
+            applied_persistently=payload.applied_persistently,
+            requires_review=False,
+            approval_required=False,
+        )
+        proposal = app.state.voice_runtime.propose_memory_from_applied_feedback(rule)
+        return {
+            "proposal": proposal.to_dict(),
+            "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
+            "applied_persistently": False,
+        }
+
+    @app.delete("/voice/runtime/memory/proposals")
+    def voice_runtime_memory_proposals_clear() -> dict:
+        app.state.voice_runtime.clear_memory_proposals()
+        return {
+            "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
+        }
+
+    @app.get("/voice/runtime/memory/proposals/{proposal_id}")
+    def voice_runtime_memory_proposal_get(proposal_id: str) -> dict:
+        try:
+            proposal = app.state.voice_runtime.get_memory_proposal(proposal_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        return {"proposal": proposal.to_dict()}
+
+    @app.post("/voice/runtime/memory/proposals/{proposal_id}/review")
+    def voice_runtime_memory_proposal_review(proposal_id: str) -> dict:
+        try:
+            proposal = app.state.voice_runtime.review_memory_proposal(proposal_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        return {"proposal": proposal.to_dict()}
+
+    @app.post("/voice/runtime/memory/proposals/{proposal_id}/approve")
+    def voice_runtime_memory_proposal_approve(proposal_id: str) -> dict:
+        try:
+            proposal = app.state.voice_runtime.approve_memory_proposal(proposal_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return {"proposal": proposal.to_dict()}
+
+    @app.post("/voice/runtime/memory/proposals/{proposal_id}/disable")
+    def voice_runtime_memory_proposal_disable(
+        proposal_id: str,
+        payload: Optional[VoiceRuntimeMemoryProposalDisableRequest] = None,
+    ) -> dict:
+        try:
+            proposal = app.state.voice_runtime.disable_memory_proposal(
+                proposal_id,
+                reason=(payload.reason or "") if payload else "",
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        return {"proposal": proposal.to_dict()}
+
+    @app.delete("/voice/runtime/memory/proposals/{proposal_id}")
+    def voice_runtime_memory_proposal_delete(proposal_id: str) -> dict:
+        try:
+            proposal = app.state.voice_runtime.delete_memory_proposal(proposal_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        return {"proposal": proposal.to_dict()}
 
     @app.post("/tasks/{task_id}/cancel", response_model=CancelTaskResponse)
     def cancel_task(task_id: str) -> CancelTaskResponse:
