@@ -126,6 +126,21 @@ Ejemplo JSON conceptual, no codigo productivo:
 
 Campos como `id`, `created_at`, `expires_at`, `scope`, `sensitive`, `active` y `audit` son conceptuales. La forma final debe definirse en una PR posterior antes de implementar persistencia.
 
+## PR #32 — Memory proposal model
+
+Se añade un modelo local en memoria para propuestas futuras de User Understanding memory.
+
+Alcance:
+
+- No persiste propuestas.
+- No escribe memoria en disco.
+- No aplica propuestas al router.
+- No carga propuestas en runtime.
+- No cambia la conducta de JARVIS.
+- Mantiene propuestas revisables, auditables, reversibles y serializables.
+
+Este paso prepara la siguiente fase: una API de proposals en memoria. La persistencia real sigue fuera de alcance hasta que exista un flujo explicito de revision, aprobacion, auditoria y reversibilidad.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.
