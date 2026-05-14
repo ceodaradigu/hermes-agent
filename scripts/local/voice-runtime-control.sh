@@ -20,6 +20,10 @@ Comandos:
                          POST   /voice/runtime/feedback
   feedback-preview <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]
                          POST   /voice/runtime/feedback/preview
+  feedback-apply-reviewed <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]
+                         POST   /voice/runtime/feedback/apply-reviewed
+  feedback-applied-list  GET    /voice/runtime/feedback/applied
+  feedback-applied-clear DELETE /voice/runtime/feedback/applied
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -98,6 +102,14 @@ case "$COMMAND" in
     METHOD="DELETE"
     ENDPOINT="/voice/runtime/feedback"
     ;;
+  feedback-applied-list)
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/feedback/applied"
+    ;;
+  feedback-applied-clear)
+    METHOD="DELETE"
+    ENDPOINT="/voice/runtime/feedback/applied"
+    ;;
   feedback-add)
     if [[ "$#" -eq 0 ]]; then
       echo "Error: falta <original_text>." >&2
@@ -111,6 +123,26 @@ case "$COMMAND" in
     fi
     METHOD="POST"
     ENDPOINT="/voice/runtime/feedback"
+    PAYLOAD_KIND="feedback"
+    FEEDBACK_ORIGINAL_TEXT="$1"
+    FEEDBACK_INTERPRETED_INTENT="$2"
+    FEEDBACK_CORRECTED_INTENT="$3"
+    FEEDBACK_CORRECTION_NOTE="${4:-}"
+    FEEDBACK_PREFERRED_NEXT_STEP="${5:-}"
+    ;;
+  feedback-apply-reviewed)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <original_text>." >&2
+      usage
+      exit 2
+    fi
+    if [[ "$#" -lt 3 ]]; then
+      echo "Error: falta <corrected_intent>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/feedback/apply-reviewed"
     PAYLOAD_KIND="feedback"
     FEEDBACK_ORIGINAL_TEXT="$1"
     FEEDBACK_INTERPRETED_INTENT="$2"

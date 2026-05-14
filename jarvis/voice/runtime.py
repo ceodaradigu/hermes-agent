@@ -3,7 +3,12 @@ from enum import Enum
 from typing import Any
 
 from jarvis.voice.intent_router import VoiceIntentRouter
-from jarvis.voice.understanding_feedback import UserUnderstandingFeedback, UserUnderstandingFeedbackStore
+from jarvis.voice.understanding_feedback import (
+    UserUnderstandingAppliedFeedbackRule,
+    UserUnderstandingAppliedFeedbackStore,
+    UserUnderstandingFeedback,
+    UserUnderstandingFeedbackStore,
+)
 
 
 class VoiceRuntimeMode(str, Enum):
@@ -27,6 +32,7 @@ class VoiceRuntimeState:
     last_intent: dict[str, Any] | None
     wake_words: tuple[str, ...]
     feedback_count: int = 0
+    applied_feedback_count: int = 0
 
 
 class VoiceRuntime:
@@ -57,9 +63,11 @@ class VoiceRuntime:
         wake_words: tuple[str, ...] = ("jarvis", "hola jarvis"),
         intent_router: VoiceIntentRouter | None = None,
         feedback_store: UserUnderstandingFeedbackStore | None = None,
+        applied_feedback_store: UserUnderstandingAppliedFeedbackStore | None = None,
     ) -> None:
         self._intent_router = intent_router or VoiceIntentRouter()
         self._feedback_store = feedback_store or UserUnderstandingFeedbackStore()
+        self._applied_feedback_store = applied_feedback_store or UserUnderstandingAppliedFeedbackStore()
         self._state = VoiceRuntimeState(
             mode=self._coerce_mode(mode),
             enabled=enabled,
@@ -71,6 +79,7 @@ class VoiceRuntime:
             last_intent=None,
             wake_words=wake_words,
             feedback_count=self._feedback_store.count(),
+            applied_feedback_count=self._applied_feedback_store.count(),
         )
 
     def status(self) -> VoiceRuntimeState:
@@ -107,7 +116,12 @@ class VoiceRuntime:
 
     def handle_transcript(self, text: str) -> dict[str, Any]:
         self._state.last_transcript = text
-        self._state.last_intent = self._intent_router.classify(text).to_dict()
+        intent = self._intent_router.classify(text).to_dict()
+        if not intent.get("approval_required") and intent.get("status") != "requires_approval":
+            rule = self._applied_feedback_store.find_matching_intent(text)
+            if rule:
+                intent = self._apply_reviewed_feedback_rule(intent, rule)
+        self._state.last_intent = intent
         return self._state.last_intent
 
     def add_feedback(
@@ -140,6 +154,38 @@ class VoiceRuntime:
         self._feedback_store.clear()
         self._state.feedback_count = self._feedback_store.count()
 
+    def apply_reviewed_feedback(
+        self,
+        *,
+        original_text: str,
+        corrected_intent: str,
+        interpreted_intent: str | None = None,
+        correction_note: str | None = None,
+        preferred_next_step: str | None = None,
+        confidence_before: str | None = None,
+    ) -> UserUnderstandingAppliedFeedbackRule:
+        feedback = UserUnderstandingFeedback(
+            original_text=original_text,
+            interpreted_intent=interpreted_intent,
+            corrected_intent=corrected_intent,
+            correction_note=correction_note,
+            preferred_next_step=preferred_next_step,
+            confidence_before=confidence_before,
+            source="user_reviewed_feedback",
+            applied_persistently=False,
+            requires_review=False,
+        )
+        rule = self._applied_feedback_store.apply_feedback(feedback)
+        self._state.applied_feedback_count = self._applied_feedback_store.count()
+        return rule
+
+    def list_applied_feedback(self) -> list[UserUnderstandingAppliedFeedbackRule]:
+        return self._applied_feedback_store.list_rules()
+
+    def clear_applied_feedback(self) -> None:
+        self._applied_feedback_store.clear()
+        self._state.applied_feedback_count = self._applied_feedback_store.count()
+
     @staticmethod
     def _coerce_mode(mode: VoiceRuntimeMode | str) -> VoiceRuntimeMode:
         if isinstance(mode, VoiceRuntimeMode):
@@ -154,3 +200,31 @@ class VoiceRuntime:
     @staticmethod
     def _normalize_text(text: str) -> str:
         return " ".join(text.strip().lower().split())
+
+    @staticmethod
+    def _apply_reviewed_feedback_rule(
+        intent: dict[str, Any],
+        rule: UserUnderstandingAppliedFeedbackRule,
+    ) -> dict[str, Any]:
+        corrected_intent = rule.corrected_intent
+        corrected = dict(intent)
+        corrected["intent"] = corrected_intent
+        corrected["executed"] = False
+        corrected["confidence"] = "high"
+        corrected["needs_clarification"] = False
+        corrected["approval_required"] = corrected_intent == "requires_approval"
+        corrected["status"] = "requires_approval" if corrected["approval_required"] else "pending"
+        corrected["reason"] = (
+            "Applied temporary reviewed feedback rule from David; no persistent learning "
+            f"or real execution occurred. {rule.reason}"
+        )
+        corrected["recommended_next_step"] = (
+            "Prepare a non-executing proposal for the corrected intent."
+        )
+        signals = dict(corrected.get("user_context_signals") or {})
+        signals["reviewed_feedback_applied"] = True
+        corrected["user_context_signals"] = signals
+        slots = dict(corrected.get("slots") or {})
+        slots["applied_feedback_rule"] = rule.to_dict()
+        corrected["slots"] = slots
+        return corrected

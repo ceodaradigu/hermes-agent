@@ -11,7 +11,12 @@ from jarvis.voice.intent_router import (
     VoiceUserLanguageProfile,
 )
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeMode, VoiceRuntimeState
-from jarvis.voice.understanding_feedback import UserUnderstandingFeedback, UserUnderstandingFeedbackStore
+from jarvis.voice.understanding_feedback import (
+    UserUnderstandingAppliedFeedbackRule,
+    UserUnderstandingAppliedFeedbackStore,
+    UserUnderstandingFeedback,
+    UserUnderstandingFeedbackStore,
+)
 from jarvis.voice.feedback_preview import (
     UserUnderstandingFeedbackPreview,
     create_feedback_preview,
@@ -36,6 +41,8 @@ __all__ = [
     "DavidUnderstandingProfile",
     "UserUnderstandingFeedback",
     "UserUnderstandingFeedbackStore",
+    "UserUnderstandingAppliedFeedbackRule",
+    "UserUnderstandingAppliedFeedbackStore",
     "UserUnderstandingFeedbackPreview",
     "create_feedback_preview",
     "preview_user_understanding_feedback",

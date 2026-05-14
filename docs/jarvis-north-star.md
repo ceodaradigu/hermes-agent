@@ -100,6 +100,7 @@ Nunca debe ejecutar automáticamente:
 - mejorar clasificación de intención con feedback.
 
 El aprendizaje debe empezar por feedback explícito, controlado y revisable antes de cualquier memoria automática.
+El aprendizaje aplicado debe empezar como reglas revisadas, explícitas, temporales y auditables antes de cualquier memoria persistente.
 
 ### No permitido sin diseño explícito
 - aprender de forma opaca.

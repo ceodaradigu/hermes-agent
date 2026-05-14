@@ -159,6 +159,7 @@ def _voice_runtime_state_payload(state: VoiceRuntimeState) -> dict:
         "last_intent": state.last_intent,
         "wake_words": list(state.wake_words),
         "feedback_count": state.feedback_count,
+        "applied_feedback_count": state.applied_feedback_count,
     }
 
 
@@ -471,6 +472,46 @@ def create_app(
             "applied": preview["applied"],
             "requires_review": preview["requires_review"],
             "feedback_count": app.state.voice_runtime.status().feedback_count,
+        }
+
+    @app.post("/voice/runtime/feedback/apply-reviewed")
+    def voice_runtime_feedback_apply_reviewed(payload: VoiceRuntimeFeedbackRequest) -> dict:
+        original_text = payload.original_text.strip()
+        corrected_intent = payload.corrected_intent.strip()
+        if not original_text:
+            raise HTTPException(status_code=400, detail="original_text must be non-empty")
+        if not corrected_intent:
+            raise HTTPException(status_code=400, detail="corrected_intent must be non-empty")
+
+        rule = app.state.voice_runtime.apply_reviewed_feedback(
+            original_text=original_text,
+            interpreted_intent=payload.interpreted_intent,
+            corrected_intent=corrected_intent,
+            correction_note=payload.correction_note,
+            preferred_next_step=payload.preferred_next_step,
+            confidence_before=payload.confidence_before,
+        )
+        return {
+            "applied_rule": rule.to_dict(),
+            "applied_feedback_count": app.state.voice_runtime.status().applied_feedback_count,
+            "applied_persistently": False,
+        }
+
+    @app.get("/voice/runtime/feedback/applied")
+    def voice_runtime_feedback_applied_list() -> dict:
+        rules = [rule.to_dict() for rule in app.state.voice_runtime.list_applied_feedback()]
+        return {
+            "applied_rules": rules,
+            "applied_feedback_count": len(rules),
+            "applied_persistently": False,
+        }
+
+    @app.delete("/voice/runtime/feedback/applied")
+    def voice_runtime_feedback_applied_clear() -> dict:
+        app.state.voice_runtime.clear_applied_feedback()
+        return {
+            "applied_feedback_count": app.state.voice_runtime.status().applied_feedback_count,
+            "applied_persistently": False,
         }
 
     @app.delete("/voice/runtime/feedback")
