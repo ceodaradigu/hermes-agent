@@ -134,7 +134,18 @@ Primero puedes consultar el feedback actual:
 ./scripts/local/voice-runtime-control.sh feedback-list
 ```
 
-Para enviar una corrección completa, usa `curl` contra `POST /voice/runtime/feedback`:
+Para enviar una corrección completa, usa el comando local `feedback-add`:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-add \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+Como alternativa, puedes usar `curl` directamente contra `POST /voice/runtime/feedback`:
 
 ```bash
 curl -s -X POST "http://127.0.0.1:8000/voice/runtime/feedback" \

@@ -84,6 +84,17 @@ curl -s -X POST "http://127.0.0.1:8000/voice/runtime/feedback" \
   }'
 ```
 
+También puedes guardar el mismo feedback temporal con el CLI local:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-add \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
 Respuesta esperada a alto nivel:
 
 ```json
