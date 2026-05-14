@@ -14,11 +14,13 @@ from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
+from jarvis.voice.feedback_preview import preview_user_understanding_feedback
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
+from jarvis.voice.understanding_feedback import UserUnderstandingFeedback
 
 
 class CreateTaskRequest(BaseModel):
@@ -66,6 +68,15 @@ class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
     corrected_intent: str
+    correction_note: Optional[str] = None
+    preferred_next_step: Optional[str] = None
+    confidence_before: Optional[str] = None
+
+
+class VoiceRuntimeFeedbackPreviewRequest(BaseModel):
+    original_text: Optional[str] = None
+    interpreted_intent: Optional[str] = None
+    corrected_intent: Optional[str] = None
     correction_note: Optional[str] = None
     preferred_next_step: Optional[str] = None
     confidence_before: Optional[str] = None
@@ -433,6 +444,33 @@ def create_app(
             "feedback": feedback.to_dict(),
             "feedback_count": app.state.voice_runtime.status().feedback_count,
             "applied_persistently": feedback.applied_persistently,
+        }
+
+    @app.post("/voice/runtime/feedback/preview")
+    def voice_runtime_feedback_preview(payload: VoiceRuntimeFeedbackPreviewRequest) -> dict:
+        original_text = (payload.original_text or "").strip()
+        corrected_intent = (payload.corrected_intent or "").strip()
+        if not original_text:
+            raise HTTPException(status_code=400, detail="original_text must be non-empty")
+        if not corrected_intent:
+            raise HTTPException(status_code=400, detail="corrected_intent must be non-empty")
+
+        feedback = UserUnderstandingFeedback(
+            original_text=original_text,
+            interpreted_intent=payload.interpreted_intent,
+            corrected_intent=corrected_intent,
+            correction_note=payload.correction_note,
+            preferred_next_step=payload.preferred_next_step,
+            confidence_before=payload.confidence_before,
+            applied_persistently=False,
+            requires_review=True,
+        )
+        preview = preview_user_understanding_feedback(feedback).to_dict()
+        return {
+            "preview": preview,
+            "applied": preview["applied"],
+            "requires_review": preview["requires_review"],
+            "feedback_count": app.state.voice_runtime.status().feedback_count,
         }
 
     @app.delete("/voice/runtime/feedback")
