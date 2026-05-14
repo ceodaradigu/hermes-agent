@@ -60,6 +60,8 @@ Para la guía específica de operación de GPT-SoVITS como sidecar local o servi
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
 
+Voice Runtime CLI full-flow smoke test: guía para validar el flujo local status → start → control → transcript → feedback → clear feedback con los scripts locales, sin micrófono real ni ejecución de tareas, en `docs/integrations/voice-runtime-cli-full-flow-smoke-test.md`.
+
 GPT-SoVITS local WSL runbook: guía validada para instalar, arrancar y probar GPT-SoVITS como sidecar local de voz para JARVIS en `docs/integrations/gpt-sovits-wsl-local-runbook.md`.
 
 Helper local GPT-SoVITS: `scripts/local/start-jarvis-gpt-sovits.sh` arranca JARVIS con defaults locales seguros apuntando al sidecar ya levantado.
