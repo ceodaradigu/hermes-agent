@@ -31,6 +31,17 @@ curl -s -X POST "http://127.0.0.1:8000/voice/runtime/feedback/preview" \
   }'
 ```
 
+Tambien puede probarse desde el CLI local sin escribir el `curl` completo:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-preview \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
 Respuesta esperada, abreviada:
 
 ```json
