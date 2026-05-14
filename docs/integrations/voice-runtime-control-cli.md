@@ -51,6 +51,26 @@ scripts/local/voice-runtime-control.sh feedback-list
 scripts/local/voice-runtime-control.sh feedback-clear
 ```
 
+Previsualizar una corrección de entendimiento sin guardarla ni aplicarla:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-preview \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+`interpreted_intent` puede pasarse como cadena vacía:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-preview \
+  "monta algo para probar este nicho" \
+  "" \
+  "create_mission"
+```
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -63,5 +83,6 @@ scripts/local/voice-runtime-control.sh feedback-clear
 | `transcript <text>` | `POST` | `/voice/runtime/transcript` |
 | `feedback-list` | `GET` | `/voice/runtime/feedback` |
 | `feedback-clear` | `DELETE` | `/voice/runtime/feedback` |
+| `feedback-preview <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]` | `POST` | `/voice/runtime/feedback/preview` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.
