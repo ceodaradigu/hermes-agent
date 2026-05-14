@@ -17,6 +17,16 @@ Garantías actuales:
 - Devuelve siempre `requires_review=true`.
 - Respeta `docs/jarvis-north-star.md`: aprendizaje explícito, revisable y sin automatismos opacos.
 
+## Diferencia entre acciones de feedback
+
+- `feedback-preview` (`POST /voice/runtime/feedback/preview`): analiza una corrección, no guarda feedback y no aplica ninguna regla.
+- `feedback-add` (`POST /voice/runtime/feedback`): guarda feedback temporal en memoria para revisión, pero no cambia la clasificación del router.
+- `feedback-apply-reviewed` (`POST /voice/runtime/feedback/apply-reviewed`): aplica una regla temporal revisada en memoria durante la vida del proceso.
+- `feedback-applied-list` (`GET /voice/runtime/feedback/applied`): lista las reglas temporales aplicadas.
+- `feedback-applied-clear` (`DELETE /voice/runtime/feedback/applied`): limpia las reglas temporales aplicadas.
+
+Las reglas aplicadas siguen devolviendo `applied_persistently=false`, no escriben memoria en disco y no saltan aprobaciones. Si una transcripción contiene términos sensibles como `.env` o `password`, `requires_approval` gana aunque exista una regla temporal que coincida.
+
 ## Ejemplo con curl
 
 ```bash
@@ -79,3 +89,24 @@ preview = create_feedback_preview(feedback).to_dict()
 ```
 
 El preview sugiere que `"probar este nicho"` puede pertenecer a `intent_aliases` para `create_mission`, pero no aprende, no guarda y no aplica esa sugerencia.
+
+## Aplicar feedback revisado de forma temporal
+
+Cuando David ya ha revisado la corrección y quiere probarla solo en la sesión actual:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-apply-reviewed \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+Después, durante ese mismo proceso:
+
+```bash
+scripts/local/voice-runtime-control.sh transcript "monta algo para probar este nicho"
+```
+
+Resultado esperado: la intención corregida es `create_mission`, `executed=false`, `status=pending` y la razón indica que se aplicó una regla temporal revisada por David. No se crea ninguna misión real.

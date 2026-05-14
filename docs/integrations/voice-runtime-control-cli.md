@@ -93,6 +93,28 @@ scripts/local/voice-runtime-control.sh feedback-preview \
   "create_mission"
 ```
 
+Aplicar una corrección revisada como regla temporal en memoria:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-apply-reviewed \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+`feedback-apply-reviewed` llama a `POST /voice/runtime/feedback/apply-reviewed`. La regla solo vive en memoria durante el proceso, devuelve `applied_persistently=false` y puede corregir transcripciones posteriores que contengan el alias sugerido, por ejemplo `"probar este nicho"`.
+
+Listar o limpiar reglas temporales aplicadas:
+
+```bash
+scripts/local/voice-runtime-control.sh feedback-applied-list
+scripts/local/voice-runtime-control.sh feedback-applied-clear
+```
+
+`feedback-applied-clear` elimina las reglas aplicadas sin tocar el buffer de `feedback-add`.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -107,5 +129,8 @@ scripts/local/voice-runtime-control.sh feedback-preview \
 | `feedback-clear` | `DELETE` | `/voice/runtime/feedback` |
 | `feedback-add <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]` | `POST` | `/voice/runtime/feedback` |
 | `feedback-preview <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]` | `POST` | `/voice/runtime/feedback/preview` |
+| `feedback-apply-reviewed <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]` | `POST` | `/voice/runtime/feedback/apply-reviewed` |
+| `feedback-applied-list` | `GET` | `/voice/runtime/feedback/applied` |
+| `feedback-applied-clear` | `DELETE` | `/voice/runtime/feedback/applied` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.

@@ -12,8 +12,11 @@ Esta guía cubre:
 - `POST /voice/runtime/transcript`
 - `POST /voice/runtime/feedback`
 - `POST /voice/runtime/feedback/preview`
+- `POST /voice/runtime/feedback/apply-reviewed`
 - `GET /voice/runtime/feedback`
 - `DELETE /voice/runtime/feedback`
+- `GET /voice/runtime/feedback/applied`
+- `DELETE /voice/runtime/feedback/applied`
 
 El objetivo funcional es comprobar el recorrido local `status -> start -> control -> transcript -> feedback -> clear feedback` con respuestas JSON observables. El flujo respeta `docs/jarvis-north-star.md`: la voz debe ayudar a entender mejor a David, pero sin saltarse controles, sin aprendizaje opaco y sin ejecutar acciones sensibles automáticamente.
 
@@ -39,7 +42,7 @@ Importante:
 - No hay audio playback.
 - El frontend no es obligatorio.
 
-Nota: existe `POST /voice/runtime/feedback/preview` para previsualizar cómo una corrección podría influir en el perfil de entendimiento en el futuro. Ese endpoint solo analiza, devuelve `applied=false` y `requires_review=true`, no guarda feedback y no incrementa `feedback_count`. El flujo full-flow principal de esta guía sigue usando `POST /voice/runtime/feedback`, que guarda feedback real temporal en memoria para poder listar y limpiar el buffer durante el smoke test.
+Nota: existe `POST /voice/runtime/feedback/preview` para previsualizar cómo una corrección podría influir en el perfil de entendimiento en el futuro. Ese endpoint solo analiza, devuelve `applied=false` y `requires_review=true`, no guarda feedback y no incrementa `feedback_count`. `POST /voice/runtime/feedback` guarda feedback temporal para revisión, pero no aplica nada. Solo `POST /voice/runtime/feedback/apply-reviewed` aplica una regla temporal en memoria, tras una acción explícita de David.
 
 ## 1. Arrancar JARVIS local
 
@@ -203,6 +206,64 @@ Verificación opcional:
 ./scripts/local/voice-runtime-control.sh feedback-list
 ```
 
+## 9b. Flujo opcional de feedback revisado aplicado
+
+Previsualiza la corrección sin guardar ni aplicar:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-preview \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+Guarda feedback temporal para revisión sin aplicarlo:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-add \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+Aplica explícitamente la regla revisada solo en memoria:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-apply-reviewed \
+  "monta algo para probar este nicho" \
+  "create_asset" \
+  "create_mission" \
+  "Cuando hablo de probar un nicho, normalmente quiero una misión de validación primero." \
+  "Crear misión de validación antes de crear landing."
+```
+
+Comprueba el transcript corregido:
+
+```bash
+./scripts/local/voice-runtime-control.sh transcript "monta algo para probar este nicho"
+```
+
+Resultado esperado:
+
+- `intent=create_mission`.
+- `status=pending`.
+- `executed=false`.
+- `user_context_signals.reviewed_feedback_applied=true`.
+- No se crea ninguna misión real.
+
+Listar y limpiar reglas temporales aplicadas:
+
+```bash
+./scripts/local/voice-runtime-control.sh feedback-applied-list
+./scripts/local/voice-runtime-control.sh feedback-applied-clear
+```
+
+Después de limpiar, `feedback-applied-list` debe devolver `applied_feedback_count=0`.
+
 ## 10. Volver a wake-word-only
 
 ```bash
@@ -229,6 +290,12 @@ Resultado esperado:
 - [ ] `feedback_count` sube después del `POST /voice/runtime/feedback`.
 - [ ] `feedback-list` muestra la corrección enviada.
 - [ ] `feedback-clear` borra el buffer en memoria.
+- [ ] `feedback-preview` no guarda ni aplica reglas.
+- [ ] `feedback-add` guarda feedback temporal pero no aplica reglas.
+- [ ] `feedback-apply-reviewed` aplica una regla temporal revisada en memoria.
+- [ ] El transcript corregido mantiene `executed=false`.
+- [ ] `feedback-applied-list` muestra reglas temporales aplicadas.
+- [ ] `feedback-applied-clear` limpia las reglas temporales aplicadas.
 - [ ] `control "jarvis no escuches"` vuelve a `mode=wake_word`.
 - [ ] No se ejecutan tareas reales.
 - [ ] No se crean misiones reales.

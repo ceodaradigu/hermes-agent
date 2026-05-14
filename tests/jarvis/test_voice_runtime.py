@@ -124,3 +124,54 @@ def test_handle_transcript_stores_transcript_without_executing_real_work():
     assert result["intent"] == "create_asset"
     assert result["transcript"] == "crea una landing"
     assert result["executed"] is False
+
+
+def test_apply_reviewed_feedback_changes_matching_transcript_without_execution():
+    runtime = VoiceRuntime()
+    runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+        correction_note="Primero quiero validación.",
+    )
+
+    result = runtime.handle_transcript("monta algo para probar este nicho")
+
+    assert result["status"] == "pending"
+    assert result["intent"] == "create_mission"
+    assert result["executed"] is False
+    assert result["approval_required"] is False
+    assert result["user_context_signals"]["reviewed_feedback_applied"] is True
+    assert "temporary reviewed feedback rule from David" in result["reason"]
+
+
+def test_sensitive_terms_keep_requires_approval_with_applied_feedback():
+    runtime = VoiceRuntime()
+    runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+
+    result = runtime.handle_transcript("monta algo para probar este nicho y usa el password del .env")
+
+    assert result["status"] == "requires_approval"
+    assert result["intent"] == "requires_approval"
+    assert result["approval_required"] is True
+    assert result["executed"] is False
+    assert "reviewed_feedback_applied" not in result["user_context_signals"]
+
+
+def test_applied_rules_are_process_local_to_runtime_instance():
+    runtime = VoiceRuntime()
+    runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+
+    fresh_runtime = VoiceRuntime()
+
+    assert runtime.status().applied_feedback_count == 1
+    assert fresh_runtime.status().applied_feedback_count == 0
+    assert fresh_runtime.handle_transcript("monta algo para probar este nicho")["intent"] == "create_asset"
