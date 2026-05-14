@@ -56,6 +56,8 @@ Always-on local voice runtime: diseño futuro para wake word, STT multidioma, TT
 
 David Understanding Profile: capa futura para que JARVIS aprenda progresivamente cómo piensa, decide, habla, prioriza y monetiza David, manteniendo privacidad, transparencia, aclaraciones cuando haya baja confianza y ApprovalGateway para acciones sensibles.
 
+User Understanding persistent memory design: diseño futuro para pasar de feedback temporal revisado a memoria persistente aprobada, auditable y reversible, manteniendo privacidad, ApprovalGateway, PolicyEngine y la North Star en `docs/roadmap/user-understanding-persistent-memory.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
