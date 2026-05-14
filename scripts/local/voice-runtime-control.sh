@@ -16,6 +16,8 @@ Comandos:
   transcript <text>      POST   /voice/runtime/transcript
   feedback-list          GET    /voice/runtime/feedback
   feedback-clear         DELETE /voice/runtime/feedback
+  feedback-add <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]
+                         POST   /voice/runtime/feedback
   feedback-preview <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]
                          POST   /voice/runtime/feedback/preview
 
@@ -96,6 +98,26 @@ case "$COMMAND" in
     METHOD="DELETE"
     ENDPOINT="/voice/runtime/feedback"
     ;;
+  feedback-add)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <original_text>." >&2
+      usage
+      exit 2
+    fi
+    if [[ "$#" -lt 3 ]]; then
+      echo "Error: falta <corrected_intent>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/feedback"
+    PAYLOAD_KIND="feedback"
+    FEEDBACK_ORIGINAL_TEXT="$1"
+    FEEDBACK_INTERPRETED_INTENT="$2"
+    FEEDBACK_CORRECTED_INTENT="$3"
+    FEEDBACK_CORRECTION_NOTE="${4:-}"
+    FEEDBACK_PREFERRED_NEXT_STEP="${5:-}"
+    ;;
   feedback-preview)
     if [[ "$#" -eq 0 ]]; then
       echo "Error: falta <original_text>." >&2
@@ -144,7 +166,7 @@ feedback_preferred_next_step = sys.argv[10]
 
 data = None
 headers = {}
-if payload_kind == "feedback-preview":
+if payload_kind in {"feedback", "feedback-preview"}:
     payload = {
         "original_text": feedback_original_text,
         "interpreted_intent": feedback_interpreted_intent,
