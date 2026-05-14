@@ -11,6 +11,7 @@ Esta guía cubre:
 - `POST /voice/runtime/control`
 - `POST /voice/runtime/transcript`
 - `POST /voice/runtime/feedback`
+- `POST /voice/runtime/feedback/preview`
 - `GET /voice/runtime/feedback`
 - `DELETE /voice/runtime/feedback`
 
@@ -37,6 +38,8 @@ Importante:
 - No hay STT real.
 - No hay audio playback.
 - El frontend no es obligatorio.
+
+Nota: existe `POST /voice/runtime/feedback/preview` para previsualizar cómo una corrección podría influir en el perfil de entendimiento en el futuro. Ese endpoint solo analiza, devuelve `applied=false` y `requires_review=true`, no guarda feedback y no incrementa `feedback_count`. El flujo full-flow principal de esta guía sigue usando `POST /voice/runtime/feedback`, que guarda feedback real temporal en memoria para poder listar y limpiar el buffer durante el smoke test.
 
 ## 1. Arrancar JARVIS local
 
