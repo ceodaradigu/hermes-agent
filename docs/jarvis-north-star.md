@@ -101,6 +101,7 @@ Nunca debe ejecutar automáticamente:
 
 El aprendizaje debe empezar por feedback explícito, controlado y revisable antes de cualquier memoria automática.
 El aprendizaje aplicado debe empezar como reglas revisadas, explícitas, temporales y auditables antes de cualquier memoria persistente.
+La memoria persistente futura debe empezar como propuestas revisadas, aprobadas explícitamente, auditables y reversibles. Ninguna memoria aprendida puede saltarse PolicyEngine, ApprovalGateway ni los límites sensibles.
 
 ### No permitido sin diseño explícito
 - aprender de forma opaca.
