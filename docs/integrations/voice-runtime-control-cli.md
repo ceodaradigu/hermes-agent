@@ -115,6 +115,68 @@ scripts/local/voice-runtime-control.sh feedback-applied-clear
 
 `feedback-applied-clear` elimina las reglas aplicadas sin tocar el buffer de `feedback-add`.
 
+## Memory proposal commands
+
+Listar propuestas de memoria User Understanding en memoria:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-proposals
+```
+
+Crear una propuesta desde feedback revisado:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-propose-from-feedback \
+  "monta algo para probar este nicho" \
+  "create_mission" \
+  "probar este nicho" \
+  "David reviso que probar un nicho debe empezar como mision de validacion."
+```
+
+`memory-propose-from-feedback` llama a `POST /voice/runtime/memory/proposals/from-applied-feedback` con `source=user_reviewed_feedback` y `applied_persistently=false`.
+
+Consultar una propuesta por id:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-proposal ump_123
+```
+
+Marcar una propuesta como revisada:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-review ump_123
+```
+
+Aprobar una propuesta:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-approve ump_123
+scripts/local/voice-runtime-control.sh memory-approve ump_123 David
+```
+
+Si no se pasa `approved_by`, el CLI usa `David`. La aprobacion solo cambia el estado de la propuesta en memoria; no aplica memoria al router ni al runtime.
+
+Desactivar una propuesta:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-disable ump_123
+scripts/local/voice-runtime-control.sh memory-disable ump_123 "Ya no aplica."
+```
+
+Eliminar una propuesta:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-delete ump_123
+```
+
+Limpiar todas las propuestas:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-clear
+```
+
+Estos comandos gestionan proposals en memoria durante la vida del proceso. No persisten, no escriben memoria en disco y no cambian el comportamiento de `transcript`.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -132,5 +194,13 @@ scripts/local/voice-runtime-control.sh feedback-applied-clear
 | `feedback-apply-reviewed <original_text> <interpreted_intent> <corrected_intent> [correction_note] [preferred_next_step]` | `POST` | `/voice/runtime/feedback/apply-reviewed` |
 | `feedback-applied-list` | `GET` | `/voice/runtime/feedback/applied` |
 | `feedback-applied-clear` | `DELETE` | `/voice/runtime/feedback/applied` |
+| `memory-proposals` | `GET` | `/voice/runtime/memory/proposals` |
+| `memory-propose-from-feedback <original_text> <corrected_intent> [suggested_alias] [reason]` | `POST` | `/voice/runtime/memory/proposals/from-applied-feedback` |
+| `memory-proposal <proposal_id>` | `GET` | `/voice/runtime/memory/proposals/{proposal_id}` |
+| `memory-review <proposal_id>` | `POST` | `/voice/runtime/memory/proposals/{proposal_id}/review` |
+| `memory-approve <proposal_id> [approved_by]` | `POST` | `/voice/runtime/memory/proposals/{proposal_id}/approve` |
+| `memory-disable <proposal_id> [reason]` | `POST` | `/voice/runtime/memory/proposals/{proposal_id}/disable` |
+| `memory-delete <proposal_id>` | `DELETE` | `/voice/runtime/memory/proposals/{proposal_id}` |
+| `memory-clear` | `DELETE` | `/voice/runtime/memory/proposals` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.

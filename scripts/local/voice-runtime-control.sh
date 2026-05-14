@@ -24,6 +24,20 @@ Comandos:
                          POST   /voice/runtime/feedback/apply-reviewed
   feedback-applied-list  GET    /voice/runtime/feedback/applied
   feedback-applied-clear DELETE /voice/runtime/feedback/applied
+  memory-proposals       GET    /voice/runtime/memory/proposals
+  memory-propose-from-feedback <original_text> <corrected_intent> [suggested_alias] [reason]
+                         POST   /voice/runtime/memory/proposals/from-applied-feedback
+  memory-proposal <proposal_id>
+                         GET    /voice/runtime/memory/proposals/{proposal_id}
+  memory-review <proposal_id>
+                         POST   /voice/runtime/memory/proposals/{proposal_id}/review
+  memory-approve <proposal_id> [approved_by]
+                         POST   /voice/runtime/memory/proposals/{proposal_id}/approve
+  memory-disable <proposal_id> [reason]
+                         POST   /voice/runtime/memory/proposals/{proposal_id}/disable
+  memory-delete <proposal_id>
+                         DELETE /voice/runtime/memory/proposals/{proposal_id}
+  memory-clear           DELETE /voice/runtime/memory/proposals
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -47,6 +61,11 @@ FEEDBACK_INTERPRETED_INTENT=""
 FEEDBACK_CORRECTED_INTENT=""
 FEEDBACK_CORRECTION_NOTE=""
 FEEDBACK_PREFERRED_NEXT_STEP=""
+MEMORY_ORIGINAL_TEXT=""
+MEMORY_CORRECTED_INTENT=""
+MEMORY_SUGGESTED_ALIAS=""
+MEMORY_REASON=""
+MEMORY_APPROVED_BY=""
 
 case "$COMMAND" in
   status)
@@ -170,6 +189,82 @@ case "$COMMAND" in
     FEEDBACK_CORRECTION_NOTE="${4:-}"
     FEEDBACK_PREFERRED_NEXT_STEP="${5:-}"
     ;;
+  memory-proposals)
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/memory/proposals"
+    ;;
+  memory-propose-from-feedback)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <original_text>." >&2
+      usage
+      exit 2
+    fi
+    if [[ "$#" -lt 2 ]]; then
+      echo "Error: falta <corrected_intent>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/proposals/from-applied-feedback"
+    PAYLOAD_KIND="memory-from-feedback"
+    MEMORY_ORIGINAL_TEXT="$1"
+    MEMORY_CORRECTED_INTENT="$2"
+    MEMORY_SUGGESTED_ALIAS="${3:-}"
+    MEMORY_REASON="${4:-}"
+    ;;
+  memory-proposal)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/memory/proposals/$1"
+    ;;
+  memory-review)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/proposals/$1/review"
+    ;;
+  memory-approve)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/proposals/$1/approve"
+    PAYLOAD_KIND="memory-approve"
+    MEMORY_APPROVED_BY="${2:-David}"
+    ;;
+  memory-disable)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/proposals/$1/disable"
+    PAYLOAD_KIND="memory-disable"
+    MEMORY_REASON="${2:-}"
+    ;;
+  memory-delete)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="DELETE"
+    ENDPOINT="/voice/runtime/memory/proposals/$1"
+    ;;
+  memory-clear)
+    METHOD="DELETE"
+    ENDPOINT="/voice/runtime/memory/proposals"
+    ;;
   *)
     echo "Error: comando desconocido: $COMMAND" >&2
     usage
@@ -179,7 +274,9 @@ esac
 
 python - "$JARVIS_BASE_URL" "$METHOD" "$ENDPOINT" "$PAYLOAD_KIND" "$PAYLOAD_VALUE" \
   "$FEEDBACK_ORIGINAL_TEXT" "$FEEDBACK_INTERPRETED_INTENT" "$FEEDBACK_CORRECTED_INTENT" \
-  "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" <<'PY'
+  "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" \
+  "$MEMORY_ORIGINAL_TEXT" "$MEMORY_CORRECTED_INTENT" "$MEMORY_SUGGESTED_ALIAS" \
+  "$MEMORY_REASON" "$MEMORY_APPROVED_BY" <<'PY'
 import json
 import sys
 import urllib.error
@@ -195,6 +292,11 @@ feedback_interpreted_intent = sys.argv[7]
 feedback_corrected_intent = sys.argv[8]
 feedback_correction_note = sys.argv[9]
 feedback_preferred_next_step = sys.argv[10]
+memory_original_text = sys.argv[11]
+memory_corrected_intent = sys.argv[12]
+memory_suggested_alias = sys.argv[13]
+memory_reason = sys.argv[14]
+memory_approved_by = sys.argv[15]
 
 data = None
 headers = {}
@@ -208,6 +310,28 @@ if payload_kind in {"feedback", "feedback-preview"}:
         payload["correction_note"] = feedback_correction_note
     if feedback_preferred_next_step:
         payload["preferred_next_step"] = feedback_preferred_next_step
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-from-feedback":
+    payload = {
+        "original_text": memory_original_text,
+        "corrected_intent": memory_corrected_intent,
+        "source": "user_reviewed_feedback",
+        "applied_persistently": False,
+    }
+    if memory_suggested_alias:
+        payload["suggested_alias"] = memory_suggested_alias
+    if memory_reason:
+        payload["reason"] = memory_reason
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-approve":
+    data = json.dumps({"approved_by": memory_approved_by or "David"}).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-disable":
+    payload = {}
+    if memory_reason:
+        payload["reason"] = memory_reason
     data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"
 elif payload_kind != "none":

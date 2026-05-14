@@ -166,6 +166,18 @@ Alcance:
 
 Este paso prepara el siguiente flujo de revision: review workflow/CLI para inspeccionar, aprobar, desactivar y eliminar propuestas antes de disenar persistencia.
 
+## PR #34 — Memory proposals CLI
+
+Se anaden comandos locales en `scripts/local/voice-runtime-control.sh` para gestionar propuestas de User Understanding memory en memoria.
+
+Alcance:
+
+- No persiste propuestas.
+- `approve` solo cambia el estado del proposal.
+- `approve` no aplica memoria al router/runtime.
+- No cambia comportamiento de transcript.
+- Prepara un review workflow humano para listar, crear, revisar, aprobar, desactivar, eliminar y limpiar proposals antes de disenar persistencia.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.
