@@ -218,7 +218,6 @@ Alcance:
 - Propuestas sensibles `active` o `approved` se rechazan.
 - Import no aplica memoria al router/runtime.
 - Import no cambia transcript ni clasificacion.
-- Prepara persistencia local opt-in futura.
 
 ## PR #38 — Memory snapshot CLI
 
@@ -244,6 +243,10 @@ PR #39 documenta el smoke test real del CLI de memory snapshots y confirma que e
 ## PR #40 — Local persistence opt-in design
 
 PR #40 documenta la futura persistencia local opt-in para memory snapshots. No implementa escritura/lectura de archivos. Define ubicacion propuesta, seguridad, auditoria, reversibilidad y roadmap antes de cualquier persistencia real.
+
+## PR #41 — Local path resolver + guardrails
+
+PR #41 prepara resolucion de rutas locales seguras sin I/O como paso previo a persistencia opt-in.
 
 ## 8. Reglas anti-autoengano
 
