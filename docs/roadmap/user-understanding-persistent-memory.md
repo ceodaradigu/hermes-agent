@@ -182,6 +182,24 @@ Alcance:
 
 PR #35 documenta el smoke test real del CLI de memory proposals y confirma que aprobar proposals todavía no cambia el runtime ni persiste memoria.
 
+## PR #36 — JSON snapshot model
+
+Se anade un modelo de snapshot JSON serializable para exportar e importar propuestas de User Understanding memory en memoria.
+
+Alcance:
+
+- Export/import funciona solo desde objeto, dict o string JSON recibido explicitamente.
+- No escribe archivos.
+- No lee archivos.
+- No persiste propuestas.
+- No aplica memoria al router/runtime.
+- No cambia clasificacion de transcript.
+- Snapshots exportados se marcan con `persisted: false`.
+- Snapshots importados con `persisted: true` se rechazan para evitar tratar datos persistidos o externos como fuente controlada.
+- Propuestas sensibles `active` o `approved` no pueden importarse activas.
+
+Este paso prepara la siguiente fase: persistencia local opt-in con auditoria, revision explicita y reglas de seguridad antes de cargar memoria en runtime.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.

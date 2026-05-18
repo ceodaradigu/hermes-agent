@@ -1,9 +1,11 @@
+import builtins
 import json
 
 import pytest
 
 from jarvis.voice import (
     UserUnderstandingAppliedFeedbackRule,
+    UserUnderstandingMemorySnapshot,
     UserUnderstandingMemoryProposalStore,
     UserUnderstandingMemoryStatus,
     VoiceIntentRouter,
@@ -187,3 +189,184 @@ def test_memory_proposals_are_not_persistent_between_new_stores():
 
     assert store.count() == 1
     assert fresh_store.count() == 0
+
+
+def test_export_snapshot_empty_store():
+    store = UserUnderstandingMemoryProposalStore()
+
+    snapshot = store.export_snapshot()
+
+    assert snapshot.version == 1
+    assert snapshot.proposals == []
+    assert snapshot.proposal_count == 0
+    assert snapshot.active_count == 0
+    assert snapshot.sensitive_count == 0
+    assert snapshot.source == "user_understanding_memory_proposal_store"
+    assert snapshot.persisted is False
+
+
+def test_export_snapshot_counts_proposals_active_and_sensitive():
+    store = UserUnderstandingMemoryProposalStore()
+    active_proposal = store.propose_from_feedback_rule(_rule())
+    store.approve(active_proposal.id)
+    sensitive_proposal = store.propose_from_feedback_rule(
+        _rule(
+            original_text="usa el token del .env",
+            corrected_intent="requires_approval",
+            suggested_alias="token del .env",
+        )
+    )
+
+    snapshot = store.export_snapshot()
+
+    assert snapshot.proposal_count == 2
+    assert snapshot.active_count == 1
+    assert snapshot.sensitive_count == 1
+    assert sensitive_proposal.sensitive is True
+
+
+def test_snapshot_to_json_produces_valid_json():
+    store = UserUnderstandingMemoryProposalStore()
+    proposal = store.propose_from_feedback_rule(_rule())
+
+    payload = json.loads(store.export_snapshot_json())
+
+    assert payload["proposal_count"] == 1
+    assert payload["persisted"] is False
+    assert payload["proposals"][0]["id"] == proposal.id
+
+
+def test_snapshot_from_json_reconstructs_snapshot():
+    store = UserUnderstandingMemoryProposalStore()
+    proposal = store.propose_from_feedback_rule(_rule())
+    snapshot_json = store.export_snapshot_json()
+
+    snapshot = UserUnderstandingMemorySnapshot.from_json(snapshot_json)
+
+    assert snapshot.proposal_count == 1
+    assert snapshot.proposals[0].id == proposal.id
+    assert snapshot.proposals[0].status == UserUnderstandingMemoryStatus.PROPOSED
+
+
+def test_import_snapshot_merge_adds_proposals_without_replacing_existing():
+    source_store = UserUnderstandingMemoryProposalStore()
+    source_proposal = source_store.propose_from_feedback_rule(_rule())
+    target_store = UserUnderstandingMemoryProposalStore()
+    existing_proposal = target_store.propose_from_feedback_rule(
+        _rule(suggested_alias="consulta estado", corrected_intent="query_status")
+    )
+
+    imported_count = target_store.import_snapshot(source_store.export_snapshot())
+
+    assert imported_count == 1
+    assert target_store.count() == 2
+    assert target_store.get_proposal(existing_proposal.id) == existing_proposal
+    assert target_store.get_proposal(source_proposal.id).id == source_proposal.id
+
+
+def test_import_snapshot_replace_replaces_existing_proposals():
+    source_store = UserUnderstandingMemoryProposalStore()
+    source_proposal = source_store.propose_from_feedback_rule(_rule())
+    target_store = UserUnderstandingMemoryProposalStore()
+    existing_proposal = target_store.propose_from_feedback_rule(
+        _rule(suggested_alias="consulta estado", corrected_intent="query_status")
+    )
+
+    imported_count = target_store.import_snapshot(
+        source_store.export_snapshot_json(),
+        replace=True,
+    )
+
+    assert imported_count == 1
+    assert target_store.count() == 1
+    assert target_store.get_proposal(source_proposal.id).id == source_proposal.id
+    with pytest.raises(KeyError):
+        target_store.get_proposal(existing_proposal.id)
+
+
+def test_import_snapshot_does_not_affect_voice_intent_router_or_runtime():
+    before_router = VoiceIntentRouter().classify("monta algo para probar este nicho").to_dict()
+    before_runtime = VoiceRuntime().handle_transcript("monta algo para probar este nicho")
+    source_store = UserUnderstandingMemoryProposalStore()
+    proposal = source_store.propose_from_feedback_rule(_rule(corrected_intent="query_status"))
+    source_store.approve(proposal.id)
+    target_store = UserUnderstandingMemoryProposalStore()
+
+    target_store.import_snapshot(source_store.export_snapshot_json())
+
+    after_router = VoiceIntentRouter().classify("monta algo para probar este nicho").to_dict()
+    after_runtime = VoiceRuntime().handle_transcript("monta algo para probar este nicho")
+
+    assert after_router == before_router
+    assert after_runtime == before_runtime
+
+
+def test_import_snapshot_rejects_active_sensitive_proposals():
+    source_store = UserUnderstandingMemoryProposalStore()
+    proposal = source_store.propose_from_feedback_rule(
+        _rule(
+            original_text="usa el password del .env",
+            corrected_intent="requires_approval",
+            suggested_alias="password del .env",
+        )
+    )
+    payload = source_store.export_snapshot().as_dict()
+    payload["proposals"][0]["status"] = "approved"
+    payload["proposals"][0]["active"] = True
+    payload["active_count"] = 1
+
+    target_store = UserUnderstandingMemoryProposalStore()
+    with pytest.raises(ValueError, match="Sensitive memory proposals"):
+        target_store.import_snapshot(payload)
+
+    assert proposal.sensitive is True
+    assert target_store.count() == 0
+
+
+def test_import_snapshot_rejects_invalid_format():
+    store = UserUnderstandingMemoryProposalStore()
+
+    with pytest.raises(ValueError):
+        store.import_snapshot({"version": 1, "exported_at": "2026-05-18T00:00:00Z"})
+
+    with pytest.raises(ValueError):
+        store.import_snapshot("{invalid json")
+
+
+def test_import_snapshot_rejects_persisted_snapshots():
+    source_store = UserUnderstandingMemoryProposalStore()
+    source_store.propose_from_feedback_rule(_rule())
+    payload = source_store.export_snapshot().as_dict()
+    payload["persisted"] = True
+    target_store = UserUnderstandingMemoryProposalStore()
+
+    with pytest.raises(ValueError, match="Persisted memory snapshots"):
+        target_store.import_snapshot(payload)
+
+    assert target_store.count() == 0
+
+
+def test_snapshot_export_import_does_not_open_files(monkeypatch):
+    def fail_open(*args, **kwargs):
+        raise AssertionError("snapshot export/import must not open files")
+
+    source_store = UserUnderstandingMemoryProposalStore()
+    source_store.propose_from_feedback_rule(_rule())
+    target_store = UserUnderstandingMemoryProposalStore()
+
+    monkeypatch.setattr(builtins, "open", fail_open)
+
+    snapshot_json = source_store.export_snapshot_json()
+    assert target_store.import_snapshot(snapshot_json) == 1
+
+
+def test_memory_proposals_are_not_persistent_between_new_stores_without_explicit_import():
+    source_store = UserUnderstandingMemoryProposalStore()
+    source_store.propose_from_feedback_rule(_rule())
+    snapshot_json = source_store.export_snapshot_json()
+    fresh_store = UserUnderstandingMemoryProposalStore()
+
+    assert fresh_store.count() == 0
+
+    assert fresh_store.import_snapshot(snapshot_json) == 1
+    assert fresh_store.count() == 1
