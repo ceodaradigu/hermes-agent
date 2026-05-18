@@ -277,3 +277,26 @@ Alcance:
 - No ejecuta tareas reales ni crea misiones reales.
 
 Este paso toca disco solo por accion explicita de save-local y no convierte el snapshot persistido en memoria activa.
+
+## PR #43 — Explicit load-local
+
+PR #43 implementa `memory-load-local` como lectura local explicita de snapshots de User Understanding memory.
+
+Alcance:
+
+- `memory-load-local` lee un snapshot solo por accion explicita de David.
+- Lee unicamente desde `.jarvis/user_understanding/memory_proposals.snapshot.json`, resuelto por el resolver local controlado.
+- No acepta rutas directas a archivos ni rutas arbitrarias de snapshot.
+- No implementa autoload.
+- No carga memoria automaticamente al arrancar.
+- No aplica memoria al router/runtime.
+- No cambia transcript ni clasificacion.
+- Importa proposals al store para poder revisar/listar proposals.
+- Acepta `persisted=true` solo cuando viene de este archivo local controlado y por load-local explicito.
+- Rechaza JSON corrupto o snapshots que no sean objeto JSON.
+- Rechaza propuestas sensibles `active` o `approved`.
+- Rechaza proposals `active` o `approved` cuyo alias/evidence contenga `.env`, password, token, credenciales, banco o tarjeta.
+- Escribe un evento local `memory_snapshot_loaded` en `.jarvis/user_understanding/audit_log.jsonl`.
+- No ejecuta tareas reales ni crea misiones reales.
+
+Este paso permite recuperar proposals persistidas al store de revision, pero no convierte esas proposals en aprendizaje activo ni modifica el comportamiento del runtime.

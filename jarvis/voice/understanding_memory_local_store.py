@@ -12,6 +12,7 @@ from typing import Any
 from jarvis.voice.understanding_memory import (
     SENSITIVE_MEMORY_TERMS,
     UserUnderstandingMemorySnapshot,
+    UserUnderstandingMemoryProposalStore,
     UserUnderstandingMemoryStatus,
 )
 from jarvis.voice.understanding_memory_local_paths import (
@@ -43,6 +44,41 @@ class UserUnderstandingMemoryLocalSaveResult:
             "active_count": self.active_count,
             "sensitive_count": self.sensitive_count,
             "checksum": self.checksum,
+            "notes": list(self.notes),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+
+@dataclass(frozen=True)
+class UserUnderstandingMemoryLocalLoadResult:
+    snapshot_path: str
+    audit_log_path: str
+    loaded: bool
+    persisted_source: bool
+    imported_count: int
+    memory_proposal_count: int
+    proposal_count: int
+    active_count: int
+    sensitive_count: int
+    checksum: str
+    applied_to_runtime: bool
+    notes: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "snapshot_path": self.snapshot_path,
+            "audit_log_path": self.audit_log_path,
+            "loaded": self.loaded,
+            "persisted_source": self.persisted_source,
+            "imported_count": self.imported_count,
+            "memory_proposal_count": self.memory_proposal_count,
+            "proposal_count": self.proposal_count,
+            "active_count": self.active_count,
+            "sensitive_count": self.sensitive_count,
+            "checksum": self.checksum,
+            "applied_to_runtime": self.applied_to_runtime,
             "notes": list(self.notes),
         }
 
@@ -116,6 +152,78 @@ def save_user_understanding_memory_snapshot_local(
     )
 
 
+def load_user_understanding_memory_snapshot_local(
+    proposal_store: UserUnderstandingMemoryProposalStore,
+    base_dir: str | Path | None = None,
+    replace: bool = True,
+) -> UserUnderstandingMemoryLocalLoadResult:
+    """Load a local persisted snapshot only for explicit load-local actions."""
+    if not isinstance(proposal_store, UserUnderstandingMemoryProposalStore):
+        raise TypeError("proposal_store must be UserUnderstandingMemoryProposalStore.")
+    if not isinstance(replace, bool):
+        raise TypeError("replace must be boolean.")
+
+    paths = resolve_user_understanding_memory_local_paths(base_dir)
+    if not paths.snapshot_path.exists():
+        raise FileNotFoundError(f"Local memory snapshot not found: {paths.snapshot_path}")
+    if not paths.snapshot_path.is_file():
+        raise ValueError(f"Local memory snapshot path is not a file: {paths.snapshot_path}")
+
+    snapshot_bytes = paths.snapshot_path.read_bytes()
+    checksum = hashlib.sha256(snapshot_bytes).hexdigest()
+    try:
+        payload = json.loads(snapshot_bytes.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ValueError("Memory snapshot file must be UTF-8 JSON.") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError("Memory snapshot JSON is invalid.") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("Memory snapshot must be a JSON object.")
+
+    snapshot = UserUnderstandingMemorySnapshot.from_dict(payload)
+    _validate_snapshot_safe_for_local_load(snapshot)
+
+    import_payload = dict(payload)
+    import_payload["persisted"] = False
+    imported_count = proposal_store.import_snapshot(import_payload, replace=replace)
+    memory_proposal_count = proposal_store.count()
+
+    paths.user_understanding_dir.mkdir(parents=True, exist_ok=True)
+    audit_event = {
+        "event": "memory_snapshot_loaded",
+        "timestamp": _now_iso(),
+        "snapshot_path": str(paths.snapshot_path),
+        "imported_count": imported_count,
+        "memory_proposal_count": memory_proposal_count,
+        "checksum": checksum,
+        "replace": replace,
+        "applied_to_runtime": False,
+    }
+    _append_jsonl_atomic(paths.audit_log_path, audit_event)
+
+    notes = [
+        "Snapshot loaded only by explicit load-local action.",
+        "Snapshot was read only from the controlled local memory snapshot path.",
+        "Persisted source snapshots are accepted only for this local load path; the in-memory import API still rejects persisted=true.",
+        "No router application, runtime application, transcript change, task, or mission was performed.",
+    ]
+    return UserUnderstandingMemoryLocalLoadResult(
+        snapshot_path=str(paths.snapshot_path),
+        audit_log_path=str(paths.audit_log_path),
+        loaded=True,
+        persisted_source=snapshot.persisted,
+        imported_count=imported_count,
+        memory_proposal_count=memory_proposal_count,
+        proposal_count=snapshot.proposal_count,
+        active_count=snapshot.active_count,
+        sensitive_count=snapshot.sensitive_count,
+        checksum=checksum,
+        applied_to_runtime=False,
+        notes=notes,
+    )
+
+
 def _validate_snapshot_safe_to_save(snapshot: UserUnderstandingMemorySnapshot) -> None:
     for proposal in snapshot.proposals:
         active_or_approved = proposal.active or proposal.status in {
@@ -126,6 +234,19 @@ def _validate_snapshot_safe_to_save(snapshot: UserUnderstandingMemorySnapshot) -
         if active_or_approved and (proposal.sensitive or contains_secret_term):
             raise ValueError(
                 "Sensitive active or approved memory proposals cannot be saved locally."
+            )
+
+
+def _validate_snapshot_safe_for_local_load(snapshot: UserUnderstandingMemorySnapshot) -> None:
+    for proposal in snapshot.proposals:
+        active_or_approved = proposal.active or proposal.status in {
+            UserUnderstandingMemoryStatus.ACTIVE,
+            UserUnderstandingMemoryStatus.APPROVED,
+        }
+        contains_secret_term = _contains_sensitive_term(proposal.alias, proposal.evidence)
+        if active_or_approved and (proposal.sensitive or contains_secret_term):
+            raise ValueError(
+                "Sensitive active or approved memory proposals cannot be loaded locally."
             )
 
 
