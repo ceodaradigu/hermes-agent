@@ -199,6 +199,18 @@ scripts/local/voice-runtime-control.sh memory-snapshot-import \
 
 Estos comandos exportan e importan snapshots solo en memoria/string JSON. No aceptan rutas de archivo, no leen archivos, no escriben archivos y no persisten memoria en disco. Importar un snapshot no aplica memoria al router/runtime y no cambia la clasificacion de `transcript`.
 
+Guardar un snapshot local por accion explicita:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-save-local
+scripts/local/voice-runtime-control.sh memory-save-local ".jarvis" true
+scripts/local/voice-runtime-control.sh memory-save-local ".jarvis" false
+```
+
+`memory-save-local` llama a `POST /voice/runtime/memory/local/save`, exporta el snapshot actual desde memoria y lo escribe bajo `.jarvis/user_understanding/`. El argumento opcional `base_dir` usa `.jarvis` por defecto. El argumento opcional `create_backup` acepta solo `true` o `false` y usa `true` por defecto.
+
+Este comando crea `memory_proposals.snapshot.json`, anade un evento a `audit_log.jsonl` y crea backup en `backups/` solo si ya existia un snapshot previo y `create_backup=true`. No implementa `load-local`, no lee memoria local, no autoload, no aplica memoria al router/runtime y no cambia `transcript`.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -226,5 +238,6 @@ Estos comandos exportan e importan snapshots solo en memoria/string JSON. No ace
 | `memory-clear` | `DELETE` | `/voice/runtime/memory/proposals` |
 | `memory-snapshot` | `GET` | `/voice/runtime/memory/snapshot` |
 | `memory-snapshot-import <snapshot_json> [replace]` | `POST` | `/voice/runtime/memory/snapshot/import` |
+| `memory-save-local [base_dir] [create_backup]` | `POST` | `/voice/runtime/memory/local/save` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.

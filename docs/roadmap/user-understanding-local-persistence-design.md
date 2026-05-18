@@ -256,3 +256,24 @@ Alcance:
 - Prepara una PR futura de `save-local` explicito.
 
 Este paso no habilita persistencia local, autoload, aplicacion al router/runtime ni ejecucion real.
+
+## PR #42 — Explicit save-local
+
+PR #42 implementa `memory-save-local` como primera escritura local explicita de snapshots de User Understanding memory.
+
+Alcance:
+
+- `memory-save-local` escribe un snapshot solo por accion explicita de David.
+- El snapshot se guarda bajo `.jarvis/user_understanding/memory_proposals.snapshot.json`.
+- El audit log se escribe en `.jarvis/user_understanding/audit_log.jsonl`.
+- Si ya existe snapshot local y `create_backup=true`, crea backup en `.jarvis/user_understanding/backups/`.
+- El archivo guardado marca `persisted=true` solo al escribir.
+- Rechaza propuestas sensibles `active` o `approved`.
+- Rechaza proposals `active` o `approved` cuyo alias/evidence contenga `.env`, password, token, credenciales, banco o tarjeta.
+- No implementa `load-local`.
+- No implementa autoload.
+- No aplica memoria al router/runtime.
+- No cambia transcript ni clasificacion.
+- No ejecuta tareas reales ni crea misiones reales.
+
+Este paso toca disco solo por accion explicita de save-local y no convierte el snapshot persistido en memoria activa.

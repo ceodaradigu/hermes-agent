@@ -248,6 +248,10 @@ PR #40 documenta la futura persistencia local opt-in para memory snapshots. No i
 
 PR #41 prepara resolucion de rutas locales seguras sin I/O como paso previo a persistencia opt-in.
 
+## PR #42 — Explicit save-local
+
+PR #42 anade guardado local explicito de snapshots bajo `.jarvis/user_understanding/`, con audit log JSONL, backup opcional si ya existe snapshot, rechazo de propuestas sensibles `active`/`approved`, y sin `load-local`, autoload, aplicacion al router/runtime ni cambios de transcript.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.

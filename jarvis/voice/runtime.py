@@ -14,6 +14,10 @@ from jarvis.voice.understanding_memory import (
     UserUnderstandingMemoryProposal,
     UserUnderstandingMemoryProposalStore,
 )
+from jarvis.voice.understanding_memory_local_store import (
+    UserUnderstandingMemoryLocalSaveResult,
+    save_user_understanding_memory_snapshot_local,
+)
 
 
 class VoiceRuntimeMode(str, Enum):
@@ -246,6 +250,18 @@ class VoiceRuntime:
 
     def export_memory_snapshot_json(self) -> str:
         return self._memory_proposal_store.export_snapshot_json()
+
+    def save_memory_snapshot_local(
+        self,
+        base_dir: str | None = None,
+        create_backup: bool = True,
+    ) -> dict[str, Any]:
+        result: UserUnderstandingMemoryLocalSaveResult = save_user_understanding_memory_snapshot_local(
+            self._memory_proposal_store.export_snapshot(),
+            base_dir=base_dir,
+            create_backup=create_backup,
+        )
+        return result.to_dict()
 
     def import_memory_snapshot(
         self,
