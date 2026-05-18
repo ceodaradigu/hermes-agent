@@ -177,6 +177,28 @@ scripts/local/voice-runtime-control.sh memory-clear
 
 Estos comandos gestionan proposals en memoria durante la vida del proceso. No persisten, no escriben memoria en disco y no cambian el comportamiento de `transcript`.
 
+## Memory snapshot commands
+
+Exportar un snapshot JSON de las propuestas de memoria User Understanding en memoria:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-snapshot
+```
+
+Importar un snapshot JSON literal:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-snapshot-import \
+  '{"version":"1","proposals":[],"proposal_count":0,"active_count":0,"sensitive_count":0,"persisted":false}' \
+  false
+```
+
+`memory-snapshot` llama a `GET /voice/runtime/memory/snapshot` e imprime la respuesta JSON.
+
+`memory-snapshot-import` llama a `POST /voice/runtime/memory/snapshot/import` con el JSON literal recibido como argumento. El argumento opcional `replace` acepta `true` o `false`; si se omite, usa `false`.
+
+Estos comandos exportan e importan snapshots solo en memoria/string JSON. No aceptan rutas de archivo, no leen archivos, no escriben archivos y no persisten memoria en disco. Importar un snapshot no aplica memoria al router/runtime y no cambia la clasificacion de `transcript`.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -202,5 +224,7 @@ Estos comandos gestionan proposals en memoria durante la vida del proceso. No pe
 | `memory-disable <proposal_id> [reason]` | `POST` | `/voice/runtime/memory/proposals/{proposal_id}/disable` |
 | `memory-delete <proposal_id>` | `DELETE` | `/voice/runtime/memory/proposals/{proposal_id}` |
 | `memory-clear` | `DELETE` | `/voice/runtime/memory/proposals` |
+| `memory-snapshot` | `GET` | `/voice/runtime/memory/snapshot` |
+| `memory-snapshot-import <snapshot_json> [replace]` | `POST` | `/voice/runtime/memory/snapshot/import` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.

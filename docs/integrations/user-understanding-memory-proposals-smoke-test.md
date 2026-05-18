@@ -36,6 +36,10 @@ Nota: el snapshot API permite export/import en memoria para pruebas, pero
 todavia no es persistencia en disco. No lee archivos, no escribe archivos y no
 carga memoria en el router/runtime.
 
+Tambien se puede exportar/importar snapshot JSON en memoria con
+`memory-snapshot` y `memory-snapshot-import`, pero todavia sin persistencia en
+disco.
+
 ## Precondiciones
 
 Arrancar JARVIS local en una terminal:

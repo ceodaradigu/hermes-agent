@@ -220,6 +220,23 @@ Alcance:
 - Import no cambia transcript ni clasificacion.
 - Prepara persistencia local opt-in futura.
 
+## PR #38 — Memory snapshot CLI
+
+Se anaden comandos locales en `scripts/local/voice-runtime-control.sh` para exportar/importar snapshots JSON de propuestas de User Understanding memory:
+
+- `memory-snapshot`
+- `memory-snapshot-import <snapshot_json> [replace]`
+
+Alcance:
+
+- `memory-snapshot-import` recibe JSON literal como argumento.
+- No lee archivos.
+- No escribe archivos.
+- No persiste memoria en disco.
+- Import no aplica memoria al router/runtime.
+- Import no cambia transcript ni clasificacion.
+- Prepara persistencia local opt-in futura.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.
