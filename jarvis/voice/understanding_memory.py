@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -70,6 +71,103 @@ class UserUnderstandingMemoryProposal:
 
     def to_dict(self) -> dict[str, Any]:
         return self.as_dict()
+
+
+@dataclass
+class UserUnderstandingMemorySnapshot:
+    version: int
+    exported_at: str
+    proposals: list[UserUnderstandingMemoryProposal]
+    proposal_count: int
+    active_count: int
+    sensitive_count: int
+    source: str = "user_understanding_memory_proposal_store"
+    persisted: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "exported_at": self.exported_at,
+            "source": self.source,
+            "persisted": self.persisted,
+            "proposal_count": self.proposal_count,
+            "active_count": self.active_count,
+            "sensitive_count": self.sensitive_count,
+            "proposals": [proposal.as_dict() for proposal in self.proposals],
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+    def to_json(self, indent: int = 2) -> str:
+        return json.dumps(self.as_dict(), indent=indent, sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "UserUnderstandingMemorySnapshot":
+        if not isinstance(payload, dict):
+            raise ValueError("Memory snapshot must be a JSON object.")
+
+        proposals_payload = payload.get("proposals")
+        if not isinstance(proposals_payload, list):
+            raise ValueError("Memory snapshot must include a proposals list.")
+
+        version = payload.get("version")
+        exported_at = payload.get("exported_at")
+        if isinstance(version, bool) or not isinstance(version, int):
+            raise ValueError("Memory snapshot must include an integer version.")
+        if not isinstance(exported_at, str) or not exported_at:
+            raise ValueError("Memory snapshot must include exported_at.")
+
+        proposals = [
+            _proposal_from_dict(proposal_payload)
+            for proposal_payload in proposals_payload
+        ]
+        proposal_count = _coerce_count(
+            payload.get("proposal_count", len(proposals)),
+            "proposal_count",
+        )
+        active_count = _coerce_count(
+            payload.get("active_count", sum(1 for proposal in proposals if proposal.active)),
+            "active_count",
+        )
+        sensitive_count = _coerce_count(
+            payload.get("sensitive_count", sum(1 for proposal in proposals if proposal.sensitive)),
+            "sensitive_count",
+        )
+        source = payload.get("source", "user_understanding_memory_proposal_store")
+        persisted = payload.get("persisted", False)
+        if not isinstance(source, str) or not source:
+            raise ValueError("Memory snapshot source must be a non-empty string.")
+        if not isinstance(persisted, bool):
+            raise ValueError("Memory snapshot persisted flag must be boolean.")
+
+        if proposal_count != len(proposals):
+            raise ValueError("Memory snapshot proposal_count does not match proposals.")
+        if active_count != sum(1 for proposal in proposals if proposal.active):
+            raise ValueError("Memory snapshot active_count does not match proposals.")
+        if sensitive_count != sum(1 for proposal in proposals if proposal.sensitive):
+            raise ValueError("Memory snapshot sensitive_count does not match proposals.")
+
+        return cls(
+            version=version,
+            exported_at=exported_at,
+            proposals=proposals,
+            proposal_count=proposal_count,
+            active_count=active_count,
+            sensitive_count=sensitive_count,
+            source=source,
+            persisted=persisted,
+        )
+
+    @classmethod
+    def from_json(cls, payload: str) -> "UserUnderstandingMemorySnapshot":
+        if not isinstance(payload, str):
+            raise ValueError("Memory snapshot JSON must be a string.")
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise ValueError("Memory snapshot JSON is invalid.") from exc
+        return cls.from_dict(data)
 
 
 class UserUnderstandingMemoryProposalStore:
@@ -180,6 +278,52 @@ class UserUnderstandingMemoryProposalStore:
     def clear(self) -> None:
         self._proposals.clear()
 
+    def export_snapshot(self) -> UserUnderstandingMemorySnapshot:
+        proposals = self.list_proposals()
+        return UserUnderstandingMemorySnapshot(
+            version=1,
+            exported_at=self._now(),
+            proposals=proposals,
+            proposal_count=len(proposals),
+            active_count=sum(1 for proposal in proposals if proposal.active),
+            sensitive_count=sum(1 for proposal in proposals if proposal.sensitive),
+            persisted=False,
+        )
+
+    def export_snapshot_json(self, indent: int = 2) -> str:
+        return self.export_snapshot().to_json(indent=indent)
+
+    def import_snapshot(
+        self,
+        snapshot: UserUnderstandingMemorySnapshot | dict[str, Any] | str,
+        replace: bool = False,
+    ) -> int:
+        parsed_snapshot = self._parse_snapshot(snapshot)
+        if parsed_snapshot.persisted:
+            raise ValueError(
+                "Persisted memory snapshots are not accepted by the in-memory proposal import."
+            )
+
+        imported: dict[str, UserUnderstandingMemoryProposal] = {}
+        for proposal in parsed_snapshot.proposals:
+            if proposal.sensitive and (
+                proposal.active
+                or proposal.status
+                in {
+                    UserUnderstandingMemoryStatus.APPROVED,
+                    UserUnderstandingMemoryStatus.ACTIVE,
+                }
+            ):
+                raise ValueError(
+                    "Sensitive memory proposals cannot be imported as approved or active."
+                )
+            imported[proposal.id] = proposal
+
+        if replace:
+            self.clear()
+        self._proposals.update(imported)
+        return len(imported)
+
     def _require(self, proposal_id: str) -> UserUnderstandingMemoryProposal:
         try:
             return self._proposals[proposal_id]
@@ -207,3 +351,86 @@ class UserUnderstandingMemoryProposalStore:
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+    @staticmethod
+    def _parse_snapshot(
+        snapshot: UserUnderstandingMemorySnapshot | dict[str, Any] | str,
+    ) -> UserUnderstandingMemorySnapshot:
+        if isinstance(snapshot, UserUnderstandingMemorySnapshot):
+            return snapshot
+        if isinstance(snapshot, str):
+            return UserUnderstandingMemorySnapshot.from_json(snapshot)
+        if isinstance(snapshot, dict):
+            return UserUnderstandingMemorySnapshot.from_dict(snapshot)
+        raise ValueError("Memory snapshot must be a snapshot object, dict, or JSON string.")
+
+
+def _coerce_count(value: Any, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"Memory snapshot {field_name} must be a non-negative integer.")
+    return value
+
+
+def _proposal_from_dict(payload: Any) -> UserUnderstandingMemoryProposal:
+    if not isinstance(payload, dict):
+        raise ValueError("Memory snapshot proposals must be JSON objects.")
+
+    required_fields = {
+        "id": str,
+        "type": str,
+        "source": str,
+        "target_intent": str,
+        "confidence": str,
+        "scope": str,
+        "created_at": str,
+        "sensitive": bool,
+        "active": bool,
+    }
+    for field_name, field_type in required_fields.items():
+        value = payload.get(field_name)
+        if not isinstance(value, field_type):
+            raise ValueError(f"Memory proposal {field_name} is required.")
+
+    status_value = payload.get("status", UserUnderstandingMemoryStatus.PROPOSED.value)
+    try:
+        status = UserUnderstandingMemoryStatus(status_value)
+    except ValueError as exc:
+        raise ValueError(f"Unknown memory proposal status: {status_value}") from exc
+
+    alias = payload.get("alias")
+    approved_by = payload.get("approved_by")
+    expires_at = payload.get("expires_at")
+    reason = payload.get("reason", "")
+    evidence = payload.get("evidence", {})
+    audit = payload.get("audit", [])
+    if alias is not None and not isinstance(alias, str):
+        raise ValueError("Memory proposal alias must be a string or null.")
+    if approved_by is not None and not isinstance(approved_by, str):
+        raise ValueError("Memory proposal approved_by must be a string or null.")
+    if expires_at is not None and not isinstance(expires_at, str):
+        raise ValueError("Memory proposal expires_at must be a string or null.")
+    if not isinstance(reason, str):
+        raise ValueError("Memory proposal reason must be a string.")
+    if not isinstance(evidence, dict):
+        raise ValueError("Memory proposal evidence must be an object.")
+    if not isinstance(audit, list) or not all(isinstance(event, dict) for event in audit):
+        raise ValueError("Memory proposal audit must be a list of objects.")
+
+    return UserUnderstandingMemoryProposal(
+        id=payload["id"],
+        type=payload["type"],
+        source=payload["source"],
+        alias=alias,
+        target_intent=payload["target_intent"],
+        confidence=payload["confidence"],
+        scope=payload["scope"],
+        approved_by=approved_by,
+        created_at=payload["created_at"],
+        expires_at=expires_at,
+        sensitive=payload["sensitive"],
+        status=status,
+        active=payload["active"],
+        reason=reason,
+        evidence=dict(evidence),
+        audit=[dict(event) for event in audit],
+    )
