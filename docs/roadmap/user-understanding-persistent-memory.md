@@ -252,6 +252,10 @@ PR #41 prepara resolucion de rutas locales seguras sin I/O como paso previo a pe
 
 PR #42 anade guardado local explicito de snapshots bajo `.jarvis/user_understanding/`, con audit log JSONL, backup opcional si ya existe snapshot, rechazo de propuestas sensibles `active`/`approved`, y sin `load-local`, autoload, aplicacion al router/runtime ni cambios de transcript.
 
+## PR #43 — Explicit load-local
+
+PR #43 anade carga local explicita desde `.jarvis/user_understanding/memory_proposals.snapshot.json` al store de proposals, con audit log local, rechazo de JSON corrupto y propuestas sensibles `active`/`approved`, sin autoload, sin aplicacion al router/runtime y sin cambios de transcript.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.

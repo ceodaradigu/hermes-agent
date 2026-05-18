@@ -519,3 +519,183 @@ def test_memory_local_save_does_not_change_transcript_or_create_tasks_or_mission
     assert client.get("/tasks").json() == []
     assert client.get("/missions").json() == []
     assert last_transcript == "monta algo para probar este nicho"
+
+
+def test_memory_local_load_endpoint_imports_proposals(tmp_path):
+    source = _client()
+    proposal = _create_proposal(source)
+    save = source.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert save.status_code == 200
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persisted_source"] is True
+    assert data["applied_to_runtime"] is False
+    assert data["result"]["loaded"] is True
+    assert data["result"]["imported_count"] == 1
+    assert data["result"]["applied_to_runtime"] is False
+    assert target.get(f"/voice/runtime/memory/proposals/{proposal['id']}").status_code == 200
+
+
+def test_memory_local_load_endpoint_missing_file_returns_controlled_error(tmp_path):
+    client = _client()
+
+    response = client.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 404
+    assert "Local memory snapshot not found" in response.json()["detail"]
+
+
+def test_memory_local_load_endpoint_rejects_invalid_replace_type(tmp_path):
+    client = _client()
+
+    response = client.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis"), "replace": "true"},
+    )
+
+    assert response.status_code == 400
+    assert "replace must be boolean" in response.json()["detail"]
+
+
+def test_memory_local_load_endpoint_rejects_empty_and_null_byte_base_dir():
+    client = _client()
+
+    empty = client.post("/voice/runtime/memory/local/load", json={"base_dir": "   "})
+    null_byte = client.post("/voice/runtime/memory/local/load", json={"base_dir": "memory\u0000root"})
+
+    assert empty.status_code == 400
+    assert "base_dir must not be empty" in empty.json()["detail"]
+    assert null_byte.status_code == 400
+    assert "null bytes" in null_byte.json()["detail"]
+
+
+def test_memory_local_load_endpoint_rejects_direct_path_or_file_input(tmp_path):
+    client = _client()
+
+    path_input = client.post(
+        "/voice/runtime/memory/local/load",
+        json={"path": str(tmp_path / "memory_proposals.snapshot.json")},
+    )
+    file_input = client.post(
+        "/voice/runtime/memory/local/load",
+        json={"file": str(tmp_path / "memory_proposals.snapshot.json")},
+    )
+
+    assert path_input.status_code == 400
+    assert file_input.status_code == 400
+    assert "path/file inputs are not accepted" in path_input.json()["detail"]
+
+
+def test_memory_local_load_endpoint_rejects_corrupt_json(tmp_path):
+    client = _client()
+    snapshot_path = tmp_path / ".jarvis" / "user_understanding" / "memory_proposals.snapshot.json"
+    snapshot_path.parent.mkdir(parents=True)
+    snapshot_path.write_text("{invalid json", encoding="utf-8")
+
+    response = client.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 400
+    assert "JSON is invalid" in response.json()["detail"]
+
+
+def test_memory_local_load_endpoint_rejects_sensitive_active_or_approved(tmp_path):
+    source = _client()
+    proposal = _create_proposal(
+        source,
+        original_text="usa el password del .env",
+        corrected_intent="requires_approval",
+        suggested_alias="password del .env",
+    )
+    runtime_proposal = source.app.state.voice_runtime.get_memory_proposal(proposal["id"])
+    runtime_proposal.status = UserUnderstandingMemoryStatus.APPROVED
+    runtime_proposal.active = True
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    snapshot["persisted"] = True
+    snapshot_path = tmp_path / ".jarvis" / "user_understanding" / "memory_proposals.snapshot.json"
+    snapshot_path.parent.mkdir(parents=True)
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 400
+    assert "Sensitive active or approved" in response.json()["detail"]
+    assert target.get("/voice/runtime/memory/proposals").json()["memory_proposal_count"] == 0
+
+
+def test_memory_local_load_does_not_change_transcript_or_apply_runtime_or_create_tasks(tmp_path):
+    source = _client()
+    proposal = _create_proposal(source, corrected_intent="query_status")
+    source.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    source.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    target = _client()
+    before = target.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+    last_transcript = target.get("/voice/runtime/status").json()["last_transcript"]
+
+    response = target.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    after = target.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+    status = target.get("/voice/runtime/status").json()
+
+    assert response.status_code == 200
+    assert response.json()["applied_to_runtime"] is False
+    assert after["intent"] == before["intent"]
+    assert after["status"] == before["status"]
+    assert "reviewed_feedback_applied" not in after["user_context_signals"]
+    assert status["applied_feedback_count"] == 0
+    assert status["memory_proposal_count"] == 1
+    assert target.get("/tasks").json() == []
+    assert target.get("/missions").json() == []
+    assert last_transcript == "monta algo para probar este nicho"
+
+
+def test_voice_tts_mock_still_works_after_memory_load_endpoint_present():
+    client = _client()
+
+    response = client.post("/voice/tts", json={"text": "hola mundo"})
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "mock"
+
+
+def test_memory_local_load_does_not_autoload_between_new_voice_runtime_instances(tmp_path):
+    source = _client()
+    _create_proposal(source)
+    source.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    fresh = _client()
+
+    assert fresh.get("/voice/runtime/memory/proposals").json()["memory_proposal_count"] == 0

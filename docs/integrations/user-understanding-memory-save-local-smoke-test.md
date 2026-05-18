@@ -57,7 +57,7 @@ Si ya habia snapshot previo y se uso `create_backup=true`, debe aparecer un back
 
 ## Confirmar alcance
 
-Este flujo sigue sin implementar `load-local` ni autoload. Guardar el archivo no aplica memoria al router/runtime, no cambia la clasificacion de `transcript`, no ejecuta tareas reales y no crea misiones reales.
+Guardar el archivo no aplica memoria al router/runtime, no cambia la clasificacion de `transcript`, no ejecuta tareas reales y no crea misiones reales.
 
 Puedes comprobar que `transcript` sigue comportandose igual antes y despues del save-local:
 
@@ -66,6 +66,19 @@ scripts/local/voice-runtime-control.sh transcript "monta algo para probar este n
 scripts/local/voice-runtime-control.sh memory-save-local
 scripts/local/voice-runtime-control.sh transcript "monta algo para probar este nicho"
 ```
+
+## Probar load-local explicito despues de save-local
+
+Despues de `memory-save-local`, puede probarse la recuperacion explicita:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-clear
+scripts/local/voice-runtime-control.sh memory-load-local
+scripts/local/voice-runtime-control.sh memory-proposals
+scripts/local/voice-runtime-control.sh transcript "monta algo para probar este nicho"
+```
+
+`memory-load-local` sigue sin implementar autoload. Solo recupera proposals al store para revision/listado; no aplica aprendizaje al router/runtime y no cambia `transcript`.
 
 ## Limpieza
 

@@ -15,7 +15,9 @@ from jarvis.voice.understanding_memory import (
     UserUnderstandingMemoryProposalStore,
 )
 from jarvis.voice.understanding_memory_local_store import (
+    UserUnderstandingMemoryLocalLoadResult,
     UserUnderstandingMemoryLocalSaveResult,
+    load_user_understanding_memory_snapshot_local,
     save_user_understanding_memory_snapshot_local,
 )
 
@@ -261,6 +263,19 @@ class VoiceRuntime:
             base_dir=base_dir,
             create_backup=create_backup,
         )
+        return result.to_dict()
+
+    def load_memory_snapshot_local(
+        self,
+        base_dir: str | None = None,
+        replace: bool = True,
+    ) -> dict[str, Any]:
+        result: UserUnderstandingMemoryLocalLoadResult = load_user_understanding_memory_snapshot_local(
+            self._memory_proposal_store,
+            base_dir=base_dir,
+            replace=replace,
+        )
+        self._state.memory_proposal_count = self._memory_proposal_store.count()
         return result.to_dict()
 
     def import_memory_snapshot(

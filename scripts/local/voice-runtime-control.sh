@@ -43,6 +43,8 @@ Comandos:
                          POST   /voice/runtime/memory/snapshot/import
   memory-save-local [base_dir] [create_backup]
                          POST   /voice/runtime/memory/local/save
+  memory-load-local [base_dir] [replace]
+                         POST   /voice/runtime/memory/local/load
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -75,6 +77,7 @@ MEMORY_SNAPSHOT_JSON=""
 MEMORY_SNAPSHOT_REPLACE="false"
 MEMORY_LOCAL_BASE_DIR=""
 MEMORY_LOCAL_CREATE_BACKUP="true"
+MEMORY_LOCAL_REPLACE="true"
 
 case "$COMMAND" in
   status)
@@ -307,6 +310,22 @@ case "$COMMAND" in
     MEMORY_LOCAL_BASE_DIR="${1:-.jarvis}"
     MEMORY_LOCAL_CREATE_BACKUP="${2:-true}"
     ;;
+  memory-load-local)
+    if [[ "${2:-true}" != "true" && "${2:-true}" != "false" ]]; then
+      echo "Error: [replace] debe ser true o false." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/local/load"
+    PAYLOAD_KIND="memory-load-local"
+    if [[ "$#" -ge 1 ]]; then
+      MEMORY_LOCAL_BASE_DIR="$1"
+    else
+      MEMORY_LOCAL_BASE_DIR=".jarvis"
+    fi
+    MEMORY_LOCAL_REPLACE="${2:-true}"
+    ;;
   *)
     echo "Error: comando desconocido: $COMMAND" >&2
     usage
@@ -319,7 +338,7 @@ python - "$JARVIS_BASE_URL" "$METHOD" "$ENDPOINT" "$PAYLOAD_KIND" "$PAYLOAD_VALU
   "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" \
   "$MEMORY_ORIGINAL_TEXT" "$MEMORY_CORRECTED_INTENT" "$MEMORY_SUGGESTED_ALIAS" \
   "$MEMORY_REASON" "$MEMORY_APPROVED_BY" "$MEMORY_SNAPSHOT_JSON" "$MEMORY_SNAPSHOT_REPLACE" \
-  "$MEMORY_LOCAL_BASE_DIR" "$MEMORY_LOCAL_CREATE_BACKUP" <<'PY'
+  "$MEMORY_LOCAL_BASE_DIR" "$MEMORY_LOCAL_CREATE_BACKUP" "$MEMORY_LOCAL_REPLACE" <<'PY'
 import json
 import sys
 import urllib.error
@@ -344,6 +363,7 @@ memory_snapshot_json = sys.argv[16]
 memory_snapshot_replace = sys.argv[17]
 memory_local_base_dir = sys.argv[18]
 memory_local_create_backup = sys.argv[19]
+memory_local_replace = sys.argv[20]
 
 data = None
 headers = {}
@@ -392,6 +412,13 @@ elif payload_kind == "memory-save-local":
     payload = {
         "base_dir": memory_local_base_dir,
         "create_backup": memory_local_create_backup == "true",
+    }
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-load-local":
+    payload = {
+        "base_dir": memory_local_base_dir,
+        "replace": memory_local_replace == "true",
     }
     data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"

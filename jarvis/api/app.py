@@ -107,6 +107,13 @@ class VoiceRuntimeMemoryLocalSaveRequest(BaseModel):
     create_backup: bool = True
 
 
+class VoiceRuntimeMemoryLocalLoadRequest(BaseModel):
+    base_dir: Optional[str] = None
+    replace: Optional[Any] = None
+    path: Optional[Any] = None
+    file: Optional[Any] = None
+
+
 @dataclass
 class TaskRecord:
     task_id: str
@@ -642,6 +649,38 @@ def create_app(
         return {
             "result": result,
             "persisted": True,
+            "applied_to_runtime": False,
+        }
+
+    @app.post("/voice/runtime/memory/local/load")
+    def voice_runtime_memory_local_load(
+        payload: Optional[VoiceRuntimeMemoryLocalLoadRequest] = None,
+    ) -> dict:
+        if payload and (payload.path is not None or payload.file is not None):
+            raise HTTPException(status_code=400, detail="path/file inputs are not accepted")
+        base_dir = payload.base_dir if payload else None
+        replace = True if payload is None or payload.replace is None else payload.replace
+        if not isinstance(replace, bool):
+            raise HTTPException(status_code=400, detail="replace must be boolean")
+        if base_dir is not None:
+            if "\0" in base_dir:
+                raise HTTPException(status_code=400, detail="base_dir must not contain null bytes")
+            if not base_dir.strip():
+                raise HTTPException(status_code=400, detail="base_dir must not be empty")
+
+        try:
+            result = app.state.voice_runtime.load_memory_snapshot_local(
+                base_dir=base_dir,
+                replace=replace,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "result": result,
+            "persisted_source": result["persisted_source"],
             "applied_to_runtime": False,
         }
 

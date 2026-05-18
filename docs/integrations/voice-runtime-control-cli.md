@@ -211,6 +211,18 @@ scripts/local/voice-runtime-control.sh memory-save-local ".jarvis" false
 
 Este comando crea `memory_proposals.snapshot.json`, anade un evento a `audit_log.jsonl` y crea backup en `backups/` solo si ya existia un snapshot previo y `create_backup=true`. No implementa `load-local`, no lee memoria local, no autoload, no aplica memoria al router/runtime y no cambia `transcript`.
 
+Cargar un snapshot local por accion explicita:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-load-local
+scripts/local/voice-runtime-control.sh memory-load-local ".jarvis" true
+scripts/local/voice-runtime-control.sh memory-load-local ".jarvis" false
+```
+
+`memory-load-local` llama a `POST /voice/runtime/memory/local/load` y lee solo `.jarvis/user_understanding/memory_proposals.snapshot.json`, resuelto por el backend. El argumento opcional `base_dir` usa `.jarvis` por defecto. El argumento opcional `replace` acepta solo `true` o `false` y usa `true` por defecto.
+
+Este comando importa proposals al store para poder listarlas y revisarlas. No acepta ruta directa al snapshot, no implementa autoload, no aplica memoria al router/runtime, no cambia `transcript`, no ejecuta tareas reales y no crea misiones reales.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -239,5 +251,6 @@ Este comando crea `memory_proposals.snapshot.json`, anade un evento a `audit_log
 | `memory-snapshot` | `GET` | `/voice/runtime/memory/snapshot` |
 | `memory-snapshot-import <snapshot_json> [replace]` | `POST` | `/voice/runtime/memory/snapshot/import` |
 | `memory-save-local [base_dir] [create_backup]` | `POST` | `/voice/runtime/memory/local/save` |
+| `memory-load-local [base_dir] [replace]` | `POST` | `/voice/runtime/memory/local/load` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.
