@@ -32,6 +32,10 @@ Este smoke test no implementa ni valida:
 - Conexión con Hermes runtime.
 - Cambios de endpoints, router, runtime, CI o dependencias.
 
+Nota: el snapshot API permite export/import en memoria para pruebas, pero
+todavia no es persistencia en disco. No lee archivos, no escribe archivos y no
+carga memoria en el router/runtime.
+
 ## Precondiciones
 
 Arrancar JARVIS local en una terminal:

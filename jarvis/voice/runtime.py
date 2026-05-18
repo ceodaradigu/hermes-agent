@@ -10,6 +10,7 @@ from jarvis.voice.understanding_feedback import (
     UserUnderstandingFeedbackStore,
 )
 from jarvis.voice.understanding_memory import (
+    UserUnderstandingMemorySnapshot,
     UserUnderstandingMemoryProposal,
     UserUnderstandingMemoryProposalStore,
 )
@@ -239,6 +240,21 @@ class VoiceRuntime:
     def clear_memory_proposals(self) -> None:
         self._memory_proposal_store.clear()
         self._state.memory_proposal_count = self._memory_proposal_store.count()
+
+    def export_memory_snapshot(self) -> UserUnderstandingMemorySnapshot:
+        return self._memory_proposal_store.export_snapshot()
+
+    def export_memory_snapshot_json(self) -> str:
+        return self._memory_proposal_store.export_snapshot_json()
+
+    def import_memory_snapshot(
+        self,
+        snapshot: UserUnderstandingMemorySnapshot | dict[str, Any] | str,
+        replace: bool = False,
+    ) -> int:
+        imported_count = self._memory_proposal_store.import_snapshot(snapshot, replace=replace)
+        self._state.memory_proposal_count = self._memory_proposal_store.count()
+        return imported_count
 
     @staticmethod
     def _coerce_mode(mode: VoiceRuntimeMode | str) -> VoiceRuntimeMode:
