@@ -58,6 +58,8 @@ David Understanding Profile: capa futura para que JARVIS aprenda progresivamente
 
 User Understanding persistent memory design: diseño futuro para pasar de feedback temporal revisado a memoria persistente aprobada, auditable y reversible, manteniendo privacidad, ApprovalGateway, PolicyEngine y la North Star en `docs/roadmap/user-understanding-persistent-memory.md`.
 
+User Understanding memory proposals smoke test: guía para validar el flujo local memory-clear → memory-propose-from-feedback → memory-review → memory-approve → transcript sin cambio → memory-disable → memory-clear usando el CLI, sin persistencia ni aplicación al router/runtime, en `docs/integrations/user-understanding-memory-proposals-smoke-test.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
