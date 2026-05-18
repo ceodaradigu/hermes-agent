@@ -38,6 +38,9 @@ Comandos:
   memory-delete <proposal_id>
                          DELETE /voice/runtime/memory/proposals/{proposal_id}
   memory-clear           DELETE /voice/runtime/memory/proposals
+  memory-snapshot        GET    /voice/runtime/memory/snapshot
+  memory-snapshot-import <snapshot_json> [replace]
+                         POST   /voice/runtime/memory/snapshot/import
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -66,6 +69,8 @@ MEMORY_CORRECTED_INTENT=""
 MEMORY_SUGGESTED_ALIAS=""
 MEMORY_REASON=""
 MEMORY_APPROVED_BY=""
+MEMORY_SNAPSHOT_JSON=""
+MEMORY_SNAPSHOT_REPLACE="false"
 
 case "$COMMAND" in
   status)
@@ -265,6 +270,27 @@ case "$COMMAND" in
     METHOD="DELETE"
     ENDPOINT="/voice/runtime/memory/proposals"
     ;;
+  memory-snapshot)
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/memory/snapshot"
+    ;;
+  memory-snapshot-import)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <snapshot_json>." >&2
+      usage
+      exit 2
+    fi
+    if [[ "${2:-false}" != "true" && "${2:-false}" != "false" ]]; then
+      echo "Error: [replace] debe ser true o false." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/snapshot/import"
+    PAYLOAD_KIND="memory-snapshot-import"
+    MEMORY_SNAPSHOT_JSON="$1"
+    MEMORY_SNAPSHOT_REPLACE="${2:-false}"
+    ;;
   *)
     echo "Error: comando desconocido: $COMMAND" >&2
     usage
@@ -276,7 +302,7 @@ python - "$JARVIS_BASE_URL" "$METHOD" "$ENDPOINT" "$PAYLOAD_KIND" "$PAYLOAD_VALU
   "$FEEDBACK_ORIGINAL_TEXT" "$FEEDBACK_INTERPRETED_INTENT" "$FEEDBACK_CORRECTED_INTENT" \
   "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" \
   "$MEMORY_ORIGINAL_TEXT" "$MEMORY_CORRECTED_INTENT" "$MEMORY_SUGGESTED_ALIAS" \
-  "$MEMORY_REASON" "$MEMORY_APPROVED_BY" <<'PY'
+  "$MEMORY_REASON" "$MEMORY_APPROVED_BY" "$MEMORY_SNAPSHOT_JSON" "$MEMORY_SNAPSHOT_REPLACE" <<'PY'
 import json
 import sys
 import urllib.error
@@ -297,6 +323,8 @@ memory_corrected_intent = sys.argv[12]
 memory_suggested_alias = sys.argv[13]
 memory_reason = sys.argv[14]
 memory_approved_by = sys.argv[15]
+memory_snapshot_json = sys.argv[16]
+memory_snapshot_replace = sys.argv[17]
 
 data = None
 headers = {}
@@ -332,6 +360,13 @@ elif payload_kind == "memory-disable":
     payload = {}
     if memory_reason:
         payload["reason"] = memory_reason
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-snapshot-import":
+    payload = {
+        "snapshot": memory_snapshot_json,
+        "replace": memory_snapshot_replace == "true",
+    }
     data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"
 elif payload_kind != "none":
