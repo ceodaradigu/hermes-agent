@@ -41,6 +41,8 @@ Comandos:
   memory-snapshot        GET    /voice/runtime/memory/snapshot
   memory-snapshot-import <snapshot_json> [replace]
                          POST   /voice/runtime/memory/snapshot/import
+  memory-save-local [base_dir] [create_backup]
+                         POST   /voice/runtime/memory/local/save
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -71,6 +73,8 @@ MEMORY_REASON=""
 MEMORY_APPROVED_BY=""
 MEMORY_SNAPSHOT_JSON=""
 MEMORY_SNAPSHOT_REPLACE="false"
+MEMORY_LOCAL_BASE_DIR=""
+MEMORY_LOCAL_CREATE_BACKUP="true"
 
 case "$COMMAND" in
   status)
@@ -291,6 +295,18 @@ case "$COMMAND" in
     MEMORY_SNAPSHOT_JSON="$1"
     MEMORY_SNAPSHOT_REPLACE="${2:-false}"
     ;;
+  memory-save-local)
+    if [[ "${2:-true}" != "true" && "${2:-true}" != "false" ]]; then
+      echo "Error: [create_backup] debe ser true o false." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/local/save"
+    PAYLOAD_KIND="memory-save-local"
+    MEMORY_LOCAL_BASE_DIR="${1:-.jarvis}"
+    MEMORY_LOCAL_CREATE_BACKUP="${2:-true}"
+    ;;
   *)
     echo "Error: comando desconocido: $COMMAND" >&2
     usage
@@ -302,7 +318,8 @@ python - "$JARVIS_BASE_URL" "$METHOD" "$ENDPOINT" "$PAYLOAD_KIND" "$PAYLOAD_VALU
   "$FEEDBACK_ORIGINAL_TEXT" "$FEEDBACK_INTERPRETED_INTENT" "$FEEDBACK_CORRECTED_INTENT" \
   "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" \
   "$MEMORY_ORIGINAL_TEXT" "$MEMORY_CORRECTED_INTENT" "$MEMORY_SUGGESTED_ALIAS" \
-  "$MEMORY_REASON" "$MEMORY_APPROVED_BY" "$MEMORY_SNAPSHOT_JSON" "$MEMORY_SNAPSHOT_REPLACE" <<'PY'
+  "$MEMORY_REASON" "$MEMORY_APPROVED_BY" "$MEMORY_SNAPSHOT_JSON" "$MEMORY_SNAPSHOT_REPLACE" \
+  "$MEMORY_LOCAL_BASE_DIR" "$MEMORY_LOCAL_CREATE_BACKUP" <<'PY'
 import json
 import sys
 import urllib.error
@@ -325,6 +342,8 @@ memory_reason = sys.argv[14]
 memory_approved_by = sys.argv[15]
 memory_snapshot_json = sys.argv[16]
 memory_snapshot_replace = sys.argv[17]
+memory_local_base_dir = sys.argv[18]
+memory_local_create_backup = sys.argv[19]
 
 data = None
 headers = {}
@@ -366,6 +385,13 @@ elif payload_kind == "memory-snapshot-import":
     payload = {
         "snapshot": memory_snapshot_json,
         "replace": memory_snapshot_replace == "true",
+    }
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-save-local":
+    payload = {
+        "base_dir": memory_local_base_dir,
+        "create_backup": memory_local_create_backup == "true",
     }
     data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"

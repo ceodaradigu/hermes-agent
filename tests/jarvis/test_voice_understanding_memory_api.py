@@ -7,6 +7,7 @@ pytest.importorskip("starlette")
 from fastapi.testclient import TestClient
 
 from jarvis.api.app import create_app
+from jarvis.voice import UserUnderstandingMemoryStatus
 
 
 def _client(**kwargs):
@@ -419,3 +420,102 @@ def test_memory_snapshot_import_does_not_change_transcript_classification_or_app
     assert "reviewed_feedback_applied" not in after["user_context_signals"]
     assert status["applied_feedback_count"] == 0
     assert status["memory_proposal_count"] == 1
+
+
+def test_memory_local_save_endpoint_writes_snapshot_and_audit_log(tmp_path):
+    client = _client()
+    proposal = _create_proposal(client)
+
+    response = client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis"), "create_backup": True},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persisted"] is True
+    assert data["applied_to_runtime"] is False
+    assert data["result"]["persisted"] is True
+    assert data["result"]["backup_path"] is None
+    snapshot_path = tmp_path / ".jarvis" / "user_understanding" / "memory_proposals.snapshot.json"
+    audit_path = tmp_path / ".jarvis" / "user_understanding" / "audit_log.jsonl"
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    audit_event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[-1])
+    assert snapshot["persisted"] is True
+    assert snapshot["proposals"][0]["id"] == proposal["id"]
+    assert audit_event["event"] == "memory_snapshot_saved"
+    assert audit_event["persisted"] is True
+
+
+def test_memory_local_save_endpoint_rejects_empty_base_dir():
+    client = _client()
+
+    response = client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": "   "},
+    )
+
+    assert response.status_code == 400
+    assert "base_dir must not be empty" in response.json()["detail"]
+
+
+def test_memory_local_save_endpoint_rejects_null_byte_base_dir():
+    client = _client()
+
+    response = client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": "memory\u0000root"},
+    )
+
+    assert response.status_code == 400
+    assert "null bytes" in response.json()["detail"]
+
+
+def test_memory_local_save_endpoint_rejects_sensitive_active_or_approved(tmp_path):
+    client = _client()
+    proposal = _create_proposal(
+        client,
+        original_text="usa el password del .env",
+        corrected_intent="requires_approval",
+        suggested_alias="password del .env",
+    )
+    runtime_proposal = client.app.state.voice_runtime.get_memory_proposal(proposal["id"])
+    runtime_proposal.status = UserUnderstandingMemoryStatus.APPROVED
+    runtime_proposal.active = True
+
+    response = client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 400
+    assert "Sensitive active or approved" in response.json()["detail"]
+    assert not (tmp_path / ".jarvis").exists()
+
+
+def test_memory_local_save_does_not_change_transcript_or_create_tasks_or_missions(tmp_path):
+    client = _client()
+    before = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+    proposal = _create_proposal(client, corrected_intent="query_status")
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    last_transcript = client.get("/voice/runtime/status").json()["last_transcript"]
+
+    response = client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    after = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+
+    assert response.status_code == 200
+    assert after["intent"] == before["intent"]
+    assert after["status"] == before["status"]
+    assert "reviewed_feedback_applied" not in after["user_context_signals"]
+    assert client.get("/tasks").json() == []
+    assert client.get("/missions").json() == []
+    assert last_transcript == "monta algo para probar este nicho"

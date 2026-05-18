@@ -102,6 +102,11 @@ class VoiceRuntimeMemorySnapshotImportRequest(BaseModel):
     file: Optional[Any] = None
 
 
+class VoiceRuntimeMemoryLocalSaveRequest(BaseModel):
+    base_dir: Optional[str] = None
+    create_backup: bool = True
+
+
 @dataclass
 class TaskRecord:
     task_id: str
@@ -611,6 +616,32 @@ def create_app(
             "imported_count": imported_count,
             "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
             "persisted": False,
+            "applied_to_runtime": False,
+        }
+
+    @app.post("/voice/runtime/memory/local/save")
+    def voice_runtime_memory_local_save(
+        payload: Optional[VoiceRuntimeMemoryLocalSaveRequest] = None,
+    ) -> dict:
+        base_dir = payload.base_dir if payload else None
+        create_backup = payload.create_backup if payload else True
+        if base_dir is not None:
+            if "\0" in base_dir:
+                raise HTTPException(status_code=400, detail="base_dir must not contain null bytes")
+            if not base_dir.strip():
+                raise HTTPException(status_code=400, detail="base_dir must not be empty")
+
+        try:
+            result = app.state.voice_runtime.save_memory_snapshot_local(
+                base_dir=base_dir,
+                create_backup=create_backup,
+            )
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "result": result,
+            "persisted": True,
             "applied_to_runtime": False,
         }
 
