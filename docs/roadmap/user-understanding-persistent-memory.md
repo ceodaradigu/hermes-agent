@@ -200,6 +200,26 @@ Alcance:
 
 Este paso prepara la siguiente fase: persistencia local opt-in con auditoria, revision explicita y reglas de seguridad antes de cargar memoria en runtime.
 
+## PR #37 — Memory snapshot API
+
+Se exponen endpoints internos para exportar/importar snapshots JSON de propuestas de User Understanding memory en memoria:
+
+- `GET /voice/runtime/memory/snapshot`
+- `POST /voice/runtime/memory/snapshot/import`
+
+Alcance:
+
+- Export/import ocurre solo en memoria.
+- No lee archivos.
+- No escribe archivos.
+- No persiste propuestas.
+- Import solo recibe dict o string JSON en el request.
+- Snapshots con `persisted=true` se rechazan.
+- Propuestas sensibles `active` o `approved` se rechazan.
+- Import no aplica memoria al router/runtime.
+- Import no cambia transcript ni clasificacion.
+- Prepara persistencia local opt-in futura.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.

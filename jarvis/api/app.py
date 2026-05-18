@@ -95,6 +95,13 @@ class VoiceRuntimeMemoryProposalDisableRequest(BaseModel):
     reason: Optional[str] = None
 
 
+class VoiceRuntimeMemorySnapshotImportRequest(BaseModel):
+    snapshot: Optional[Any] = None
+    replace: bool = False
+    path: Optional[Any] = None
+    file: Optional[Any] = None
+
+
 @dataclass
 class TaskRecord:
     task_id: str
@@ -574,6 +581,37 @@ def create_app(
         app.state.voice_runtime.clear_memory_proposals()
         return {
             "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
+        }
+
+    @app.get("/voice/runtime/memory/snapshot")
+    def voice_runtime_memory_snapshot() -> dict:
+        return {
+            "snapshot": app.state.voice_runtime.export_memory_snapshot().to_dict(),
+            "persisted": False,
+        }
+
+    @app.post("/voice/runtime/memory/snapshot/import")
+    def voice_runtime_memory_snapshot_import(
+        payload: VoiceRuntimeMemorySnapshotImportRequest,
+    ) -> dict:
+        if payload.path is not None or payload.file is not None:
+            raise HTTPException(status_code=400, detail="path/file inputs are not accepted")
+        if payload.snapshot is None:
+            raise HTTPException(status_code=400, detail="snapshot is required")
+
+        try:
+            imported_count = app.state.voice_runtime.import_memory_snapshot(
+                payload.snapshot,
+                replace=payload.replace,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "imported_count": imported_count,
+            "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
+            "persisted": False,
+            "applied_to_runtime": False,
         }
 
     @app.get("/voice/runtime/memory/proposals/{proposal_id}")

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -215,3 +217,205 @@ def test_voice_tts_mock_still_works_with_memory_proposals_api_present():
 
     assert response.status_code == 200
     assert response.json()["provider"] == "mock"
+
+
+def test_memory_snapshot_get_empty_store():
+    client = _client()
+
+    response = client.get("/voice/runtime/memory/snapshot")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persisted"] is False
+    assert data["snapshot"]["persisted"] is False
+    assert data["snapshot"]["proposal_count"] == 0
+    assert data["snapshot"]["proposals"] == []
+
+
+def test_memory_snapshot_get_includes_created_proposal_count():
+    client = _client()
+    proposal = _create_proposal(client)
+
+    response = client.get("/voice/runtime/memory/snapshot")
+
+    assert response.status_code == 200
+    snapshot = response.json()["snapshot"]
+    assert snapshot["proposal_count"] == 1
+    assert snapshot["proposals"][0]["id"] == proposal["id"]
+
+
+def test_memory_snapshot_import_with_dict_imports_proposals():
+    source = _client()
+    proposal = _create_proposal(source)
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "imported_count": 1,
+        "memory_proposal_count": 1,
+        "persisted": False,
+        "applied_to_runtime": False,
+    }
+    imported = target.get(f"/voice/runtime/memory/proposals/{proposal['id']}")
+    assert imported.status_code == 200
+
+
+def test_memory_snapshot_import_with_json_string_imports_proposals():
+    source = _client()
+    _create_proposal(source)
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": json.dumps(snapshot)},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["imported_count"] == 1
+    assert response.json()["memory_proposal_count"] == 1
+
+
+def test_memory_snapshot_import_merge_keeps_existing_proposals_by_default():
+    source = _client()
+    source_proposal = _create_proposal(source)
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    target = _client()
+    existing_proposal = _create_proposal(
+        target,
+        original_text="consulta el estado",
+        corrected_intent="query_status",
+        suggested_alias="consulta estado",
+    )
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["memory_proposal_count"] == 2
+    assert target.get(f"/voice/runtime/memory/proposals/{source_proposal['id']}").status_code == 200
+    assert target.get(f"/voice/runtime/memory/proposals/{existing_proposal['id']}").status_code == 200
+
+
+def test_memory_snapshot_import_replace_replaces_existing_proposals():
+    source = _client()
+    source_proposal = _create_proposal(source)
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    target = _client()
+    existing_proposal = _create_proposal(
+        target,
+        original_text="consulta el estado",
+        corrected_intent="query_status",
+        suggested_alias="consulta estado",
+    )
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot, "replace": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["memory_proposal_count"] == 1
+    assert target.get(f"/voice/runtime/memory/proposals/{source_proposal['id']}").status_code == 200
+    assert target.get(f"/voice/runtime/memory/proposals/{existing_proposal['id']}").status_code == 404
+
+
+def test_memory_snapshot_import_rejects_persisted_true():
+    source = _client()
+    _create_proposal(source)
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    snapshot["persisted"] = True
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot},
+    )
+
+    assert response.status_code == 400
+    assert "Persisted memory snapshots" in response.json()["detail"]
+    assert target.get("/voice/runtime/memory/proposals").json()["memory_proposal_count"] == 0
+
+
+def test_memory_snapshot_import_rejects_invalid_format():
+    client = _client()
+
+    missing = client.post("/voice/runtime/memory/snapshot/import", json={})
+    invalid_json = client.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": "{invalid json"},
+    )
+    invalid_shape = client.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": {"version": 1, "exported_at": "2026-05-18T00:00:00Z"}},
+    )
+    path_input = client.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"path": "/tmp/snapshot.json"},
+    )
+
+    assert missing.status_code == 400
+    assert invalid_json.status_code == 400
+    assert invalid_shape.status_code == 400
+    assert path_input.status_code == 400
+
+
+def test_memory_snapshot_import_rejects_sensitive_active_or_approved_proposal():
+    source = _client()
+    _create_proposal(
+        source,
+        original_text="usa el password del .env",
+        corrected_intent="requires_approval",
+        suggested_alias="password del .env",
+    )
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    snapshot["proposals"][0]["status"] = "approved"
+    snapshot["proposals"][0]["active"] = True
+    snapshot["active_count"] = 1
+    target = _client()
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot},
+    )
+
+    assert response.status_code == 400
+    assert "Sensitive memory proposals" in response.json()["detail"]
+    assert target.get("/voice/runtime/memory/proposals").json()["memory_proposal_count"] == 0
+
+
+def test_memory_snapshot_import_does_not_change_transcript_classification_or_apply_runtime_memory():
+    source = _client()
+    proposal = _create_proposal(source, corrected_intent="query_status")
+    source.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    snapshot = source.get("/voice/runtime/memory/snapshot").json()["snapshot"]
+    target = _client()
+    before = target.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+
+    response = target.post(
+        "/voice/runtime/memory/snapshot/import",
+        json={"snapshot": snapshot},
+    )
+    after = target.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+    status = target.get("/voice/runtime/status").json()
+
+    assert response.status_code == 200
+    assert after["intent"] == before["intent"]
+    assert after["status"] == before["status"]
+    assert "reviewed_feedback_applied" not in after["user_context_signals"]
+    assert status["applied_feedback_count"] == 0
+    assert status["memory_proposal_count"] == 1
