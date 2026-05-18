@@ -23,6 +23,11 @@ from jarvis.voice.understanding_memory import (
     UserUnderstandingMemoryProposalStore,
     UserUnderstandingMemoryStatus,
 )
+from jarvis.voice.understanding_memory_local_paths import (
+    UserUnderstandingMemoryLocalPaths,
+    resolve_user_understanding_memory_local_paths,
+    validate_user_understanding_memory_local_paths,
+)
 from jarvis.voice.feedback_preview import (
     UserUnderstandingFeedbackPreview,
     create_feedback_preview,
@@ -53,6 +58,9 @@ __all__ = [
     "UserUnderstandingMemoryProposal",
     "UserUnderstandingMemoryProposalStore",
     "UserUnderstandingMemoryStatus",
+    "UserUnderstandingMemoryLocalPaths",
+    "resolve_user_understanding_memory_local_paths",
+    "validate_user_understanding_memory_local_paths",
     "UserUnderstandingFeedbackPreview",
     "create_feedback_preview",
     "preview_user_understanding_feedback",

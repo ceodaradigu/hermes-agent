@@ -240,3 +240,19 @@ Roadmap incremental recomendado:
 - PR G: active memory application separado y con `ApprovalGateway`.
 
 Cada fase debe mantener alcance pequeno y revisable. La persistencia local debe aparecer antes que cualquier autoload o aplicacion runtime, y la aplicacion runtime debe llegar solo despues de una revision de seguridad especifica.
+
+## PR #41 — Local path resolver + guardrails
+
+Se anade un modulo interno para calcular las rutas locales futuras de User Understanding memory bajo `.jarvis/user_understanding/`.
+
+Alcance:
+
+- Calcula `memory_proposals.snapshot.json`, `audit_log.jsonl` y `backups/`.
+- No crea directorios.
+- No lee archivos.
+- No escribe archivos.
+- Los guardrails devuelven `can_read=false` y `can_write=false`.
+- Mantiene `persisted=false`.
+- Prepara una PR futura de `save-local` explicito.
+
+Este paso no habilita persistencia local, autoload, aplicacion al router/runtime ni ejecucion real.
