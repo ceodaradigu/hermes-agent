@@ -178,6 +178,10 @@ Alcance:
 - No cambia comportamiento de transcript.
 - Prepara un review workflow humano para listar, crear, revisar, aprobar, desactivar, eliminar y limpiar proposals antes de disenar persistencia.
 
+## PR #35 — Memory proposals CLI smoke test docs
+
+PR #35 documenta el smoke test real del CLI de memory proposals y confirma que aprobar proposals todavía no cambia el runtime ni persiste memoria.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.
