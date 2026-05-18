@@ -40,6 +40,11 @@ Tambien se puede exportar/importar snapshot JSON en memoria con
 `memory-snapshot` y `memory-snapshot-import`, pero todavia sin persistencia en
 disco.
 
+Para el smoke test específico de snapshots, ver
+`docs/integrations/user-understanding-memory-snapshot-smoke-test.md`. Ese flujo
+valida export/import como string JSON en memoria, sin leer/escribir archivos y
+sin aplicar memoria al router/runtime.
+
 ## Precondiciones
 
 Arrancar JARVIS local en una terminal:
