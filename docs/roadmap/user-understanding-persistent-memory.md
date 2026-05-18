@@ -241,6 +241,10 @@ Alcance:
 
 PR #39 documenta el smoke test real del CLI de memory snapshots y confirma que export/import funciona solo como JSON en memoria, sin leer/escribir archivos, sin persistencia en disco y sin cambiar el runtime/router.
 
+## PR #40 — Local persistence opt-in design
+
+PR #40 documenta la futura persistencia local opt-in para memory snapshots. No implementa escritura/lectura de archivos. Define ubicacion propuesta, seguridad, auditoria, reversibilidad y roadmap antes de cualquier persistencia real.
+
 ## 8. Reglas anti-autoengano
 
 La memoria no debe convertir a JARVIS en un sistema que siempre confirma a David.

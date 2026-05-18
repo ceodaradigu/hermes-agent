@@ -62,6 +62,8 @@ User Understanding memory proposals smoke test: guía para validar el flujo loca
 
 User Understanding memory snapshot smoke test: guía para validar el flujo local memory-clear → memory-propose-from-feedback → memory-snapshot → memory-clear → memory-snapshot-import → memory-proposals → transcript sin cambio, sin persistencia en disco ni aplicación al router/runtime, en `docs/integrations/user-understanding-memory-snapshot-smoke-test.md`.
 
+User Understanding local persistence design: diseño futuro para persistencia local opt-in de memory snapshots, con rutas propuestas bajo `.jarvis`, auditoría, backups, borrado reversible, bloqueo de secretos y sin aplicación automática al router/runtime, en `docs/roadmap/user-understanding-local-persistence-design.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
