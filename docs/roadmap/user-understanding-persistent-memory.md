@@ -214,6 +214,10 @@ PR #48 documenta la validacion real del flujo `memory-propose-from-feedback` -> 
 
 PR #49 documenta el flujo real `save-local` -> `clear runtime` -> `load-local` -> `review` -> `approve` -> `activate` -> `transcript` cambia, confirmando que `load-local` no activa runtime, `memory-activate` si cambia clasificacion y el sensitive boundary sigue ganando.
 
+## PR #50 — Local memory quickstart and natural interaction docs
+
+PR #50 documenta el quickstart local de memoria y el principio de interacción natural. La memoria activa debe servir para respuestas más contextuales y naturales, no para frases predeterminadas. La activación debe seguir siendo explícita y segura.
+
 ## PR #37 — Memory snapshot API
 
 Se exponen endpoints internos para exportar/importar snapshots JSON de propuestas de User Understanding memory en memoria:
