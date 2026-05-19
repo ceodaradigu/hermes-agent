@@ -72,6 +72,8 @@ User Understanding memory activation smoke test: guía para validar memory-propo
 
 User Understanding load-local approval activation smoke test: guía para validar save-local → clear runtime → load-local → review → approve → activate → transcript cambia, con sensitive boundary ganando, en `docs/integrations/user-understanding-memory-load-approve-activate-smoke-test.md`.
 
+JARVIS local memory quickstart: guía para usar memoria local de forma explícita y principio de interacción natural sin frases rígidas, en `docs/integrations/jarvis-local-memory-quickstart.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
