@@ -170,6 +170,131 @@ class UserUnderstandingMemorySnapshot:
         return cls.from_dict(data)
 
 
+@dataclass
+class UserUnderstandingActiveMemoryRule:
+    proposal_id: str
+    alias: str
+    target_intent: str
+    activated_at: str
+    reason: str
+    source: str = "approved_memory_proposal"
+    activated_by: str = "David"
+    sensitive: bool = False
+    persisted_source: bool = False
+    applied_to_runtime: bool = True
+    active: bool = True
+    approval_required: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "proposal_id": self.proposal_id,
+            "alias": self.alias,
+            "target_intent": self.target_intent,
+            "source": self.source,
+            "activated_by": self.activated_by,
+            "activated_at": self.activated_at,
+            "reason": self.reason,
+            "sensitive": self.sensitive,
+            "persisted_source": self.persisted_source,
+            "applied_to_runtime": self.applied_to_runtime,
+            "active": self.active,
+            "approval_required": self.approval_required,
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+
+class UserUnderstandingActiveMemoryRuleStore:
+    """Process-local active memory rules explicitly enabled by David.
+
+    This store intentionally does not read or write files, autoload memory,
+    call external APIs, create tasks, or execute missions.
+    """
+
+    def __init__(self) -> None:
+        self._rules: dict[str, UserUnderstandingActiveMemoryRule] = {}
+
+    def activate_from_proposal(
+        self,
+        proposal: UserUnderstandingMemoryProposal,
+        activated_by: str = "David",
+    ) -> UserUnderstandingActiveMemoryRule:
+        if proposal.status != UserUnderstandingMemoryStatus.APPROVED:
+            raise ValueError("Only approved memory proposals can be activated.")
+        if not proposal.active:
+            raise ValueError("Only active approved memory proposals can be activated.")
+        if proposal.sensitive:
+            raise ValueError("Sensitive memory proposals cannot be activated in runtime.")
+
+        alias = self._normalize(proposal.alias or "")
+        target_intent = self._normalize(proposal.target_intent)
+        if not alias:
+            raise ValueError("Memory proposal alias must be non-empty before activation.")
+        if not target_intent:
+            raise ValueError("Memory proposal target_intent must be non-empty before activation.")
+
+        activated_by = (activated_by or "David").strip() or "David"
+        rule = UserUnderstandingActiveMemoryRule(
+            proposal_id=proposal.id,
+            alias=alias,
+            target_intent=target_intent,
+            activated_by=activated_by,
+            activated_at=self._now(),
+            reason=(
+                "Approved memory proposal explicitly activated in runtime by "
+                f"{activated_by}."
+            ),
+            sensitive=False,
+            persisted_source=False,
+            applied_to_runtime=True,
+            active=True,
+            approval_required=False,
+        )
+        self._rules[proposal.id] = rule
+        return rule
+
+    def list_rules(self) -> list[UserUnderstandingActiveMemoryRule]:
+        return [rule for rule in self._rules.values() if rule.active]
+
+    def get_rule(self, proposal_id: str) -> UserUnderstandingActiveMemoryRule:
+        try:
+            return self._rules[proposal_id]
+        except KeyError as exc:
+            raise KeyError(f"Unknown active memory rule proposal id: {proposal_id}") from exc
+
+    def deactivate(self, proposal_id: str, reason: str = "") -> UserUnderstandingActiveMemoryRule:
+        rule = self.get_rule(proposal_id)
+        rule.active = False
+        if reason:
+            rule.reason = reason
+        return rule
+
+    def clear(self) -> None:
+        self._rules.clear()
+
+    def count(self) -> int:
+        return len(self.list_rules())
+
+    def find_matching_rule(self, text: str) -> UserUnderstandingActiveMemoryRule | None:
+        normalized_text = self._normalize(text)
+        if not normalized_text:
+            return None
+        for rule in self.list_rules():
+            alias = self._normalize(rule.alias)
+            if alias and alias in normalized_text:
+                return rule
+        return None
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        return " ".join(text.strip().lower().split())
+
+    @staticmethod
+    def _now() -> str:
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 class UserUnderstandingMemoryProposalStore:
     """In-memory proposal store for future User Understanding memory.
 

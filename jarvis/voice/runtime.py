@@ -10,6 +10,8 @@ from jarvis.voice.understanding_feedback import (
     UserUnderstandingFeedbackStore,
 )
 from jarvis.voice.understanding_memory import (
+    UserUnderstandingActiveMemoryRule,
+    UserUnderstandingActiveMemoryRuleStore,
     UserUnderstandingMemorySnapshot,
     UserUnderstandingMemoryProposal,
     UserUnderstandingMemoryProposalStore,
@@ -51,6 +53,7 @@ class VoiceRuntimeState:
     feedback_count: int = 0
     applied_feedback_count: int = 0
     memory_proposal_count: int = 0
+    active_memory_rule_count: int = 0
 
 
 class VoiceRuntime:
@@ -83,11 +86,13 @@ class VoiceRuntime:
         feedback_store: UserUnderstandingFeedbackStore | None = None,
         applied_feedback_store: UserUnderstandingAppliedFeedbackStore | None = None,
         memory_proposal_store: UserUnderstandingMemoryProposalStore | None = None,
+        active_memory_rule_store: UserUnderstandingActiveMemoryRuleStore | None = None,
     ) -> None:
         self._intent_router = intent_router or VoiceIntentRouter()
         self._feedback_store = feedback_store or UserUnderstandingFeedbackStore()
         self._applied_feedback_store = applied_feedback_store or UserUnderstandingAppliedFeedbackStore()
         self._memory_proposal_store = memory_proposal_store or UserUnderstandingMemoryProposalStore()
+        self._active_memory_rule_store = active_memory_rule_store or UserUnderstandingActiveMemoryRuleStore()
         self._state = VoiceRuntimeState(
             mode=self._coerce_mode(mode),
             enabled=enabled,
@@ -101,6 +106,7 @@ class VoiceRuntime:
             feedback_count=self._feedback_store.count(),
             applied_feedback_count=self._applied_feedback_store.count(),
             memory_proposal_count=self._memory_proposal_store.count(),
+            active_memory_rule_count=self._active_memory_rule_store.count(),
         )
 
     def status(self) -> VoiceRuntimeState:
@@ -139,9 +145,13 @@ class VoiceRuntime:
         self._state.last_transcript = text
         intent = self._intent_router.classify(text).to_dict()
         if not intent.get("approval_required") and intent.get("status") != "requires_approval":
-            rule = self._applied_feedback_store.find_matching_intent(text)
-            if rule:
-                intent = self._apply_reviewed_feedback_rule(intent, rule)
+            active_memory_rule = self._active_memory_rule_store.find_matching_rule(text)
+            if active_memory_rule:
+                intent = self._apply_active_memory_rule(intent, active_memory_rule)
+            else:
+                rule = self._applied_feedback_store.find_matching_intent(text)
+                if rule:
+                    intent = self._apply_reviewed_feedback_rule(intent, rule)
         self._state.last_intent = intent
         return self._state.last_intent
 
@@ -211,6 +221,10 @@ class VoiceRuntime:
     def memory_proposal_store(self) -> UserUnderstandingMemoryProposalStore:
         return self._memory_proposal_store
 
+    @property
+    def active_memory_rule_store(self) -> UserUnderstandingActiveMemoryRuleStore:
+        return self._active_memory_rule_store
+
     def propose_memory_from_applied_feedback(
         self,
         rule: UserUnderstandingAppliedFeedbackRule,
@@ -233,7 +247,38 @@ class VoiceRuntime:
         proposal_id: str,
         approved_by: str = "David",
     ) -> UserUnderstandingMemoryProposal:
-        return self._memory_proposal_store.approve(proposal_id, approved_by=approved_by)
+        proposal = self._memory_proposal_store.approve(proposal_id, approved_by=approved_by)
+        self._state.memory_proposal_count = self._memory_proposal_store.count()
+        return proposal
+
+    def activate_memory_proposal(
+        self,
+        proposal_id: str,
+        activated_by: str = "David",
+    ) -> UserUnderstandingActiveMemoryRule:
+        proposal = self._memory_proposal_store.get_proposal(proposal_id)
+        rule = self._active_memory_rule_store.activate_from_proposal(
+            proposal,
+            activated_by=activated_by,
+        )
+        self._state.active_memory_rule_count = self._active_memory_rule_store.count()
+        return rule
+
+    def list_active_memory_rules(self) -> list[UserUnderstandingActiveMemoryRule]:
+        return self._active_memory_rule_store.list_rules()
+
+    def deactivate_memory_rule(
+        self,
+        proposal_id: str,
+        reason: str = "",
+    ) -> UserUnderstandingActiveMemoryRule:
+        rule = self._active_memory_rule_store.deactivate(proposal_id, reason=reason)
+        self._state.active_memory_rule_count = self._active_memory_rule_store.count()
+        return rule
+
+    def clear_active_memory_rules(self) -> None:
+        self._active_memory_rule_store.clear()
+        self._state.active_memory_rule_count = self._active_memory_rule_store.count()
 
     def disable_memory_proposal(
         self,
@@ -282,6 +327,7 @@ class VoiceRuntime:
             replace=replace,
         )
         self._state.memory_proposal_count = self._memory_proposal_store.count()
+        self._state.active_memory_rule_count = self._active_memory_rule_store.count()
         return result.to_dict()
 
     def get_memory_local_status(
@@ -320,6 +366,7 @@ class VoiceRuntime:
     ) -> int:
         imported_count = self._memory_proposal_store.import_snapshot(snapshot, replace=replace)
         self._state.memory_proposal_count = self._memory_proposal_store.count()
+        self._state.active_memory_rule_count = self._active_memory_rule_store.count()
         return imported_count
 
     @staticmethod
@@ -362,5 +409,34 @@ class VoiceRuntime:
         corrected["user_context_signals"] = signals
         slots = dict(corrected.get("slots") or {})
         slots["applied_feedback_rule"] = rule.to_dict()
+        corrected["slots"] = slots
+        return corrected
+
+    @staticmethod
+    def _apply_active_memory_rule(
+        intent: dict[str, Any],
+        rule: UserUnderstandingActiveMemoryRule,
+    ) -> dict[str, Any]:
+        corrected_intent = rule.target_intent
+        corrected = dict(intent)
+        corrected["intent"] = corrected_intent
+        corrected["executed"] = False
+        corrected["confidence"] = "high"
+        corrected["needs_clarification"] = False
+        corrected["approval_required"] = corrected_intent == "requires_approval"
+        corrected["status"] = "requires_approval" if corrected["approval_required"] else "pending"
+        corrected["reason"] = (
+            "Applied approved memory explicitly activated in runtime; no persistent "
+            "autoload or real execution occurred. "
+            "Se aplicó memoria aprobada activada explícitamente en runtime."
+        )
+        corrected["recommended_next_step"] = (
+            "Prepare a non-executing proposal for the memory-selected intent."
+        )
+        signals = dict(corrected.get("user_context_signals") or {})
+        signals["active_memory_rule_applied"] = True
+        corrected["user_context_signals"] = signals
+        slots = dict(corrected.get("slots") or {})
+        slots["active_memory_rule"] = rule.to_dict()
         corrected["slots"] = slots
         return corrected

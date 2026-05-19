@@ -33,6 +33,12 @@ Comandos:
                          POST   /voice/runtime/memory/proposals/{proposal_id}/review
   memory-approve <proposal_id> [approved_by]
                          POST   /voice/runtime/memory/proposals/{proposal_id}/approve
+  memory-activate <proposal_id> [activated_by]
+                         POST   /voice/runtime/memory/proposals/{proposal_id}/activate
+  memory-active-list     GET    /voice/runtime/memory/active
+  memory-deactivate <proposal_id> [reason]
+                         POST   /voice/runtime/memory/active/{proposal_id}/deactivate
+  memory-active-clear    DELETE /voice/runtime/memory/active
   memory-disable <proposal_id> [reason]
                          POST   /voice/runtime/memory/proposals/{proposal_id}/disable
   memory-delete <proposal_id>
@@ -260,6 +266,36 @@ case "$COMMAND" in
     PAYLOAD_KIND="memory-approve"
     MEMORY_APPROVED_BY="${2:-David}"
     ;;
+  memory-activate)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/proposals/$1/activate"
+    PAYLOAD_KIND="memory-activate"
+    MEMORY_APPROVED_BY="${2:-David}"
+    ;;
+  memory-active-list)
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/memory/active"
+    ;;
+  memory-deactivate)
+    if [[ "$#" -eq 0 ]]; then
+      echo "Error: falta <proposal_id>." >&2
+      usage
+      exit 2
+    fi
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/active/$1/deactivate"
+    PAYLOAD_KIND="memory-deactivate"
+    MEMORY_REASON="${2:-}"
+    ;;
+  memory-active-clear)
+    METHOD="DELETE"
+    ENDPOINT="/voice/runtime/memory/active"
+    ;;
   memory-disable)
     if [[ "$#" -eq 0 ]]; then
       echo "Error: falta <proposal_id>." >&2
@@ -428,6 +464,15 @@ elif payload_kind == "memory-from-feedback":
     headers["Content-Type"] = "application/json"
 elif payload_kind == "memory-approve":
     data = json.dumps({"approved_by": memory_approved_by or "David"}).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-activate":
+    data = json.dumps({"activated_by": memory_approved_by or "David"}).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-deactivate":
+    payload = {}
+    if memory_reason:
+        payload["reason"] = memory_reason
+    data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"
 elif payload_kind == "memory-disable":
     payload = {}

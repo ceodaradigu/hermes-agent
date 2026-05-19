@@ -168,6 +168,8 @@ Resultado esperado:
 
 Esto es correcto: `memory-load-local` solo recupera proposals al store. No activa memoria en el router/runtime y no cambia la clasificacion de `transcript`.
 
+Nota PR #47: incluso despues de `memory-load-local` y `memory-approve`, la memoria sigue sin afectar al runtime hasta ejecutar `memory-activate <proposal_id>` de forma explicita. No hay autoload ni activacion automatica por aprobar.
+
 ## 12. Confirmar status
 
 ```bash

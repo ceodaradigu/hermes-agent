@@ -91,7 +91,19 @@ class VoiceRuntimeMemoryProposalFromAppliedFeedbackRequest(BaseModel):
     applied_persistently: bool = False
 
 
+class VoiceRuntimeMemoryProposalApproveRequest(BaseModel):
+    approved_by: Optional[str] = "David"
+
+
 class VoiceRuntimeMemoryProposalDisableRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class VoiceRuntimeMemoryProposalActivateRequest(BaseModel):
+    activated_by: Optional[str] = "David"
+
+
+class VoiceRuntimeMemoryRuleDeactivateRequest(BaseModel):
     reason: Optional[str] = None
 
 
@@ -206,6 +218,7 @@ def _voice_runtime_state_payload(state: VoiceRuntimeState) -> dict:
         "feedback_count": state.feedback_count,
         "applied_feedback_count": state.applied_feedback_count,
         "memory_proposal_count": state.memory_proposal_count,
+        "active_memory_rule_count": state.active_memory_rule_count,
     }
 
 
@@ -608,6 +621,26 @@ def create_app(
             "memory_proposal_count": app.state.voice_runtime.status().memory_proposal_count,
         }
 
+    @app.get("/voice/runtime/memory/active")
+    def voice_runtime_memory_active_list() -> dict:
+        active_rules = [
+            rule.to_dict()
+            for rule in app.state.voice_runtime.list_active_memory_rules()
+        ]
+        return {
+            "active_rules": active_rules,
+            "active_memory_rule_count": len(active_rules),
+            "applied_to_runtime": True,
+        }
+
+    @app.delete("/voice/runtime/memory/active")
+    def voice_runtime_memory_active_clear() -> dict:
+        app.state.voice_runtime.clear_active_memory_rules()
+        return {
+            "active_memory_rule_count": app.state.voice_runtime.status().active_memory_rule_count,
+            "applied_to_runtime": True,
+        }
+
     @app.get("/voice/runtime/memory/snapshot")
     def voice_runtime_memory_snapshot() -> dict:
         return {
@@ -786,14 +819,60 @@ def create_app(
         return {"proposal": proposal.to_dict()}
 
     @app.post("/voice/runtime/memory/proposals/{proposal_id}/approve")
-    def voice_runtime_memory_proposal_approve(proposal_id: str) -> dict:
+    def voice_runtime_memory_proposal_approve(
+        proposal_id: str,
+        payload: Optional[VoiceRuntimeMemoryProposalApproveRequest] = None,
+    ) -> dict:
         try:
-            proposal = app.state.voice_runtime.approve_memory_proposal(proposal_id)
+            proposal = app.state.voice_runtime.approve_memory_proposal(
+                proposal_id,
+                approved_by=(payload.approved_by or "David") if payload else "David",
+            )
         except KeyError:
             raise HTTPException(status_code=404, detail="memory proposal not found")
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         return {"proposal": proposal.to_dict()}
+
+    @app.post("/voice/runtime/memory/proposals/{proposal_id}/activate")
+    def voice_runtime_memory_proposal_activate(
+        proposal_id: str,
+        payload: Optional[VoiceRuntimeMemoryProposalActivateRequest] = None,
+    ) -> dict:
+        try:
+            rule = app.state.voice_runtime.activate_memory_proposal(
+                proposal_id,
+                activated_by=(payload.activated_by or "David") if payload else "David",
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="memory proposal not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return {
+            "active_rule": rule.to_dict(),
+            "active_memory_rule_count": app.state.voice_runtime.status().active_memory_rule_count,
+            "applied_to_runtime": True,
+            "persisted": False,
+        }
+
+    @app.post("/voice/runtime/memory/active/{proposal_id}/deactivate")
+    def voice_runtime_memory_active_deactivate(
+        proposal_id: str,
+        payload: Optional[VoiceRuntimeMemoryRuleDeactivateRequest] = None,
+    ) -> dict:
+        try:
+            rule = app.state.voice_runtime.deactivate_memory_rule(
+                proposal_id,
+                reason=(payload.reason or "") if payload else "",
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="active memory rule not found")
+        return {
+            "active_rule": rule.to_dict(),
+            "active_memory_rule_count": app.state.voice_runtime.status().active_memory_rule_count,
+            "applied_to_runtime": True,
+            "persisted": False,
+        }
 
     @app.post("/voice/runtime/memory/proposals/{proposal_id}/disable")
     def voice_runtime_memory_proposal_disable(

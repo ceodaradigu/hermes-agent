@@ -156,6 +156,25 @@ scripts/local/voice-runtime-control.sh memory-approve ump_123 David
 
 Si no se pasa `approved_by`, el CLI usa `David`. La aprobacion solo cambia el estado de la propuesta en memoria; no aplica memoria al router ni al runtime.
 
+Activar explicitamente una propuesta aprobada en el runtime actual:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-activate ump_123
+scripts/local/voice-runtime-control.sh memory-activate ump_123 David
+```
+
+`memory-activate` llama a `POST /voice/runtime/memory/proposals/{proposal_id}/activate`. Solo acepta proposals aprobadas, activas, no sensibles y con `alias` y `target_intent` no vacios. La regla activa vive solo en memoria del proceso, devuelve `persisted=false` y `applied_to_runtime=true`, y puede reclasificar transcripts que contengan el alias.
+
+Listar, desactivar o limpiar reglas activas:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-active-list
+scripts/local/voice-runtime-control.sh memory-deactivate ump_123 "validacion terminada"
+scripts/local/voice-runtime-control.sh memory-active-clear
+```
+
+Las reglas activas no ejecutan tareas ni crean misiones reales. El boundary sensible gana siempre: si el transcript contiene `.env`, `password` u otros terminos sensibles, el resultado sigue siendo `requires_approval`.
+
 Desactivar una propuesta:
 
 ```bash

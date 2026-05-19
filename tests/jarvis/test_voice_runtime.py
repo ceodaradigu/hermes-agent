@@ -145,6 +145,53 @@ def test_apply_reviewed_feedback_changes_matching_transcript_without_execution()
     assert "temporary reviewed feedback rule from David" in result["reason"]
 
 
+def test_activated_memory_changes_matching_transcript_without_execution():
+    runtime = VoiceRuntime()
+    rule = runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+        correction_note="Primero quiero validación.",
+    )
+    proposal = runtime.propose_memory_from_applied_feedback(rule)
+    runtime.review_memory_proposal(proposal.id)
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.clear_applied_feedback()
+
+    active_rule = runtime.activate_memory_proposal(proposal.id)
+    result = runtime.handle_transcript("monta algo para probar este nicho")
+
+    assert runtime.status().active_memory_rule_count == 1
+    assert active_rule.proposal_id == proposal.id
+    assert result["status"] == "pending"
+    assert result["intent"] == "create_mission"
+    assert result["executed"] is False
+    assert result["approval_required"] is False
+    assert result["user_context_signals"]["active_memory_rule_applied"] is True
+    assert result["slots"]["active_memory_rule"]["proposal_id"] == proposal.id
+    assert "memoria aprobada activada explícitamente" in result["reason"]
+
+
+def test_sensitive_terms_keep_requires_approval_with_active_memory():
+    runtime = VoiceRuntime()
+    rule = runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+    proposal = runtime.propose_memory_from_applied_feedback(rule)
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.activate_memory_proposal(proposal.id)
+
+    result = runtime.handle_transcript("monta algo para probar este nicho y usa el password del .env")
+
+    assert result["status"] == "requires_approval"
+    assert result["intent"] == "requires_approval"
+    assert result["approval_required"] is True
+    assert result["executed"] is False
+    assert "active_memory_rule_applied" not in result["user_context_signals"]
+
+
 def test_sensitive_terms_keep_requires_approval_with_applied_feedback():
     runtime = VoiceRuntime()
     runtime.apply_reviewed_feedback(
@@ -162,6 +209,50 @@ def test_sensitive_terms_keep_requires_approval_with_applied_feedback():
     assert "reviewed_feedback_applied" not in result["user_context_signals"]
 
 
+def test_active_memory_has_priority_over_applied_reviewed_feedback():
+    runtime = VoiceRuntime()
+    memory_rule = runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+    proposal = runtime.propose_memory_from_applied_feedback(memory_rule)
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.activate_memory_proposal(proposal.id)
+    runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="query_status",
+    )
+
+    result = runtime.handle_transcript("monta algo para probar este nicho")
+
+    assert result["intent"] == "create_mission"
+    assert result["user_context_signals"]["active_memory_rule_applied"] is True
+    assert "reviewed_feedback_applied" not in result["user_context_signals"]
+
+
+def test_deactivate_active_memory_rule_restores_router_classification():
+    runtime = VoiceRuntime()
+    rule = runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+    proposal = runtime.propose_memory_from_applied_feedback(rule)
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.clear_applied_feedback()
+    runtime.activate_memory_proposal(proposal.id)
+
+    active = runtime.handle_transcript("monta algo para probar este nicho")
+    runtime.deactivate_memory_rule(proposal.id, reason="validación terminada")
+    inactive = runtime.handle_transcript("monta algo para probar este nicho")
+
+    assert active["intent"] == "create_mission"
+    assert inactive["intent"] == "create_asset"
+    assert runtime.status().active_memory_rule_count == 0
+
+
 def test_applied_rules_are_process_local_to_runtime_instance():
     runtime = VoiceRuntime()
     runtime.apply_reviewed_feedback(
@@ -174,4 +265,22 @@ def test_applied_rules_are_process_local_to_runtime_instance():
 
     assert runtime.status().applied_feedback_count == 1
     assert fresh_runtime.status().applied_feedback_count == 0
+    assert fresh_runtime.handle_transcript("monta algo para probar este nicho")["intent"] == "create_asset"
+
+
+def test_active_memory_rules_are_process_local_to_runtime_instance():
+    runtime = VoiceRuntime()
+    rule = runtime.apply_reviewed_feedback(
+        original_text="monta algo para probar este nicho",
+        interpreted_intent="create_asset",
+        corrected_intent="create_mission",
+    )
+    proposal = runtime.propose_memory_from_applied_feedback(rule)
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.activate_memory_proposal(proposal.id)
+
+    fresh_runtime = VoiceRuntime()
+
+    assert runtime.status().active_memory_rule_count == 1
+    assert fresh_runtime.status().active_memory_rule_count == 0
     assert fresh_runtime.handle_transcript("monta algo para probar este nicho")["intent"] == "create_asset"
