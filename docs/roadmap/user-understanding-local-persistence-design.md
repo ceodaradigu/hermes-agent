@@ -171,6 +171,8 @@ La reversibilidad tambien implica que cargar un snapshot no debe activar comport
 
 En esta fase futura, cargar un snapshot local no debe aplicar memoria al router/runtime.
 
+PR #48 documenta la validacion real de activacion explicita: `approve` y `memory-load-local` no activan memoria; `memory-activate` si permite cambiar la clasificacion durante la sesion; el sensitive boundary sigue ganando siempre.
+
 Aplicar memoria al router debe ser otra fase separada y solo para memoria:
 
 - `reviewed`.

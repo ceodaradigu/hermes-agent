@@ -206,6 +206,10 @@ Una proposal aprobada puede activarse explicitamente en el runtime con `memory-a
 
 Este paso prepara la siguiente fase: persistencia local opt-in con auditoria, revision explicita y reglas de seguridad antes de cargar memoria en runtime.
 
+## PR #48 — Memory activation smoke test docs
+
+PR #48 documenta la validacion real del flujo `memory-propose-from-feedback` -> `memory-review` -> `memory-approve` -> `memory-activate`: `approve` y `memory-load-local` no activan memoria automaticamente, `memory-activate` puede cambiar la clasificacion durante la sesion, y el sensitive boundary sigue ganando siempre.
+
 ## PR #37 — Memory snapshot API
 
 Se exponen endpoints internos para exportar/importar snapshots JSON de propuestas de User Understanding memory en memoria:
