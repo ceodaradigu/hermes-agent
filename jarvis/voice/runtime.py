@@ -15,8 +15,14 @@ from jarvis.voice.understanding_memory import (
     UserUnderstandingMemoryProposalStore,
 )
 from jarvis.voice.understanding_memory_local_store import (
+    UserUnderstandingMemoryLocalBackupResult,
+    UserUnderstandingMemoryLocalDeleteResult,
     UserUnderstandingMemoryLocalLoadResult,
     UserUnderstandingMemoryLocalSaveResult,
+    UserUnderstandingMemoryLocalStatusResult,
+    backup_user_understanding_memory_snapshot_local,
+    delete_user_understanding_memory_local,
+    get_user_understanding_memory_local_status,
     load_user_understanding_memory_snapshot_local,
     save_user_understanding_memory_snapshot_local,
 )
@@ -276,6 +282,35 @@ class VoiceRuntime:
             replace=replace,
         )
         self._state.memory_proposal_count = self._memory_proposal_store.count()
+        return result.to_dict()
+
+    def get_memory_local_status(
+        self,
+        base_dir: str | None = None,
+    ) -> dict[str, Any]:
+        result: UserUnderstandingMemoryLocalStatusResult = get_user_understanding_memory_local_status(
+            base_dir=base_dir,
+        )
+        return result.to_dict()
+
+    def backup_memory_snapshot_local(
+        self,
+        base_dir: str | None = None,
+    ) -> dict[str, Any]:
+        result: UserUnderstandingMemoryLocalBackupResult = backup_user_understanding_memory_snapshot_local(
+            base_dir=base_dir,
+        )
+        return result.to_dict()
+
+    def delete_memory_local(
+        self,
+        base_dir: str | None = None,
+        include_backups: bool = True,
+    ) -> dict[str, Any]:
+        result: UserUnderstandingMemoryLocalDeleteResult = delete_user_understanding_memory_local(
+            base_dir=base_dir,
+            include_backups=include_backups,
+        )
         return result.to_dict()
 
     def import_memory_snapshot(

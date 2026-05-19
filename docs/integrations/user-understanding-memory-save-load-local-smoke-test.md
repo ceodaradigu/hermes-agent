@@ -193,6 +193,54 @@ Resultado esperado:
 - No queda memoria local de prueba.
 - El repo queda limpio salvo cambios documentales intencionados de esta PR.
 
+## Opcional: mantenimiento local PR #46
+
+Despues de `memory-save-local`, consultar estado local:
+
+```bash
+./scripts/local/voice-runtime-control.sh memory-local-status ".jarvis"
+```
+
+Resultado esperado:
+
+- `snapshot_exists=true`
+- `persisted=true`
+- `checksum` presente
+- `applied_to_runtime=false`
+
+Crear backup manual:
+
+```bash
+./scripts/local/voice-runtime-control.sh memory-backup-local ".jarvis"
+```
+
+Resultado esperado:
+
+- `backed_up=true`
+- Se crea un archivo en `.jarvis/user_understanding/backups/`.
+- El audit log contiene `event=memory_snapshot_backed_up`.
+
+Borrar memoria local:
+
+```bash
+./scripts/local/voice-runtime-control.sh memory-delete-local ".jarvis" true
+./scripts/local/voice-runtime-control.sh memory-local-status ".jarvis"
+```
+
+Resultado esperado:
+
+- `deleted=true` en el delete.
+- `snapshot_exists=false` despues del delete.
+- No hay autoload.
+- No aplica memoria al router/runtime.
+- `transcript` no cambia.
+
+Confirmar repo limpio o solo con cambios intencionados:
+
+```bash
+git status --short
+```
+
 ## Confirmaciones de seguridad
 
 - `.jarvis` es memoria local de usuario y no debe versionarse.

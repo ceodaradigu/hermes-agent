@@ -699,3 +699,229 @@ def test_memory_local_load_does_not_autoload_between_new_voice_runtime_instances
     fresh = _client()
 
     assert fresh.get("/voice/runtime/memory/proposals").json()["memory_proposal_count"] == 0
+
+
+def test_memory_local_status_endpoint_works_without_snapshot(tmp_path):
+    client = _client()
+
+    response = client.get(
+        "/voice/runtime/memory/local/status",
+        params={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["applied_to_runtime"] is False
+    assert data["result"]["exists"] is False
+    assert data["result"]["snapshot_exists"] is False
+    assert data["result"]["can_load_explicitly"] is False
+
+
+def test_memory_local_status_endpoint_after_save_reports_checksum(tmp_path):
+    client = _client()
+    _create_proposal(client)
+    client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    response = client.get(
+        "/voice/runtime/memory/local/status",
+        params={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["snapshot_exists"] is True
+    assert result["persisted"] is True
+    assert result["checksum"]
+    assert result["applied_to_runtime"] is False
+
+
+def test_memory_local_backup_endpoint_works_and_writes_audit(tmp_path):
+    client = _client()
+    _create_proposal(client)
+    client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    response = client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    audit_path = tmp_path / ".jarvis" / "user_understanding" / "audit_log.jsonl"
+    event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[-1])
+    assert response.status_code == 200
+    data = response.json()
+    assert data["applied_to_runtime"] is False
+    assert data["result"]["backed_up"] is True
+    assert data["result"]["persisted_source"] is True
+    assert data["result"]["applied_to_runtime"] is False
+    assert event["event"] == "memory_snapshot_backed_up"
+
+
+def test_memory_local_backup_endpoint_missing_snapshot_returns_404(tmp_path):
+    client = _client()
+
+    response = client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 404
+    assert "Local memory snapshot not found" in response.json()["detail"]
+
+
+def test_memory_local_delete_endpoint_deletes_files_and_backups(tmp_path):
+    client = _client()
+    _create_proposal(client)
+    client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    response = client.request(
+        "DELETE",
+        "/voice/runtime/memory/local",
+        json={"base_dir": str(tmp_path / ".jarvis"), "include_backups": True},
+    )
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert response.json()["applied_to_runtime"] is False
+    assert result["deleted"] is True
+    assert result["snapshot_deleted"] is True
+    assert result["audit_log_deleted"] is True
+    assert result["backups_deleted"] is True
+    assert not (tmp_path / ".jarvis" / "user_understanding" / "memory_proposals.snapshot.json").exists()
+    assert not (tmp_path / ".jarvis" / "user_understanding" / "backups").exists()
+
+
+def test_memory_local_delete_endpoint_preserves_backups_when_false(tmp_path):
+    client = _client()
+    _create_proposal(client)
+    client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    response = client.request(
+        "DELETE",
+        "/voice/runtime/memory/local",
+        json={"base_dir": str(tmp_path / ".jarvis"), "include_backups": False},
+    )
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["deleted"] is True
+    assert result["backups_deleted"] is False
+    assert (tmp_path / ".jarvis" / "user_understanding" / "backups").is_dir()
+
+
+def test_memory_local_delete_endpoint_does_not_fail_when_missing(tmp_path):
+    client = _client()
+
+    response = client.request(
+        "DELETE",
+        "/voice/runtime/memory/local",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["result"]["deleted"] is False
+
+
+def test_memory_local_new_endpoints_validate_empty_base_dir():
+    client = _client()
+
+    status = client.get("/voice/runtime/memory/local/status", params={"base_dir": "   "})
+    backup = client.post("/voice/runtime/memory/local/backup", json={"base_dir": "   "})
+    delete = client.request("DELETE", "/voice/runtime/memory/local", json={"base_dir": "   "})
+
+    assert status.status_code == 400
+    assert backup.status_code == 400
+    assert delete.status_code == 400
+    assert "base_dir must not be empty" in status.json()["detail"]
+
+
+def test_memory_local_new_endpoints_reject_direct_path_or_file_input(tmp_path):
+    client = _client()
+
+    backup_path_input = client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"path": str(tmp_path / "memory_proposals.snapshot.json")},
+    )
+    delete_file_input = client.request(
+        "DELETE",
+        "/voice/runtime/memory/local",
+        json={"file": str(tmp_path / "memory_proposals.snapshot.json")},
+    )
+
+    assert backup_path_input.status_code == 400
+    assert delete_file_input.status_code == 400
+    assert "path/file inputs are not accepted" in backup_path_input.json()["detail"]
+
+
+def test_memory_local_status_backup_delete_do_not_change_transcript_or_create_tasks(tmp_path):
+    client = _client()
+    before = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+    proposal = _create_proposal(client, corrected_intent="query_status")
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    client.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    last_transcript = client.get("/voice/runtime/status").json()["last_transcript"]
+
+    status = client.get(
+        "/voice/runtime/memory/local/status",
+        params={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    backup = client.post(
+        "/voice/runtime/memory/local/backup",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    delete = client.request(
+        "DELETE",
+        "/voice/runtime/memory/local",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    after = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+
+    assert status.status_code == 200
+    assert backup.status_code == 200
+    assert delete.status_code == 200
+    assert status.json()["applied_to_runtime"] is False
+    assert backup.json()["applied_to_runtime"] is False
+    assert delete.json()["applied_to_runtime"] is False
+    assert after["intent"] == before["intent"]
+    assert after["status"] == before["status"]
+    assert "reviewed_feedback_applied" not in after["user_context_signals"]
+    assert client.get("/tasks").json() == []
+    assert client.get("/missions").json() == []
+    assert last_transcript == "monta algo para probar este nicho"
+
+
+def test_voice_tts_mock_still_works_after_memory_local_maintenance_endpoints_present():
+    client = _client()
+
+    response = client.post("/voice/tts", json={"text": "hola mundo"})
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "mock"

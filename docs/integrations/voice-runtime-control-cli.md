@@ -223,6 +223,34 @@ scripts/local/voice-runtime-control.sh memory-load-local ".jarvis" false
 
 Este comando importa proposals al store para poder listarlas y revisarlas. No acepta ruta directa al snapshot, no implementa autoload, no aplica memoria al router/runtime, no cambia `transcript`, no ejecuta tareas reales y no crea misiones reales.
 
+Consultar estado de memoria local por accion explicita:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-local-status
+scripts/local/voice-runtime-control.sh memory-local-status ".jarvis"
+```
+
+`memory-local-status` llama a `GET /voice/runtime/memory/local/status`, inspecciona solo las rutas controladas bajo `.jarvis/user_understanding/`, informa existencia, tamanos, backups, checksum y `persisted` cuando el snapshot existe. No importa memoria, no autoload, no aplica memoria al router/runtime y no cambia `transcript`.
+
+Crear backup manual del snapshot local:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-backup-local
+scripts/local/voice-runtime-control.sh memory-backup-local ".jarvis"
+```
+
+`memory-backup-local` llama a `POST /voice/runtime/memory/local/backup` y copia `memory_proposals.snapshot.json` a `.jarvis/user_understanding/backups/`. Tambien escribe el evento `memory_snapshot_backed_up` en `audit_log.jsonl` sin incluir contenido de proposals.
+
+Borrar memoria local explicitamente:
+
+```bash
+scripts/local/voice-runtime-control.sh memory-delete-local
+scripts/local/voice-runtime-control.sh memory-delete-local ".jarvis" true
+scripts/local/voice-runtime-control.sh memory-delete-local ".jarvis" false
+```
+
+`memory-delete-local` llama a `DELETE /voice/runtime/memory/local`. El argumento opcional `include_backups` acepta `true` o `false` y usa `true` por defecto. Borra snapshot y audit log; si `include_backups=true`, borra tambien `backups/`.
+
 ## Endpoints
 
 | Comando | Metodo | Endpoint |
@@ -252,5 +280,8 @@ Este comando importa proposals al store para poder listarlas y revisarlas. No ac
 | `memory-snapshot-import <snapshot_json> [replace]` | `POST` | `/voice/runtime/memory/snapshot/import` |
 | `memory-save-local [base_dir] [create_backup]` | `POST` | `/voice/runtime/memory/local/save` |
 | `memory-load-local [base_dir] [replace]` | `POST` | `/voice/runtime/memory/local/load` |
+| `memory-local-status [base_dir]` | `GET` | `/voice/runtime/memory/local/status` |
+| `memory-backup-local [base_dir]` | `POST` | `/voice/runtime/memory/local/backup` |
+| `memory-delete-local [base_dir] [include_backups]` | `DELETE` | `/voice/runtime/memory/local` |
 
 El script imprime la respuesta JSON que devuelve la API. Si no recibe comando, muestra el uso y sale con codigo `2`.

@@ -314,3 +314,24 @@ Alcance:
 - Confirma que `transcript` sigue sin cambiar.
 
 Este paso es solo documentacion: no implementa persistencia nueva, no cambia endpoints, no cambia runtime y no activa aprendizaje operativo.
+
+## PR #46 — Local status/delete/backup
+
+PR #46 implementa mantenimiento local basico para snapshots de User Understanding memory bajo `.jarvis/user_understanding/`.
+
+Alcance:
+
+- `memory-local-status` inspecciona memoria local de forma explicita.
+- `memory-backup-local` crea un backup manual de `memory_proposals.snapshot.json` en `backups/`.
+- `memory-delete-local` borra memoria local de forma explicita.
+- Las operaciones solo actuan bajo `.jarvis/user_understanding/`, resuelto por el resolver local controlado.
+- `status` puede calcular checksum y `persisted` si existe snapshot, pero no importa proposals al store.
+- `backup` escribe un evento `memory_snapshot_backed_up` en `audit_log.jsonl` sin incluir contenido de proposals, alias, evidence ni secretos.
+- `delete` puede borrar snapshot, audit log y backups; con `include_backups=false` conserva backups.
+- No hay autoload.
+- No carga memoria automaticamente al arrancar.
+- No aplica memoria al router/runtime.
+- No cambia transcript ni clasificacion.
+- No ejecuta tareas reales ni crea misiones reales.
+
+Este paso anade controles explicitos de mantenimiento local, pero mantiene separada la persistencia de cualquier aplicacion operativa de memoria.
