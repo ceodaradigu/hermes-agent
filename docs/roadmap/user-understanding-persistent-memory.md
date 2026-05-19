@@ -210,6 +210,10 @@ Este paso prepara la siguiente fase: persistencia local opt-in con auditoria, re
 
 PR #48 documenta la validacion real del flujo `memory-propose-from-feedback` -> `memory-review` -> `memory-approve` -> `memory-activate`: `approve` y `memory-load-local` no activan memoria automaticamente, `memory-activate` puede cambiar la clasificacion durante la sesion, y el sensitive boundary sigue ganando siempre.
 
+## PR #49 — Load-local to approved activation smoke test docs
+
+PR #49 documenta el flujo real `save-local` -> `clear runtime` -> `load-local` -> `review` -> `approve` -> `activate` -> `transcript` cambia, confirmando que `load-local` no activa runtime, `memory-activate` si cambia clasificacion y el sensitive boundary sigue ganando.
+
 ## PR #37 — Memory snapshot API
 
 Se exponen endpoints internos para exportar/importar snapshots JSON de propuestas de User Understanding memory en memoria:

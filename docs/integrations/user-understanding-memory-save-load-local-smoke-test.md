@@ -20,6 +20,8 @@ Este flujo valida:
 
 Esta fase permite recuperar proposals, no activar aprendizaje operativo todavia.
 
+Para validar el flujo completo desde memoria local persistida hasta activacion aprobada, ver `docs/integrations/user-understanding-memory-load-approve-activate-smoke-test.md`. Ese smoke test cubre `load-local` -> `review` -> `approve` -> `activate` y confirma que la clasificacion cambia solo tras `memory-activate`.
+
 ## 1. Arrancar JARVIS local
 
 En una terminal:

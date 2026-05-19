@@ -16,6 +16,8 @@ El flujo confirma:
 - `transcript` cambia solo a nivel de intención y mantiene `executed=false`.
 - Este es el primer punto donde memoria aprobada puede afectar runtime, pero solo tras activación explícita.
 
+Para validar activación desde memoria local persistida, ver `docs/integrations/user-understanding-memory-load-approve-activate-smoke-test.md`.
+
 ## 1. Arrancar JARVIS local
 
 En una terminal:
