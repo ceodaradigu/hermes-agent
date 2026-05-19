@@ -2,6 +2,8 @@
 
 Esta guia valida `memory-load-local` como lectura local explicita. El flujo lee y escribe `.jarvis/user_understanding/` solo por comandos explicitos; no hay autoload ni aplicacion al router/runtime.
 
+Para validar el flujo completo real de `memory-save-local` + `memory-load-local`, incluyendo limpieza de runtime y confirmacion de `transcript` sin cambio, ver `docs/integrations/user-understanding-memory-save-load-local-smoke-test.md`.
+
 ## Preparacion
 
 Arranca la API local de JARVIS y limpia proposals en memoria:
