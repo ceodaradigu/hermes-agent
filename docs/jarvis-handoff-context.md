@@ -302,7 +302,7 @@ PR #51 - docs: add JARVIS handoff context and working protocol
 
 Después:
 
-- PR #52 - usar quickstart como smoke test real de JARVIS local memory.
+- PR #52 - documentar `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md` como checklist de smoke test manual de JARVIS local memory, pendiente de ejecucion real por David; no afirmar que fue ejecutado hasta que exista salida real de terminal.
 - PR #53 - diseño de conversational runtime natural.
 - PR #54 - modelo de respuesta natural/contextual sin frases rígidas.
 - PR #55 - propuesta de MissionControl safe handoff.

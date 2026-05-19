@@ -74,6 +74,8 @@ User Understanding load-local approval activation smoke test: guía para validar
 
 JARVIS local memory quickstart: guía para usar memoria local de forma explícita y principio de interacción natural sin frases rígidas, en `docs/integrations/jarvis-local-memory-quickstart.md`.
 
+JARVIS local memory quickstart manual smoke test: checklist documental para ejecutar manualmente el quickstart como smoke test reproducible, sin autoload, sin autoejecucion, sin tareas reales y sin afirmar validacion hasta que David pegue salida real de terminal, en `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
