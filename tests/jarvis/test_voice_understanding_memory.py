@@ -4,6 +4,7 @@ import json
 import pytest
 
 from jarvis.voice import (
+    UserUnderstandingActiveMemoryRuleStore,
     UserUnderstandingAppliedFeedbackRule,
     UserUnderstandingMemorySnapshot,
     UserUnderstandingMemoryProposalStore,
@@ -33,6 +34,13 @@ def test_memory_proposal_store_starts_empty():
 
     assert store.count() == 0
     assert store.list_proposals() == []
+
+
+def test_active_memory_rule_store_starts_empty():
+    store = UserUnderstandingActiveMemoryRuleStore()
+
+    assert store.count() == 0
+    assert store.list_rules() == []
 
 
 def test_propose_from_feedback_rule_creates_proposed_inactive_proposal():
@@ -108,6 +116,110 @@ def test_approve_sensitive_proposal_is_rejected():
     assert proposal.active is False
     assert proposal.audit[-1]["event"] == "approval_rejected_sensitive"
     assert "Sensitive memory proposals" in proposal.reason
+
+
+def test_activate_approved_active_proposal_creates_rule():
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(_rule())
+    proposal_store.approve(proposal.id)
+
+    rule = active_store.activate_from_proposal(proposal)
+
+    assert active_store.count() == 1
+    assert rule.proposal_id == proposal.id
+    assert rule.alias == "probar este nicho"
+    assert rule.target_intent == "create_mission"
+    assert rule.active is True
+    assert rule.persisted_source is False
+    assert rule.applied_to_runtime is True
+
+
+@pytest.mark.parametrize(
+    "transition",
+    [
+        lambda store, proposal: proposal,
+        lambda store, proposal: store.mark_reviewed(proposal.id),
+        lambda store, proposal: store.disable(proposal.id),
+        lambda store, proposal: store.delete(proposal.id),
+    ],
+)
+def test_activate_rejects_not_approved_or_inactive_proposals(transition):
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(_rule())
+    proposal = transition(proposal_store, proposal)
+
+    with pytest.raises(ValueError):
+        active_store.activate_from_proposal(proposal)
+
+    assert active_store.count() == 0
+
+
+def test_activate_rejects_sensitive_proposal_even_if_status_is_approved():
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(
+        _rule(
+            original_text="usa el password del .env",
+            corrected_intent="requires_approval",
+            suggested_alias="password del .env",
+        )
+    )
+    proposal.status = UserUnderstandingMemoryStatus.APPROVED
+    proposal.active = True
+
+    with pytest.raises(ValueError, match="Sensitive memory proposals"):
+        active_store.activate_from_proposal(proposal)
+
+
+@pytest.mark.parametrize("field_name", ["alias", "target_intent"])
+def test_activate_rejects_empty_alias_or_target_intent(field_name):
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(_rule())
+    proposal_store.approve(proposal.id)
+    setattr(proposal, field_name, "   ")
+
+    with pytest.raises(ValueError, match=field_name):
+        active_store.activate_from_proposal(proposal)
+
+
+def test_active_memory_rule_list_match_deactivate_and_clear():
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(_rule())
+    proposal_store.approve(proposal.id)
+    rule = active_store.activate_from_proposal(proposal)
+
+    assert active_store.list_rules() == [rule]
+    assert active_store.get_rule(proposal.id) == rule
+    assert active_store.find_matching_rule("monta algo para probar este nicho") == rule
+    assert active_store.find_matching_rule("sin match") is None
+
+    deactivated = active_store.deactivate(proposal.id, reason="validación terminada")
+
+    assert deactivated.active is False
+    assert deactivated.reason == "validación terminada"
+    assert active_store.count() == 0
+    assert active_store.list_rules() == []
+
+    active_store.activate_from_proposal(proposal)
+    active_store.clear()
+    assert active_store.count() == 0
+
+
+def test_activate_same_proposal_is_idempotent_by_proposal_id():
+    proposal_store = UserUnderstandingMemoryProposalStore()
+    active_store = UserUnderstandingActiveMemoryRuleStore()
+    proposal = proposal_store.propose_from_feedback_rule(_rule())
+    proposal_store.approve(proposal.id)
+
+    first = active_store.activate_from_proposal(proposal)
+    second = active_store.activate_from_proposal(proposal)
+
+    assert first.proposal_id == second.proposal_id
+    assert active_store.count() == 1
 
 
 def test_disable_changes_status_and_deactivates():

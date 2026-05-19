@@ -18,6 +18,8 @@ from jarvis.voice.understanding_feedback import (
     UserUnderstandingFeedbackStore,
 )
 from jarvis.voice.understanding_memory import (
+    UserUnderstandingActiveMemoryRule,
+    UserUnderstandingActiveMemoryRuleStore,
     UserUnderstandingMemorySnapshot,
     UserUnderstandingMemoryProposal,
     UserUnderstandingMemoryProposalStore,
@@ -66,6 +68,8 @@ __all__ = [
     "UserUnderstandingFeedbackStore",
     "UserUnderstandingAppliedFeedbackRule",
     "UserUnderstandingAppliedFeedbackStore",
+    "UserUnderstandingActiveMemoryRule",
+    "UserUnderstandingActiveMemoryRuleStore",
     "UserUnderstandingMemorySnapshot",
     "UserUnderstandingMemoryProposal",
     "UserUnderstandingMemoryProposalStore",

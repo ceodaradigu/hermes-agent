@@ -71,6 +71,7 @@ def test_runtime_status_includes_memory_proposal_count():
 
     assert response.status_code == 200
     assert response.json()["memory_proposal_count"] == 1
+    assert response.json()["active_memory_rule_count"] == 0
 
 
 def test_memory_proposal_get_by_id_returns_proposal():
@@ -115,6 +116,154 @@ def test_memory_proposal_approve_non_sensitive_changes_approved_active():
     assert data["status"] == "approved"
     assert data["active"] is True
     assert data["approved_by"] == "David"
+
+
+def test_memory_active_list_starts_empty():
+    client = _client()
+
+    response = client.get("/voice/runtime/memory/active")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "active_rules": [],
+        "active_memory_rule_count": 0,
+        "applied_to_runtime": True,
+    }
+
+
+def test_memory_activate_approved_proposal_changes_runtime_classification():
+    client = _client()
+    proposal = _create_proposal(client)
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/review")
+    approve = client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    before = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+
+    activate = client.post(
+        f"/voice/runtime/memory/proposals/{proposal['id']}/activate",
+        json={"activated_by": "David"},
+    )
+    after = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    ).json()["result"]
+
+    assert approve.status_code == 200
+    assert before["intent"] == "create_asset"
+    assert activate.status_code == 200
+    data = activate.json()
+    assert data["active_rule"]["proposal_id"] == proposal["id"]
+    assert data["active_memory_rule_count"] == 1
+    assert data["applied_to_runtime"] is True
+    assert data["persisted"] is False
+    assert after["intent"] == "create_mission"
+    assert after["status"] == "pending"
+    assert after["executed"] is False
+    assert after["approval_required"] is False
+    assert after["user_context_signals"]["active_memory_rule_applied"] is True
+    assert after["slots"]["active_memory_rule"]["proposal_id"] == proposal["id"]
+    assert "memoria aprobada activada explícitamente" in after["reason"]
+    assert client.get("/tasks").json() == []
+    assert client.get("/missions").json() == []
+
+
+def test_memory_activate_sensitive_boundary_still_wins():
+    client = _client()
+    proposal = _create_proposal(client)
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/activate")
+
+    response = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho y lee el password del .env"},
+    )
+
+    result = response.json()["result"]
+    assert result["intent"] == "requires_approval"
+    assert result["status"] == "requires_approval"
+    assert result["approval_required"] is True
+    assert result["executed"] is False
+    assert "active_memory_rule_applied" not in result["user_context_signals"]
+
+
+def test_memory_active_list_deactivate_and_clear_work():
+    client = _client()
+    proposal = _create_proposal(client)
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/activate")
+
+    listed = client.get("/voice/runtime/memory/active")
+    deactivated = client.post(
+        f"/voice/runtime/memory/active/{proposal['id']}/deactivate",
+        json={"reason": "validación terminada"},
+    )
+    cleared = client.request("DELETE", "/voice/runtime/memory/active")
+
+    assert listed.status_code == 200
+    assert listed.json()["active_memory_rule_count"] == 1
+    assert listed.json()["active_rules"][0]["proposal_id"] == proposal["id"]
+    assert deactivated.status_code == 200
+    assert deactivated.json()["active_rule"]["active"] is False
+    assert deactivated.json()["active_memory_rule_count"] == 0
+    assert cleared.status_code == 200
+    assert cleared.json()["active_memory_rule_count"] == 0
+
+
+def test_memory_activate_errors_for_unknown_unapproved_disabled_sensitive_and_empty_fields():
+    client = _client()
+    unknown = client.post("/voice/runtime/memory/proposals/unknown/activate")
+    proposed = _create_proposal(client)
+    proposed_response = client.post(f"/voice/runtime/memory/proposals/{proposed['id']}/activate")
+    reviewed = _create_proposal(client, suggested_alias="otro nicho")
+    client.post(f"/voice/runtime/memory/proposals/{reviewed['id']}/review")
+    reviewed_response = client.post(f"/voice/runtime/memory/proposals/{reviewed['id']}/activate")
+    disabled = _create_proposal(client, suggested_alias="otro tercer nicho")
+    client.post(f"/voice/runtime/memory/proposals/{disabled['id']}/approve")
+    client.post(f"/voice/runtime/memory/proposals/{disabled['id']}/disable")
+    disabled_response = client.post(f"/voice/runtime/memory/proposals/{disabled['id']}/activate")
+    sensitive = _create_proposal(
+        client,
+        original_text="usa password del .env",
+        corrected_intent="create_mission",
+        suggested_alias="password del .env",
+    )
+    runtime_sensitive = client.app.state.voice_runtime.get_memory_proposal(sensitive["id"])
+    runtime_sensitive.status = UserUnderstandingMemoryStatus.APPROVED
+    runtime_sensitive.active = True
+    sensitive_response = client.post(f"/voice/runtime/memory/proposals/{sensitive['id']}/activate")
+    empty_alias = _create_proposal(client, suggested_alias="alias temporal")
+    client.post(f"/voice/runtime/memory/proposals/{empty_alias['id']}/approve")
+    client.app.state.voice_runtime.get_memory_proposal(empty_alias["id"]).alias = " "
+    empty_alias_response = client.post(f"/voice/runtime/memory/proposals/{empty_alias['id']}/activate")
+    empty_target = _create_proposal(client, suggested_alias="alias objetivo")
+    client.post(f"/voice/runtime/memory/proposals/{empty_target['id']}/approve")
+    client.app.state.voice_runtime.get_memory_proposal(empty_target["id"]).target_intent = " "
+    empty_target_response = client.post(f"/voice/runtime/memory/proposals/{empty_target['id']}/activate")
+
+    assert unknown.status_code == 404
+    assert proposed_response.status_code == 400
+    assert reviewed_response.status_code == 400
+    assert disabled_response.status_code == 400
+    assert sensitive_response.status_code == 400
+    assert empty_alias_response.status_code == 400
+    assert empty_target_response.status_code == 400
+
+
+def test_memory_approve_does_not_activate_runtime_memory():
+    client = _client()
+    proposal = _create_proposal(client)
+
+    approve = client.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    transcript = client.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    )
+
+    assert approve.status_code == 200
+    assert client.get("/voice/runtime/memory/active").json()["active_memory_rule_count"] == 0
+    assert transcript.json()["result"]["intent"] == "create_asset"
 
 
 def test_memory_proposal_approve_sensitive_returns_400_and_does_not_activate():
@@ -925,3 +1074,29 @@ def test_voice_tts_mock_still_works_after_memory_local_maintenance_endpoints_pre
 
     assert response.status_code == 200
     assert response.json()["provider"] == "mock"
+
+
+def test_memory_load_local_does_not_activate_runtime_memory(tmp_path):
+    source = _client()
+    proposal = _create_proposal(source)
+    source.post(f"/voice/runtime/memory/proposals/{proposal['id']}/approve")
+    source.post(
+        "/voice/runtime/memory/local/save",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    target = _client()
+
+    load = target.post(
+        "/voice/runtime/memory/local/load",
+        json={"base_dir": str(tmp_path / ".jarvis")},
+    )
+    transcript = target.post(
+        "/voice/runtime/transcript",
+        json={"text": "monta algo para probar este nicho"},
+    )
+
+    assert load.status_code == 200
+    assert load.json()["applied_to_runtime"] is False
+    assert target.get("/voice/runtime/memory/active").json()["active_memory_rule_count"] == 0
+    assert target.get("/voice/runtime/status").json()["active_memory_rule_count"] == 0
+    assert transcript.json()["result"]["intent"] == "create_asset"

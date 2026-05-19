@@ -218,6 +218,21 @@ Casos futuros a cubrir cuando exista implementacion:
 - Los archivos locales quedan fuera de git.
 - Load rechaza snapshot `persisted=false` si falta metadata requerida para carga local.
 - Load rechaza secretos.
+
+## PR #47 — Explicit runtime activation of approved memory
+
+PR #47 anade activacion runtime explicita para proposals aprobadas de User Understanding memory.
+
+- `memory-activate <proposal_id>` activa una proposal aprobada en el runtime actual.
+- La activacion es una accion explicita de David.
+- No hay autoload.
+- `memory-load-local` no activa memoria.
+- `memory-approve` no activa memoria.
+- La activacion vive solo en memoria del proceso.
+- Es reversible con `memory-deactivate <proposal_id>` o `memory-active-clear`.
+- `PolicyEngine` y el boundary sensible ganan siempre; textos con `.env`, `password` u otros terminos sensibles siguen en `requires_approval`.
+- La memoria activada puede reclasificar el transcript, pero no ejecuta tareas ni crea misiones reales.
+- No conecta con MissionControl ni con Hermes runtime.
 - Load no aplica router/runtime.
 - Delete borra memoria local.
 - Backup ocurre antes de overwrite.

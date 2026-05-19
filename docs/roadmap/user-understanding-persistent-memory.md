@@ -198,6 +198,10 @@ Alcance:
 - No cambia clasificacion de transcript.
 - Snapshots exportados se marcan con `persisted: false`.
 - Snapshots importados con `persisted: true` se rechazan para evitar tratar datos persistidos o externos como fuente controlada.
+
+## PR #47 — Explicit runtime activation
+
+Una proposal aprobada puede activarse explicitamente en el runtime con `memory-activate`; no hay autoload, `approve` y `load-local` no activan memoria, la activacion es solo en memoria del proceso y el boundary sensible sigue ganando siempre.
 - Propuestas sensibles `active` o `approved` no pueden importarse activas.
 
 Este paso prepara la siguiente fase: persistencia local opt-in con auditoria, revision explicita y reglas de seguridad antes de cargar memoria en runtime.
