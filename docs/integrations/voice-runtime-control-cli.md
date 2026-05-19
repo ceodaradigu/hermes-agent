@@ -165,6 +165,8 @@ scripts/local/voice-runtime-control.sh memory-activate ump_123 David
 
 `memory-activate` llama a `POST /voice/runtime/memory/proposals/{proposal_id}/activate`. Solo acepta proposals aprobadas, activas, no sensibles y con `alias` y `target_intent` no vacios. La regla activa vive solo en memoria del proceso, devuelve `persisted=false` y `applied_to_runtime=true`, y puede reclasificar transcripts que contengan el alias.
 
+`memory-activate` es el primer punto donde una memoria aprobada puede afectar el runtime, y requiere una accion explicita. `memory-approve` no activa memoria automaticamente, `memory-load-local` no activa memoria automaticamente y no hay autoload.
+
 Listar, desactivar o limpiar reglas activas:
 
 ```bash
@@ -173,7 +175,9 @@ scripts/local/voice-runtime-control.sh memory-deactivate ump_123 "validacion ter
 scripts/local/voice-runtime-control.sh memory-active-clear
 ```
 
-Las reglas activas no ejecutan tareas ni crean misiones reales. El boundary sensible gana siempre: si el transcript contiene `.env`, `password` u otros terminos sensibles, el resultado sigue siendo `requires_approval`.
+`memory-active-list` solo inspecciona reglas activas en memoria del proceso. `memory-deactivate` revierte una regla activa por proposal id y `memory-active-clear` elimina todas las reglas activas runtime sin borrar necesariamente las proposals.
+
+Las reglas activas no ejecutan tareas ni crean misiones reales. `transcript` cambia solo a nivel de intencion y mantiene `executed=false`. El boundary sensible gana siempre: si el transcript contiene `.env`, `password` u otros terminos sensibles, el resultado sigue siendo `requires_approval`.
 
 Desactivar una propuesta:
 

@@ -68,6 +68,8 @@ User Understanding local persistence design: diseño futuro para persistencia lo
 
 User Understanding save/load local smoke test: guía para validar el flujo completo memory-propose-from-feedback → memory-save-local → memory-clear → memory-load-local → memory-proposals → transcript sin cambio, en `docs/integrations/user-understanding-memory-save-load-local-smoke-test.md`.
 
+User Understanding memory activation smoke test: guía para validar memory-propose-from-feedback → memory-review → memory-approve → memory-activate → transcript cambia → sensitive boundary gana → memory-deactivate revierte, en `docs/integrations/user-understanding-memory-activation-smoke-test.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.
