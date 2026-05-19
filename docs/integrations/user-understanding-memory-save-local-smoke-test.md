@@ -2,6 +2,8 @@
 
 Esta guia valida el flujo futuro local de `memory-save-local`. A diferencia de los smoke tests anteriores de snapshot en memoria, este flujo si toca disco bajo `.jarvis/user_understanding/`.
 
+Para validar el flujo completo real de guardado, limpieza de runtime, carga local y confirmacion de `transcript` sin cambio, ver `docs/integrations/user-understanding-memory-save-load-local-smoke-test.md`.
+
 ## Preparacion
 
 Arranca la API local de JARVIS en el puerto habitual y usa el script local:

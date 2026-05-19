@@ -300,3 +300,17 @@ Alcance:
 - No ejecuta tareas reales ni crea misiones reales.
 
 Este paso permite recuperar proposals persistidas al store de revision, pero no convierte esas proposals en aprendizaje activo ni modifica el comportamiento del runtime.
+
+## PR #44 — Save/load local smoke test
+
+PR #44 documenta el flujo real combinado de `memory-save-local` + `memory-load-local` en `docs/integrations/user-understanding-memory-save-load-local-smoke-test.md`.
+
+Alcance:
+
+- Confirma escritura explicita mediante `memory-save-local`.
+- Confirma lectura explicita mediante `memory-load-local`.
+- Confirma que no hay autoload.
+- Confirma que `load-local` no aplica memoria al router/runtime.
+- Confirma que `transcript` sigue sin cambiar.
+
+Este paso es solo documentacion: no implementa persistencia nueva, no cambia endpoints, no cambia runtime y no activa aprendizaje operativo.
