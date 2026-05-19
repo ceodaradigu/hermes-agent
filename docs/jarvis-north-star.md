@@ -106,6 +106,8 @@ Antes de persistir cualquier aprendizaje, debe existir como proposal revisable, 
 
 JARVIS también debe poder mantenerse actualizado mediante un sistema de aprendizaje continuo supervisado: investigar novedades, filtrar ruido, proponer mejoras y aplicarlas solo tras aprobación explícita de David, PR revisable y tests.
 
+El proyecto debe mantener una fuente de handoff actualizada para que JARVIS pueda continuar entre hilos sin perder contexto, manteniendo seguridad, pensamiento crítico, workflow de PRs y memoria local explícita. Ver `docs/jarvis-handoff-context.md`.
+
 ### No permitido sin diseño explícito
 - aprender de forma opaca.
 - guardar información sensible sin consentimiento.
