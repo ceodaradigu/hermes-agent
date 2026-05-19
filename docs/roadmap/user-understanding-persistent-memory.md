@@ -79,6 +79,8 @@ Flujo futuro propuesto:
 
 El paso de feedback temporal a memoria persistente debe ser deliberado. El sistema no debe convertir patrones observados en memoria activa sin una propuesta visible y aprobacion humana.
 
+El sistema de aprendizaje continuo podrá proponer nuevas memorias o roadmap items, pero no debe persistir ni aplicar aprendizaje sin aprobación explícita.
+
 ## 6. Estados de una memoria
 
 Estados conceptuales:

@@ -104,6 +104,8 @@ El aprendizaje aplicado debe empezar como reglas revisadas, explícitas, tempora
 La memoria persistente futura debe empezar como propuestas revisadas, aprobadas explícitamente, auditables y reversibles. Ninguna memoria aprendida puede saltarse PolicyEngine, ApprovalGateway ni los límites sensibles.
 Antes de persistir cualquier aprendizaje, debe existir como proposal revisable, auditable y reversible.
 
+JARVIS también debe poder mantenerse actualizado mediante un sistema de aprendizaje continuo supervisado: investigar novedades, filtrar ruido, proponer mejoras y aplicarlas solo tras aprobación explícita de David, PR revisable y tests.
+
 ### No permitido sin diseño explícito
 - aprender de forma opaca.
 - guardar información sensible sin consentimiento.
