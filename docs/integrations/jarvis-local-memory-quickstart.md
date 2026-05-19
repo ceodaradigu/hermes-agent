@@ -2,6 +2,8 @@
 
 Guía práctica para usar JARVIS localmente con memoria disponible, sin autoload, sin ejecución real de tareas y sin crear misiones reales.
 
+Para continuar el trabajo en un nuevo hilo o nueva sesión, usar `docs/jarvis-handoff-context.md` como fuente de contexto operativo.
+
 Esta guía valida el flujo explícito:
 
 1. crear una propuesta de memoria.
@@ -174,4 +176,3 @@ Malo:
 Mejor:
 
 > "Esto suena a validación de nicho, no a crear una landing todavía. Te propongo abrir una misión de validación primero y dejar la landing para cuando tengamos señal."
-
