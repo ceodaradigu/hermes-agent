@@ -296,14 +296,17 @@ Transcript:
 
 ## 10. Roadmap inmediato recomendado
 
-PR #51 - docs: add JARVIS handoff context and working protocol
+Ya completado:
 
-- Este documento.
+- PR #51 - docs: add JARVIS handoff context and working protocol.
+- PR #52 - documentar `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md` como checklist de smoke test manual de JARVIS local memory. PR mergeado y validado con smoke test real manual.
+
+Actual:
+
+- PR #53 - diseño de conversational runtime natural.
 
 Después:
 
-- PR #52 - documentar `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md` como checklist de smoke test manual de JARVIS local memory, pendiente de ejecucion real por David; no afirmar que fue ejecutado hasta que exista salida real de terminal.
-- PR #53 - diseño de conversational runtime natural.
 - PR #54 - modelo de respuesta natural/contextual sin frases rígidas.
 - PR #55 - propuesta de MissionControl safe handoff.
 - PR #56 - approval flow para acciones reales.
