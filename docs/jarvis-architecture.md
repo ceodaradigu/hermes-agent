@@ -58,6 +58,8 @@ David Understanding Profile: capa futura para que JARVIS aprenda progresivamente
 
 User Understanding persistent memory design: diseño futuro para pasar de feedback temporal revisado a memoria persistente aprobada, auditable y reversible, manteniendo privacidad, ApprovalGateway, PolicyEngine y la North Star en `docs/roadmap/user-understanding-persistent-memory.md`.
 
+JARVIS Continuous Learning System: diseño futuro para radar tecnológico semanal, filtrado de relevancia, revisión contrarian, propuestas de aprendizaje, aprobación humana, PRs y tests antes de aplicar cambios. Ver `docs/roadmap/jarvis-continuous-learning-system.md`.
+
 User Understanding memory proposals smoke test: guía para validar el flujo local memory-clear → memory-propose-from-feedback → memory-review → memory-approve → transcript sin cambio → memory-disable → memory-clear usando el CLI, sin persistencia ni aplicación al router/runtime, en `docs/integrations/user-understanding-memory-proposals-smoke-test.md`.
 
 User Understanding memory snapshot smoke test: guía para validar el flujo local memory-clear → memory-propose-from-feedback → memory-snapshot → memory-clear → memory-snapshot-import → memory-proposals → transcript sin cambio, sin persistencia en disco ni aplicación al router/runtime, en `docs/integrations/user-understanding-memory-snapshot-smoke-test.md`.
