@@ -165,6 +165,8 @@ scripts/local/voice-runtime-control.sh memory-activate ump_123 David
 
 `memory-activate` llama a `POST /voice/runtime/memory/proposals/{proposal_id}/activate`. Solo acepta proposals aprobadas, activas, no sensibles y con `alias` y `target_intent` no vacios. La regla activa vive solo en memoria del proceso, devuelve `persisted=false` y `applied_to_runtime=true`, y puede reclasificar transcripts que contengan el alias.
 
+`memory-activate` si aplica una proposal `approved` al runtime de la sesion. Esa aplicacion es explicita, reversible y vive solo en memoria del proceso.
+
 `memory-activate` es el primer punto donde una memoria aprobada puede afectar el runtime, y requiere una accion explicita. `memory-approve` no activa memoria automaticamente, `memory-load-local` no activa memoria automaticamente y no hay autoload.
 
 Listar, desactivar o limpiar reglas activas:
@@ -243,6 +245,8 @@ scripts/local/voice-runtime-control.sh memory-load-local ".jarvis" false
 ```
 
 `memory-load-local` llama a `POST /voice/runtime/memory/local/load` y lee solo `.jarvis/user_understanding/memory_proposals.snapshot.json`, resuelto por el backend. El argumento opcional `base_dir` usa `.jarvis` por defecto. El argumento opcional `replace` acepta solo `true` o `false` y usa `true` por defecto.
+
+`memory-load-local` no activa runtime. Solo recupera proposals al store para inspeccion, revision y aprobacion posterior.
 
 Este comando importa proposals al store para poder listarlas y revisarlas. No acepta ruta directa al snapshot, no implementa autoload, no aplica memoria al router/runtime, no cambia `transcript`, no ejecuta tareas reales y no crea misiones reales.
 

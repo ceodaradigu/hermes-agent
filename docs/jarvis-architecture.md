@@ -70,6 +70,8 @@ User Understanding save/load local smoke test: guía para validar el flujo compl
 
 User Understanding memory activation smoke test: guía para validar memory-propose-from-feedback → memory-review → memory-approve → memory-activate → transcript cambia → sensitive boundary gana → memory-deactivate revierte, en `docs/integrations/user-understanding-memory-activation-smoke-test.md`.
 
+User Understanding load-local approval activation smoke test: guía para validar save-local → clear runtime → load-local → review → approve → activate → transcript cambia, con sensitive boundary ganando, en `docs/integrations/user-understanding-memory-load-approve-activate-smoke-test.md`.
+
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
 
 Voice local smoke test: guía para validar localmente `/voice/tts` con mock y GPT-SoVITS sidecar en `docs/integrations/voice-local-smoke-test.md`.

@@ -173,6 +173,16 @@ En esta fase futura, cargar un snapshot local no debe aplicar memoria al router/
 
 PR #48 documenta la validacion real de activacion explicita: `approve` y `memory-load-local` no activan memoria; `memory-activate` si permite cambiar la clasificacion durante la sesion; el sensitive boundary sigue ganando siempre.
 
+## PR #49 — Load-local to approved activation smoke test
+
+PR #49 documenta el flujo real de recuperacion local, revision, aprobacion y activacion:
+
+- Recupera memoria local con `memory-load-local` desde un snapshot guardado explicitamente.
+- Confirma que `memory-load-local` no activa runtime.
+- Confirma que `memory-review` y `memory-approve` preparan la proposal, pero no cambian clasificacion por si solos.
+- Confirma que `memory-activate` si cambia la clasificacion durante la sesion.
+- Confirma que el sensitive boundary sigue ganando aunque exista memoria activa.
+
 Aplicar memoria al router debe ser otra fase separada y solo para memoria:
 
 - `reviewed`.
