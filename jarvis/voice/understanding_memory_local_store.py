@@ -86,6 +86,109 @@ class UserUnderstandingMemoryLocalLoadResult:
         return self.as_dict()
 
 
+@dataclass(frozen=True)
+class UserUnderstandingMemoryLocalStatusResult:
+    root_dir: str
+    user_understanding_dir: str
+    snapshot_path: str
+    audit_log_path: str
+    backups_dir: str
+    exists: bool
+    snapshot_exists: bool
+    audit_log_exists: bool
+    backups_dir_exists: bool
+    snapshot_size_bytes: int
+    audit_log_size_bytes: int
+    backup_count: int
+    persisted: bool
+    checksum: str | None
+    can_load_explicitly: bool
+    applied_to_runtime: bool = False
+    notes: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "root_dir": self.root_dir,
+            "user_understanding_dir": self.user_understanding_dir,
+            "snapshot_path": self.snapshot_path,
+            "audit_log_path": self.audit_log_path,
+            "backups_dir": self.backups_dir,
+            "exists": self.exists,
+            "snapshot_exists": self.snapshot_exists,
+            "audit_log_exists": self.audit_log_exists,
+            "backups_dir_exists": self.backups_dir_exists,
+            "snapshot_size_bytes": self.snapshot_size_bytes,
+            "audit_log_size_bytes": self.audit_log_size_bytes,
+            "backup_count": self.backup_count,
+            "persisted": self.persisted,
+            "checksum": self.checksum,
+            "can_load_explicitly": self.can_load_explicitly,
+            "applied_to_runtime": self.applied_to_runtime,
+            "notes": list(self.notes),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+
+@dataclass(frozen=True)
+class UserUnderstandingMemoryLocalBackupResult:
+    snapshot_path: str
+    backup_path: str
+    audit_log_path: str
+    backed_up: bool
+    persisted_source: bool
+    checksum: str
+    proposal_count: int
+    active_count: int
+    sensitive_count: int
+    applied_to_runtime: bool = False
+    notes: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "snapshot_path": self.snapshot_path,
+            "backup_path": self.backup_path,
+            "audit_log_path": self.audit_log_path,
+            "backed_up": self.backed_up,
+            "persisted_source": self.persisted_source,
+            "checksum": self.checksum,
+            "proposal_count": self.proposal_count,
+            "active_count": self.active_count,
+            "sensitive_count": self.sensitive_count,
+            "applied_to_runtime": self.applied_to_runtime,
+            "notes": list(self.notes),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+
+@dataclass(frozen=True)
+class UserUnderstandingMemoryLocalDeleteResult:
+    user_understanding_dir: str
+    deleted: bool
+    snapshot_deleted: bool
+    audit_log_deleted: bool
+    backups_deleted: bool
+    applied_to_runtime: bool = False
+    notes: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "user_understanding_dir": self.user_understanding_dir,
+            "deleted": self.deleted,
+            "snapshot_deleted": self.snapshot_deleted,
+            "audit_log_deleted": self.audit_log_deleted,
+            "backups_deleted": self.backups_deleted,
+            "applied_to_runtime": self.applied_to_runtime,
+            "notes": list(self.notes),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.as_dict()
+
+
 def save_user_understanding_memory_snapshot_local(
     snapshot: UserUnderstandingMemorySnapshot,
     base_dir: str | Path | None = None,
@@ -224,6 +327,159 @@ def load_user_understanding_memory_snapshot_local(
     )
 
 
+def get_user_understanding_memory_local_status(
+    base_dir: str | Path | None = None,
+) -> UserUnderstandingMemoryLocalStatusResult:
+    """Inspect controlled local memory files without importing or applying them."""
+    paths = resolve_user_understanding_memory_local_paths(base_dir)
+    snapshot_exists = paths.snapshot_path.is_file()
+    audit_log_exists = paths.audit_log_path.is_file()
+    backups_dir_exists = paths.backups_dir.is_dir()
+    snapshot_size_bytes = paths.snapshot_path.stat().st_size if snapshot_exists else 0
+    audit_log_size_bytes = paths.audit_log_path.stat().st_size if audit_log_exists else 0
+    backup_count = (
+        sum(1 for item in paths.backups_dir.iterdir() if item.is_file())
+        if backups_dir_exists
+        else 0
+    )
+
+    persisted = False
+    checksum: str | None = None
+    can_load_explicitly = False
+    notes = [
+        "Status inspected only controlled local memory paths.",
+        "No snapshot was imported, no autoload was performed, and no runtime/router memory was applied.",
+    ]
+    if snapshot_exists:
+        try:
+            snapshot_bytes = paths.snapshot_path.read_bytes()
+            checksum = hashlib.sha256(snapshot_bytes).hexdigest()
+            payload = json.loads(snapshot_bytes.decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("Memory snapshot must be a JSON object.")
+            snapshot = UserUnderstandingMemorySnapshot.from_dict(payload)
+            persisted = snapshot.persisted
+            can_load_explicitly = True
+        except UnicodeDecodeError:
+            notes.append("Local memory snapshot status warning: file is not valid UTF-8 JSON.")
+        except (json.JSONDecodeError, ValueError) as exc:
+            notes.append(f"Local memory snapshot status warning: {exc}")
+        except OSError as exc:
+            notes.append(f"Local memory snapshot status warning: could not read snapshot: {exc}")
+    else:
+        notes.append("No local memory snapshot exists.")
+
+    return UserUnderstandingMemoryLocalStatusResult(
+        root_dir=str(paths.root_dir),
+        user_understanding_dir=str(paths.user_understanding_dir),
+        snapshot_path=str(paths.snapshot_path),
+        audit_log_path=str(paths.audit_log_path),
+        backups_dir=str(paths.backups_dir),
+        exists=paths.user_understanding_dir.exists(),
+        snapshot_exists=snapshot_exists,
+        audit_log_exists=audit_log_exists,
+        backups_dir_exists=backups_dir_exists,
+        snapshot_size_bytes=snapshot_size_bytes,
+        audit_log_size_bytes=audit_log_size_bytes,
+        backup_count=backup_count,
+        persisted=persisted,
+        checksum=checksum,
+        can_load_explicitly=can_load_explicitly,
+        applied_to_runtime=False,
+        notes=notes,
+    )
+
+
+def backup_user_understanding_memory_snapshot_local(
+    base_dir: str | Path | None = None,
+) -> UserUnderstandingMemoryLocalBackupResult:
+    """Create a manual backup of the controlled local memory snapshot."""
+    paths = resolve_user_understanding_memory_local_paths(base_dir)
+    if not paths.snapshot_path.exists():
+        raise FileNotFoundError(f"Local memory snapshot not found: {paths.snapshot_path}")
+    if not paths.snapshot_path.is_file():
+        raise ValueError(f"Local memory snapshot path is not a file: {paths.snapshot_path}")
+
+    snapshot_bytes = paths.snapshot_path.read_bytes()
+    payload = _decode_snapshot_payload(snapshot_bytes)
+    snapshot = UserUnderstandingMemorySnapshot.from_dict(payload)
+
+    paths.backups_dir.mkdir(parents=True, exist_ok=True)
+    backup_path = paths.backups_dir / f"memory_proposals.snapshot.{_timestamp_for_filename()}.json"
+    shutil.copy2(paths.snapshot_path, backup_path)
+    backup_bytes = backup_path.read_bytes()
+    checksum = hashlib.sha256(backup_bytes).hexdigest()
+
+    audit_event = {
+        "event": "memory_snapshot_backed_up",
+        "timestamp": _now_iso(),
+        "snapshot_path": str(paths.snapshot_path),
+        "backup_path": str(backup_path),
+        "checksum": checksum,
+        "applied_to_runtime": False,
+    }
+    _append_jsonl_atomic(paths.audit_log_path, audit_event)
+
+    notes = [
+        "Snapshot backed up only by explicit backup-local action.",
+        "No autoload, router application, runtime application, transcript change, task, or mission was performed.",
+    ]
+    return UserUnderstandingMemoryLocalBackupResult(
+        snapshot_path=str(paths.snapshot_path),
+        backup_path=str(backup_path),
+        audit_log_path=str(paths.audit_log_path),
+        backed_up=True,
+        persisted_source=snapshot.persisted,
+        checksum=checksum,
+        proposal_count=snapshot.proposal_count,
+        active_count=snapshot.active_count,
+        sensitive_count=snapshot.sensitive_count,
+        applied_to_runtime=False,
+        notes=notes,
+    )
+
+
+def delete_user_understanding_memory_local(
+    base_dir: str | Path | None = None,
+    include_backups: bool = True,
+) -> UserUnderstandingMemoryLocalDeleteResult:
+    """Delete controlled local memory files only by explicit delete-local action."""
+    if not isinstance(include_backups, bool):
+        raise TypeError("include_backups must be boolean.")
+
+    paths = resolve_user_understanding_memory_local_paths(base_dir)
+    notes = [
+        "Local memory delete was requested explicitly.",
+        "Only controlled files under user_understanding_dir were targeted.",
+        "No autoload, router application, runtime application, transcript change, task, or mission was performed.",
+    ]
+
+    snapshot_deleted = _unlink_if_file(paths.snapshot_path)
+    audit_log_deleted = _unlink_if_file(paths.audit_log_path)
+    backups_deleted = False
+    if include_backups and paths.backups_dir.exists():
+        if not paths.backups_dir.is_dir():
+            raise ValueError(f"Local memory backups path is not a directory: {paths.backups_dir}")
+        shutil.rmtree(paths.backups_dir)
+        backups_deleted = True
+    elif not include_backups:
+        notes.append("Backups were preserved because include_backups=false.")
+
+    deleted = snapshot_deleted or audit_log_deleted or backups_deleted
+    if not deleted:
+        notes.append("No local memory snapshot, audit log, or selected backups existed.")
+
+    return UserUnderstandingMemoryLocalDeleteResult(
+        user_understanding_dir=str(paths.user_understanding_dir),
+        deleted=deleted,
+        snapshot_deleted=snapshot_deleted,
+        audit_log_deleted=audit_log_deleted,
+        backups_deleted=backups_deleted,
+        applied_to_runtime=False,
+        notes=notes,
+    )
+
+
 def _validate_snapshot_safe_to_save(snapshot: UserUnderstandingMemorySnapshot) -> None:
     for proposal in snapshot.proposals:
         active_or_approved = proposal.active or proposal.status in {
@@ -280,6 +536,27 @@ def _append_jsonl_atomic(path: Path, event: dict[str, Any]) -> None:
             existing += b"\n"
     line = (json.dumps(event, sort_keys=True) + "\n").encode("utf-8")
     _atomic_write_bytes(path, existing + line)
+
+
+def _decode_snapshot_payload(snapshot_bytes: bytes) -> dict[str, Any]:
+    try:
+        payload = json.loads(snapshot_bytes.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ValueError("Memory snapshot file must be UTF-8 JSON.") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError("Memory snapshot JSON is invalid.") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Memory snapshot must be a JSON object.")
+    return payload
+
+
+def _unlink_if_file(path: Path) -> bool:
+    if not path.exists():
+        return False
+    if not path.is_file():
+        raise ValueError(f"Local memory path is not a file: {path}")
+    path.unlink()
+    return True
 
 
 def _now_iso() -> str:

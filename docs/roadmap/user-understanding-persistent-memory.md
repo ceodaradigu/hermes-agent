@@ -218,6 +218,10 @@ Alcance:
 - Import solo recibe dict o string JSON en el request.
 - Snapshots con `persisted=true` se rechazan.
 - Propuestas sensibles `active` o `approved` se rechazan.
+
+## PR #46 — Local status/delete/backup
+
+Se anaden operaciones explicitas de mantenimiento local (`memory-local-status`, `memory-backup-local`, `memory-delete-local`) para inspeccionar, respaldar y borrar snapshots bajo `.jarvis/user_understanding/`, sin autoload, sin aplicar memoria al router/runtime y sin cambiar transcript.
 - Import no aplica memoria al router/runtime.
 - Import no cambia transcript ni clasificacion.
 

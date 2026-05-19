@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 
 import pytest
 
@@ -8,6 +9,9 @@ from jarvis.voice import (
     UserUnderstandingMemoryProposalStore,
     UserUnderstandingMemoryStatus,
     VoiceRuntime,
+    backup_user_understanding_memory_snapshot_local,
+    delete_user_understanding_memory_local,
+    get_user_understanding_memory_local_status,
     load_user_understanding_memory_snapshot_local,
     save_user_understanding_memory_snapshot_local,
 )
@@ -355,3 +359,152 @@ def test_load_local_does_not_autoload_between_new_voice_runtime_instances(tmp_pa
 
     assert fresh_runtime.status().memory_proposal_count == 0
     assert fresh_runtime.list_memory_proposals() == []
+
+
+def test_local_status_without_jarvis_reports_missing_snapshot(tmp_path):
+    result = get_user_understanding_memory_local_status(base_dir=tmp_path / ".jarvis")
+
+    assert result.exists is False
+    assert result.snapshot_exists is False
+    assert result.audit_log_exists is False
+    assert result.backups_dir_exists is False
+    assert result.persisted is False
+    assert result.checksum is None
+    assert result.can_load_explicitly is False
+    assert result.applied_to_runtime is False
+
+
+def test_save_local_then_status_reports_persisted_checksum(tmp_path):
+    snapshot, _proposal = _snapshot_with_proposal()
+    base_dir = tmp_path / ".jarvis"
+    save_user_understanding_memory_snapshot_local(snapshot, base_dir=base_dir)
+
+    result = get_user_understanding_memory_local_status(base_dir=base_dir)
+
+    snapshot_path = base_dir / "user_understanding" / "memory_proposals.snapshot.json"
+    assert result.exists is True
+    assert result.snapshot_exists is True
+    assert result.audit_log_exists is True
+    assert result.persisted is True
+    assert result.can_load_explicitly is True
+    assert result.checksum == hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+
+
+def test_local_status_with_corrupt_json_returns_note_not_exception(tmp_path):
+    base_dir = tmp_path / ".jarvis"
+    snapshot_path = base_dir / "user_understanding" / "memory_proposals.snapshot.json"
+    snapshot_path.parent.mkdir(parents=True)
+    snapshot_path.write_text("{invalid json", encoding="utf-8")
+
+    result = get_user_understanding_memory_local_status(base_dir=base_dir)
+
+    assert result.snapshot_exists is True
+    assert result.persisted is False
+    assert result.can_load_explicitly is False
+    assert any("warning" in note for note in result.notes)
+
+
+def test_backup_local_creates_file_and_audit_event(tmp_path):
+    snapshot, _proposal = _snapshot_with_proposal()
+    base_dir = tmp_path / ".jarvis"
+    save_user_understanding_memory_snapshot_local(snapshot, base_dir=base_dir)
+
+    result = backup_user_understanding_memory_snapshot_local(base_dir=base_dir)
+
+    backup_path = base_dir / "user_understanding" / "backups"
+    audit_path = base_dir / "user_understanding" / "audit_log.jsonl"
+    event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[-1])
+    assert result.backed_up is True
+    assert result.persisted_source is True
+    assert result.proposal_count == 1
+    assert result.applied_to_runtime is False
+    assert len(list(backup_path.glob("memory_proposals.snapshot.*.json"))) == 1
+    assert event["event"] == "memory_snapshot_backed_up"
+    assert event["backup_path"] == result.backup_path
+    assert event["checksum"] == result.checksum
+    assert event["applied_to_runtime"] is False
+    assert "proposals" not in event
+    assert "alias" not in event
+    assert "evidence" not in event
+
+
+def test_backup_local_fails_controlled_when_snapshot_missing(tmp_path):
+    with pytest.raises(FileNotFoundError, match="Local memory snapshot not found"):
+        backup_user_understanding_memory_snapshot_local(base_dir=tmp_path / ".jarvis")
+
+
+def test_delete_local_deletes_snapshot_audit_and_backups(tmp_path):
+    snapshot, _proposal = _snapshot_with_proposal()
+    base_dir = tmp_path / ".jarvis"
+    save_user_understanding_memory_snapshot_local(snapshot, base_dir=base_dir)
+    backup_user_understanding_memory_snapshot_local(base_dir=base_dir)
+
+    result = delete_user_understanding_memory_local(base_dir=base_dir, include_backups=True)
+
+    user_understanding_dir = base_dir / "user_understanding"
+    assert result.deleted is True
+    assert result.snapshot_deleted is True
+    assert result.audit_log_deleted is True
+    assert result.backups_deleted is True
+    assert not (user_understanding_dir / "memory_proposals.snapshot.json").exists()
+    assert not (user_understanding_dir / "audit_log.jsonl").exists()
+    assert not (user_understanding_dir / "backups").exists()
+
+
+def test_delete_local_preserves_backups_when_requested(tmp_path):
+    snapshot, _proposal = _snapshot_with_proposal()
+    base_dir = tmp_path / ".jarvis"
+    save_user_understanding_memory_snapshot_local(snapshot, base_dir=base_dir)
+    backup_user_understanding_memory_snapshot_local(base_dir=base_dir)
+
+    result = delete_user_understanding_memory_local(base_dir=base_dir, include_backups=False)
+
+    assert result.deleted is True
+    assert result.snapshot_deleted is True
+    assert result.audit_log_deleted is True
+    assert result.backups_deleted is False
+    assert (base_dir / "user_understanding" / "backups").is_dir()
+
+
+def test_delete_local_does_not_fail_when_memory_missing(tmp_path):
+    result = delete_user_understanding_memory_local(base_dir=tmp_path / ".jarvis")
+
+    assert result.deleted is False
+    assert result.snapshot_deleted is False
+    assert result.audit_log_deleted is False
+    assert result.backups_deleted is False
+    assert any("No local memory" in note for note in result.notes)
+
+
+def test_status_backup_delete_do_not_change_runtime_transcript_or_router(tmp_path):
+    runtime = VoiceRuntime()
+    before = runtime.handle_transcript("monta algo para probar este nicho")
+    last_transcript = runtime.status().last_transcript
+    proposal = runtime.propose_memory_from_applied_feedback(_rule(corrected_intent="query_status"))
+    runtime.approve_memory_proposal(proposal.id)
+    runtime.save_memory_snapshot_local(base_dir=tmp_path / ".jarvis")
+
+    status = runtime.get_memory_local_status(base_dir=tmp_path / ".jarvis")
+    backup = runtime.backup_memory_snapshot_local(base_dir=tmp_path / ".jarvis")
+    delete = runtime.delete_memory_local(base_dir=tmp_path / ".jarvis")
+    after = runtime.handle_transcript("monta algo para probar este nicho")
+
+    assert status["applied_to_runtime"] is False
+    assert backup["applied_to_runtime"] is False
+    assert delete["applied_to_runtime"] is False
+    assert after["intent"] == before["intent"]
+    assert after["status"] == before["status"]
+    assert "reviewed_feedback_applied" not in after["user_context_signals"]
+    assert runtime.status().applied_feedback_count == 0
+    assert last_transcript == "monta algo para probar este nicho"
+
+
+def test_cli_bash_syntax_is_valid():
+    result = subprocess.run(
+        ["bash", "-n", "scripts/local/voice-runtime-control.sh"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr

@@ -114,6 +114,19 @@ class VoiceRuntimeMemoryLocalLoadRequest(BaseModel):
     file: Optional[Any] = None
 
 
+class VoiceRuntimeMemoryLocalBackupRequest(BaseModel):
+    base_dir: Optional[str] = None
+    path: Optional[Any] = None
+    file: Optional[Any] = None
+
+
+class VoiceRuntimeMemoryLocalDeleteRequest(BaseModel):
+    base_dir: Optional[str] = None
+    include_backups: Optional[Any] = True
+    path: Optional[Any] = None
+    file: Optional[Any] = None
+
+
 @dataclass
 class TaskRecord:
     task_id: str
@@ -681,6 +694,78 @@ def create_app(
         return {
             "result": result,
             "persisted_source": result["persisted_source"],
+            "applied_to_runtime": False,
+        }
+
+    @app.get("/voice/runtime/memory/local/status")
+    def voice_runtime_memory_local_status(base_dir: Optional[str] = None) -> dict:
+        if base_dir is not None:
+            if "\0" in base_dir:
+                raise HTTPException(status_code=400, detail="base_dir must not contain null bytes")
+            if not base_dir.strip():
+                raise HTTPException(status_code=400, detail="base_dir must not be empty")
+
+        try:
+            result = app.state.voice_runtime.get_memory_local_status(base_dir=base_dir)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "result": result,
+            "applied_to_runtime": False,
+        }
+
+    @app.post("/voice/runtime/memory/local/backup")
+    def voice_runtime_memory_local_backup(
+        payload: Optional[VoiceRuntimeMemoryLocalBackupRequest] = None,
+    ) -> dict:
+        if payload and (payload.path is not None or payload.file is not None):
+            raise HTTPException(status_code=400, detail="path/file inputs are not accepted")
+        base_dir = payload.base_dir if payload else None
+        if base_dir is not None:
+            if "\0" in base_dir:
+                raise HTTPException(status_code=400, detail="base_dir must not contain null bytes")
+            if not base_dir.strip():
+                raise HTTPException(status_code=400, detail="base_dir must not be empty")
+
+        try:
+            result = app.state.voice_runtime.backup_memory_snapshot_local(base_dir=base_dir)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "result": result,
+            "applied_to_runtime": False,
+        }
+
+    @app.delete("/voice/runtime/memory/local")
+    def voice_runtime_memory_local_delete(
+        payload: Optional[VoiceRuntimeMemoryLocalDeleteRequest] = None,
+    ) -> dict:
+        if payload and (payload.path is not None or payload.file is not None):
+            raise HTTPException(status_code=400, detail="path/file inputs are not accepted")
+        base_dir = payload.base_dir if payload else None
+        include_backups = True if payload is None or payload.include_backups is None else payload.include_backups
+        if not isinstance(include_backups, bool):
+            raise HTTPException(status_code=400, detail="include_backups must be boolean")
+        if base_dir is not None:
+            if "\0" in base_dir:
+                raise HTTPException(status_code=400, detail="base_dir must not contain null bytes")
+            if not base_dir.strip():
+                raise HTTPException(status_code=400, detail="base_dir must not be empty")
+
+        try:
+            result = app.state.voice_runtime.delete_memory_local(
+                base_dir=base_dir,
+                include_backups=include_backups,
+            )
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return {
+            "result": result,
             "applied_to_runtime": False,
         }
 

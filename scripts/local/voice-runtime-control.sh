@@ -45,6 +45,12 @@ Comandos:
                          POST   /voice/runtime/memory/local/save
   memory-load-local [base_dir] [replace]
                          POST   /voice/runtime/memory/local/load
+  memory-local-status [base_dir]
+                         GET    /voice/runtime/memory/local/status
+  memory-backup-local [base_dir]
+                         POST   /voice/runtime/memory/local/backup
+  memory-delete-local [base_dir] [include_backups]
+                         DELETE /voice/runtime/memory/local
 
 Variables:
   JARVIS_BASE_URL        URL base de JARVIS (default: http://127.0.0.1:8000)
@@ -78,6 +84,7 @@ MEMORY_SNAPSHOT_REPLACE="false"
 MEMORY_LOCAL_BASE_DIR=""
 MEMORY_LOCAL_CREATE_BACKUP="true"
 MEMORY_LOCAL_REPLACE="true"
+MEMORY_LOCAL_INCLUDE_BACKUPS="true"
 
 case "$COMMAND" in
   status)
@@ -326,6 +333,30 @@ case "$COMMAND" in
     fi
     MEMORY_LOCAL_REPLACE="${2:-true}"
     ;;
+  memory-local-status)
+    METHOD="GET"
+    ENDPOINT="/voice/runtime/memory/local/status"
+    PAYLOAD_KIND="memory-local-status"
+    MEMORY_LOCAL_BASE_DIR="${1:-.jarvis}"
+    ;;
+  memory-backup-local)
+    METHOD="POST"
+    ENDPOINT="/voice/runtime/memory/local/backup"
+    PAYLOAD_KIND="memory-backup-local"
+    MEMORY_LOCAL_BASE_DIR="${1:-.jarvis}"
+    ;;
+  memory-delete-local)
+    if [[ "${2:-true}" != "true" && "${2:-true}" != "false" ]]; then
+      echo "Error: [include_backups] debe ser true o false." >&2
+      usage
+      exit 2
+    fi
+    METHOD="DELETE"
+    ENDPOINT="/voice/runtime/memory/local"
+    PAYLOAD_KIND="memory-delete-local"
+    MEMORY_LOCAL_BASE_DIR="${1:-.jarvis}"
+    MEMORY_LOCAL_INCLUDE_BACKUPS="${2:-true}"
+    ;;
   *)
     echo "Error: comando desconocido: $COMMAND" >&2
     usage
@@ -338,9 +369,11 @@ python - "$JARVIS_BASE_URL" "$METHOD" "$ENDPOINT" "$PAYLOAD_KIND" "$PAYLOAD_VALU
   "$FEEDBACK_CORRECTION_NOTE" "$FEEDBACK_PREFERRED_NEXT_STEP" \
   "$MEMORY_ORIGINAL_TEXT" "$MEMORY_CORRECTED_INTENT" "$MEMORY_SUGGESTED_ALIAS" \
   "$MEMORY_REASON" "$MEMORY_APPROVED_BY" "$MEMORY_SNAPSHOT_JSON" "$MEMORY_SNAPSHOT_REPLACE" \
-  "$MEMORY_LOCAL_BASE_DIR" "$MEMORY_LOCAL_CREATE_BACKUP" "$MEMORY_LOCAL_REPLACE" <<'PY'
+  "$MEMORY_LOCAL_BASE_DIR" "$MEMORY_LOCAL_CREATE_BACKUP" "$MEMORY_LOCAL_REPLACE" \
+  "$MEMORY_LOCAL_INCLUDE_BACKUPS" <<'PY'
 import json
 import sys
+import urllib.parse
 import urllib.error
 import urllib.request
 
@@ -364,6 +397,7 @@ memory_snapshot_replace = sys.argv[17]
 memory_local_base_dir = sys.argv[18]
 memory_local_create_backup = sys.argv[19]
 memory_local_replace = sys.argv[20]
+memory_local_include_backups = sys.argv[21]
 
 data = None
 headers = {}
@@ -419,6 +453,23 @@ elif payload_kind == "memory-load-local":
     payload = {
         "base_dir": memory_local_base_dir,
         "replace": memory_local_replace == "true",
+    }
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-local-status":
+    endpoint = (
+        f"{endpoint}?base_dir={urllib.parse.quote(memory_local_base_dir, safe='')}"
+    )
+elif payload_kind == "memory-backup-local":
+    payload = {
+        "base_dir": memory_local_base_dir,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    headers["Content-Type"] = "application/json"
+elif payload_kind == "memory-delete-local":
+    payload = {
+        "base_dir": memory_local_base_dir,
+        "include_backups": memory_local_include_backups == "true",
     }
     data = json.dumps(payload).encode("utf-8")
     headers["Content-Type"] = "application/json"
