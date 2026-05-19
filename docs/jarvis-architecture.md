@@ -76,6 +76,8 @@ JARVIS local memory quickstart: guía para usar memoria local de forma explícit
 
 JARVIS local memory quickstart manual smoke test: checklist documental para ejecutar manualmente el quickstart como smoke test reproducible, sin autoload, sin autoejecucion, sin tareas reales y sin afirmar validacion hasta que David pegue salida real de terminal, en `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md`.
 
+JARVIS conversational runtime natural design: diseño futuro para que JARVIS evolucione desde comandos rígidos hacia una capa conversacional contextual, crítica y segura, sin autoejecución peligrosa y manteniendo `PolicyEngine`, `ApprovalGateway` y sensitive boundary por encima, en `docs/roadmap/pr-53-conversational-runtime-natural-design.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
