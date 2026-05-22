@@ -302,15 +302,16 @@ Ya completado:
 - PR #52 - documentar `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md` como checklist de smoke test manual de JARVIS local memory. PR mergeado y validado con smoke test real manual.
 - PR #53 - diseño de conversational runtime natural. PR mergeado.
 - PR #54 - natural runtime contracts. PR mergeado.
+- PR #55 - future capabilities backlog / moonshot map. PR mergeado.
 
 Actual:
 
-- PR #55 - future capabilities backlog / moonshot map: vision documental de 70 capacidades futuras, clasificadas por riesgo, modo probable, approval, monetizacion y dependencias.
+- PR #56 - Hermes inside JARVIS integration contract: contrato documental para usar Hermes como runtime/engine interno de JARVIS sin saltarse `PolicyEngine`, `ApprovalGateway`, auditoria ni sensitive boundary.
 
 Después:
 
-- PR siguiente recomendado - Hermes inside JARVIS integration contract.
-- PR #56 - approval flow para acciones reales.
+- PR siguiente recomendado - deployment modes local/server/hybrid contract.
+- PR siguiente alternativo - mobile voice command and approval contract.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
