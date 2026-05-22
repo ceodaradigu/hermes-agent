@@ -80,6 +80,8 @@ JARVIS conversational runtime natural design: diseño futuro para que JARVIS evo
 
 JARVIS natural runtime contracts: contrato documental para futuras implementaciones del modelo de respuesta natural/contextual, con inputs, outputs, estados, matriz tono/riesgo, baja confianza, acciones sensibles, pensamiento contrarian y criterios de aceptación, en `docs/roadmap/pr-54-natural-runtime-contracts.md`.
 
+JARVIS future capabilities backlog: vision map documental de 70 capacidades futuras y moonshots, con clasificacion por riesgo, modo probable, approval, monetizacion y dependencias como Hermes, mobile, server/hybrid, Money Engine y Asset Factory, en `docs/roadmap/jarvis-future-capabilities-backlog.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
