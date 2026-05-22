@@ -78,6 +78,8 @@ JARVIS local memory quickstart manual smoke test: checklist documental para ejec
 
 JARVIS conversational runtime natural design: diseño futuro para que JARVIS evolucione desde comandos rígidos hacia una capa conversacional contextual, crítica y segura, sin autoejecución peligrosa y manteniendo `PolicyEngine`, `ApprovalGateway` y sensitive boundary por encima, en `docs/roadmap/pr-53-conversational-runtime-natural-design.md`.
 
+JARVIS natural runtime contracts: contrato documental para futuras implementaciones del modelo de respuesta natural/contextual, con inputs, outputs, estados, matriz tono/riesgo, baja confianza, acciones sensibles, pensamiento contrarian y criterios de aceptación, en `docs/roadmap/pr-54-natural-runtime-contracts.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
