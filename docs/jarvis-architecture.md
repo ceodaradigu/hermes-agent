@@ -84,6 +84,8 @@ JARVIS future capabilities backlog: vision map documental de 70 capacidades futu
 
 Hermes inside JARVIS integration contract: contrato documental para usar Hermes como runtime/engine interno de JARVIS solo mediante adapter/control layer, despues de `PolicyEngine`, `ApprovalGateway` cuando aplique, sensitive boundary y auditoria, en `docs/roadmap/pr-56-hermes-inside-jarvis-contract.md`.
 
+JARVIS deployment modes contract: contrato documental para futuros Local Mode, Server Mode y Hybrid Mode, manteniendo un unico `PolicyEngine`, un unico `ApprovalGateway`, Hermes detras de JARVIS control layer y sin exponer JARVIS directamente a internet sin auth/audit, en `docs/roadmap/pr-57-deployment-modes-contract.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
