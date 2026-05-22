@@ -304,15 +304,15 @@ Ya completado:
 - PR #54 - natural runtime contracts. PR mergeado.
 - PR #55 - future capabilities backlog / moonshot map. PR mergeado.
 - PR #56 - Hermes inside JARVIS integration contract. PR mergeado.
+- PR #57 - deployment modes local/server/hybrid contract. PR mergeado.
 
 Actual:
 
-- PR #57 - deployment modes local/server/hybrid contract: contrato documental para futuros Local Mode, Server Mode y Hybrid Mode sin implementar despliegue, servidor, movil ni runtime nuevo.
+- PR #58 - mobile voice command and approval contract: contrato documental para usar el movil como interfaz remota segura de voz/texto/aprobacion, sin implementar app movil, wake word, runtime, endpoints ni bypass de JARVIS Gateway, PolicyEngine o ApprovalGateway.
 
 Después:
 
-- PR siguiente recomendado - mobile voice command and approval contract.
-- PR siguiente alternativo - restriction registry and policy override contract.
+- PR siguiente recomendado - restriction registry and policy override contract.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
