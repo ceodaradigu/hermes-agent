@@ -92,6 +92,8 @@ JARVIS restriction registry and policy override contract: contrato documental pa
 
 JARVIS Code Intelligence / CodeGraph evaluation contract: contrato documental para evaluar CodeGraph como herramienta local/opcional candidata para reducir exploracion ciega del codebase, tool calls, tokens y tiempo, sin instalarlo, ejecutarlo ni adoptarlo, en `docs/roadmap/pr-60-codegraph-evaluation-contract.md`.
 
+JARVIS Home / Voice / Sensor Hardware Layer contract: contrato documental para futura capa fisica/domestica local-first con Home Assistant, voz local, sensores, camaras, presencia, privacidad, ApprovalGateway y adapters/capabilities detras de JARVIS, sin implementar hardware ni integraciones reales, en `docs/roadmap/pr-61-home-voice-sensor-hardware-layer.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
