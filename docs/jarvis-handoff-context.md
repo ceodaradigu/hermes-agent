@@ -307,14 +307,15 @@ Ya completado:
 - PR #57 - deployment modes local/server/hybrid contract. PR mergeado.
 - PR #58 - mobile voice command and approval contract. PR mergeado.
 - PR #59 - restriction registry and policy override contract. PR mergeado.
+- PR #60 - Code Intelligence / CodeGraph Evaluation Contract. PR mergeado.
 
 Actual:
 
-- PR #60 - Code Intelligence / CodeGraph Evaluation Contract: contrato documental para evaluar CodeGraph como herramienta local/opcional candidata para reducir exploracion ciega del codebase, tool calls, tokens y tiempo, sin instalarlo, ejecutarlo ni adoptarlo.
+- PR #61 - Home / Voice / Sensor Hardware Layer: contrato documental para futura capa fisica/domestica local-first con Home Assistant, wake word local, STT/TTS local, voice satellites, camaras, sensores, presencia, privacidad, ApprovalGateway y adapters/capabilities detras de JARVIS, sin implementar hardware ni integraciones reales.
 
 Después:
 
-- PR siguiente recomendado - Home / Voice / Sensor Hardware Layer o Personal OS / Environment Intelligence Backlog.
+- PR siguiente recomendado - Personal OS / Environment Intelligence Backlog o Distributed Personal OS Capabilities Backlog.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
