@@ -94,6 +94,8 @@ JARVIS Code Intelligence / CodeGraph evaluation contract: contrato documental pa
 
 JARVIS Home / Voice / Sensor Hardware Layer contract: contrato documental para futura capa fisica/domestica local-first con Home Assistant, voz local, sensores, camaras, presencia, privacidad, ApprovalGateway y adapters/capabilities detras de JARVIS, sin implementar hardware ni integraciones reales, en `docs/roadmap/pr-61-home-voice-sensor-hardware-layer.md`.
 
+JARVIS Personal OS / Environment Intelligence backlog: contrato documental para que JARVIS evolucione hacia sistema operativo personal de David, con Command Center, contexto/memoria, proactividad elegida, modos operativos, daily state, notificaciones, vida/trabajo, socio tecnico, privacidad, consentimiento y auditoria, sin implementar UI, memoria, scheduler ni notificaciones reales, en `docs/roadmap/pr-62-personal-os-environment-intelligence-backlog.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.

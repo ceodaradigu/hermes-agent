@@ -308,14 +308,15 @@ Ya completado:
 - PR #58 - mobile voice command and approval contract. PR mergeado.
 - PR #59 - restriction registry and policy override contract. PR mergeado.
 - PR #60 - Code Intelligence / CodeGraph Evaluation Contract. PR mergeado.
+- PR #61 - Home / Voice / Sensor Hardware Layer. PR mergeado.
 
 Actual:
 
-- PR #61 - Home / Voice / Sensor Hardware Layer: contrato documental para futura capa fisica/domestica local-first con Home Assistant, wake word local, STT/TTS local, voice satellites, camaras, sensores, presencia, privacidad, ApprovalGateway y adapters/capabilities detras de JARVIS, sin implementar hardware ni integraciones reales.
+- PR #62 - Personal OS / Environment Intelligence Backlog: contrato documental para que JARVIS evolucione hacia sistema operativo personal de David, con Command Center, memoria/contexto, proactividad elegida, modos operativos, notificaciones, daily state, coordinacion vida/trabajo, socio tecnico y control personal, sin implementar runtime, UI, memoria, scheduler ni notificaciones reales.
 
 Después:
 
-- PR siguiente recomendado - Personal OS / Environment Intelligence Backlog o Distributed Personal OS Capabilities Backlog.
+- PR siguiente recomendado - Distributed Personal OS Capabilities Backlog o Authorized Security Research / Bug Bounty Mode Contract.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
