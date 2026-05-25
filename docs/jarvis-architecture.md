@@ -88,6 +88,8 @@ JARVIS deployment modes contract: contrato documental para futuros Local Mode, S
 
 JARVIS mobile voice command and approval contract: contrato documental para que el movil sea una interfaz remota segura de voz/texto/aprobacion mediante JARVIS Gateway, `PolicyEngine`, `ApprovalGateway`, auditoria y limites sensibles, sin llamar a Hermes directo ni afirmar app movil/wake word implementados, en `docs/roadmap/pr-58-mobile-voice-command-approval-contract.md`.
 
+JARVIS restriction registry and policy override contract: contrato documental para explicar restricciones en lenguaje humano, permitir overrides temporales/reversibles solo cuando sea seguro y mantener `PolicyEngine`, `ApprovalGateway`, auditoria y hard boundaries por encima, en `docs/roadmap/pr-59-restriction-registry-policy-override-contract.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
