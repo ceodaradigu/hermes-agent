@@ -306,14 +306,15 @@ Ya completado:
 - PR #56 - Hermes inside JARVIS integration contract. PR mergeado.
 - PR #57 - deployment modes local/server/hybrid contract. PR mergeado.
 - PR #58 - mobile voice command and approval contract. PR mergeado.
+- PR #59 - restriction registry and policy override contract. PR mergeado.
 
 Actual:
 
-- PR #59 - restriction registry and policy override contract: contrato documental para explicar restricciones en lenguaje humano, permitir overrides temporales/reversibles cuando sea seguro y mantener hard boundaries, PolicyEngine, ApprovalGateway, sensitive boundary y auditoria por encima.
+- PR #60 - Code Intelligence / CodeGraph Evaluation Contract: contrato documental para evaluar CodeGraph como herramienta local/opcional candidata para reducir exploracion ciega del codebase, tool calls, tokens y tiempo, sin instalarlo, ejecutarlo ni adoptarlo.
 
 Después:
 
-- PR siguiente recomendado - Code Intelligence / CodeGraph Evaluation Contract o Home / Voice / Sensor Hardware Layer.
+- PR siguiente recomendado - Home / Voice / Sensor Hardware Layer o Personal OS / Environment Intelligence Backlog.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo

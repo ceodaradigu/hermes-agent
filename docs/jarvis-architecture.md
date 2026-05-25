@@ -90,6 +90,8 @@ JARVIS mobile voice command and approval contract: contrato documental para que 
 
 JARVIS restriction registry and policy override contract: contrato documental para explicar restricciones en lenguaje humano, permitir overrides temporales/reversibles solo cuando sea seguro y mantener `PolicyEngine`, `ApprovalGateway`, auditoria y hard boundaries por encima, en `docs/roadmap/pr-59-restriction-registry-policy-override-contract.md`.
 
+JARVIS Code Intelligence / CodeGraph evaluation contract: contrato documental para evaluar CodeGraph como herramienta local/opcional candidata para reducir exploracion ciega del codebase, tool calls, tokens y tiempo, sin instalarlo, ejecutarlo ni adoptarlo, en `docs/roadmap/pr-60-codegraph-evaluation-contract.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
