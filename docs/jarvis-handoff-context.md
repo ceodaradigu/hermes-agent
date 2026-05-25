@@ -305,14 +305,15 @@ Ya completado:
 - PR #55 - future capabilities backlog / moonshot map. PR mergeado.
 - PR #56 - Hermes inside JARVIS integration contract. PR mergeado.
 - PR #57 - deployment modes local/server/hybrid contract. PR mergeado.
+- PR #58 - mobile voice command and approval contract. PR mergeado.
 
 Actual:
 
-- PR #58 - mobile voice command and approval contract: contrato documental para usar el movil como interfaz remota segura de voz/texto/aprobacion, sin implementar app movil, wake word, runtime, endpoints ni bypass de JARVIS Gateway, PolicyEngine o ApprovalGateway.
+- PR #59 - restriction registry and policy override contract: contrato documental para explicar restricciones en lenguaje humano, permitir overrides temporales/reversibles cuando sea seguro y mantener hard boundaries, PolicyEngine, ApprovalGateway, sensitive boundary y auditoria por encima.
 
 Después:
 
-- PR siguiente recomendado - restriction registry and policy override contract.
+- PR siguiente recomendado - Code Intelligence / CodeGraph Evaluation Contract o Home / Voice / Sensor Hardware Layer.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
