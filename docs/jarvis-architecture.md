@@ -96,6 +96,8 @@ JARVIS Home / Voice / Sensor Hardware Layer contract: contrato documental para f
 
 JARVIS Personal OS / Environment Intelligence backlog: contrato documental para que JARVIS evolucione hacia sistema operativo personal de David, con Command Center, contexto/memoria, proactividad elegida, modos operativos, daily state, notificaciones, vida/trabajo, socio tecnico, privacidad, consentimiento y auditoria, sin implementar UI, memoria, scheduler ni notificaciones reales, en `docs/roadmap/pr-62-personal-os-environment-intelligence-backlog.md`.
 
+JARVIS Distributed Personal OS Capabilities backlog: contrato documental para presencia distribuida futura en movil, PC, reloj, coche, auriculares, altavoces, pantallas, casa, IDE, servidor y workers, con Gateway, policy, approvals, auditoria, sincronizacion de estado, fallback offline, watchers prepare-only, operaciones largas y coste visible, sin implementar clientes, sync, watchers, notificaciones ni device registry real, en `docs/roadmap/pr-63-distributed-personal-os-capabilities-backlog.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
