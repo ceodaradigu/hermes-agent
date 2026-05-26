@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #65
+## 5. Estado actual de JARVIS después de PR #66
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode y Personal Memory / User Model Layer.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer y Core Intelligence / Personal Memory Backlog.
 
 JARVIS puede:
 
@@ -314,19 +314,19 @@ Ya completado:
 - PR #63 - Distributed Personal OS Capabilities Backlog. PR mergeado.
 - PR #64 - Authorized Security Research / Bug Bounty Mode Contract. PR mergeado.
 - PR #65 - Personal Memory / User Model Layer. PR mergeado.
+- PR #66 - Core Intelligence and Personal Memory Backlog. PR mergeado.
 
 Actual:
 
-- PR #66 - Core Intelligence and Personal Memory Backlog: contrato documental para el futuro nucleo inteligente de JARVIS, con LLM como cerebro cognitivo, intencion real, razonamiento, planificacion, seleccion inteligente de herramientas, evaluacion de consecuencias, identidad/persona versionada, memory retrieval gate, contrarian review y handoff obligatorio a `PolicyEngine`, `ApprovalGateway`, Restriction Registry, hard boundaries y auditoria.
+- PR #67 - Developer / Stark Workshop Layer: contrato documental para la futura capa de desarrollo de software, pair programming por voz, analisis de codebase, PR planning, code review, error watchers, deploy con doble confirmacion, sandbox futuro, IDE/terminal companion, CodeGraph opcional y socio tecnico, sin saltarse JARVIS Gateway, `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni auditoria.
 
 Siguiente recomendado:
 
-- Developer / Stark Workshop Layer.
 - Personal Knowledge / RAG Layer.
+- Finance / Business Metrics Layer.
 
 Después:
 
-- PR siguiente recomendado - Core Intelligence and Personal Memory Backlog o Developer / Stark Workshop Layer.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
