@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #64
+## 5. Estado actual de JARVIS después de PR #65
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities y Authorized Security Research / Bug Bounty Mode.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode y Personal Memory / User Model Layer.
 
 JARVIS puede:
 
@@ -313,10 +313,16 @@ Ya completado:
 - PR #62 - Personal OS / Environment Intelligence Backlog. PR mergeado.
 - PR #63 - Distributed Personal OS Capabilities Backlog. PR mergeado.
 - PR #64 - Authorized Security Research / Bug Bounty Mode Contract. PR mergeado.
+- PR #65 - Personal Memory / User Model Layer. PR mergeado.
 
 Actual:
 
-- PR #65 - Personal Memory / User Model Layer: contrato documental para la futura capa de memoria profunda de David, con preferencias, habitos, decisiones, proyectos, memoria episodica, separacion personal/profesional, sensibilidad, conflictos, borrado/reversion, consentimiento y auditoria, manteniendo que memoria no es permiso y nunca salta `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni hard boundaries.
+- PR #66 - Core Intelligence and Personal Memory Backlog: contrato documental para el futuro nucleo inteligente de JARVIS, con LLM como cerebro cognitivo, intencion real, razonamiento, planificacion, seleccion inteligente de herramientas, evaluacion de consecuencias, identidad/persona versionada, memory retrieval gate, contrarian review y handoff obligatorio a `PolicyEngine`, `ApprovalGateway`, Restriction Registry, hard boundaries y auditoria.
+
+Siguiente recomendado:
+
+- Developer / Stark Workshop Layer.
+- Personal Knowledge / RAG Layer.
 
 Después:
 

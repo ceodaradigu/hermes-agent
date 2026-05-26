@@ -102,6 +102,8 @@ JARVIS Authorized Security Research / Bug Bounty Mode contract: contrato documen
 
 JARVIS Personal Memory / User Model Layer: contrato documental para la futura capa de memoria profunda de David, con preferencias, habitos, decisiones, proyectos, memoria episodica, separacion personal/profesional, sensibilidad, conflictos, borrado/reversion, consentimiento y auditoria, manteniendo que memoria no es permiso y nunca salta `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni hard boundaries, en `docs/roadmap/pr-65-personal-memory-user-model-layer.md`.
 
+JARVIS Core Intelligence and Personal Memory Backlog: contrato documental para el futuro nucleo inteligente de JARVIS, con LLM como cerebro cognitivo, intencion, planificacion, seleccion de herramientas, razonamiento de consecuencias, persona versionada, identidad consistente, memory retrieval gate, contrarian review, monetizacion/ROI y handoff obligatorio a `PolicyEngine`, `ApprovalGateway`, Restriction Registry, hard boundaries y auditoria, en `docs/roadmap/pr-66-core-intelligence-personal-memory-backlog.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
