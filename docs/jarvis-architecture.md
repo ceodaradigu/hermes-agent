@@ -104,6 +104,8 @@ JARVIS Personal Memory / User Model Layer: contrato documental para la futura ca
 
 JARVIS Core Intelligence and Personal Memory Backlog: contrato documental para el futuro nucleo inteligente de JARVIS, con LLM como cerebro cognitivo, intencion, planificacion, seleccion de herramientas, razonamiento de consecuencias, persona versionada, identidad consistente, memory retrieval gate, contrarian review, monetizacion/ROI y handoff obligatorio a `PolicyEngine`, `ApprovalGateway`, Restriction Registry, hard boundaries y auditoria, en `docs/roadmap/pr-66-core-intelligence-personal-memory-backlog.md`.
 
+JARVIS Developer / Stark Workshop Layer: contrato documental para la futura capa de desarrollo de software, pair programming por voz, code review, PR planning, IDE/terminal companion, error watchers, sandbox futuro, CodeGraph opcional, deploy con aprobacion fuerte y socio tecnico, manteniendo JARVIS Gateway, `PolicyEngine`, `ApprovalGateway`, Restriction Registry y auditoria por encima, en `docs/roadmap/pr-67-developer-stark-workshop-layer.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
