@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #62
+## 5. Estado actual de JARVIS después de PR #63
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer y Personal OS / Environment Intelligence.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence y Distributed Personal OS Capabilities.
 
 JARVIS puede:
 
@@ -310,15 +310,16 @@ Ya completado:
 - PR #59 - restriction registry and policy override contract. PR mergeado.
 - PR #60 - Code Intelligence / CodeGraph Evaluation Contract. PR mergeado.
 - PR #61 - Home / Voice / Sensor Hardware Layer. PR mergeado.
-- PR #62 - Personal OS / Environment Intelligence Backlog: contrato documental para que JARVIS evolucione hacia sistema operativo personal de David, con Command Center, memoria/contexto, proactividad elegida, modos operativos, notificaciones, daily state, coordinacion vida/trabajo, socio tecnico y control personal, sin implementar runtime, UI, memoria, scheduler ni notificaciones reales.
+- PR #62 - Personal OS / Environment Intelligence Backlog. PR mergeado.
+- PR #63 - Distributed Personal OS Capabilities Backlog. PR mergeado.
 
 Actual:
 
-- PR #63 - Distributed Personal OS Capabilities Backlog: contrato documental para que JARVIS pueda sentirse presente en movil, PC, reloj, coche, auriculares, altavoces, pantallas, casa, IDE, servidor y workers, con Gateway, policy comun, approvals, auditoria, sincronizacion de estado, fallback offline, operaciones largas, watchers prepare-only, briefing/debriefing, notification routing, coste visible y continuidad controlada, sin implementar clientes, sync, watchers, notificaciones ni device registry real.
+- PR #64 - Authorized Security Research / Bug Bounty Mode Contract: contrato documental para seguridad autorizada, laboratorios, CTF, auditoria defensiva, bug bounty dentro de scope, safe harbor y rules of engagement explicitos, evidence handling y report writing, manteniendo `PolicyEngine`, `ApprovalGateway`, Restriction Registry, auditoria y stop conditions, sin implementar scanners, target registry ni evidence locker reales.
 
 Después:
 
-- PR siguiente recomendado - Authorized Security Research / Bug Bounty Mode Contract o Personal Memory / User Model Layer.
+- PR siguiente recomendado - Personal Memory / User Model Layer o Core Intelligence and Personal Memory Backlog.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo
