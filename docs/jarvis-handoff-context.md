@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #63
+## 5. Estado actual de JARVIS después de PR #64
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence y Distributed Personal OS Capabilities.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities y Authorized Security Research / Bug Bounty Mode.
 
 JARVIS puede:
 
@@ -312,14 +312,15 @@ Ya completado:
 - PR #61 - Home / Voice / Sensor Hardware Layer. PR mergeado.
 - PR #62 - Personal OS / Environment Intelligence Backlog. PR mergeado.
 - PR #63 - Distributed Personal OS Capabilities Backlog. PR mergeado.
+- PR #64 - Authorized Security Research / Bug Bounty Mode Contract. PR mergeado.
 
 Actual:
 
-- PR #64 - Authorized Security Research / Bug Bounty Mode Contract: contrato documental para seguridad autorizada, laboratorios, CTF, auditoria defensiva, bug bounty dentro de scope, safe harbor y rules of engagement explicitos, evidence handling y report writing, manteniendo `PolicyEngine`, `ApprovalGateway`, Restriction Registry, auditoria y stop conditions, sin implementar scanners, target registry ni evidence locker reales.
+- PR #65 - Personal Memory / User Model Layer: contrato documental para la futura capa de memoria profunda de David, con preferencias, habitos, decisiones, proyectos, memoria episodica, separacion personal/profesional, sensibilidad, conflictos, borrado/reversion, consentimiento y auditoria, manteniendo que memoria no es permiso y nunca salta `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni hard boundaries.
 
 Después:
 
-- PR siguiente recomendado - Personal Memory / User Model Layer o Core Intelligence and Personal Memory Backlog.
+- PR siguiente recomendado - Core Intelligence and Personal Memory Backlog o Developer / Stark Workshop Layer.
 - PR futura - Tech Radar / Continuous Learning source model.
 
 ## 11. Cómo iniciar un hilo nuevo

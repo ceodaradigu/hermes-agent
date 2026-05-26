@@ -100,6 +100,8 @@ JARVIS Distributed Personal OS Capabilities backlog: contrato documental para pr
 
 JARVIS Authorized Security Research / Bug Bounty Mode contract: contrato documental para seguridad autorizada, laboratorios, CTF, auditoria defensiva, bug bounty dentro de scope, evidence handling y report writing, manteniendo `PolicyEngine`, `ApprovalGateway`, Restriction Registry, auditoria, hard boundaries y stop conditions, sin implementar scanners, target registry ni evidence locker reales, en `docs/roadmap/pr-64-authorized-security-bug-bounty-mode-contract.md`.
 
+JARVIS Personal Memory / User Model Layer: contrato documental para la futura capa de memoria profunda de David, con preferencias, habitos, decisiones, proyectos, memoria episodica, separacion personal/profesional, sensibilidad, conflictos, borrado/reversion, consentimiento y auditoria, manteniendo que memoria no es permiso y nunca salta `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni hard boundaries, en `docs/roadmap/pr-65-personal-memory-user-model-layer.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
