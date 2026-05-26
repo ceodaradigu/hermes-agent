@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #66
+## 5. Estado actual de JARVIS después de PR #67
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer y Core Intelligence / Personal Memory Backlog.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer, Core Intelligence / Personal Memory Backlog y Developer / Stark Workshop Layer.
 
 JARVIS puede:
 
@@ -315,15 +315,16 @@ Ya completado:
 - PR #64 - Authorized Security Research / Bug Bounty Mode Contract. PR mergeado.
 - PR #65 - Personal Memory / User Model Layer. PR mergeado.
 - PR #66 - Core Intelligence and Personal Memory Backlog. PR mergeado.
+- PR #67 - Developer / Stark Workshop Layer. PR mergeado.
 
 Actual:
 
-- PR #67 - Developer / Stark Workshop Layer: contrato documental para la futura capa de desarrollo de software, pair programming por voz, analisis de codebase, PR planning, code review, error watchers, deploy con doble confirmacion, sandbox futuro, IDE/terminal companion, CodeGraph opcional y socio tecnico, sin saltarse JARVIS Gateway, `PolicyEngine`, `ApprovalGateway`, Restriction Registry ni auditoria.
+- PR #68 - Personal Knowledge / RAG Layer: contrato documental para la futura capa de conocimiento personal/documental de David, consultas sobre documentos, notas, PDFs, papers, marcadores, emails, citas de fuentes, busqueda en contenido propio, resumenes, flashcards, separacion personal/profesional, privacidad, consentimiento, auditoria y limites para no mezclar datos ni citar sin fuente.
 
 Siguiente recomendado:
 
-- Personal Knowledge / RAG Layer.
 - Finance / Business Metrics Layer.
+- Communication / Inbox Layer.
 
 Después:
 

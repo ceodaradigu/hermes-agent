@@ -106,6 +106,8 @@ JARVIS Core Intelligence and Personal Memory Backlog: contrato documental para e
 
 JARVIS Developer / Stark Workshop Layer: contrato documental para la futura capa de desarrollo de software, pair programming por voz, code review, PR planning, IDE/terminal companion, error watchers, sandbox futuro, CodeGraph opcional, deploy con aprobacion fuerte y socio tecnico, manteniendo JARVIS Gateway, `PolicyEngine`, `ApprovalGateway`, Restriction Registry y auditoria por encima, en `docs/roadmap/pr-67-developer-stark-workshop-layer.md`.
 
+JARVIS Personal Knowledge / RAG Layer: contrato documental para la futura capa de conocimiento personal/documental de David, con fuentes, metadatos, sensibilidad, consentimiento, citas obligatorias, separacion personal/profesional, manejo de conflictos, relacion con memoria y reglas para que RAG no sea verdad absoluta ni permiso de accion, en `docs/roadmap/pr-68-personal-knowledge-rag-layer.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
