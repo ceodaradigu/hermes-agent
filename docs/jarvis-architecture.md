@@ -14,6 +14,8 @@ Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 - Ejecuta Hermes solo cuando policy devuelve `allowed`.
 - Mantiene endpoints `/tasks` existentes intactos.
 
+Mission Envelope v1 vive como contrato validable en `jarvis/missions/`: describe objetivo, métricas, límites, acciones, herramientas candidatas y auditoría sin planificar ni ejecutar misiones por sí mismo.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
