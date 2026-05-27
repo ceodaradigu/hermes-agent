@@ -108,6 +108,8 @@ JARVIS Developer / Stark Workshop Layer: contrato documental para la futura capa
 
 JARVIS Personal Knowledge / RAG Layer: contrato documental para la futura capa de conocimiento personal/documental de David, con fuentes, metadatos, sensibilidad, consentimiento, citas obligatorias, separacion personal/profesional, manejo de conflictos, relacion con memoria y reglas para que RAG no sea verdad absoluta ni permiso de accion, en `docs/roadmap/pr-68-personal-knowledge-rag-layer.md`.
 
+JARVIS Mission Autonomy / Self-Improvement / Revenue Execution Contract: contrato documental para recibir misiones con objetivo, operar por bloques aprobados, mejorar activos genericos, evaluar herramientas candidatas como Open Design o CodeGraph, crear activos de negocio y perseguir revenue targets con metricas, approvals, stop conditions y auditoria, en `docs/roadmap/pr-69-mission-autonomy-self-improvement-revenue-contract.md`.
+
 JARVIS handoff context: fuente operativa para continuar el proyecto en nuevos hilos, con rutas, comandos, workflow de PRs, reglas de seguridad, estado actual, validaciones reales y roadmap inmediato. Ver `docs/jarvis-handoff-context.md`.
 
 Para la guía específica de operación de GPT-SoVITS como sidecar local o servicio externo desacoplado, ver `docs/integrations/gpt-sovits-sidecar.md`.
