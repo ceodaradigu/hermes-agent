@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #67
+## 5. Estado actual de JARVIS después de PR #68
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer, Core Intelligence / Personal Memory Backlog y Developer / Stark Workshop Layer.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer, Core Intelligence / Personal Memory Backlog, Developer / Stark Workshop Layer y Personal Knowledge / RAG Layer.
 
 JARVIS puede:
 
@@ -316,19 +316,19 @@ Ya completado:
 - PR #65 - Personal Memory / User Model Layer. PR mergeado.
 - PR #66 - Core Intelligence and Personal Memory Backlog. PR mergeado.
 - PR #67 - Developer / Stark Workshop Layer. PR mergeado.
+- PR #68 - Personal Knowledge / RAG Layer. PR mergeado.
 
 Actual:
 
-- PR #68 - Personal Knowledge / RAG Layer: contrato documental para la futura capa de conocimiento personal/documental de David, consultas sobre documentos, notas, PDFs, papers, marcadores, emails, citas de fuentes, busqueda en contenido propio, resumenes, flashcards, separacion personal/profesional, privacidad, consentimiento, auditoria y limites para no mezclar datos ni citar sin fuente.
+- PR #69 - Mission Autonomy / Self-Improvement / Revenue Execution Contract: contrato documental para recibir misiones con objetivo, operar por bloques aprobados, mejorar activos genericos, evaluar herramientas candidatas como Open Design o CodeGraph, crear activos de negocio y perseguir objetivos de ingresos con approvals, limites, auditoria, metricas, stop conditions y reporting.
 
 Siguiente recomendado:
 
-- Finance / Business Metrics Layer.
-- Communication / Inbox Layer.
+- PR #70 - Mission Envelope v1, first implementation PR.
 
 Después:
 
-- PR futura - Tech Radar / Continuous Learning source model.
+- No seguir ampliando backlog general salvo necesidad concreta. Nuevas ideas deben entrar como misiones/spikes, no como arquitectura infinita.
 
 ## 11. Cómo iniciar un hilo nuevo
 
