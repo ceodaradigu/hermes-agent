@@ -16,6 +16,8 @@ Mission Control es una capa de orquestación por encima de `tasks/runtime`.
 
 Mission Envelope v1 vive como contrato validable en `jarvis/missions/`: describe objetivo, métricas, límites, acciones, herramientas candidatas y auditoría sin planificar ni ejecutar misiones por sí mismo.
 
+Mission Approval Request v1 deriva una acción propuesta dentro de un `MissionEnvelope` en una solicitud de aprobación limitada y auditable, sin ejecutar la acción.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`

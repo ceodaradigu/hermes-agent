@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #69
+## 5. Estado actual de JARVIS después de PR #70
 
 Ya existe:
 
@@ -170,7 +170,11 @@ JARVIS aún NO debe:
 8. Instalar dependencias solo.
 9. Hacer deploy solo.
 
-PR #70 es la primera PR de código real posterior a esa fase documental general: introduce Mission Envelope v1 como contrato Python validable y testeado, sin planner, ejecución real, endpoints, tool adoption ni conexión nueva con Hermes/MissionControl.
+PR #70 está mergeado y es la primera PR de código real posterior a esa fase documental general: introduce Mission Envelope v1 como contrato Python validable y testeado, sin planner, ejecución real, endpoints, tool adoption ni conexión nueva con Hermes/MissionControl.
+
+PR #71 actual introduce Mission Approval Request v1: una solicitud de aprobación clara, auditable y limitada derivada de `MissionEnvelope` + acción propuesta, sin ejecutar acciones reales.
+
+Siguiente recomendado: PR #72 — Mission Audit Log v1.
 
 ## 6. Validaciones reales ya confirmadas
 
