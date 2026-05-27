@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #70
+## 5. Estado actual de JARVIS después de PR #71
 
 Ya existe:
 
@@ -172,9 +172,11 @@ JARVIS aún NO debe:
 
 PR #70 está mergeado y es la primera PR de código real posterior a esa fase documental general: introduce Mission Envelope v1 como contrato Python validable y testeado, sin planner, ejecución real, endpoints, tool adoption ni conexión nueva con Hermes/MissionControl.
 
-PR #71 actual introduce Mission Approval Request v1: una solicitud de aprobación clara, auditable y limitada derivada de `MissionEnvelope` + acción propuesta, sin ejecutar acciones reales.
+PR #71 está mergeado e introduce Mission Approval Request v1: una solicitud de aprobación clara, auditable y limitada derivada de `MissionEnvelope` + acción propuesta, sin ejecutar acciones reales.
 
-Siguiente recomendado: PR #72 — Mission Audit Log v1.
+PR #72 actual introduce Mission Audit Log v1: eventos auditables, serializables y validables para misiones JARVIS, sin persistencia, runtime, endpoints ni conexión con Hermes/MissionControl.
+
+Siguiente recomendado: PR #73 — Mission State Store v1 o Mission Lifecycle Validator v1.
 
 ## 6. Validaciones reales ya confirmadas
 
@@ -323,14 +325,17 @@ Ya completado:
 - PR #66 - Core Intelligence and Personal Memory Backlog. PR mergeado.
 - PR #67 - Developer / Stark Workshop Layer. PR mergeado.
 - PR #68 - Personal Knowledge / RAG Layer. PR mergeado.
+- PR #69 - Mission Autonomy / Self-Improvement / Revenue Execution Contract. PR mergeado.
+- PR #70 - Mission Envelope v1. PR mergeado.
+- PR #71 - Mission Approval Request v1. PR mergeado.
 
 Actual:
 
-- PR #69 - Mission Autonomy / Self-Improvement / Revenue Execution Contract: contrato documental para recibir misiones con objetivo, operar por bloques aprobados, mejorar activos genericos, evaluar herramientas candidatas como Open Design o CodeGraph, crear activos de negocio y perseguir objetivos de ingresos con approvals, limites, auditoria, metricas, stop conditions y reporting.
+- PR #72 - Mission Audit Log v1: eventos auditables, serializables y validables para creación de misión, clasificación de acción, aprobación, denegación, stop conditions, errores de validación y resultados registrados.
 
 Siguiente recomendado:
 
-- PR #70 - Mission Envelope v1, first implementation PR.
+- PR #73 - Mission State Store v1 o Mission Lifecycle Validator v1.
 
 Después:
 

@@ -18,6 +18,8 @@ Mission Envelope v1 vive como contrato validable en `jarvis/missions/`: describe
 
 Mission Approval Request v1 deriva una acción propuesta dentro de un `MissionEnvelope` en una solicitud de aprobación limitada y auditable, sin ejecutar la acción.
 
+Mission Audit Log v1 modela eventos auditables serializables de misiones, sin persistencia ni conexión con runtime.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
