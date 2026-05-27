@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #68
+## 5. Estado actual de JARVIS después de PR #69
 
 Ya existe:
 
@@ -143,7 +143,7 @@ Ya existe:
 - Quickstart local de memoria.
 - Continuous learning system design.
 - Principio de interacción natural.
-- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer, Core Intelligence / Personal Memory Backlog, Developer / Stark Workshop Layer y Personal Knowledge / RAG Layer.
+- Contratos documentales mergeados para Hermes inside JARVIS, deployment modes, mobile voice approval, restriction registry, CodeGraph evaluation, Home / Voice / Sensor Hardware Layer, Personal OS / Environment Intelligence, Distributed Personal OS Capabilities, Authorized Security Research / Bug Bounty Mode, Personal Memory / User Model Layer, Core Intelligence / Personal Memory Backlog, Developer / Stark Workshop Layer, Personal Knowledge / RAG Layer y Mission Autonomy / Self-Improvement / Revenue Execution.
 
 JARVIS puede:
 
@@ -169,6 +169,8 @@ JARVIS aún NO debe:
 7. Auto-modificarse.
 8. Instalar dependencias solo.
 9. Hacer deploy solo.
+
+PR #70 es la primera PR de código real posterior a esa fase documental general: introduce Mission Envelope v1 como contrato Python validable y testeado, sin planner, ejecución real, endpoints, tool adoption ni conexión nueva con Hermes/MissionControl.
 
 ## 6. Validaciones reales ya confirmadas
 
