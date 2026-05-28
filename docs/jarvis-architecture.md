@@ -20,6 +20,8 @@ Mission Approval Request v1 deriva una acción propuesta dentro de un `MissionEn
 
 Mission Audit Log v1 modela eventos auditables serializables de misiones, sin persistencia ni conexión con runtime.
 
+Mission State Store v1 agrupa envelope, approval requests, audit events y status en memoria, sin persistencia real ni ejecución.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
