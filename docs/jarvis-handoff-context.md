@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #71
+## 5. Estado actual de JARVIS después de PR #72
 
 Ya existe:
 
@@ -174,9 +174,11 @@ PR #70 está mergeado y es la primera PR de código real posterior a esa fase do
 
 PR #71 está mergeado e introduce Mission Approval Request v1: una solicitud de aprobación clara, auditable y limitada derivada de `MissionEnvelope` + acción propuesta, sin ejecutar acciones reales.
 
-PR #72 actual introduce Mission Audit Log v1: eventos auditables, serializables y validables para misiones JARVIS, sin persistencia, runtime, endpoints ni conexión con Hermes/MissionControl.
+PR #72 está mergeado e introduce Mission Audit Log v1: eventos auditables, serializables y validables para misiones JARVIS, sin persistencia, runtime, endpoints ni conexión con Hermes/MissionControl.
 
-Siguiente recomendado: PR #73 — Mission State Store v1 o Mission Lifecycle Validator v1.
+PR #73 actual introduce Mission State Store v1: estado mínimo serializable y validable para agrupar envelope, approvals, audit events y status, con store en memoria sin persistencia real.
+
+Siguiente recomendado: PR #74 — Mission Lifecycle Validator v1.
 
 ## 6. Validaciones reales ya confirmadas
 
