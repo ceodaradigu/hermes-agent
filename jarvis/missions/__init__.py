@@ -34,6 +34,13 @@ from jarvis.missions.lifecycle import (
     MissionLifecycleValidationResult,
     validate_status_transition,
 )
+from jarvis.missions.command_builder import (
+    MissionCommand,
+    MissionCommandStatus,
+    MissionCommandValidationResult,
+    build_mission_command,
+    validate_mission_command,
+)
 
 __all__ = [
     "ActionClassification",
@@ -42,6 +49,9 @@ __all__ = [
     "MissionAuditOutcome",
     "MissionAuditRiskLevel",
     "MissionAuditValidationResult",
+    "MissionCommand",
+    "MissionCommandStatus",
+    "MissionCommandValidationResult",
     "MissionApprovalLevel",
     "MissionApprovalRequest",
     "MissionEnvelope",
@@ -56,9 +66,11 @@ __all__ = [
     "build_audit_event",
     "build_audit_event_from_approval_request",
     "build_approval_request",
+    "build_mission_command",
     "classify_action",
     "set_status",
     "validate_audit_event",
+    "validate_mission_command",
     "validate_mission_envelope",
     "validate_mission_state",
     "validate_status_transition",

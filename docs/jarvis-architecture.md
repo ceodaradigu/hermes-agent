@@ -24,6 +24,8 @@ Mission State Store v1 agrupa envelope, approval requests, audit events y status
 
 Mission Lifecycle Validator v1 valida transiciones de `MissionStatus` sin mutar estado, ejecutar acciones ni conectar runtime.
 
+Mission Command Builder v1 prepara comandos serializables desde estado + acción + contexto opcional, sin ejecutar, persistir ni conectar runtime.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
