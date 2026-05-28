@@ -178,9 +178,11 @@ PR #72 está mergeado e introduce Mission Audit Log v1: eventos auditables, seri
 
 PR #73 está mergeado e introduce Mission State Store v1: estado mínimo serializable y validable para agrupar envelope, approvals, audit events y status, con store en memoria sin persistencia real.
 
-PR #74 actual introduce Mission Lifecycle Validator v1: validación declarativa de transiciones entre estados de misión, sin mutar estado, ejecutar acciones, persistir ni conectar runtime.
+PR #74 está mergeado e introduce Mission Lifecycle Validator v1: validación declarativa de transiciones entre estados de misión, sin mutar estado, ejecutar acciones, persistir ni conectar runtime.
 
-Siguiente recomendado: PR #75 — Mission Command Builder v1 o Mission Snapshot Serializer v1.
+PR #75 actual introduce Mission Command Builder v1: comando preparado serializable y validable desde `MissionState` + acción + contexto opcional, sin ejecutar, persistir ni conectar runtime.
+
+Siguiente recomendado: PR #76 — Mission Snapshot Serializer v1 o Mission Dry-Run Evaluator v1.
 
 ## 6. Validaciones reales ya confirmadas
 
@@ -334,14 +336,15 @@ Ya completado:
 - PR #71 - Mission Approval Request v1. PR mergeado.
 - PR #72 - Mission Audit Log v1. PR mergeado.
 - PR #73 - Mission State Store v1. PR mergeado.
+- PR #74 - Mission Lifecycle Validator v1. PR mergeado.
 
 Actual:
 
-- PR #74 - Mission Lifecycle Validator v1: validación mínima de transiciones de `MissionStatus`, sin runtime ni ejecución real.
+- PR #75 - Mission Command Builder v1: comando preparado serializable y validable, sin runtime ni ejecución real.
 
 Siguiente recomendado:
 
-- PR #75 - Mission Command Builder v1 o Mission Snapshot Serializer v1.
+- PR #76 - Mission Snapshot Serializer v1 o Mission Dry-Run Evaluator v1.
 
 Después:
 
