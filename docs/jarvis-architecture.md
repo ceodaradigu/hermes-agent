@@ -28,6 +28,8 @@ Mission Command Builder v1 prepara comandos serializables desde estado + acción
 
 Mission Dry-Run Evaluator v1 evalúa un `MissionCommand` preparado antes de cualquier ejecución futura, sin ejecutar, persistir ni llamar a approvals/runtime.
 
+Mission Snapshot Serializer v1 construye snapshots serializables y redactados de una misión para debug, UI futura, auditoría y exportación segura, sin escribir archivos ni mutar estado.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`

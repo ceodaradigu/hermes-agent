@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #75
+## 5. Estado actual de JARVIS después de PR #76
 
 Ya existe:
 
@@ -182,9 +182,11 @@ PR #74 está mergeado e introduce Mission Lifecycle Validator v1: validación de
 
 PR #75 está mergeado e introduce Mission Command Builder v1: comando preparado serializable y validable desde `MissionState` + acción + contexto opcional, sin ejecutar, persistir ni conectar runtime.
 
-PR #76 actual introduce Mission Dry-Run Evaluator v1: evaluación serializable y validable de un `MissionCommand` preparado antes de cualquier ejecución futura, sin ejecutar, persistir ni conectar runtime.
+PR #76 está mergeado e introduce Mission Dry-Run Evaluator v1: evaluación serializable y validable de un `MissionCommand` preparado antes de cualquier ejecución futura, sin ejecutar, persistir ni conectar runtime.
 
-Siguiente recomendado: PR #77 — Mission Snapshot Serializer v1 o Mission Approval Bridge v1.
+PR #77 actual introduce Mission Snapshot Serializer v1: snapshot serializable y validable de `MissionState`, comandos preparados y dry-runs, sin escribir archivos, persistir, ejecutar ni conectar runtime.
+
+Siguiente recomendado: PR #78 — Mission Approval Bridge v1.
 
 ## 6. Validaciones reales ya confirmadas
 

@@ -49,6 +49,13 @@ from jarvis.missions.dry_run import (
     evaluate_mission_command_dry_run,
     validate_mission_dry_run_evaluation,
 )
+from jarvis.missions.snapshot import (
+    MissionSnapshot,
+    MissionSnapshotValidationResult,
+    build_mission_snapshot,
+    redact_snapshot_dict,
+    validate_mission_snapshot,
+)
 
 __all__ = [
     "ActionClassification",
@@ -69,6 +76,8 @@ __all__ = [
     "MissionEnvelope",
     "MissionEnvelopeValidationResult",
     "MissionLifecycleValidationResult",
+    "MissionSnapshot",
+    "MissionSnapshotValidationResult",
     "MissionState",
     "MissionStateStore",
     "MissionStateValidationResult",
@@ -79,13 +88,16 @@ __all__ = [
     "build_audit_event_from_approval_request",
     "build_approval_request",
     "build_mission_command",
+    "build_mission_snapshot",
     "classify_action",
     "evaluate_mission_command_dry_run",
+    "redact_snapshot_dict",
     "set_status",
     "validate_audit_event",
     "validate_mission_dry_run_evaluation",
     "validate_mission_command",
     "validate_mission_envelope",
+    "validate_mission_snapshot",
     "validate_mission_state",
     "validate_status_transition",
 ]
