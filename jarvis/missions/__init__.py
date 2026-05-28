@@ -30,6 +30,10 @@ from jarvis.missions.state_store import (
     set_status,
     validate_mission_state,
 )
+from jarvis.missions.lifecycle import (
+    MissionLifecycleValidationResult,
+    validate_status_transition,
+)
 
 __all__ = [
     "ActionClassification",
@@ -42,6 +46,7 @@ __all__ = [
     "MissionApprovalRequest",
     "MissionEnvelope",
     "MissionEnvelopeValidationResult",
+    "MissionLifecycleValidationResult",
     "MissionState",
     "MissionStateStore",
     "MissionStateValidationResult",
@@ -56,4 +61,5 @@ __all__ = [
     "validate_audit_event",
     "validate_mission_envelope",
     "validate_mission_state",
+    "validate_status_transition",
 ]

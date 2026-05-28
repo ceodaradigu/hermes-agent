@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #72
+## 5. Estado actual de JARVIS después de PR #73
 
 Ya existe:
 
@@ -176,9 +176,11 @@ PR #71 está mergeado e introduce Mission Approval Request v1: una solicitud de 
 
 PR #72 está mergeado e introduce Mission Audit Log v1: eventos auditables, serializables y validables para misiones JARVIS, sin persistencia, runtime, endpoints ni conexión con Hermes/MissionControl.
 
-PR #73 actual introduce Mission State Store v1: estado mínimo serializable y validable para agrupar envelope, approvals, audit events y status, con store en memoria sin persistencia real.
+PR #73 está mergeado e introduce Mission State Store v1: estado mínimo serializable y validable para agrupar envelope, approvals, audit events y status, con store en memoria sin persistencia real.
 
-Siguiente recomendado: PR #74 — Mission Lifecycle Validator v1.
+PR #74 actual introduce Mission Lifecycle Validator v1: validación declarativa de transiciones entre estados de misión, sin mutar estado, ejecutar acciones, persistir ni conectar runtime.
+
+Siguiente recomendado: PR #75 — Mission Command Builder v1 o Mission Snapshot Serializer v1.
 
 ## 6. Validaciones reales ya confirmadas
 
@@ -330,14 +332,16 @@ Ya completado:
 - PR #69 - Mission Autonomy / Self-Improvement / Revenue Execution Contract. PR mergeado.
 - PR #70 - Mission Envelope v1. PR mergeado.
 - PR #71 - Mission Approval Request v1. PR mergeado.
+- PR #72 - Mission Audit Log v1. PR mergeado.
+- PR #73 - Mission State Store v1. PR mergeado.
 
 Actual:
 
-- PR #72 - Mission Audit Log v1: eventos auditables, serializables y validables para creación de misión, clasificación de acción, aprobación, denegación, stop conditions, errores de validación y resultados registrados.
+- PR #74 - Mission Lifecycle Validator v1: validación mínima de transiciones de `MissionStatus`, sin runtime ni ejecución real.
 
 Siguiente recomendado:
 
-- PR #73 - Mission State Store v1 o Mission Lifecycle Validator v1.
+- PR #75 - Mission Command Builder v1 o Mission Snapshot Serializer v1.
 
 Después:
 

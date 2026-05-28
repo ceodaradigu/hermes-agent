@@ -22,6 +22,8 @@ Mission Audit Log v1 modela eventos auditables serializables de misiones, sin pe
 
 Mission State Store v1 agrupa envelope, approval requests, audit events y status en memoria, sin persistencia real ni ejecución.
 
+Mission Lifecycle Validator v1 valida transiciones de `MissionStatus` sin mutar estado, ejecutar acciones ni conectar runtime.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
