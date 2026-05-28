@@ -41,6 +41,14 @@ from jarvis.missions.command_builder import (
     build_mission_command,
     validate_mission_command,
 )
+from jarvis.missions.dry_run import (
+    MissionDryRunDecision,
+    MissionDryRunEvaluation,
+    MissionDryRunRiskLevel,
+    MissionDryRunValidationResult,
+    evaluate_mission_command_dry_run,
+    validate_mission_dry_run_evaluation,
+)
 
 __all__ = [
     "ActionClassification",
@@ -52,6 +60,10 @@ __all__ = [
     "MissionCommand",
     "MissionCommandStatus",
     "MissionCommandValidationResult",
+    "MissionDryRunDecision",
+    "MissionDryRunEvaluation",
+    "MissionDryRunRiskLevel",
+    "MissionDryRunValidationResult",
     "MissionApprovalLevel",
     "MissionApprovalRequest",
     "MissionEnvelope",
@@ -68,8 +80,10 @@ __all__ = [
     "build_approval_request",
     "build_mission_command",
     "classify_action",
+    "evaluate_mission_command_dry_run",
     "set_status",
     "validate_audit_event",
+    "validate_mission_dry_run_evaluation",
     "validate_mission_command",
     "validate_mission_envelope",
     "validate_mission_state",

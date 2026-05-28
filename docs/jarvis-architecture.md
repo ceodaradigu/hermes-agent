@@ -26,6 +26,8 @@ Mission Lifecycle Validator v1 valida transiciones de `MissionStatus` sin mutar 
 
 Mission Command Builder v1 prepara comandos serializables desde estado + acción + contexto opcional, sin ejecutar, persistir ni conectar runtime.
 
+Mission Dry-Run Evaluator v1 evalúa un `MissionCommand` preparado antes de cualquier ejecución futura, sin ejecutar, persistir ni llamar a approvals/runtime.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
