@@ -77,6 +77,7 @@ Piezas de misión ya documentadas como mergeadas:
 - `MissionCommandBuilder` v1.
 - `MissionDryRunEvaluator` v1.
 - `MissionSnapshotSerializer` v1.
+- `MissionApprovalBridge` v1 actual: payload prepare-only para aprobación futura sin aprobar, ejecutar, llamar `ApprovalGateway`, conectar runtime ni mutar estado.
 
 Piezas relevantes ya documentadas:
 
@@ -91,7 +92,6 @@ Piezas relevantes ya documentadas:
 
 Límites actuales:
 
-- No hay Approval Bridge de misión real.
 - No hay Safety Baseline Gate de misión.
 - No hay Policy Bridge de misión.
 - No hay Budget Guard real.
