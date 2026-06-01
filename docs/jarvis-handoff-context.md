@@ -184,9 +184,11 @@ PR #75 está mergeado e introduce Mission Command Builder v1: comando preparado 
 
 PR #76 está mergeado e introduce Mission Dry-Run Evaluator v1: evaluación serializable y validable de un `MissionCommand` preparado antes de cualquier ejecución futura, sin ejecutar, persistir ni conectar runtime.
 
-PR #77 actual introduce Mission Snapshot Serializer v1: snapshot serializable y validable de `MissionState`, comandos preparados y dry-runs, sin escribir archivos, persistir, ejecutar ni conectar runtime.
+PR #77 está mergeado e introduce Mission Snapshot Serializer v1: snapshot serializable y validable de `MissionState`, comandos preparados y dry-runs, sin escribir archivos, persistir, ejecutar ni conectar runtime.
 
-Siguiente recomendado: PR #78 — Mission Approval Bridge v1.
+PR #78 actual introduce JARVIS Master Build Map: mapa maestro documental para construir JARVIS por fases sin olvidar Hermes, Command Center, voz, móvil, cámara, multi-dispositivo, approvals, ejecución, herramientas, asset factory, publicación, ventas, pagos, scheduler y monetización, sin implementar código.
+
+Siguiente recomendado: Mission Approval Bridge v1.
 
 ## 6. Validaciones reales ya confirmadas
 
