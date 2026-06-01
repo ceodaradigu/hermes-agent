@@ -192,9 +192,11 @@ PR #79 está mergeado e introduce Mission Approval Bridge v1: payload prepare-on
 
 PR #80 está mergeado e introduce Mission Safety Baseline Gate v1: evaluación prepare-only de riesgos de misión antes de cualquier ejecución futura, sin aprobar, ejecutar, llamar `ApprovalGateway`, conectar Hermes/MissionControl ni mutar estado.
 
-PR #81 actual completa los bridges/guards restantes de Phase B: Mission Policy Bridge v1, Mission Budget Guard v1, Approval Payload Hardening v1 y Legal/AI Content Safety Baseline v1, manteniendo alcance prepare-only y sin ejecución real.
+PR #81 está mergeado y completa Phase B — Approval & Safety Bridge: Mission Policy Bridge v1, Mission Budget Guard v1, Approval Payload Hardening v1 y Legal/AI Content Safety Baseline v1, manteniendo alcance prepare-only y sin ejecución real.
 
-Siguiente recomendado: Hermes Runtime Bridge Contract.
+PR actual: Phase C — Hermes Runtime Bridge. Objetivo: contrato prepare-only para payloads Hermes, dry-run bridge, execution result futuro, audit integration y agent registry bridge, sin ejecutar Hermes, conectar MissionControl, llamar ApprovalGateway ni crear runtime activo.
+
+Siguiente recomendado: Command Center Visual Interface o Sandbox Execution, según el orden operativo de `docs/JARVIS_MASTER_BUILD_MAP.md`.
 
 ## 6. Validaciones reales ya confirmadas
 
