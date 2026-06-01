@@ -62,6 +62,8 @@ Mission Snapshot Serializer v1 construye snapshots serializables y redactados de
 - Sin WebSocket.
 
 ## Roadmap futuro (Command Center)
+JARVIS Master Build Map: mapa maestro operativo para construir JARVIS por fases sin olvidar Hermes, Command Center, voz, móvil, cámara, multi-dispositivo, approvals, ejecución, herramientas, asset factory, publicación, ventas, pagos, scheduler, monetización y seguridad en `docs/JARVIS_MASTER_BUILD_MAP.md`.
+
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
 JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.
