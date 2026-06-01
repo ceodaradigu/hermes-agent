@@ -30,6 +30,8 @@ Mission Dry-Run Evaluator v1 evalúa un `MissionCommand` preparado antes de cual
 
 Mission Snapshot Serializer v1 construye snapshots serializables y redactados de una misión para debug, UI futura, auditoría y exportación segura, sin escribir archivos ni mutar estado.
 
+Mission Approval Bridge v1 prepara un payload de decisión para aprobación futura desde estado, comando y dry-run, sin aprobar, ejecutar, llamar `ApprovalGateway` ni mutar estado.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`

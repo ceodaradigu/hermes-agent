@@ -56,9 +56,19 @@ from jarvis.missions.snapshot import (
     redact_snapshot_dict,
     validate_mission_snapshot,
 )
+from jarvis.missions.approval_bridge import (
+    MissionApprovalBridgeDecision,
+    MissionApprovalBridgePayload,
+    MissionApprovalBridgeValidationResult,
+    build_approval_bridge_payload,
+    validate_approval_bridge_payload,
+)
 
 __all__ = [
     "ActionClassification",
+    "MissionApprovalBridgeDecision",
+    "MissionApprovalBridgePayload",
+    "MissionApprovalBridgeValidationResult",
     "MissionAuditEvent",
     "MissionAuditEventType",
     "MissionAuditOutcome",
@@ -86,6 +96,7 @@ __all__ = [
     "add_approval_request",
     "build_audit_event",
     "build_audit_event_from_approval_request",
+    "build_approval_bridge_payload",
     "build_approval_request",
     "build_mission_command",
     "build_mission_snapshot",
@@ -94,6 +105,7 @@ __all__ = [
     "redact_snapshot_dict",
     "set_status",
     "validate_audit_event",
+    "validate_approval_bridge_payload",
     "validate_mission_dry_run_evaluation",
     "validate_mission_command",
     "validate_mission_envelope",
