@@ -157,6 +157,8 @@ Estado: completada en modo prepare-only tras PR #81.
 
 ### Phase C - Hermes Runtime Bridge
 
+Estado: actual/parcial en modo contrato prepare-only.
+
 - Objetivo: definir y construir la puerta segura entre JARVIS y Hermes.
 - Incluye: Hermes adapter contract, command payload, dry-run bridge, execution result, safe execution adapter, audit integration y Hermes agent registry bridge.
 - Permite: enviar a Hermes solo acciones ya permitidas, acotadas y auditables.

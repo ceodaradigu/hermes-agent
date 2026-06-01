@@ -34,6 +34,8 @@ Mission Approval Bridge v1 prepara un payload de decisión para aprobación futu
 
 Mission Phase B Bridge/Guard layer consolida safety, approval payload hardening, policy, budget y baseline de contenido AI/legal en decisiones prepare-only, sin conectar runtime ni ejecutar acciones.
 
+Hermes Runtime Bridge v1 prepara payloads, dry-runs, resultados futuros, auditoria y registro de agentes para Hermes en modo contrato/prepare-only, sin ejecutar Hermes, conectar MissionControl ni llamar `ApprovalGateway`.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`
