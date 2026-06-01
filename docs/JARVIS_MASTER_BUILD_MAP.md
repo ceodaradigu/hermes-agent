@@ -92,9 +92,8 @@ Piezas relevantes ya documentadas:
 
 Límites actuales:
 
-- No hay Safety Baseline Gate de misión.
-- No hay Policy Bridge de misión.
-- No hay Budget Guard real.
+- Mission Safety Baseline Gate de misión ya está mergeado.
+- PR #81 completa los bridges/guards restantes de Phase B en modo prepare-only: Policy Bridge, Budget Guard, Approval Payload Hardening y Legal/AI Content Safety Baseline.
 - No hay Hermes Runtime Bridge real para misiones.
 - No hay Command Center visual real.
 - No hay app móvil ni multi-device runtime real.
@@ -145,6 +144,8 @@ Estado: mostly built.
 - Approval: no ejecuta; no requiere strong approval salvo que una futura acción derivada toque riesgo alto.
 
 ### Phase B - Approval & Safety Bridge
+
+Estado: completada en modo prepare-only tras PR #81.
 
 - Objetivo: conectar misión preparada con approvals y safety baseline sin ejecutar.
 - Incluye: Mission Approval Bridge, Mission Safety Baseline Gate, Mission Policy Bridge, Budget Guard y legal/AI content safety baseline.
@@ -380,12 +381,11 @@ JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medi
 
 ## Orden Inmediato Recomendado
 
-Después de este PR documental, volver al código en este orden conceptual:
+Orden conceptual actualizado tras PR #81:
 
-1. PR #79 - Mission Approval Bridge v1.
-2. PR #80 - Mission Safety Baseline Gate v1.
-3. PR #81 - Mission Policy Bridge v1.
-4. PR #82 - Mission Budget Guard v1.
-5. PR #83 - Hermes Runtime Bridge Contract.
+1. PR #79 - Mission Approval Bridge v1. Mergeado.
+2. PR #80 - Mission Safety Baseline Gate v1. Mergeado.
+3. PR #81 - Complete Phase B remaining bridges/guards. Actual.
+4. Siguiente recomendado - Hermes Runtime Bridge Contract.
 
-Los números pueden ajustarse si el repo cambia su secuencia, pero el orden conceptual debe mantenerse: approvals y safety antes de policy bridge avanzado, budget guard antes de revenue execution, y Hermes bridge antes de ejecución real.
+Los números pueden ajustarse si el repo cambia su secuencia, pero el orden conceptual debe mantenerse: approvals, safety, policy bridge y budget guard antes de revenue execution, y Hermes bridge antes de ejecución real.

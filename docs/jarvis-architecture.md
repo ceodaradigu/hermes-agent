@@ -32,6 +32,8 @@ Mission Snapshot Serializer v1 construye snapshots serializables y redactados de
 
 Mission Approval Bridge v1 prepara un payload de decisión para aprobación futura desde estado, comando y dry-run, sin aprobar, ejecutar, llamar `ApprovalGateway` ni mutar estado.
 
+Mission Phase B Bridge/Guard layer consolida safety, approval payload hardening, policy, budget y baseline de contenido AI/legal en decisiones prepare-only, sin conectar runtime ni ejecutar acciones.
+
 ## API Mission Control (sin UI, sin WebSocket)
 - `POST /missions`
 - `GET /missions`

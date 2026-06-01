@@ -71,10 +71,32 @@ from jarvis.missions.safety_baseline import (
     evaluate_mission_safety_baseline,
     validate_mission_safety_baseline_result,
 )
+from jarvis.missions.policy_bridge import (
+    MissionPolicyBridgeDecision,
+    MissionPolicyBridgeResult,
+    evaluate_mission_policy_bridge,
+)
+from jarvis.missions.budget_guard import (
+    MissionBudgetGuardDecision,
+    MissionBudgetGuardResult,
+    evaluate_mission_budget_guard,
+)
+from jarvis.missions.approval_hardening import (
+    MissionApprovalHardeningDecision,
+    MissionApprovalHardeningResult,
+    harden_approval_bridge_payload,
+)
+from jarvis.missions.content_safety import (
+    MissionContentSafetyDecision,
+    MissionContentSafetyResult,
+    evaluate_mission_content_safety,
+)
 
 __all__ = [
     "ActionClassification",
     "MissionApprovalBridgeDecision",
+    "MissionApprovalHardeningDecision",
+    "MissionApprovalHardeningResult",
     "MissionApprovalBridgePayload",
     "MissionApprovalBridgeValidationResult",
     "MissionAuditEvent",
@@ -85,6 +107,10 @@ __all__ = [
     "MissionCommand",
     "MissionCommandStatus",
     "MissionCommandValidationResult",
+    "MissionBudgetGuardDecision",
+    "MissionBudgetGuardResult",
+    "MissionContentSafetyDecision",
+    "MissionContentSafetyResult",
     "MissionDryRunDecision",
     "MissionDryRunEvaluation",
     "MissionDryRunRiskLevel",
@@ -94,6 +120,8 @@ __all__ = [
     "MissionEnvelope",
     "MissionEnvelopeValidationResult",
     "MissionLifecycleValidationResult",
+    "MissionPolicyBridgeDecision",
+    "MissionPolicyBridgeResult",
     "MissionSnapshot",
     "MissionSnapshotValidationResult",
     "MissionSafetyBaselineDecision",
@@ -113,8 +141,12 @@ __all__ = [
     "build_mission_command",
     "build_mission_snapshot",
     "classify_action",
+    "evaluate_mission_budget_guard",
+    "evaluate_mission_content_safety",
+    "evaluate_mission_policy_bridge",
     "evaluate_mission_safety_baseline",
     "evaluate_mission_command_dry_run",
+    "harden_approval_bridge_payload",
     "redact_snapshot_dict",
     "set_status",
     "validate_audit_event",
