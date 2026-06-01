@@ -63,6 +63,14 @@ from jarvis.missions.approval_bridge import (
     build_approval_bridge_payload,
     validate_approval_bridge_payload,
 )
+from jarvis.missions.safety_baseline import (
+    MissionSafetyBaselineDecision,
+    MissionSafetyBaselineResult,
+    MissionSafetyBaselineValidationResult,
+    MissionSafetyFinding,
+    evaluate_mission_safety_baseline,
+    validate_mission_safety_baseline_result,
+)
 
 __all__ = [
     "ActionClassification",
@@ -88,6 +96,10 @@ __all__ = [
     "MissionLifecycleValidationResult",
     "MissionSnapshot",
     "MissionSnapshotValidationResult",
+    "MissionSafetyBaselineDecision",
+    "MissionSafetyBaselineResult",
+    "MissionSafetyBaselineValidationResult",
+    "MissionSafetyFinding",
     "MissionState",
     "MissionStateStore",
     "MissionStateValidationResult",
@@ -101,6 +113,7 @@ __all__ = [
     "build_mission_command",
     "build_mission_snapshot",
     "classify_action",
+    "evaluate_mission_safety_baseline",
     "evaluate_mission_command_dry_run",
     "redact_snapshot_dict",
     "set_status",
@@ -110,6 +123,7 @@ __all__ = [
     "validate_mission_command",
     "validate_mission_envelope",
     "validate_mission_snapshot",
+    "validate_mission_safety_baseline_result",
     "validate_mission_state",
     "validate_status_transition",
 ]
