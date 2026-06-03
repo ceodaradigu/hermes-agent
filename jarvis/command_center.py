@@ -11,7 +11,11 @@ from jarvis.missions.budget_guard import MissionBudgetGuardResult
 from jarvis.missions.dry_run import MissionDryRunRiskLevel
 from jarvis.missions.hermes_bridge import HermesAgentDescriptor, HermesCommandPayload
 from jarvis.missions.state_store import MissionState, MissionStatus
-from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
+from jarvis.voice.companion import (
+    VoiceCompanionControlPolicy,
+    VoiceCompanionIntentPreview,
+    VoiceCompanionStatus,
+)
 
 
 class CommandCenterViewStatus(str, Enum):
@@ -575,6 +579,8 @@ class VoiceCameraControlsView:
     can_record: bool = False
     voice_companion_status: VoiceCompanionStatus = field(default_factory=VoiceCompanionStatus.placeholder)
     voice_companion_control_policy: VoiceCompanionControlPolicy = field(default_factory=VoiceCompanionControlPolicy.placeholder)
+    voice_companion_preview: VoiceCompanionIntentPreview = field(default_factory=VoiceCompanionIntentPreview.placeholder)
+    can_preview_transcript: bool = True
     notes: List[str] = field(default_factory=lambda: ["placeholder only; no microphone or camera runtime is connected"])
 
     def __post_init__(self) -> None:
@@ -592,13 +598,22 @@ class VoiceCameraControlsView:
                 "voice_companion_control_policy",
                 VoiceCompanionControlPolicy.from_dict(self.voice_companion_control_policy),
             )
+        if isinstance(self.voice_companion_preview, dict):
+            object.__setattr__(
+                self,
+                "voice_companion_preview",
+                VoiceCompanionIntentPreview.from_dict(self.voice_companion_preview),
+            )
         if not isinstance(self.voice_companion_status, VoiceCompanionStatus):
             raise ValueError("voice_companion_status must be a VoiceCompanionStatus")
         if not isinstance(self.voice_companion_control_policy, VoiceCompanionControlPolicy):
             raise ValueError("voice_companion_control_policy must be a VoiceCompanionControlPolicy")
+        if not isinstance(self.voice_companion_preview, VoiceCompanionIntentPreview):
+            raise ValueError("voice_companion_preview must be a VoiceCompanionIntentPreview")
         object.__setattr__(self, "notes", _list_from(self.notes))
         companion = self.voice_companion_status
         control_policy = self.voice_companion_control_policy
+        preview = self.voice_companion_preview
         if (
             self.can_start_voice
             or self.can_start_camera
@@ -621,6 +636,12 @@ class VoiceCameraControlsView:
             or control_policy.activation_enabled
             or not control_policy.prepare_only
             or not control_policy.requires_approval_for_activation
+            or not preview.prepare_only
+            or preview.would_execute
+            or preview.execution_enabled
+            or preview.approval_created
+            or preview.approval_gateway_called
+            or preview.hermes_called
         ):
             raise ValueError("Voice/camera controls are placeholders and cannot start capture")
 
@@ -633,13 +654,15 @@ class VoiceCameraControlsView:
         return cls(
             voice_status=data.get("voice_status", CommandCenterControlStatus.PLACEHOLDER),
             camera_status=data.get("camera_status", CommandCenterControlStatus.PLACEHOLDER),
-            can_start_voice=bool(data.get("can_start_voice", False)),
-            can_start_camera=bool(data.get("can_start_camera", False)),
-            can_record=bool(data.get("can_record", False)),
+            can_start_voice=False,
+            can_start_camera=False,
+            can_record=False,
             voice_companion_status=VoiceCompanionStatus.from_dict(data.get("voice_companion_status")),
             voice_companion_control_policy=VoiceCompanionControlPolicy.from_dict(
                 data.get("voice_companion_control_policy")
             ),
+            voice_companion_preview=VoiceCompanionIntentPreview.from_dict(data.get("voice_companion_preview")),
+            can_preview_transcript=bool(data.get("can_preview_transcript", True)),
             notes=_list_from(data.get("notes")),
         )
 
@@ -652,6 +675,8 @@ class VoiceCameraControlsView:
             "can_record": self.can_record,
             "voice_companion_status": self.voice_companion_status.to_dict(),
             "voice_companion_control_policy": self.voice_companion_control_policy.to_dict(),
+            "voice_companion_preview": self.voice_companion_preview.to_dict(),
+            "can_preview_transcript": self.can_preview_transcript,
             "notes": list(self.notes),
         }
 
