@@ -9,6 +9,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from jarvis.command_center import build_command_center_view_model
 from jarvis.mission_control import MissionControl
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
@@ -251,6 +252,19 @@ def create_app(
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.get("/command-center")
+    def command_center() -> dict:
+        view = build_command_center_view_model(
+            view_id=f"command-center-{uuid4()}",
+            generated_at=_now_iso(),
+            metadata={
+                "phase": "D.1",
+                "source": "empty_placeholder_snapshot",
+                "store_connected": False,
+            },
+        )
+        return view.to_dict()
 
     @app.post("/missions")
     def create_mission() -> dict:

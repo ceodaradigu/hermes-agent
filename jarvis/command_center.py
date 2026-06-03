@@ -724,10 +724,23 @@ class CommandCenterViewModel:
         )
 
     def to_dict(self) -> Dict[str, Any]:
+        metadata = dict(self.metadata)
+        safety_flags = {
+            key: metadata[key]
+            for key in (
+                "prepare_only",
+                "execution_enabled",
+                "approval_enabled",
+                "approve_reject_enabled",
+                "hermes_connected",
+                "approval_gateway_called",
+            )
+        }
         return {
             "view_id": self.view_id,
             "generated_at": self.generated_at,
             "status": self.status.value,
+            **safety_flags,
             "missions": [item.to_dict() for item in self.missions],
             "approvals": [item.to_dict() for item in self.approvals],
             "audit_timeline": [item.to_dict() for item in self.audit_timeline],
@@ -738,7 +751,7 @@ class CommandCenterViewModel:
             "voice_camera_controls": self.voice_camera_controls.to_dict(),
             "cost_roi_summary": self.cost_roi_summary.to_dict(),
             "safety_indicator": self.safety_indicator.to_dict(),
-            "metadata": dict(self.metadata),
+            "metadata": metadata,
         }
 
 

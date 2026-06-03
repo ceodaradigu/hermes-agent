@@ -28,6 +28,104 @@ def test_health_ok():
     assert response.status_code == 200
 
 
+def test_command_center_returns_prepare_only_placeholder_snapshot(monkeypatch):
+    client, adapter = _make_client()
+
+    def fail_approval(*args, **kwargs):
+        raise AssertionError("ApprovalGateway must not be called by read-only Command Center API")
+
+    monkeypatch.setattr("jarvis.policy.approval_gateway.ApprovalGateway.create_request", fail_approval)
+
+    response = client.get("/command-center")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["prepare_only"] is True
+    assert payload["execution_enabled"] is False
+    assert payload["approval_enabled"] is False
+    assert payload["approve_reject_enabled"] is False
+    assert payload["hermes_connected"] is False
+    assert payload["approval_gateway_called"] is False
+    assert payload["metadata"]["prepare_only"] is True
+    assert payload["metadata"]["execution_enabled"] is False
+    assert payload["metadata"]["approval_enabled"] is False
+    assert payload["metadata"]["approve_reject_enabled"] is False
+    assert payload["metadata"]["hermes_connected"] is False
+    assert payload["metadata"]["approval_gateway_called"] is False
+    assert payload["missions"] == []
+    assert payload["approvals"] == []
+    assert payload["audit_timeline"] == []
+    assert payload["agents"] == []
+    assert payload["risk_budget_panels"] == []
+    assert payload["hermes_payloads"] == []
+    assert payload["devices"] == [
+        {
+            "device_id": "device-placeholder",
+            "label": "Device runtime not connected",
+            "trusted": False,
+            "online": False,
+            "approval_capable": False,
+            "status": "placeholder",
+        }
+    ]
+    assert payload["voice_camera_controls"]["voice_status"] == "placeholder"
+    assert payload["voice_camera_controls"]["camera_status"] == "placeholder"
+    assert payload["voice_camera_controls"]["can_start_voice"] is False
+    assert payload["voice_camera_controls"]["can_start_camera"] is False
+    assert payload["voice_camera_controls"]["can_record"] is False
+    assert payload["cost_roi_summary"]["roi_status"] == "placeholder"
+    assert payload["safety_indicator"]["policy_engine_boundary"]
+    assert adapter.calls == 0
+
+
+def test_command_center_does_not_expose_audio_env_or_credentials():
+    client, _ = _make_client()
+
+    response = client.get("/command-center")
+    serialized = response.text.lower()
+
+    assert response.status_code == 200
+    for forbidden in (
+        ".env",
+        "api_key",
+        "apikey",
+        "secret",
+        "token",
+        "password",
+        "credential",
+        "authorization",
+        "audio_path",
+        "audio_bytes",
+        "ref_audio",
+        "base_url",
+        "prompt_text",
+    ):
+        assert forbidden not in serialized
+
+
+def test_command_center_get_does_not_create_missions_or_execute_runtime():
+    client, adapter = _make_client()
+
+    before = client.get("/missions")
+    response = client.get("/command-center")
+    after = client.get("/missions")
+
+    assert before.status_code == 200
+    assert response.status_code == 200
+    assert after.status_code == 200
+    assert before.json() == []
+    assert after.json() == []
+    assert adapter.calls == 0
+
+
+def test_command_center_has_no_post_action_endpoint():
+    client, _ = _make_client()
+
+    response = client.post("/command-center")
+
+    assert response.status_code == 405
+
+
 def test_create_allowed_task_executes():
     client, adapter = _make_client()
     response = client.post("/tasks", json={"prompt": "investigar nichos de afiliación"})
