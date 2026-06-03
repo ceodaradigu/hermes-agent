@@ -15,7 +15,11 @@ from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
-from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
+from jarvis.voice.companion import (
+    VoiceCompanionControlPolicy,
+    VoiceCompanionIntentPreview,
+    VoiceCompanionStatus,
+)
 from jarvis.voice.feedback_preview import preview_user_understanding_feedback
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
@@ -63,6 +67,10 @@ class VoiceRuntimeModeRequest(BaseModel):
 
 
 class VoiceRuntimeTextRequest(BaseModel):
+    text: str
+
+
+class VoiceCompanionPreviewRequest(BaseModel):
     text: str
 
 
@@ -460,6 +468,17 @@ def create_app(
     @app.get("/voice/companion/control-policy")
     def voice_companion_control_policy() -> dict:
         return VoiceCompanionControlPolicy.placeholder().to_dict()
+
+    @app.post("/voice/companion/preview")
+    def voice_companion_preview(payload: VoiceCompanionPreviewRequest) -> dict:
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text must be non-empty")
+        preview = VoiceCompanionIntentPreview.from_text(
+            text,
+            policy_engine=app.state.policy_engine,
+        )
+        return preview.to_dict()
 
     @app.get("/voice/runtime/status")
     def voice_runtime_status() -> dict:

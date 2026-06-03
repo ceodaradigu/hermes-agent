@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from run_agent import AIAgent
-
 
 @dataclass
 class HermesAdapterConfig:
@@ -25,6 +23,8 @@ class HermesRuntimeAdapter:
         self.config = config or HermesAdapterConfig()
 
     def create_agent(self, session_id: Optional[str] = None) -> AIAgent:
+        from run_agent import AIAgent
+
         return AIAgent(
             model=self.config.model,
             max_iterations=self.config.max_iterations,

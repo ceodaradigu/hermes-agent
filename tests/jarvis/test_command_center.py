@@ -27,7 +27,7 @@ from jarvis.missions.hermes_bridge import (
 from jarvis.missions.state_store import MissionState, MissionStatus, add_approval_request, add_audit_event
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
-from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
+from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionIntentPreview, VoiceCompanionStatus
 
 
 def _envelope(**overrides):
@@ -339,6 +339,10 @@ def test_placeholder_controls_cannot_enable_capture_or_device_approvals():
     with pytest.raises(ValueError, match="cannot start capture"):
         VoiceCameraControlsView(voice_companion_control_policy=VoiceCompanionControlPolicy(microphone_requested=True))
 
+    preview = VoiceCompanionIntentPreview(would_execute=True, execution_enabled=True)
+    assert preview.to_dict()["would_execute"] is False
+    assert preview.to_dict()["execution_enabled"] is False
+
     with pytest.raises(ValueError, match="cannot enable approvals"):
         DeviceStatusView(device_id="phone", label="Phone", approval_capable=True)
 
@@ -374,6 +378,48 @@ def test_voice_camera_controls_include_prepare_only_voice_companion_status():
         "activation_enabled": False,
         "reason": "Voice Companion controls are policy placeholders only.",
     }
+    assert data["voice_companion_preview"] == {
+        "prepare_only": True,
+        "input_text": "",
+        "intent": "unknown",
+        "policy_decision": "unknown",
+        "would_execute": False,
+        "execution_enabled": False,
+        "approval_created": False,
+        "approval_gateway_called": False,
+        "hermes_called": False,
+        "sensitive_boundary_triggered": False,
+        "reason": "Voice Companion preview is prepare-only; no execution path is enabled.",
+        "warnings": [],
+    }
+    assert data["can_preview_transcript"] is True
+
+
+def test_voice_camera_controls_from_dict_cannot_enable_preview_execution_flags():
+    view = VoiceCameraControlsView.from_dict(
+        {
+            "can_start_voice": True,
+            "voice_companion_preview": {
+                "prepare_only": False,
+                "input_text": "read .env",
+                "intent": "create_mission",
+                "policy_decision": "allowed",
+                "would_execute": True,
+                "execution_enabled": True,
+                "approval_created": True,
+                "approval_gateway_called": True,
+                "hermes_called": True,
+            },
+        }
+    )
+    data = view.to_dict()
+
+    assert data["can_start_voice"] is False
+    assert data["voice_companion_preview"]["would_execute"] is False
+    assert data["voice_companion_preview"]["execution_enabled"] is False
+    assert data["voice_companion_preview"]["approval_created"] is False
+    assert data["voice_companion_preview"]["approval_gateway_called"] is False
+    assert data["voice_companion_preview"]["hermes_called"] is False
 
 
 def test_risk_budget_panel_cannot_enable_spending():

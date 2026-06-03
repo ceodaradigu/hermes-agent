@@ -96,6 +96,21 @@ def test_command_center_returns_prepare_only_placeholder_snapshot(monkeypatch):
         "activation_enabled": False,
         "reason": "Voice Companion controls are policy placeholders only.",
     }
+    assert payload["voice_camera_controls"]["voice_companion_preview"] == {
+        "prepare_only": True,
+        "input_text": "",
+        "intent": "unknown",
+        "policy_decision": "unknown",
+        "would_execute": False,
+        "execution_enabled": False,
+        "approval_created": False,
+        "approval_gateway_called": False,
+        "hermes_called": False,
+        "sensitive_boundary_triggered": False,
+        "reason": "Voice Companion preview is prepare-only; no execution path is enabled.",
+        "warnings": [],
+    }
+    assert payload["voice_camera_controls"]["can_preview_transcript"] is True
     assert payload["cost_roi_summary"]["roi_status"] == "placeholder"
     assert payload["safety_indicator"]["policy_engine_boundary"]
     assert adapter.calls == 0
