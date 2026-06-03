@@ -4,6 +4,52 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 
+_CONTROL_POLICY_REASON = "Voice Companion controls are policy placeholders only."
+
+
+@dataclass(frozen=True)
+class VoiceCompanionControlPolicy:
+    """Prepare-only policy for future Voice Companion controls.
+
+    This DTO records the desired control posture without activating any
+    microphone, wake-word, recording, streaming, execution, Hermes, or approval
+    runtime.
+    """
+
+    prepare_only: bool = True
+    microphone_requested: bool = False
+    wake_word_requested: bool = False
+    recording_requested: bool = False
+    streaming_requested: bool = False
+    auto_start_requested: bool = False
+    execution_requested: bool = False
+    requires_approval_for_activation: bool = True
+    activation_enabled: bool = False
+    reason: str = _CONTROL_POLICY_REASON
+
+    @classmethod
+    def placeholder(cls) -> "VoiceCompanionControlPolicy":
+        return cls()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any] | None) -> "VoiceCompanionControlPolicy":
+        return cls()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "prepare_only": self.prepare_only,
+            "microphone_requested": self.microphone_requested,
+            "wake_word_requested": self.wake_word_requested,
+            "recording_requested": self.recording_requested,
+            "streaming_requested": self.streaming_requested,
+            "auto_start_requested": self.auto_start_requested,
+            "execution_requested": self.execution_requested,
+            "requires_approval_for_activation": self.requires_approval_for_activation,
+            "activation_enabled": self.activation_enabled,
+            "reason": self.reason,
+        }
+
+
 @dataclass(frozen=True)
 class VoiceCompanionStatus:
     """Prepare-only status for the future Voice Companion surface.

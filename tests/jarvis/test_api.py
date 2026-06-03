@@ -84,6 +84,18 @@ def test_command_center_returns_prepare_only_placeholder_snapshot(monkeypatch):
         "execution_enabled": False,
         "approval_required_for_sensitive_actions": True,
     }
+    assert payload["voice_camera_controls"]["voice_companion_control_policy"] == {
+        "prepare_only": True,
+        "microphone_requested": False,
+        "wake_word_requested": False,
+        "recording_requested": False,
+        "streaming_requested": False,
+        "auto_start_requested": False,
+        "execution_requested": False,
+        "requires_approval_for_activation": True,
+        "activation_enabled": False,
+        "reason": "Voice Companion controls are policy placeholders only.",
+    }
     assert payload["cost_roi_summary"]["roi_status"] == "placeholder"
     assert payload["safety_indicator"]["policy_engine_boundary"]
     assert adapter.calls == 0
