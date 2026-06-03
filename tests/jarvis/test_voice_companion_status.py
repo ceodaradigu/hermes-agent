@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from jarvis.api.app import create_app
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
-from jarvis.voice.companion import VoiceCompanionStatus
+from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
 
 
 class DummyAdapter:
@@ -39,10 +39,50 @@ def _expected_status():
     }
 
 
+def _expected_control_policy():
+    return {
+        "prepare_only": True,
+        "microphone_requested": False,
+        "wake_word_requested": False,
+        "recording_requested": False,
+        "streaming_requested": False,
+        "auto_start_requested": False,
+        "execution_requested": False,
+        "requires_approval_for_activation": True,
+        "activation_enabled": False,
+        "reason": "Voice Companion controls are policy placeholders only.",
+    }
+
+
 def test_voice_companion_status_is_prepare_only():
     status = VoiceCompanionStatus.placeholder()
 
     assert status.to_dict() == _expected_status()
+
+
+def test_voice_companion_control_policy_is_prepare_only():
+    policy = VoiceCompanionControlPolicy.placeholder()
+
+    assert policy.to_dict() == _expected_control_policy()
+
+
+def test_voice_companion_control_policy_from_dict_forces_safe_placeholder():
+    policy = VoiceCompanionControlPolicy.from_dict(
+        {
+            "prepare_only": False,
+            "microphone_requested": True,
+            "wake_word_requested": True,
+            "recording_requested": True,
+            "streaming_requested": True,
+            "auto_start_requested": True,
+            "execution_requested": True,
+            "requires_approval_for_activation": False,
+            "activation_enabled": True,
+            "reason": "enable everything",
+        }
+    )
+
+    assert policy.to_dict() == _expected_control_policy()
 
 
 def test_voice_companion_status_from_dict_forces_safe_placeholder():
@@ -63,12 +103,19 @@ def test_voice_companion_status_from_dict_forces_safe_placeholder():
     assert status.to_dict() == _expected_status()
 
 
-def test_voice_companion_status_endpoint_is_read_only_and_does_not_call_runtime_bridges(monkeypatch):
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("/voice/companion/status", _expected_status()),
+        ("/voice/companion/control-policy", _expected_control_policy()),
+    ],
+)
+def test_voice_companion_read_only_endpoints_do_not_call_runtime_bridges(monkeypatch, path, expected):
     def fail_approval(*args, **kwargs):
-        raise AssertionError("ApprovalGateway must not be called by Voice Companion status")
+        raise AssertionError("ApprovalGateway must not be called by Voice Companion read-only endpoints")
 
     def fail_hermes(*args, **kwargs):
-        raise AssertionError("HermesRuntimeAdapter must not be called by Voice Companion status")
+        raise AssertionError("HermesRuntimeAdapter must not be called by Voice Companion read-only endpoints")
 
     monkeypatch.setattr(ApprovalGateway, "create_request", fail_approval)
     monkeypatch.setattr(HermesRuntimeAdapter, "run", fail_hermes, raising=False)
@@ -77,13 +124,13 @@ def test_voice_companion_status_endpoint_is_read_only_and_does_not_call_runtime_
     before_tasks = client.get("/tasks")
     before_missions = client.get("/missions")
 
-    response = client.get("/voice/companion/status")
+    response = client.get(path)
 
     after_tasks = client.get("/tasks")
     after_missions = client.get("/missions")
 
     assert response.status_code == 200
-    assert response.json() == _expected_status()
+    assert response.json() == expected
     assert before_tasks.json() == []
     assert after_tasks.json() == []
     assert before_missions.json() == []
@@ -91,12 +138,23 @@ def test_voice_companion_status_endpoint_is_read_only_and_does_not_call_runtime_
     assert adapter.calls == 0
 
 
-def test_voice_companion_status_endpoint_has_no_post_route():
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/voice/companion/status",
+        "/voice/companion/control-policy",
+        "/voice/companion/control",
+        "/voice/companion/start",
+        "/voice/companion/stop",
+        "/voice/companion/listen",
+    ],
+)
+def test_voice_companion_has_no_post_activation_or_control_routes(path):
     client, _ = _client()
 
-    response = client.post("/voice/companion/status")
+    response = client.post(path)
 
-    assert response.status_code == 405
+    assert response.status_code in {404, 405}
 
 
 def test_voice_companion_status_endpoint_does_not_open_env_file_or_expose_sensitive_routes(monkeypatch):
@@ -110,7 +168,7 @@ def test_voice_companion_status_endpoint_does_not_open_env_file_or_expose_sensit
     monkeypatch.setattr("builtins.open", tracking_open)
 
     client, _ = _client()
-    response = client.get("/voice/companion/status")
+    response = client.get("/voice/companion/control-policy")
     serialized = response.text.lower()
     routes = [route.path.lower() for route in client.app.routes]
 
@@ -133,6 +191,7 @@ def test_voice_companion_status_endpoint_does_not_open_env_file_or_expose_sensit
     ):
         assert forbidden not in serialized
     assert "/voice/companion/status" in routes
+    assert "/voice/companion/control-policy" in routes
     assert "/voice/companion/audio" not in routes
     assert "/voice/companion/record" not in routes
     assert "/voice/companion/stream" not in routes

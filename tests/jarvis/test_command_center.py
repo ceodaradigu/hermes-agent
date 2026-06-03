@@ -27,7 +27,7 @@ from jarvis.missions.hermes_bridge import (
 from jarvis.missions.state_store import MissionState, MissionStatus, add_approval_request, add_audit_event
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
-from jarvis.voice.companion import VoiceCompanionStatus
+from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
 
 
 def _envelope(**overrides):
@@ -336,6 +336,9 @@ def test_placeholder_controls_cannot_enable_capture_or_device_approvals():
     with pytest.raises(ValueError, match="cannot start capture"):
         VoiceCameraControlsView(voice_companion_status=VoiceCompanionStatus(voice_available=True))
 
+    with pytest.raises(ValueError, match="cannot start capture"):
+        VoiceCameraControlsView(voice_companion_control_policy=VoiceCompanionControlPolicy(microphone_requested=True))
+
     with pytest.raises(ValueError, match="cannot enable approvals"):
         DeviceStatusView(device_id="phone", label="Phone", approval_capable=True)
 
@@ -358,6 +361,18 @@ def test_voice_camera_controls_include_prepare_only_voice_companion_status():
         "auto_start_enabled": False,
         "execution_enabled": False,
         "approval_required_for_sensitive_actions": True,
+    }
+    assert data["voice_companion_control_policy"] == {
+        "prepare_only": True,
+        "microphone_requested": False,
+        "wake_word_requested": False,
+        "recording_requested": False,
+        "streaming_requested": False,
+        "auto_start_requested": False,
+        "execution_requested": False,
+        "requires_approval_for_activation": True,
+        "activation_enabled": False,
+        "reason": "Voice Companion controls are policy placeholders only.",
     }
 
 

@@ -11,7 +11,7 @@ from jarvis.missions.budget_guard import MissionBudgetGuardResult
 from jarvis.missions.dry_run import MissionDryRunRiskLevel
 from jarvis.missions.hermes_bridge import HermesAgentDescriptor, HermesCommandPayload
 from jarvis.missions.state_store import MissionState, MissionStatus
-from jarvis.voice.companion import VoiceCompanionStatus
+from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionStatus
 
 
 class CommandCenterViewStatus(str, Enum):
@@ -574,6 +574,7 @@ class VoiceCameraControlsView:
     can_start_camera: bool = False
     can_record: bool = False
     voice_companion_status: VoiceCompanionStatus = field(default_factory=VoiceCompanionStatus.placeholder)
+    voice_companion_control_policy: VoiceCompanionControlPolicy = field(default_factory=VoiceCompanionControlPolicy.placeholder)
     notes: List[str] = field(default_factory=lambda: ["placeholder only; no microphone or camera runtime is connected"])
 
     def __post_init__(self) -> None:
@@ -585,10 +586,19 @@ class VoiceCameraControlsView:
                 "voice_companion_status",
                 VoiceCompanionStatus.from_dict(self.voice_companion_status),
             )
+        if isinstance(self.voice_companion_control_policy, dict):
+            object.__setattr__(
+                self,
+                "voice_companion_control_policy",
+                VoiceCompanionControlPolicy.from_dict(self.voice_companion_control_policy),
+            )
         if not isinstance(self.voice_companion_status, VoiceCompanionStatus):
             raise ValueError("voice_companion_status must be a VoiceCompanionStatus")
+        if not isinstance(self.voice_companion_control_policy, VoiceCompanionControlPolicy):
+            raise ValueError("voice_companion_control_policy must be a VoiceCompanionControlPolicy")
         object.__setattr__(self, "notes", _list_from(self.notes))
         companion = self.voice_companion_status
+        control_policy = self.voice_companion_control_policy
         if (
             self.can_start_voice
             or self.can_start_camera
@@ -602,6 +612,15 @@ class VoiceCameraControlsView:
             or companion.execution_enabled
             or not companion.prepare_only
             or not companion.approval_required_for_sensitive_actions
+            or control_policy.microphone_requested
+            or control_policy.wake_word_requested
+            or control_policy.recording_requested
+            or control_policy.streaming_requested
+            or control_policy.auto_start_requested
+            or control_policy.execution_requested
+            or control_policy.activation_enabled
+            or not control_policy.prepare_only
+            or not control_policy.requires_approval_for_activation
         ):
             raise ValueError("Voice/camera controls are placeholders and cannot start capture")
 
@@ -618,6 +637,9 @@ class VoiceCameraControlsView:
             can_start_camera=bool(data.get("can_start_camera", False)),
             can_record=bool(data.get("can_record", False)),
             voice_companion_status=VoiceCompanionStatus.from_dict(data.get("voice_companion_status")),
+            voice_companion_control_policy=VoiceCompanionControlPolicy.from_dict(
+                data.get("voice_companion_control_policy")
+            ),
             notes=_list_from(data.get("notes")),
         )
 
@@ -629,6 +651,7 @@ class VoiceCameraControlsView:
             "can_start_camera": self.can_start_camera,
             "can_record": self.can_record,
             "voice_companion_status": self.voice_companion_status.to_dict(),
+            "voice_companion_control_policy": self.voice_companion_control_policy.to_dict(),
             "notes": list(self.notes),
         }
 
