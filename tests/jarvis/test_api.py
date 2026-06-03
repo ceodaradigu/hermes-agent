@@ -73,6 +73,17 @@ def test_command_center_returns_prepare_only_placeholder_snapshot(monkeypatch):
     assert payload["voice_camera_controls"]["can_start_voice"] is False
     assert payload["voice_camera_controls"]["can_start_camera"] is False
     assert payload["voice_camera_controls"]["can_record"] is False
+    assert payload["voice_camera_controls"]["voice_companion_status"] == {
+        "prepare_only": True,
+        "voice_available": False,
+        "microphone_enabled": False,
+        "wake_word_enabled": False,
+        "recording_enabled": False,
+        "streaming_enabled": False,
+        "auto_start_enabled": False,
+        "execution_enabled": False,
+        "approval_required_for_sensitive_actions": True,
+    }
     assert payload["cost_roi_summary"]["roi_status"] == "placeholder"
     assert payload["safety_indicator"]["policy_engine_boundary"]
     assert adapter.calls == 0

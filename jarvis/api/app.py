@@ -15,6 +15,7 @@ from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
+from jarvis.voice.companion import VoiceCompanionStatus
 from jarvis.voice.feedback_preview import preview_user_understanding_feedback
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
@@ -451,6 +452,10 @@ def create_app(
             "can_synthesize": False,
             "details": {"class_name": adapter.__class__.__name__},
         }
+
+    @app.get("/voice/companion/status")
+    def voice_companion_status() -> dict:
+        return VoiceCompanionStatus.placeholder().to_dict()
 
     @app.get("/voice/runtime/status")
     def voice_runtime_status() -> dict:
