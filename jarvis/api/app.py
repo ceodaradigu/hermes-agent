@@ -11,6 +11,12 @@ from pydantic import BaseModel
 
 from jarvis.command_center import build_command_center_view_model
 from jarvis.mission_control import MissionControl
+from jarvis.mobile.companion import (
+    MobileCommandCenterSnapshot,
+    MobileCompanionPermissionPolicy,
+    MobileCompanionStatus,
+    MobileIntentPreview,
+)
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
@@ -71,6 +77,10 @@ class VoiceRuntimeTextRequest(BaseModel):
 
 
 class VoiceCompanionPreviewRequest(BaseModel):
+    text: str
+
+
+class MobileIntentPreviewRequest(BaseModel):
     text: str
 
 
@@ -274,6 +284,39 @@ def create_app(
             },
         )
         return view.to_dict()
+
+    @app.get("/mobile/companion/status")
+    def mobile_companion_status() -> dict:
+        return MobileCompanionStatus.placeholder().to_dict()
+
+    @app.get("/mobile/companion/permissions")
+    def mobile_companion_permissions() -> dict:
+        return MobileCompanionPermissionPolicy.placeholder().to_dict()
+
+    @app.get("/mobile/command-center")
+    def mobile_command_center() -> dict:
+        view = build_command_center_view_model(
+            view_id=f"mobile-command-center-{uuid4()}",
+            generated_at=_now_iso(),
+            metadata={
+                "phase": "F",
+                "source": "mobile_empty_placeholder_snapshot",
+                "store_connected": False,
+                "mobile_companion": "prepare_only",
+            },
+        )
+        return MobileCommandCenterSnapshot.from_command_center_view(view).to_dict()
+
+    @app.post("/mobile/intent/preview")
+    def mobile_intent_preview(payload: MobileIntentPreviewRequest) -> dict:
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text must be non-empty")
+        preview = MobileIntentPreview.from_text(
+            text,
+            policy_engine=app.state.policy_engine,
+        )
+        return preview.to_dict()
 
     @app.post("/missions")
     def create_mission() -> dict:

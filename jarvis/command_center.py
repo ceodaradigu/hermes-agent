@@ -896,6 +896,7 @@ def build_command_center_view_model(
             "phase": "D",
             "ui_ready": True,
             **dict(metadata or {}),
+            "mobile_companion": "prepare_only",
         },
     )
 
