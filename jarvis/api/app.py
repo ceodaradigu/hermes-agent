@@ -17,6 +17,12 @@ from jarvis.mobile.companion import (
     MobileCompanionStatus,
     MobileIntentPreview,
 )
+from jarvis.operator_console import (
+    OperatorConsoleCapabilityMatrix,
+    OperatorConsolePreview,
+    OperatorConsoleStatus,
+    build_operator_console_snapshot,
+)
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
@@ -81,6 +87,10 @@ class VoiceCompanionPreviewRequest(BaseModel):
 
 
 class MobileIntentPreviewRequest(BaseModel):
+    text: str
+
+
+class OperatorConsolePreviewRequest(BaseModel):
     text: str
 
 
@@ -281,9 +291,37 @@ def create_app(
                 "phase": "D.1",
                 "source": "empty_placeholder_snapshot",
                 "store_connected": False,
+                "operator_console": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/operator/console/status")
+    def operator_console_status() -> dict:
+        return OperatorConsoleStatus.placeholder().to_dict()
+
+    @app.get("/operator/console/capabilities")
+    def operator_console_capabilities() -> dict:
+        return OperatorConsoleCapabilityMatrix.placeholder().to_dict()
+
+    @app.get("/operator/console/snapshot")
+    def operator_console_snapshot() -> dict:
+        snapshot = build_operator_console_snapshot(
+            view_id=f"operator-command-center-{uuid4()}",
+            generated_at=_now_iso(),
+        )
+        return snapshot.to_dict()
+
+    @app.post("/operator/console/preview")
+    def operator_console_preview(payload: OperatorConsolePreviewRequest) -> dict:
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text must be non-empty")
+        preview = OperatorConsolePreview.from_text(
+            text,
+            policy_engine=app.state.policy_engine,
+        )
+        return preview.to_dict()
 
     @app.get("/mobile/companion/status")
     def mobile_companion_status() -> dict:
