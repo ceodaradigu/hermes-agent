@@ -940,6 +940,7 @@ def build_command_center_view_model(
             "multi_device_runtime": "prepare_only",
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
+            "asset_factory_web_builder": "prepare_only",
         },
     )
 

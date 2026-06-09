@@ -8,6 +8,7 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStatus,
     AmbientVisionStopControl,
 )
+from jarvis.asset_factory.foundation import AssetFactoryStatus, AssetGenerationPolicy
 from jarvis.command_center import CommandCenterViewModel, build_command_center_view_model
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
@@ -121,6 +122,9 @@ class OperatorConsoleCapabilityMatrix:
     preview_sandbox_dry_run: bool = True
     read_tool_adoption_status: bool = True
     preview_tool_adoption: bool = True
+    read_asset_factory_status: bool = True
+    read_asset_generation_policy: bool = True
+    preview_asset_factory: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -163,6 +167,9 @@ class OperatorConsoleCapabilityMatrix:
             "preview_sandbox_dry_run": True,
             "read_tool_adoption_status": True,
             "preview_tool_adoption": True,
+            "read_asset_factory_status": True,
+            "read_asset_generation_policy": True,
+            "preview_asset_factory": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -362,6 +369,8 @@ class OperatorConsoleSnapshot:
     device_registry: DeviceRegistrySnapshot = field(default_factory=DeviceRegistrySnapshot.placeholder)
     sandbox_execution_status: SandboxExecutionStatus = field(default_factory=SandboxExecutionStatus.placeholder)
     tool_adoption_status: ToolAdoptionStatus = field(default_factory=ToolAdoptionStatus.placeholder)
+    asset_factory_status: AssetFactoryStatus = field(default_factory=AssetFactoryStatus.placeholder)
+    asset_generation_policy: AssetGenerationPolicy = field(default_factory=AssetGenerationPolicy.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -428,6 +437,14 @@ class OperatorConsoleSnapshot:
                 "tool_adoption_status",
                 ToolAdoptionStatus.from_dict(self.tool_adoption_status),
             )
+        if isinstance(self.asset_factory_status, dict):
+            object.__setattr__(self, "asset_factory_status", AssetFactoryStatus.from_dict(self.asset_factory_status))
+        if isinstance(self.asset_generation_policy, dict):
+            object.__setattr__(
+                self,
+                "asset_generation_policy",
+                AssetGenerationPolicy.from_dict(self.asset_generation_policy),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -456,6 +473,8 @@ class OperatorConsoleSnapshot:
             device_registry=DeviceRegistrySnapshot.from_dict(source.get("device_registry")),
             sandbox_execution_status=SandboxExecutionStatus.from_dict(source.get("sandbox_execution_status")),
             tool_adoption_status=ToolAdoptionStatus.from_dict(source.get("tool_adoption_status")),
+            asset_factory_status=AssetFactoryStatus.from_dict(source.get("asset_factory_status")),
+            asset_generation_policy=AssetGenerationPolicy.from_dict(source.get("asset_generation_policy")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -478,6 +497,8 @@ class OperatorConsoleSnapshot:
             "device_registry": self.device_registry.to_dict(),
             "sandbox_execution_status": self.sandbox_execution_status.to_dict(),
             "tool_adoption_status": self.tool_adoption_status.to_dict(),
+            "asset_factory_status": self.asset_factory_status.to_dict(),
+            "asset_generation_policy": self.asset_generation_policy.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -496,6 +517,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "multi_device_runtime": "prepare_only",
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
+            "asset_factory_web_builder": "prepare_only",
         },
     )
 
@@ -527,6 +549,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "multi_device_runtime": "prepare_only",
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
+            "asset_factory_web_builder": "prepare_only",
         },
     )
 
@@ -559,6 +582,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "multi_device_runtime": "prepare_only",
         "sandbox_execution": "prepare_only",
         "tool_adoption_pipeline": "prepare_only",
+        "asset_factory_web_builder": "prepare_only",
     }
     return safe
 
