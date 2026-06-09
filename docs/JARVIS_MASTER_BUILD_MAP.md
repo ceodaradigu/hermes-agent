@@ -4,6 +4,10 @@ JARVIS es un sistema operativo personal de IA para David, privado/no SaaS, que c
 
 Este documento es el mapa maestro operativo para construir JARVIS por fases sin olvidar piezas críticas. No implementa código, runtime, endpoints, router, scripts, CI, dependencias, integraciones externas ni conexión nueva con Hermes/MissionControl.
 
+**JARVIS_MASTER_BUILD_MAP.md is the source of truth for master phase names and order.**
+
+Las foundations prepare-only pueden completarse antes que el objetivo runtime completo de una fase. Una extensión transversal, como Operator Console, no crea ni sustituye una fase maestra.
+
 ## JARVIS vs Hermes
 
 - JARVIS = cerebro, orquestador, interfaz, control, negocio y seguridad.
@@ -94,13 +98,17 @@ Límites actuales:
 
 - Mission Safety Baseline Gate de misión ya está mergeado.
 - PR #81 completa los bridges/guards restantes de Phase B en modo prepare-only: Policy Bridge, Budget Guard, Approval Payload Hardening y Legal/AI Content Safety Baseline.
-- No hay Hermes Runtime Bridge real para misiones.
-- No hay Command Center visual real.
-- No hay app móvil ni multi-device runtime real.
+- Hermes Runtime Bridge foundation está completada en modo contrato/prepare-only; no hay ejecución Hermes real para misiones.
+- Command Center foundation está completada con view model y API read-only; no hay Command Center visual real.
+- Voice Companion foundation está completada en modo status/control-policy/preview prepare-only; no hay companion de voz runtime real.
+- Mobile Companion foundation está completada como superficie API prepare-only; no hay app móvil ni multi-device runtime real.
+- Operator Console Foundation está completada como extensión read-only de Command Center / operator layer. No es Phase G ni sustituye Ambient Vision.
 - No hay tool adoption pipeline real.
 - No hay Asset Factory, Deploy/Publishing, Sales, Payments ni Scheduler reales.
 
 ## Qué Falta Por Construir
+
+Esta lista describe capacidades runtime/producción completas pendientes; no contradice el estado completado de sus foundations prepare-only.
 
 - Approval Bridge.
 - Safety Baseline Gate.
@@ -134,7 +142,7 @@ Límites actuales:
 
 ### Phase A - Mission Core Foundation
 
-Estado: mostly built.
+Estado: completada como foundation contractual prepare-only.
 
 - Objetivo: definir contratos de misión serializables y validables.
 - Permite: modelos de misión, approvals, audit, state, lifecycle, commands, dry-run y snapshots.
@@ -157,7 +165,7 @@ Estado: completada en modo prepare-only tras PR #81.
 
 ### Phase C - Hermes Runtime Bridge
 
-Estado: actual/parcial en modo contrato prepare-only.
+Estado: foundation contractual completada en modo prepare-only; runtime de ejecución real pendiente.
 
 - Objetivo: definir y construir la puerta segura entre JARVIS y Hermes.
 - Incluye: Hermes adapter contract, command payload, dry-run bridge, execution result, safe execution adapter, audit integration y Hermes agent registry bridge.
@@ -169,6 +177,9 @@ Estado: actual/parcial en modo contrato prepare-only.
 
 ### Phase D - Command Center Visual Interface
 
+Estado: foundation completada con view model y API read-only; interfaz visual operativa completa pendiente.
+
+- Extensión transversal completada: Operator Console Foundation como Command Center / operator layer read-only. No sustituye ninguna fase maestra.
 - Objetivo: crear la interfaz visual operativa de JARVIS.
 - Incluye: visual shell, dashboard, missions view, approvals view, audit timeline, agents view, money/ROI view, device view, voice/camera controls e interfaz visual de JARVIS.
 - Permite: ver estado, riesgos, approvals, misiones, ROI, dispositivos y controles.
@@ -178,6 +189,8 @@ Estado: actual/parcial en modo contrato prepare-only.
 - Approval: la UI puede iniciar approvals, pero strong approval sigue exigiendo challenge y scope exacto.
 
 ### Phase E - Voice Companion
+
+Estado: foundation completada en modo prepare-only; conversación de voz runtime y controles activos pendientes.
 
 - Objetivo: hacer que JARVIS pueda conversar por voz de forma segura.
 - Incluye: wake phrase where possible, push-to-talk fallback, STT, TTS, voice conversation, voice approval flow, transcript confidence, low-confidence no-action rule y controles "no escuches" / "pausa".
@@ -189,6 +202,8 @@ Estado: actual/parcial en modo contrato prepare-only.
 
 ### Phase F - Mobile Companion
 
+Estado: foundation completada en modo prepare-only; app móvil, pairing y acciones remotas reales pendientes.
+
 - Objetivo: convertir móvil/PWA/app en interfaz remota segura.
 - Incluye: approvals desde móvil, passphrase/challenge code, notifications, mission status, camera access, mic access, quick actions y offline/limited mode.
 - Permite: revisar estado, aprobar/denegar, hablar, recibir notificaciones y controlar misiones.
@@ -198,6 +213,8 @@ Estado: actual/parcial en modo contrato prepare-only.
 - Approval: strong approval desde móvil solo si el dispositivo es confiable y la acción exacta está clara.
 
 ### Phase G - Ambient Vision / Camera Companion
+
+Estado: siguiente fase maestra recomendada; foundation pendiente.
 
 - Objetivo: permitir "mira conmigo" sin convertir la cámara en vigilancia.
 - Incluye: camera session, indicador visible camera-active, "no mires" hard stop, privacy redaction, no recording by default, no face/person analysis by default, document/screen awareness, useful alerts y audit of camera sessions.
@@ -383,11 +400,16 @@ JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medi
 
 ## Orden Inmediato Recomendado
 
-Orden conceptual actualizado tras PR #81:
+Orden conceptual actualizado tras PR #99:
 
 1. PR #79 - Mission Approval Bridge v1. Mergeado.
 2. PR #80 - Mission Safety Baseline Gate v1. Mergeado.
-3. PR #81 - Complete Phase B remaining bridges/guards. Actual.
-4. Siguiente recomendado - Hermes Runtime Bridge Contract.
+3. PR #81 - Complete Phase B remaining bridges/guards. Mergeado.
+4. PR #82 - Hermes Runtime Bridge Contract. Mergeado.
+5. PRs #93-#94 - Command Center foundation. Mergeadas.
+6. PRs #95-#97 - Voice Companion foundation. Mergeadas.
+7. PR #98 - Mobile Companion foundation. Mergeado.
+8. PR #99 - Operator Console Foundation como extensión de Command Center / operator layer. Mergeado; no es Phase G maestra.
+9. Siguiente fase maestra recomendada - Phase G: Ambient Vision / Camera Companion.
 
 Los números pueden ajustarse si el repo cambia su secuencia, pero el orden conceptual debe mantenerse: approvals, safety, policy bridge y budget guard antes de revenue execution, y Hermes bridge antes de ejecución real.

@@ -35,6 +35,12 @@ The view model can be assembled from already prepared mission, approval, audit, 
 
 `PolicyEngine` and `ApprovalGateway` remain authoritative. A future visual UI may render this model, but any action buttons must route through separate policy, approval, strong-approval, and audit flows.
 
+## Operator Console Foundation Extension
+
+Operator Console Foundation is completed as a read-only Command Center / operator layer extension. It aggregates safe Command Center, Voice Companion, Mobile Companion, and safety views without enabling execution or approval actions.
+
+This extension is not a master phase and is not a replacement for Phase G Ambient Vision / Camera Companion. `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
+
 ## Phase D.1 Read-Only API
 
 Phase D.1 exposes the prepared view model through `GET /command-center`.
