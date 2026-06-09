@@ -23,6 +23,16 @@ from jarvis.mobile.companion import (
     MobileCompanionStatus,
     MobileIntentPreview,
 )
+from jarvis.multidevice.runtime import (
+    DeviceApprovalChannelPreview,
+    DeviceCapabilityProfile,
+    DevicePairingPreview,
+    DeviceRegistrySnapshot,
+    DeviceRevokePreview,
+    DeviceSyncPreview,
+    MultiDeviceRuntimeStatus,
+    NotificationRoutingPreview,
+)
 from jarvis.operator_console import (
     OperatorConsoleCapabilityMatrix,
     OperatorConsolePreview,
@@ -111,6 +121,32 @@ class AmbientVisionSessionPreviewRequest(BaseModel):
     external_vision_requested: bool = False
     image_storage_requested: bool = False
     sensitive_capture_requested: bool = False
+
+
+class DevicePairingPreviewRequest(BaseModel):
+    device_id: str = "device-placeholder"
+    device_type: str = "unknown"
+    pairing_requested: bool = False
+
+
+class DeviceRevokePreviewRequest(BaseModel):
+    device_id: str = "device-placeholder"
+    revoke_requested: bool = False
+
+
+class DeviceApprovalChannelPreviewRequest(BaseModel):
+    device_id: str = "device-placeholder"
+    approval_channel_requested: bool = False
+
+
+class DeviceSyncPreviewRequest(BaseModel):
+    device_id: str = "device-placeholder"
+    sync_requested: bool = False
+
+
+class NotificationRoutingPreviewRequest(BaseModel):
+    device_id: str = "device-placeholder"
+    notification_requested: bool = False
 
 
 class VoiceRuntimeFeedbackRequest(BaseModel):
@@ -311,9 +347,42 @@ def create_app(
                 "source": "empty_placeholder_snapshot",
                 "store_connected": False,
                 "operator_console": "prepare_only",
+                "multi_device_runtime": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/devices/runtime/status")
+    def multi_device_runtime_status() -> dict:
+        return MultiDeviceRuntimeStatus.placeholder().to_dict()
+
+    @app.get("/devices/registry")
+    def device_registry() -> dict:
+        return DeviceRegistrySnapshot.placeholder().to_dict()
+
+    @app.get("/devices/capabilities")
+    def device_capabilities() -> dict:
+        return DeviceCapabilityProfile.placeholder().to_dict()
+
+    @app.post("/devices/pairing/preview")
+    def device_pairing_preview(payload: DevicePairingPreviewRequest) -> dict:
+        return DevicePairingPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/devices/revoke/preview")
+    def device_revoke_preview(payload: DeviceRevokePreviewRequest) -> dict:
+        return DeviceRevokePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/devices/approval-channel/preview")
+    def device_approval_channel_preview(payload: DeviceApprovalChannelPreviewRequest) -> dict:
+        return DeviceApprovalChannelPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/devices/sync/preview")
+    def device_sync_preview(payload: DeviceSyncPreviewRequest) -> dict:
+        return DeviceSyncPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/devices/notifications/preview")
+    def notification_routing_preview(payload: NotificationRoutingPreviewRequest) -> dict:
+        return NotificationRoutingPreview.from_request(payload.model_dump()).to_dict()
 
     @app.get("/ambient-vision/status")
     def ambient_vision_status() -> dict:

@@ -16,6 +16,7 @@ from jarvis.missions.budget_guard import MissionBudgetGuardResult
 from jarvis.missions.dry_run import MissionDryRunRiskLevel
 from jarvis.missions.hermes_bridge import HermesAgentDescriptor, HermesCommandPayload
 from jarvis.missions.state_store import MissionState, MissionStatus
+from jarvis.multidevice.runtime import MultiDeviceRuntimeStatus
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
     VoiceCompanionIntentPreview,
@@ -763,6 +764,7 @@ class CommandCenterViewModel:
     risk_budget_panels: List[RiskAndBudgetPanelView] = field(default_factory=list)
     hermes_payloads: List[HermesPayloadView] = field(default_factory=list)
     devices: List[DeviceStatusView] = field(default_factory=lambda: [DeviceStatusView.placeholder()])
+    multi_device_runtime_status: MultiDeviceRuntimeStatus = field(default_factory=MultiDeviceRuntimeStatus.placeholder)
     voice_camera_controls: VoiceCameraControlsView = field(default_factory=VoiceCameraControlsView.placeholder)
     cost_roi_summary: CostRoiSummaryView = field(default_factory=CostRoiSummaryView.placeholder)
     safety_indicator: SafetyIndicatorView = field(
@@ -784,6 +786,12 @@ class CommandCenterViewModel:
         object.__setattr__(self, "risk_budget_panels", _coerce_list(self.risk_budget_panels, RiskAndBudgetPanelView, "risk_budget_panels"))
         object.__setattr__(self, "hermes_payloads", _coerce_list(self.hermes_payloads, HermesPayloadView, "hermes_payloads"))
         object.__setattr__(self, "devices", _coerce_list(self.devices, DeviceStatusView, "devices"))
+        if isinstance(self.multi_device_runtime_status, dict):
+            object.__setattr__(
+                self,
+                "multi_device_runtime_status",
+                MultiDeviceRuntimeStatus.from_dict(self.multi_device_runtime_status),
+            )
         object.__setattr__(self, "metadata", _with_safety_metadata(self.metadata))
         if not _is_non_empty_string(self.view_id):
             raise ValueError("view_id must be a non-empty string")
@@ -817,6 +825,7 @@ class CommandCenterViewModel:
             risk_budget_panels=risk_budget_panels,
             hermes_payloads=hermes_payloads,
             devices=devices,
+            multi_device_runtime_status=MultiDeviceRuntimeStatus.from_dict(data.get("multi_device_runtime_status")),
             voice_camera_controls=VoiceCameraControlsView.from_dict(data.get("voice_camera_controls") or {}),
             cost_roi_summary=CostRoiSummaryView.from_dict(data.get("cost_roi_summary") or {}),
             safety_indicator=_safety_indicator_from_dict(
@@ -850,6 +859,7 @@ class CommandCenterViewModel:
             "risk_budget_panels": [item.to_dict() for item in self.risk_budget_panels],
             "hermes_payloads": [item.to_dict() for item in self.hermes_payloads],
             "devices": [item.to_dict() for item in self.devices],
+            "multi_device_runtime_status": self.multi_device_runtime_status.to_dict(),
             "voice_camera_controls": self.voice_camera_controls.to_dict(),
             "cost_roi_summary": self.cost_roi_summary.to_dict(),
             "safety_indicator": self.safety_indicator.to_dict(),
@@ -927,6 +937,7 @@ def build_command_center_view_model(
             "operator_console": "prepare_only",
             "mobile_companion": "prepare_only",
             "ambient_vision": "prepare_only",
+            "multi_device_runtime": "prepare_only",
         },
     )
 
