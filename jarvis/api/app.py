@@ -42,6 +42,14 @@ from jarvis.operator_console import (
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
+from jarvis.sandbox_execution.foundation import (
+    SandboxAuditPreview,
+    SandboxCommandPlan,
+    SandboxDryRunResult,
+    SandboxExecutionPolicy,
+    SandboxExecutionStatus,
+    SandboxRollbackPreview,
+)
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
@@ -147,6 +155,11 @@ class DeviceSyncPreviewRequest(BaseModel):
 class NotificationRoutingPreviewRequest(BaseModel):
     device_id: str = "device-placeholder"
     notification_requested: bool = False
+
+
+class SandboxCommandRequest(BaseModel):
+    command: str = ""
+    working_directory: str = ""
 
 
 class VoiceRuntimeFeedbackRequest(BaseModel):
@@ -348,9 +361,34 @@ def create_app(
                 "store_connected": False,
                 "operator_console": "prepare_only",
                 "multi_device_runtime": "prepare_only",
+                "sandbox_execution": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/sandbox/execution/status")
+    def sandbox_execution_status() -> dict:
+        return SandboxExecutionStatus.placeholder().to_dict()
+
+    @app.get("/sandbox/execution/policy")
+    def sandbox_execution_policy() -> dict:
+        return SandboxExecutionPolicy.placeholder().to_dict()
+
+    @app.post("/sandbox/command/plan")
+    def sandbox_command_plan(payload: SandboxCommandRequest) -> dict:
+        return SandboxCommandPlan.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/sandbox/command/dry-run")
+    def sandbox_command_dry_run(payload: SandboxCommandRequest) -> dict:
+        return SandboxDryRunResult.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/sandbox/rollback/preview")
+    def sandbox_rollback_preview(payload: SandboxCommandRequest) -> dict:
+        return SandboxRollbackPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/sandbox/audit/preview")
+    def sandbox_audit_preview(payload: SandboxCommandRequest) -> dict:
+        return SandboxAuditPreview.from_request(payload.model_dump()).to_dict()
 
     @app.get("/devices/runtime/status")
     def multi_device_runtime_status() -> dict:
