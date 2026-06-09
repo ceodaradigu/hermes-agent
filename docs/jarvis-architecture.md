@@ -70,6 +70,10 @@ Hermes Runtime Bridge v1 prepara payloads, dry-runs, resultados futuros, auditor
 ## Roadmap futuro (Command Center)
 JARVIS Master Build Map: mapa maestro operativo para construir JARVIS por fases sin olvidar Hermes, Command Center, voz, móvil, cámara, multi-dispositivo, approvals, ejecución, herramientas, asset factory, publicación, ventas, pagos, scheduler, monetización y seguridad en `docs/JARVIS_MASTER_BUILD_MAP.md`.
 
+**JARVIS_MASTER_BUILD_MAP.md is the source of truth for master phase names and order.**
+
+Operator Console Foundation es una extensión read-only de Command Center / operator layer. Está completada como foundation prepare-only, pero no es una fase maestra y no sustituye Phase G — Ambient Vision / Camera Companion.
+
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
 JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.

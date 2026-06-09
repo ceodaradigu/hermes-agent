@@ -128,7 +128,23 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #76
+## 5. Estado actual de JARVIS después de PR #99
+
+`JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
+
+Estado alineado de las fases maestras:
+
+| Fase maestra | Estado actual |
+|---|---|
+| Phase A — Mission Core Foundation | Completada como foundation contractual prepare-only. |
+| Phase B — Approval & Safety Bridge | Completada en modo prepare-only. |
+| Phase C — Hermes Runtime Bridge | Foundation contractual completada; runtime de ejecución real pendiente. |
+| Phase D — Command Center Visual Interface | Foundation completada con view model y API read-only; UI visual completa pendiente. |
+| Phase E — Voice Companion | Foundation completada en modo prepare-only; runtime de voz companion pendiente. |
+| Phase F — Mobile Companion | Foundation completada en modo prepare-only; app móvil y runtime remoto pendientes. |
+| Phase G — Ambient Vision / Camera Companion | Siguiente fase maestra recomendada. |
+
+Operator Console Foundation está completada como extensión read-only de Command Center / operator layer. No es Phase G maestra y no sustituye Ambient Vision / Camera Companion.
 
 Ya existe:
 
@@ -194,9 +210,19 @@ PR #80 está mergeado e introduce Mission Safety Baseline Gate v1: evaluación p
 
 PR #81 está mergeado y completa Phase B — Approval & Safety Bridge: Mission Policy Bridge v1, Mission Budget Guard v1, Approval Payload Hardening v1 y Legal/AI Content Safety Baseline v1, manteniendo alcance prepare-only y sin ejecución real.
 
-PR actual: Phase C — Hermes Runtime Bridge. Objetivo: contrato prepare-only para payloads Hermes, dry-run bridge, execution result futuro, audit integration y agent registry bridge, sin ejecutar Hermes, conectar MissionControl, llamar ApprovalGateway ni crear runtime activo.
+PR #82 está mergeado y completa la foundation contractual de Phase C — Hermes Runtime Bridge en modo prepare-only, sin ejecutar Hermes, conectar MissionControl, llamar ApprovalGateway ni crear runtime activo.
 
-Siguiente recomendado: Command Center Visual Interface o Sandbox Execution, según el orden operativo de `docs/JARVIS_MASTER_BUILD_MAP.md`.
+PRs #93 y #94 están mergeadas y completan la foundation de Phase D — Command Center con view model y API read-only, sin UI visual completa ni acciones de ejecución/aprobación.
+
+PRs #95, #96 y #97 están mergeadas y completan la foundation de Phase E — Voice Companion en modo prepare-only, sin activar micrófono, wake word, grabación, streaming ni ejecución.
+
+PR #98 está mergeado y completa la foundation de Phase F — Mobile Companion en modo prepare-only, sin app móvil, pairing, push, background sync ni acciones remotas reales.
+
+PR #99 está mergeado y completa Operator Console Foundation como extensión read-only de Command Center / operator layer. No es una Phase G maestra ni sustituye Ambient Vision / Camera Companion.
+
+PR actual: alineación documental de roadmap y handoff con `docs/JARVIS_MASTER_BUILD_MAP.md`, sin cambios de runtime, endpoints, tests funcionales ni código de producto.
+
+Siguiente fase maestra recomendada: Phase G — Ambient Vision / Camera Companion.
 
 ## 6. Validaciones reales ya confirmadas
 

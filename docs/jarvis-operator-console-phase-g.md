@@ -1,6 +1,10 @@
-# JARVIS Operator Console - Phase G
+# JARVIS Operator Console Foundation
 
-Phase G adds a safe backend/API foundation for an Operator Console. The console is a read-only operator surface for seeing JARVIS state, understanding active/inactive capabilities, and previewing text intent. It does not include a frontend, WebSocket, mission execution, approval actions, Hermes runtime calls, external calls, or secrets access.
+Operator Console Foundation is a Command Center / Operator layer extension. It adds a safe backend/API foundation for a read-only operator surface for seeing JARVIS state, understanding active/inactive capabilities, and previewing text intent. It does not include a frontend, WebSocket, mission execution, approval actions, Hermes runtime calls, external calls, or secrets access.
+
+It is not a replacement for Phase G Ambient Vision / Camera Companion. `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
+
+The historical filename is retained only to avoid breaking existing documentation links; it does not assign Operator Console to master Phase G.
 
 ## What It Allows
 
@@ -154,7 +158,7 @@ The preview may classify intent and policy posture, but it never executes, creat
 
 ## Prohibited Routes
 
-Phase G intentionally does not add:
+Operator Console Foundation intentionally does not add:
 
 - `POST /operator/execute`
 - `POST /operator/approve`
@@ -183,7 +187,7 @@ External input cannot enable execution, approvals, Hermes connectivity, deployme
 
 ## Validation
 
-Phase G is validated by tests covering:
+Operator Console Foundation is validated by tests covering:
 
 - status endpoint safety flags
 - capability matrix allowed/forbidden fields
