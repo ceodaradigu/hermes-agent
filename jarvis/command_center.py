@@ -939,6 +939,7 @@ def build_command_center_view_model(
             "ambient_vision": "prepare_only",
             "multi_device_runtime": "prepare_only",
             "sandbox_execution": "prepare_only",
+            "tool_adoption_pipeline": "prepare_only",
         },
     )
 

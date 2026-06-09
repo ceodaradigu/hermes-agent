@@ -50,6 +50,17 @@ from jarvis.sandbox_execution.foundation import (
     SandboxExecutionStatus,
     SandboxRollbackPreview,
 )
+from jarvis.tool_adoption.pipeline import (
+    ToolAdoptionDecisionPreview,
+    ToolAdoptionStatus,
+    ToolCandidateProfile,
+    ToolDependencyRiskReview,
+    ToolLicenseReview,
+    ToolRepoHealthReview,
+    ToolSandboxInstallProposal,
+    ToolSpikePlan,
+    ToolValueMeasurementPreview,
+)
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
@@ -160,6 +171,64 @@ class NotificationRoutingPreviewRequest(BaseModel):
 class SandboxCommandRequest(BaseModel):
     command: str = ""
     working_directory: str = ""
+
+
+class ToolCandidateProfileRequest(BaseModel):
+    tool_name: str = "unknown"
+    source_url: str = ""
+    declared_use_case: str = "unknown"
+    license: str = "unknown"
+    repo_health: str = "unknown"
+    dependency_risk: str = "unknown"
+    security_risk: str = "unknown"
+    expected_value: str = "unknown"
+
+
+class ToolLicenseReviewRequest(BaseModel):
+    license: str = "unknown"
+
+
+class ToolRepoHealthReviewRequest(BaseModel):
+    metadata: Optional[dict] = None
+
+
+class ToolDependencyRiskReviewRequest(BaseModel):
+    dependencies: Optional[List[str]] = None
+
+
+class ToolSandboxInstallProposalRequest(BaseModel):
+    tool_name: str = "unknown"
+
+
+class ToolSpikePlanRequest(BaseModel):
+    hypothesis: str = "unknown"
+    scope: str = "unknown"
+    success_metric: str = "unknown"
+    max_time: str = "unknown"
+    max_cost: str = "unknown"
+    rollback: str = "required before any real spike"
+
+
+class ToolValueMeasurementPreviewRequest(BaseModel):
+    time_saved: Optional[str] = None
+    token_saved: Optional[str] = None
+    error_reduction: Optional[str] = None
+    asset_quality_improvement: Optional[str] = None
+    revenue_enablement: Optional[str] = None
+    confirmed_revenue: bool = False
+
+
+class ToolAdoptionDecisionPreviewRequest(BaseModel):
+    license: str = "unknown"
+    repo_health: str = "unknown"
+    dependency_risk: str = "unknown"
+    expected_value: str = "unknown"
+    blocked: bool = False
+    install_requested: bool = False
+    execution_requested: bool = False
+    network_requested: bool = False
+    secrets_requested: bool = False
+    core_dependency_requested: bool = False
 
 
 class VoiceRuntimeFeedbackRequest(BaseModel):
@@ -362,9 +431,46 @@ def create_app(
                 "operator_console": "prepare_only",
                 "multi_device_runtime": "prepare_only",
                 "sandbox_execution": "prepare_only",
+                "tool_adoption_pipeline": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/tools/adoption/status")
+    def tool_adoption_status() -> dict:
+        return ToolAdoptionStatus.placeholder().to_dict()
+
+    @app.post("/tools/candidate/profile")
+    def tool_candidate_profile(payload: ToolCandidateProfileRequest) -> dict:
+        return ToolCandidateProfile.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/license/review")
+    def tool_license_review(payload: ToolLicenseReviewRequest) -> dict:
+        return ToolLicenseReview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/repo-health/review")
+    def tool_repo_health_review(payload: ToolRepoHealthReviewRequest) -> dict:
+        return ToolRepoHealthReview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/dependency-risk/review")
+    def tool_dependency_risk_review(payload: ToolDependencyRiskReviewRequest) -> dict:
+        return ToolDependencyRiskReview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/sandbox-install/proposal")
+    def tool_sandbox_install_proposal(payload: ToolSandboxInstallProposalRequest) -> dict:
+        return ToolSandboxInstallProposal.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/spike/plan")
+    def tool_spike_plan(payload: ToolSpikePlanRequest) -> dict:
+        return ToolSpikePlan.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/value/preview")
+    def tool_value_preview(payload: ToolValueMeasurementPreviewRequest) -> dict:
+        return ToolValueMeasurementPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/tools/adoption/decision-preview")
+    def tool_adoption_decision_preview(payload: ToolAdoptionDecisionPreviewRequest) -> dict:
+        return ToolAdoptionDecisionPreview.from_request(payload.model_dump()).to_dict()
 
     @app.get("/sandbox/execution/status")
     def sandbox_execution_status() -> dict:
