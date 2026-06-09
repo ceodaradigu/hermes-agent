@@ -941,6 +941,7 @@ def build_command_center_view_model(
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
+            "deploy_publishing_control": "prepare_only",
         },
     )
 

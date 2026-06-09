@@ -28,6 +28,18 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStopControl,
 )
 from jarvis.command_center import build_command_center_view_model
+from jarvis.deploy_publishing.foundation import (
+    DeployPublishingPolicy,
+    DeployPublishingStatus,
+    DeploymentTargetPreview,
+    DomainConnectionPreview,
+    ExternalAccountConnectionPreview,
+    ProductionReleasePreview,
+    PublishingApprovalRequirements,
+    PublishingPlanPreview,
+    PublishingReadinessChecklist,
+    PublishingRollbackPreview,
+)
 from jarvis.mission_control import MissionControl
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
@@ -286,6 +298,28 @@ class AssetFactoryPreviewRequest(BaseModel):
     confirmed_revenue_explicitly_provided: bool = False
 
 
+class DeployPublishingPreviewRequest(BaseModel):
+    target_name: Optional[str] = None
+    target_type: str = "unknown"
+    environment: str = "unknown"
+    production_target: bool = False
+    asset_reference: Optional[str] = None
+    publish_destination: Optional[str] = None
+    domain_requested: bool = False
+    domain_name: Optional[str] = None
+    account_type: Optional[str] = None
+    production_requested: bool = False
+    paid_resource_requested: bool = False
+    identity_requested: bool = False
+    secrets_requested: bool = False
+    publish_requested: bool = False
+    required_checks: Optional[List[str]] = None
+    missing_items: Optional[List[str]] = None
+    rollback_steps_preview: Optional[List[str]] = None
+    irreversible_risks: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -488,9 +522,50 @@ def create_app(
                 "sandbox_execution": "prepare_only",
                 "tool_adoption_pipeline": "prepare_only",
                 "asset_factory_web_builder": "prepare_only",
+                "deploy_publishing_control": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/deploy-publishing/status")
+    def deploy_publishing_status() -> dict:
+        return DeployPublishingStatus.placeholder().to_dict()
+
+    @app.get("/deploy-publishing/policy")
+    def deploy_publishing_policy() -> dict:
+        return DeployPublishingPolicy.placeholder().to_dict()
+
+    @app.post("/deploy-publishing/target-preview")
+    def deploy_publishing_target_preview(payload: DeployPublishingPreviewRequest) -> dict:
+        return DeploymentTargetPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/publish-plan")
+    def deploy_publishing_publish_plan(payload: DeployPublishingPreviewRequest) -> dict:
+        return PublishingPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/domain-preview")
+    def deploy_publishing_domain_preview(payload: DeployPublishingPreviewRequest) -> dict:
+        return DomainConnectionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/account-preview")
+    def deploy_publishing_account_preview(payload: DeployPublishingPreviewRequest) -> dict:
+        return ExternalAccountConnectionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/production-preview")
+    def deploy_publishing_production_preview(payload: DeployPublishingPreviewRequest) -> dict:
+        return ProductionReleasePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/rollback-preview")
+    def deploy_publishing_rollback_preview(payload: DeployPublishingPreviewRequest) -> dict:
+        return PublishingRollbackPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/readiness-checklist")
+    def deploy_publishing_readiness_checklist(payload: DeployPublishingPreviewRequest) -> dict:
+        return PublishingReadinessChecklist.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/deploy-publishing/approval-requirements")
+    def deploy_publishing_approval_requirements(payload: DeployPublishingPreviewRequest) -> dict:
+        return PublishingApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/asset-factory/status")
     def asset_factory_status() -> dict:
