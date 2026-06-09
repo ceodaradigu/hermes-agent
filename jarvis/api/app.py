@@ -40,6 +40,20 @@ from jarvis.deploy_publishing.foundation import (
     PublishingReadinessChecklist,
     PublishingRollbackPreview,
 )
+from jarvis.daily_operator.scheduler import (
+    DailyBriefingPreview,
+    DailyOperatorSchedulerStatus,
+    DailyPlanPreview,
+    ExecutionWindowPreview,
+    MissedRunRetryPolicyPreview,
+    OperatorHandoffSummaryPreview,
+    RecurrencePreview,
+    ReminderNotificationPreview,
+    ScheduleRulePreview,
+    SchedulerApprovalRequirements,
+    SchedulerSafetyPolicy,
+    TaskQueuePreview,
+)
 from jarvis.mission_control import MissionControl
 from jarvis.marketing_distribution.foundation import (
     AudienceSegmentPreview,
@@ -440,6 +454,68 @@ class PaymentsRevenuePreviewRequest(BaseModel):
     income_guarantee_requested: bool = False
 
 
+class DailyOperatorPreviewRequest(BaseModel):
+    date: Optional[str] = None
+    timezone: str = "unknown"
+    priorities: Optional[List[str]] = None
+    open_loops: Optional[List[str]] = None
+    blocked_items: Optional[List[str]] = None
+    scheduled_items_preview: Optional[List[str]] = None
+    risk_warnings: Optional[List[str]] = None
+    source_data: str = "unknown"
+    plan_date: Optional[str] = None
+    focus_blocks: Optional[List[str]] = None
+    task_candidates: Optional[List[str]] = None
+    priority_order: Optional[List[str]] = None
+    estimated_effort: Optional[str] = None
+    dependency_notes: Optional[List[str]] = None
+    blocked_by_approval: Optional[List[str]] = None
+    rule_name: Optional[str] = None
+    cadence: str = "unknown"
+    start_time: Optional[str] = None
+    allowed_window: Optional[str] = None
+    quiet_hours: Optional[str] = None
+    recurrence_requested: bool = False
+    recurrence_rule: Optional[str] = None
+    next_run_preview: Optional[str] = None
+    max_runs: Optional[int] = None
+    stop_condition: Optional[str] = None
+    queued_items_preview: Optional[List[str]] = None
+    execution_order: Optional[List[str]] = None
+    reminder_requested: bool = False
+    channel: str = "none"
+    message_preview: Optional[str] = None
+    recipient_preview: Optional[str] = None
+    window_name: Optional[str] = None
+    allowed_start: Optional[str] = None
+    allowed_end: Optional[str] = None
+    max_runtime: Optional[str] = None
+    max_retries: int = 0
+    backoff_preview: Optional[str] = None
+    side_effect_task: bool = False
+    summary_date: Optional[str] = None
+    completed_preview: Optional[List[str]] = None
+    pending_preview: Optional[List[str]] = None
+    risks: Optional[List[str]] = None
+    approvals_needed: Optional[List[str]] = None
+    next_actions_preview: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+    background_requested: bool = False
+    background_execution_requested: bool = False
+    recurring_requested: bool = False
+    notification_requested: bool = False
+    external_notification_requested: bool = False
+    external_calendar_requested: bool = False
+    calendar_requested: bool = False
+    money_requested: bool = False
+    money_movement_requested: bool = False
+    payment_requested: bool = False
+    spend_requested: bool = False
+    publish_requested: bool = False
+    deploy_requested: bool = False
+    external_side_effect_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -645,9 +721,58 @@ def create_app(
                 "deploy_publishing_control": "prepare_only",
                 "marketing_distribution_engine": "prepare_only",
                 "payments_revenue": "prepare_only",
+                "daily_operator_scheduler": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/daily-operator/status")
+    def daily_operator_status() -> dict:
+        return DailyOperatorSchedulerStatus.placeholder().to_dict()
+
+    @app.get("/daily-operator/policy")
+    def daily_operator_policy() -> dict:
+        return SchedulerSafetyPolicy.placeholder().to_dict()
+
+    @app.post("/daily-operator/briefing-preview")
+    def daily_operator_briefing_preview(payload: DailyOperatorPreviewRequest) -> dict:
+        return DailyBriefingPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/daily-plan")
+    def daily_operator_daily_plan(payload: DailyOperatorPreviewRequest) -> dict:
+        return DailyPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/schedule-rule")
+    def daily_operator_schedule_rule(payload: DailyOperatorPreviewRequest) -> dict:
+        return ScheduleRulePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/recurrence-preview")
+    def daily_operator_recurrence_preview(payload: DailyOperatorPreviewRequest) -> dict:
+        return RecurrencePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/task-queue-preview")
+    def daily_operator_task_queue_preview(payload: DailyOperatorPreviewRequest) -> dict:
+        return TaskQueuePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/reminder-preview")
+    def daily_operator_reminder_preview(payload: DailyOperatorPreviewRequest) -> dict:
+        return ReminderNotificationPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/execution-window")
+    def daily_operator_execution_window(payload: DailyOperatorPreviewRequest) -> dict:
+        return ExecutionWindowPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/retry-policy")
+    def daily_operator_retry_policy(payload: DailyOperatorPreviewRequest) -> dict:
+        return MissedRunRetryPolicyPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/handoff-summary")
+    def daily_operator_handoff_summary(payload: DailyOperatorPreviewRequest) -> dict:
+        return OperatorHandoffSummaryPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/daily-operator/approval-requirements")
+    def daily_operator_approval_requirements(payload: DailyOperatorPreviewRequest) -> dict:
+        return SchedulerApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/payments-revenue/status")
     def payments_revenue_status() -> dict:

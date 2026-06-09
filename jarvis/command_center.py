@@ -944,6 +944,7 @@ def build_command_center_view_model(
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
+            "daily_operator_scheduler": "prepare_only",
         },
     )
 

@@ -15,6 +15,7 @@ from jarvis.deploy_publishing.foundation import (
     DeployPublishingStatus,
     PublishingReadinessChecklist,
 )
+from jarvis.daily_operator.scheduler import DailyOperatorSchedulerStatus, SchedulerSafetyPolicy
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
     MobileCompanionPermissionPolicy,
@@ -149,6 +150,9 @@ class OperatorConsoleCapabilityMatrix:
     read_payments_revenue_status: bool = True
     read_payments_revenue_policy: bool = True
     preview_payments_revenue: bool = True
+    read_daily_operator_status: bool = True
+    read_scheduler_safety_policy: bool = True
+    preview_daily_operator: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -203,6 +207,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_payments_revenue_status": True,
             "read_payments_revenue_policy": True,
             "preview_payments_revenue": True,
+            "read_daily_operator_status": True,
+            "read_scheduler_safety_policy": True,
+            "preview_daily_operator": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -413,6 +420,8 @@ class OperatorConsoleSnapshot:
     payments_revenue_status: PaymentsRevenueStatus = field(default_factory=PaymentsRevenueStatus.placeholder)
     payments_revenue_policy: PaymentsRevenuePolicy = field(default_factory=PaymentsRevenuePolicy.placeholder)
     financial_readiness: FinancialRiskGuardPreview = field(default_factory=FinancialRiskGuardPreview)
+    daily_operator_status: DailyOperatorSchedulerStatus = field(default_factory=DailyOperatorSchedulerStatus.placeholder)
+    scheduler_safety_policy: SchedulerSafetyPolicy = field(default_factory=SchedulerSafetyPolicy.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -541,6 +550,18 @@ class OperatorConsoleSnapshot:
                 "financial_readiness",
                 FinancialRiskGuardPreview.from_dict(self.financial_readiness),
             )
+        if isinstance(self.daily_operator_status, dict):
+            object.__setattr__(
+                self,
+                "daily_operator_status",
+                DailyOperatorSchedulerStatus.from_dict(self.daily_operator_status),
+            )
+        if isinstance(self.scheduler_safety_policy, dict):
+            object.__setattr__(
+                self,
+                "scheduler_safety_policy",
+                SchedulerSafetyPolicy.from_dict(self.scheduler_safety_policy),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -580,6 +601,8 @@ class OperatorConsoleSnapshot:
             payments_revenue_status=PaymentsRevenueStatus.from_dict(source.get("payments_revenue_status")),
             payments_revenue_policy=PaymentsRevenuePolicy.from_dict(source.get("payments_revenue_policy")),
             financial_readiness=FinancialRiskGuardPreview.from_dict(source.get("financial_readiness")),
+            daily_operator_status=DailyOperatorSchedulerStatus.from_dict(source.get("daily_operator_status")),
+            scheduler_safety_policy=SchedulerSafetyPolicy.from_dict(source.get("scheduler_safety_policy")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -613,6 +636,8 @@ class OperatorConsoleSnapshot:
             "payments_revenue_status": self.payments_revenue_status.to_dict(),
             "payments_revenue_policy": self.payments_revenue_policy.to_dict(),
             "financial_readiness": self.financial_readiness.to_dict(),
+            "daily_operator_status": self.daily_operator_status.to_dict(),
+            "scheduler_safety_policy": self.scheduler_safety_policy.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -635,6 +660,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
+            "daily_operator_scheduler": "prepare_only",
         },
     )
 
@@ -670,6 +696,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
+            "daily_operator_scheduler": "prepare_only",
         },
     )
 
@@ -706,6 +733,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "deploy_publishing_control": "prepare_only",
         "marketing_distribution_engine": "prepare_only",
         "payments_revenue": "prepare_only",
+        "daily_operator_scheduler": "prepare_only",
     }
     return safe
 
