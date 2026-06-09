@@ -9,6 +9,12 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from jarvis.ambient_vision.companion import (
+    AmbientVisionPrivacyPolicy,
+    AmbientVisionSessionPreview,
+    AmbientVisionStatus,
+    AmbientVisionStopControl,
+)
 from jarvis.command_center import build_command_center_view_model
 from jarvis.mission_control import MissionControl
 from jarvis.mobile.companion import (
@@ -92,6 +98,19 @@ class MobileIntentPreviewRequest(BaseModel):
 
 class OperatorConsolePreviewRequest(BaseModel):
     text: str
+
+
+class AmbientVisionSessionPreviewRequest(BaseModel):
+    session_requested: bool = False
+    camera_requested: bool = False
+    recording_requested: bool = False
+    streaming_requested: bool = False
+    continuous_watch_requested: bool = False
+    face_analysis_requested: bool = False
+    person_analysis_requested: bool = False
+    external_vision_requested: bool = False
+    image_storage_requested: bool = False
+    sensitive_capture_requested: bool = False
 
 
 class VoiceRuntimeFeedbackRequest(BaseModel):
@@ -295,6 +314,22 @@ def create_app(
             },
         )
         return view.to_dict()
+
+    @app.get("/ambient-vision/status")
+    def ambient_vision_status() -> dict:
+        return AmbientVisionStatus.placeholder().to_dict()
+
+    @app.get("/ambient-vision/privacy-policy")
+    def ambient_vision_privacy_policy() -> dict:
+        return AmbientVisionPrivacyPolicy.placeholder().to_dict()
+
+    @app.post("/ambient-vision/session-preview")
+    def ambient_vision_session_preview(payload: AmbientVisionSessionPreviewRequest) -> dict:
+        return AmbientVisionSessionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.get("/ambient-vision/stop-control")
+    def ambient_vision_stop_control() -> dict:
+        return AmbientVisionStopControl.placeholder().to_dict()
 
     @app.get("/operator/console/status")
     def operator_console_status() -> dict:

@@ -4,6 +4,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
+from jarvis.ambient_vision.companion import (
+    AmbientVisionPrivacyPolicy,
+    AmbientVisionStatus,
+    AmbientVisionStopControl,
+)
 from jarvis.missions.approval_bridge import MissionApprovalBridgePayload
 from jarvis.missions.approval_request import MissionApprovalLevel, MissionApprovalRequest
 from jarvis.missions.audit_log import MissionAuditEvent
@@ -581,6 +586,9 @@ class VoiceCameraControlsView:
     voice_companion_control_policy: VoiceCompanionControlPolicy = field(default_factory=VoiceCompanionControlPolicy.placeholder)
     voice_companion_preview: VoiceCompanionIntentPreview = field(default_factory=VoiceCompanionIntentPreview.placeholder)
     can_preview_transcript: bool = True
+    ambient_vision_status: AmbientVisionStatus = field(default_factory=AmbientVisionStatus.placeholder)
+    ambient_vision_privacy_policy: AmbientVisionPrivacyPolicy = field(default_factory=AmbientVisionPrivacyPolicy.placeholder)
+    ambient_vision_stop_control: AmbientVisionStopControl = field(default_factory=AmbientVisionStopControl.placeholder)
     notes: List[str] = field(default_factory=lambda: ["placeholder only; no microphone or camera runtime is connected"])
 
     def __post_init__(self) -> None:
@@ -603,6 +611,20 @@ class VoiceCameraControlsView:
                 self,
                 "voice_companion_preview",
                 VoiceCompanionIntentPreview.from_dict(self.voice_companion_preview),
+            )
+        if isinstance(self.ambient_vision_status, dict):
+            object.__setattr__(self, "ambient_vision_status", AmbientVisionStatus.from_dict(self.ambient_vision_status))
+        if isinstance(self.ambient_vision_privacy_policy, dict):
+            object.__setattr__(
+                self,
+                "ambient_vision_privacy_policy",
+                AmbientVisionPrivacyPolicy.from_dict(self.ambient_vision_privacy_policy),
+            )
+        if isinstance(self.ambient_vision_stop_control, dict):
+            object.__setattr__(
+                self,
+                "ambient_vision_stop_control",
+                AmbientVisionStopControl.from_dict(self.ambient_vision_stop_control),
             )
         if not isinstance(self.voice_companion_status, VoiceCompanionStatus):
             raise ValueError("voice_companion_status must be a VoiceCompanionStatus")
@@ -663,6 +685,9 @@ class VoiceCameraControlsView:
             ),
             voice_companion_preview=VoiceCompanionIntentPreview.from_dict(data.get("voice_companion_preview")),
             can_preview_transcript=bool(data.get("can_preview_transcript", True)),
+            ambient_vision_status=AmbientVisionStatus.from_dict(data.get("ambient_vision_status")),
+            ambient_vision_privacy_policy=AmbientVisionPrivacyPolicy.from_dict(data.get("ambient_vision_privacy_policy")),
+            ambient_vision_stop_control=AmbientVisionStopControl.from_dict(data.get("ambient_vision_stop_control")),
             notes=_list_from(data.get("notes")),
         )
 
@@ -677,6 +702,9 @@ class VoiceCameraControlsView:
             "voice_companion_control_policy": self.voice_companion_control_policy.to_dict(),
             "voice_companion_preview": self.voice_companion_preview.to_dict(),
             "can_preview_transcript": self.can_preview_transcript,
+            "ambient_vision_status": self.ambient_vision_status.to_dict(),
+            "ambient_vision_privacy_policy": self.ambient_vision_privacy_policy.to_dict(),
+            "ambient_vision_stop_control": self.ambient_vision_stop_control.to_dict(),
             "notes": list(self.notes),
         }
 
@@ -898,6 +926,7 @@ def build_command_center_view_model(
             **dict(metadata or {}),
             "operator_console": "prepare_only",
             "mobile_companion": "prepare_only",
+            "ambient_vision": "prepare_only",
         },
     )
 

@@ -214,7 +214,7 @@ Estado: foundation completada en modo prepare-only; app móvil, pairing y accion
 
 ### Phase G - Ambient Vision / Camera Companion
 
-Estado: siguiente fase maestra recomendada; foundation pendiente.
+Estado: foundation prepare-only completada; runtime visual real pendiente.
 
 - Objetivo: permitir "mira conmigo" sin convertir la cámara en vigilancia.
 - Incluye: camera session, indicador visible camera-active, "no mires" hard stop, privacy redaction, no recording by default, no face/person analysis by default, document/screen awareness, useful alerts y audit of camera sessions.
@@ -400,7 +400,7 @@ JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medi
 
 ## Orden Inmediato Recomendado
 
-Orden conceptual actualizado tras PR #99:
+Orden conceptual actualizado durante Phase G:
 
 1. PR #79 - Mission Approval Bridge v1. Mergeado.
 2. PR #80 - Mission Safety Baseline Gate v1. Mergeado.
@@ -410,6 +410,7 @@ Orden conceptual actualizado tras PR #99:
 6. PRs #95-#97 - Voice Companion foundation. Mergeadas.
 7. PR #98 - Mobile Companion foundation. Mergeado.
 8. PR #99 - Operator Console Foundation como extensión de Command Center / operator layer. Mergeado; no es Phase G maestra.
-9. Siguiente fase maestra recomendada - Phase G: Ambient Vision / Camera Companion.
+9. Phase G - Ambient Vision / Camera Companion foundation prepare-only completada.
+10. Siguiente fase maestra recomendada - Phase H: Multi-device Runtime.
 
 Los números pueden ajustarse si el repo cambia su secuencia, pero el orden conceptual debe mantenerse: approvals, safety, policy bridge y budget guard antes de revenue execution, y Hermes bridge antes de ejecución real.

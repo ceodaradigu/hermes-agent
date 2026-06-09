@@ -142,7 +142,7 @@ Estado alineado de las fases maestras:
 | Phase D — Command Center Visual Interface | Foundation completada con view model y API read-only; UI visual completa pendiente. |
 | Phase E — Voice Companion | Foundation completada en modo prepare-only; runtime de voz companion pendiente. |
 | Phase F — Mobile Companion | Foundation completada en modo prepare-only; app móvil y runtime remoto pendientes. |
-| Phase G — Ambient Vision / Camera Companion | Siguiente fase maestra recomendada. |
+| Phase G — Ambient Vision / Camera Companion | Foundation completada en modo prepare-only; runtime visual real pendiente. |
 
 Operator Console Foundation está completada como extensión read-only de Command Center / operator layer. No es Phase G maestra y no sustituye Ambient Vision / Camera Companion.
 
@@ -220,9 +220,9 @@ PR #98 está mergeado y completa la foundation de Phase F — Mobile Companion e
 
 PR #99 está mergeado y completa Operator Console Foundation como extensión read-only de Command Center / operator layer. No es una Phase G maestra ni sustituye Ambient Vision / Camera Companion.
 
-PR actual: alineación documental de roadmap y handoff con `docs/JARVIS_MASTER_BUILD_MAP.md`, sin cambios de runtime, endpoints, tests funcionales ni código de producto.
+PR actual: Phase G — Ambient Vision / Camera Companion foundation prepare-only, con contratos seguros, endpoints de lectura/preview, integración read-only, tests y documentación.
 
-Siguiente fase maestra recomendada: Phase G — Ambient Vision / Camera Companion.
+Siguiente fase maestra recomendada: Phase H — Multi-device Runtime.
 
 ## 6. Validaciones reales ya confirmadas
 

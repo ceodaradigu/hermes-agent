@@ -74,6 +74,8 @@ JARVIS Master Build Map: mapa maestro operativo para construir JARVIS por fases 
 
 Operator Console Foundation es una extensión read-only de Command Center / operator layer. Está completada como foundation prepare-only, pero no es una fase maestra y no sustituye Phase G — Ambient Vision / Camera Companion.
 
+Phase G — Ambient Vision / Camera Companion tiene una foundation prepare-only completada: contratos de estado, privacidad, preview simulado y hard stop, sin cámara ni runtime visual real.
+
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
 JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.
