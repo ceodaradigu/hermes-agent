@@ -9,6 +9,18 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from jarvis.asset_factory.foundation import (
+    AssetFactoryStatus,
+    AssetGenerationPolicy,
+    BuildPackagePreview,
+    CopyContentPackPreview,
+    LandingPagePlan,
+    MonetizationOfferPreview,
+    PublishingReadinessPreview,
+    StaticAssetManifestPreview,
+    WebProjectBrief,
+    WebsiteStructurePlan,
+)
 from jarvis.ambient_vision.companion import (
     AmbientVisionPrivacyPolicy,
     AmbientVisionSessionPreview,
@@ -231,6 +243,49 @@ class ToolAdoptionDecisionPreviewRequest(BaseModel):
     core_dependency_requested: bool = False
 
 
+class AssetFactoryPreviewRequest(BaseModel):
+    project_name: Optional[str] = None
+    audience: Optional[str] = None
+    problem: Optional[str] = None
+    promise_or_value_proposition: Optional[str] = None
+    offer_type: Optional[str] = None
+    monetization_hypothesis: Optional[str] = None
+    tone: Optional[str] = None
+    constraints: Optional[List[str]] = None
+    confirmed_roi: Optional[str] = None
+    confirmed_roi_explicitly_provided: bool = False
+    hero: Optional[str] = None
+    sections: Optional[List[str]] = None
+    cta: Optional[str] = None
+    trust_elements: Optional[List[str]] = None
+    faq: Optional[List[str]] = None
+    risk_disclaimers: Optional[List[str]] = None
+    conversion_goal: Optional[str] = None
+    pages: Optional[List[str]] = None
+    navigation: Optional[List[str]] = None
+    components: Optional[List[str]] = None
+    data_requirements: Optional[List[str]] = None
+    static_dynamic_classification: Optional[str] = None
+    headlines: Optional[List[str]] = None
+    subheadlines: Optional[List[str]] = None
+    cta_copy: Optional[List[str]] = None
+    offer_copy: Optional[List[str]] = None
+    faq_copy: Optional[List[str]] = None
+    disclaimer_copy: Optional[List[str]] = None
+    files_to_create: Optional[List[str]] = None
+    directories: Optional[List[str]] = None
+    framework: Optional[str] = None
+    package_type: Optional[str] = None
+    dependencies_preview: Optional[List[str]] = None
+    build_steps_preview: Optional[List[str]] = None
+    required_checks: Optional[List[str]] = None
+    missing_items: Optional[List[str]] = None
+    offer_name: Optional[str] = None
+    pricing_hypothesis: Optional[str] = None
+    revenue_hypothesis: Optional[str] = None
+    confirmed_revenue_explicitly_provided: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -432,9 +487,50 @@ def create_app(
                 "multi_device_runtime": "prepare_only",
                 "sandbox_execution": "prepare_only",
                 "tool_adoption_pipeline": "prepare_only",
+                "asset_factory_web_builder": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/asset-factory/status")
+    def asset_factory_status() -> dict:
+        return AssetFactoryStatus.placeholder().to_dict()
+
+    @app.get("/asset-factory/policy")
+    def asset_factory_policy() -> dict:
+        return AssetGenerationPolicy.placeholder().to_dict()
+
+    @app.post("/asset-factory/web-brief")
+    def asset_factory_web_brief(payload: AssetFactoryPreviewRequest) -> dict:
+        return WebProjectBrief.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/landing-plan")
+    def asset_factory_landing_plan(payload: AssetFactoryPreviewRequest) -> dict:
+        return LandingPagePlan.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/website-structure")
+    def asset_factory_website_structure(payload: AssetFactoryPreviewRequest) -> dict:
+        return WebsiteStructurePlan.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/copy-pack")
+    def asset_factory_copy_pack(payload: AssetFactoryPreviewRequest) -> dict:
+        return CopyContentPackPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/static-asset-manifest")
+    def asset_factory_static_asset_manifest(payload: AssetFactoryPreviewRequest) -> dict:
+        return StaticAssetManifestPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/build-package-preview")
+    def asset_factory_build_package_preview(payload: AssetFactoryPreviewRequest) -> dict:
+        return BuildPackagePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/publishing-readiness")
+    def asset_factory_publishing_readiness(payload: AssetFactoryPreviewRequest) -> dict:
+        return PublishingReadinessPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/asset-factory/monetization-offer-preview")
+    def asset_factory_monetization_offer_preview(payload: AssetFactoryPreviewRequest) -> dict:
+        return MonetizationOfferPreview.from_request(payload.model_dump()).to_dict()
 
     @app.get("/tools/adoption/status")
     def tool_adoption_status() -> dict:
