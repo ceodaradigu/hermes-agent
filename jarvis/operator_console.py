@@ -21,6 +21,11 @@ from jarvis.mobile.companion import (
     MobileCompanionStatus,
     MobileIntentPreview,
 )
+from jarvis.marketing_distribution.foundation import (
+    LaunchChecklistPreview,
+    MarketingDistributionPolicy,
+    MarketingDistributionStatus,
+)
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
 from jarvis.policy.policy_engine import PolicyEngine
 from jarvis.sandbox_execution.foundation import SandboxExecutionStatus
@@ -133,6 +138,9 @@ class OperatorConsoleCapabilityMatrix:
     read_deploy_publishing_status: bool = True
     read_deploy_publishing_policy: bool = True
     preview_deploy_publishing: bool = True
+    read_marketing_distribution_status: bool = True
+    read_marketing_distribution_policy: bool = True
+    preview_marketing_distribution: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -181,6 +189,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_deploy_publishing_status": True,
             "read_deploy_publishing_policy": True,
             "preview_deploy_publishing": True,
+            "read_marketing_distribution_status": True,
+            "read_marketing_distribution_policy": True,
+            "preview_marketing_distribution": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -385,6 +396,9 @@ class OperatorConsoleSnapshot:
     deploy_publishing_status: DeployPublishingStatus = field(default_factory=DeployPublishingStatus.placeholder)
     deploy_publishing_policy: DeployPublishingPolicy = field(default_factory=DeployPublishingPolicy.placeholder)
     publishing_readiness: PublishingReadinessChecklist = field(default_factory=PublishingReadinessChecklist.placeholder)
+    marketing_distribution_status: MarketingDistributionStatus = field(default_factory=MarketingDistributionStatus.placeholder)
+    marketing_distribution_policy: MarketingDistributionPolicy = field(default_factory=MarketingDistributionPolicy.placeholder)
+    marketing_launch_readiness: LaunchChecklistPreview = field(default_factory=LaunchChecklistPreview.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -477,6 +491,24 @@ class OperatorConsoleSnapshot:
                 "publishing_readiness",
                 PublishingReadinessChecklist.from_dict(self.publishing_readiness),
             )
+        if isinstance(self.marketing_distribution_status, dict):
+            object.__setattr__(
+                self,
+                "marketing_distribution_status",
+                MarketingDistributionStatus.from_dict(self.marketing_distribution_status),
+            )
+        if isinstance(self.marketing_distribution_policy, dict):
+            object.__setattr__(
+                self,
+                "marketing_distribution_policy",
+                MarketingDistributionPolicy.from_dict(self.marketing_distribution_policy),
+            )
+        if isinstance(self.marketing_launch_readiness, dict):
+            object.__setattr__(
+                self,
+                "marketing_launch_readiness",
+                LaunchChecklistPreview.from_dict(self.marketing_launch_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -510,6 +542,9 @@ class OperatorConsoleSnapshot:
             deploy_publishing_status=DeployPublishingStatus.from_dict(source.get("deploy_publishing_status")),
             deploy_publishing_policy=DeployPublishingPolicy.from_dict(source.get("deploy_publishing_policy")),
             publishing_readiness=PublishingReadinessChecklist.from_dict(source.get("publishing_readiness")),
+            marketing_distribution_status=MarketingDistributionStatus.from_dict(source.get("marketing_distribution_status")),
+            marketing_distribution_policy=MarketingDistributionPolicy.from_dict(source.get("marketing_distribution_policy")),
+            marketing_launch_readiness=LaunchChecklistPreview.from_dict(source.get("marketing_launch_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -537,6 +572,9 @@ class OperatorConsoleSnapshot:
             "deploy_publishing_status": self.deploy_publishing_status.to_dict(),
             "deploy_publishing_policy": self.deploy_publishing_policy.to_dict(),
             "publishing_readiness": self.publishing_readiness.to_dict(),
+            "marketing_distribution_status": self.marketing_distribution_status.to_dict(),
+            "marketing_distribution_policy": self.marketing_distribution_policy.to_dict(),
+            "marketing_launch_readiness": self.marketing_launch_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -557,6 +595,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
+            "marketing_distribution_engine": "prepare_only",
         },
     )
 
@@ -590,6 +629,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
+            "marketing_distribution_engine": "prepare_only",
         },
     )
 
@@ -624,6 +664,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "tool_adoption_pipeline": "prepare_only",
         "asset_factory_web_builder": "prepare_only",
         "deploy_publishing_control": "prepare_only",
+        "marketing_distribution_engine": "prepare_only",
     }
     return safe
 

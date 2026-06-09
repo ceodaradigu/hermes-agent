@@ -41,6 +41,18 @@ from jarvis.deploy_publishing.foundation import (
     PublishingRollbackPreview,
 )
 from jarvis.mission_control import MissionControl
+from jarvis.marketing_distribution.foundation import (
+    AudienceSegmentPreview,
+    BudgetSpendGuardPreview,
+    CampaignPlanPreview,
+    ChannelStrategyPreview,
+    ContentDistributionPackPreview,
+    DistributionApprovalRequirements,
+    LaunchChecklistPreview,
+    MarketingDistributionPolicy,
+    MarketingDistributionStatus,
+    MeasurementPlanPreview,
+)
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
     MobileCompanionPermissionPolicy,
@@ -320,6 +332,49 @@ class DeployPublishingPreviewRequest(BaseModel):
     warnings: Optional[List[str]] = None
 
 
+class MarketingDistributionPreviewRequest(BaseModel):
+    audience_name: Optional[str] = None
+    problem: Optional[str] = None
+    pains: Optional[List[str]] = None
+    desired_outcomes: Optional[List[str]] = None
+    objections: Optional[List[str]] = None
+    data_source: str = "unknown"
+    confidence: str = "unknown"
+    channels: Optional[List[str]] = None
+    rationale: Optional[List[str]] = None
+    content_types: Optional[List[str]] = None
+    expected_effort: Optional[str] = None
+    expected_cost: str = "unknown"
+    campaign_name: Optional[str] = None
+    objective: Optional[str] = None
+    audience: Optional[str] = None
+    offer: Optional[str] = None
+    assets_needed: Optional[List[str]] = None
+    schedule_preview: Optional[List[str]] = None
+    success_metrics: Optional[List[str]] = None
+    posts: Optional[List[str]] = None
+    email_drafts: Optional[List[str]] = None
+    community_posts: Optional[List[str]] = None
+    outreach_messages: Optional[List[str]] = None
+    seo_snippets: Optional[List[str]] = None
+    cta_variants: Optional[List[str]] = None
+    utm_plan: Optional[List[str]] = None
+    metrics: Optional[List[str]] = None
+    attribution_assumptions: Optional[List[str]] = None
+    dashboard_fields_preview: Optional[List[str]] = None
+    budget_requested: Optional[str] = None
+    required_assets: Optional[List[str]] = None
+    missing_items: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+    publish_requested: bool = False
+    send_requested: bool = False
+    paid_requested: bool = False
+    external_account_requested: bool = False
+    identity_requested: bool = False
+    secrets_requested: bool = False
+    budget_spend_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -523,9 +578,50 @@ def create_app(
                 "tool_adoption_pipeline": "prepare_only",
                 "asset_factory_web_builder": "prepare_only",
                 "deploy_publishing_control": "prepare_only",
+                "marketing_distribution_engine": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/marketing-distribution/status")
+    def marketing_distribution_status() -> dict:
+        return MarketingDistributionStatus.placeholder().to_dict()
+
+    @app.get("/marketing-distribution/policy")
+    def marketing_distribution_policy() -> dict:
+        return MarketingDistributionPolicy.placeholder().to_dict()
+
+    @app.post("/marketing-distribution/audience-preview")
+    def marketing_distribution_audience_preview(payload: MarketingDistributionPreviewRequest) -> dict:
+        return AudienceSegmentPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/channel-strategy")
+    def marketing_distribution_channel_strategy(payload: MarketingDistributionPreviewRequest) -> dict:
+        return ChannelStrategyPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/campaign-plan")
+    def marketing_distribution_campaign_plan(payload: MarketingDistributionPreviewRequest) -> dict:
+        return CampaignPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/content-pack")
+    def marketing_distribution_content_pack(payload: MarketingDistributionPreviewRequest) -> dict:
+        return ContentDistributionPackPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/measurement-plan")
+    def marketing_distribution_measurement_plan(payload: MarketingDistributionPreviewRequest) -> dict:
+        return MeasurementPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/budget-guard")
+    def marketing_distribution_budget_guard(payload: MarketingDistributionPreviewRequest) -> dict:
+        return BudgetSpendGuardPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/launch-checklist")
+    def marketing_distribution_launch_checklist(payload: MarketingDistributionPreviewRequest) -> dict:
+        return LaunchChecklistPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/marketing-distribution/approval-requirements")
+    def marketing_distribution_approval_requirements(payload: MarketingDistributionPreviewRequest) -> dict:
+        return DistributionApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/deploy-publishing/status")
     def deploy_publishing_status() -> dict:

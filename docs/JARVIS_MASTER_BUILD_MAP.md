@@ -274,15 +274,17 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 - Monetización: habilita experimentos públicos y productos.
 - Approval: producción, dominios, identidad y publicación real requieren strong approval.
 
-### Phase M - Communication & Sales
+### Phase M - Marketing / Distribution Engine
 
-- Objetivo: preparar y gestionar comunicación comercial sin envíos silenciosos.
-- Incluye: lead model, email draft builder, message approval, CRM simple, outreach tracker, reply tracker, Gmail/SMTP bridge later y no send without strong approval.
-- Permite: leads, borradores, seguimiento y respuestas propuestas.
-- NO permite: enviar emails, mensajes o representar a David sin aprobación.
-- Criterios mínimos: destinatario, canal, texto exacto, identidad usada, objetivo, riesgo y audit.
-- Monetización: convierte activos en conversaciones, leads y ventas.
-- Approval: cualquier envío externo como David requiere strong approval.
+Estado: foundation completada en modo prepare-only; distribución, cuentas y ejecución real pendientes.
+
+- Objetivo: preparar audiencias, campañas, canales, contenido, medición y lanzamiento de forma revisable.
+- Incluye: audience preview, channel strategy, campaign plan, content distribution pack, SEO/social/community/email outreach preview, UTM/measurement plan, budget guard, launch checklist y approval requirements.
+- Permite: estructurar planes y borradores con inputs proporcionados por el usuario.
+- NO permite: publicar, enviar, crear ads, conectar cuentas, usar identidad real, gastar, scrapear, automatizar spam ni llamar servicios externos.
+- Criterios mínimos: prepare-only, no fake claims/social proof/income guarantees, redacción sensible, no tracking instalado, launch no-ready por defecto y API sin side effects.
+- Monetización: prepara distribución medible sin confundir hipótesis, métricas planificadas o presupuesto solicitado con resultados o gasto real.
+- Approval: publicar, enviar, paid ads, cuentas externas, identidad, secretos y gasto requieren strong approval.
 
 ### Phase N - Payments & Revenue
 
