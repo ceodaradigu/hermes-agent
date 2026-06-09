@@ -943,6 +943,7 @@ def build_command_center_view_model(
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
+            "payments_revenue": "prepare_only",
         },
     )
 

@@ -27,6 +27,11 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
 )
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
+from jarvis.payments_revenue.foundation import (
+    FinancialRiskGuardPreview,
+    PaymentsRevenuePolicy,
+    PaymentsRevenueStatus,
+)
 from jarvis.policy.policy_engine import PolicyEngine
 from jarvis.sandbox_execution.foundation import SandboxExecutionStatus
 from jarvis.tool_adoption.pipeline import ToolAdoptionStatus
@@ -141,6 +146,9 @@ class OperatorConsoleCapabilityMatrix:
     read_marketing_distribution_status: bool = True
     read_marketing_distribution_policy: bool = True
     preview_marketing_distribution: bool = True
+    read_payments_revenue_status: bool = True
+    read_payments_revenue_policy: bool = True
+    preview_payments_revenue: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -192,6 +200,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_marketing_distribution_status": True,
             "read_marketing_distribution_policy": True,
             "preview_marketing_distribution": True,
+            "read_payments_revenue_status": True,
+            "read_payments_revenue_policy": True,
+            "preview_payments_revenue": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -399,6 +410,9 @@ class OperatorConsoleSnapshot:
     marketing_distribution_status: MarketingDistributionStatus = field(default_factory=MarketingDistributionStatus.placeholder)
     marketing_distribution_policy: MarketingDistributionPolicy = field(default_factory=MarketingDistributionPolicy.placeholder)
     marketing_launch_readiness: LaunchChecklistPreview = field(default_factory=LaunchChecklistPreview.placeholder)
+    payments_revenue_status: PaymentsRevenueStatus = field(default_factory=PaymentsRevenueStatus.placeholder)
+    payments_revenue_policy: PaymentsRevenuePolicy = field(default_factory=PaymentsRevenuePolicy.placeholder)
+    financial_readiness: FinancialRiskGuardPreview = field(default_factory=FinancialRiskGuardPreview)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -509,6 +523,24 @@ class OperatorConsoleSnapshot:
                 "marketing_launch_readiness",
                 LaunchChecklistPreview.from_dict(self.marketing_launch_readiness),
             )
+        if isinstance(self.payments_revenue_status, dict):
+            object.__setattr__(
+                self,
+                "payments_revenue_status",
+                PaymentsRevenueStatus.from_dict(self.payments_revenue_status),
+            )
+        if isinstance(self.payments_revenue_policy, dict):
+            object.__setattr__(
+                self,
+                "payments_revenue_policy",
+                PaymentsRevenuePolicy.from_dict(self.payments_revenue_policy),
+            )
+        if isinstance(self.financial_readiness, dict):
+            object.__setattr__(
+                self,
+                "financial_readiness",
+                FinancialRiskGuardPreview.from_dict(self.financial_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -545,6 +577,9 @@ class OperatorConsoleSnapshot:
             marketing_distribution_status=MarketingDistributionStatus.from_dict(source.get("marketing_distribution_status")),
             marketing_distribution_policy=MarketingDistributionPolicy.from_dict(source.get("marketing_distribution_policy")),
             marketing_launch_readiness=LaunchChecklistPreview.from_dict(source.get("marketing_launch_readiness")),
+            payments_revenue_status=PaymentsRevenueStatus.from_dict(source.get("payments_revenue_status")),
+            payments_revenue_policy=PaymentsRevenuePolicy.from_dict(source.get("payments_revenue_policy")),
+            financial_readiness=FinancialRiskGuardPreview.from_dict(source.get("financial_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -575,6 +610,9 @@ class OperatorConsoleSnapshot:
             "marketing_distribution_status": self.marketing_distribution_status.to_dict(),
             "marketing_distribution_policy": self.marketing_distribution_policy.to_dict(),
             "marketing_launch_readiness": self.marketing_launch_readiness.to_dict(),
+            "payments_revenue_status": self.payments_revenue_status.to_dict(),
+            "payments_revenue_policy": self.payments_revenue_policy.to_dict(),
+            "financial_readiness": self.financial_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -596,6 +634,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
+            "payments_revenue": "prepare_only",
         },
     )
 
@@ -630,6 +669,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
             "marketing_distribution_engine": "prepare_only",
+            "payments_revenue": "prepare_only",
         },
     )
 
@@ -665,6 +705,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "asset_factory_web_builder": "prepare_only",
         "deploy_publishing_control": "prepare_only",
         "marketing_distribution_engine": "prepare_only",
+        "payments_revenue": "prepare_only",
     }
     return safe
 
