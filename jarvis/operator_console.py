@@ -10,6 +10,11 @@ from jarvis.ambient_vision.companion import (
 )
 from jarvis.asset_factory.foundation import AssetFactoryStatus, AssetGenerationPolicy
 from jarvis.command_center import CommandCenterViewModel, build_command_center_view_model
+from jarvis.deploy_publishing.foundation import (
+    DeployPublishingPolicy,
+    DeployPublishingStatus,
+    PublishingReadinessChecklist,
+)
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
     MobileCompanionPermissionPolicy,
@@ -125,6 +130,9 @@ class OperatorConsoleCapabilityMatrix:
     read_asset_factory_status: bool = True
     read_asset_generation_policy: bool = True
     preview_asset_factory: bool = True
+    read_deploy_publishing_status: bool = True
+    read_deploy_publishing_policy: bool = True
+    preview_deploy_publishing: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -170,6 +178,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_asset_factory_status": True,
             "read_asset_generation_policy": True,
             "preview_asset_factory": True,
+            "read_deploy_publishing_status": True,
+            "read_deploy_publishing_policy": True,
+            "preview_deploy_publishing": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -371,6 +382,9 @@ class OperatorConsoleSnapshot:
     tool_adoption_status: ToolAdoptionStatus = field(default_factory=ToolAdoptionStatus.placeholder)
     asset_factory_status: AssetFactoryStatus = field(default_factory=AssetFactoryStatus.placeholder)
     asset_generation_policy: AssetGenerationPolicy = field(default_factory=AssetGenerationPolicy.placeholder)
+    deploy_publishing_status: DeployPublishingStatus = field(default_factory=DeployPublishingStatus.placeholder)
+    deploy_publishing_policy: DeployPublishingPolicy = field(default_factory=DeployPublishingPolicy.placeholder)
+    publishing_readiness: PublishingReadinessChecklist = field(default_factory=PublishingReadinessChecklist.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -445,6 +459,24 @@ class OperatorConsoleSnapshot:
                 "asset_generation_policy",
                 AssetGenerationPolicy.from_dict(self.asset_generation_policy),
             )
+        if isinstance(self.deploy_publishing_status, dict):
+            object.__setattr__(
+                self,
+                "deploy_publishing_status",
+                DeployPublishingStatus.from_dict(self.deploy_publishing_status),
+            )
+        if isinstance(self.deploy_publishing_policy, dict):
+            object.__setattr__(
+                self,
+                "deploy_publishing_policy",
+                DeployPublishingPolicy.from_dict(self.deploy_publishing_policy),
+            )
+        if isinstance(self.publishing_readiness, dict):
+            object.__setattr__(
+                self,
+                "publishing_readiness",
+                PublishingReadinessChecklist.from_dict(self.publishing_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -475,6 +507,9 @@ class OperatorConsoleSnapshot:
             tool_adoption_status=ToolAdoptionStatus.from_dict(source.get("tool_adoption_status")),
             asset_factory_status=AssetFactoryStatus.from_dict(source.get("asset_factory_status")),
             asset_generation_policy=AssetGenerationPolicy.from_dict(source.get("asset_generation_policy")),
+            deploy_publishing_status=DeployPublishingStatus.from_dict(source.get("deploy_publishing_status")),
+            deploy_publishing_policy=DeployPublishingPolicy.from_dict(source.get("deploy_publishing_policy")),
+            publishing_readiness=PublishingReadinessChecklist.from_dict(source.get("publishing_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -499,6 +534,9 @@ class OperatorConsoleSnapshot:
             "tool_adoption_status": self.tool_adoption_status.to_dict(),
             "asset_factory_status": self.asset_factory_status.to_dict(),
             "asset_generation_policy": self.asset_generation_policy.to_dict(),
+            "deploy_publishing_status": self.deploy_publishing_status.to_dict(),
+            "deploy_publishing_policy": self.deploy_publishing_policy.to_dict(),
+            "publishing_readiness": self.publishing_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -518,6 +556,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
+            "deploy_publishing_control": "prepare_only",
         },
     )
 
@@ -550,6 +589,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "sandbox_execution": "prepare_only",
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
+            "deploy_publishing_control": "prepare_only",
         },
     )
 
@@ -583,6 +623,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "sandbox_execution": "prepare_only",
         "tool_adoption_pipeline": "prepare_only",
         "asset_factory_web_builder": "prepare_only",
+        "deploy_publishing_control": "prepare_only",
     }
     return safe
 
