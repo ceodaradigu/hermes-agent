@@ -53,6 +53,20 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
     MeasurementPlanPreview,
 )
+from jarvis.payments_revenue.foundation import (
+    CheckoutPlanPreview,
+    FinancialRiskGuardPreview,
+    InvoicePaymentLinkPreview,
+    PaymentApprovalRequirements,
+    PaymentProviderPreview,
+    PaymentsRevenuePolicy,
+    PaymentsRevenueStatus,
+    PricingModelPreview,
+    RefundChargebackPolicyPreview,
+    RevenueExperimentPreview,
+    RevenueMetricsPreview,
+    SubscriptionPlanPreview,
+)
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
     MobileCompanionPermissionPolicy,
@@ -375,6 +389,57 @@ class MarketingDistributionPreviewRequest(BaseModel):
     budget_spend_requested: bool = False
 
 
+class PaymentsRevenuePreviewRequest(BaseModel):
+    product_name: Optional[str] = None
+    audience: Optional[str] = None
+    offer_type: Optional[str] = None
+    pricing_hypothesis: Optional[str] = None
+    pricing_tiers: Optional[List[str]] = None
+    currency: str = "unknown"
+    assumptions: Optional[List[str]] = None
+    confirmed_revenue: Optional[str] = None
+    confirmed_revenue_explicitly_provided: bool = False
+    checkout_requested: bool = False
+    provider: str = "unknown"
+    provider_name: Optional[str] = None
+    product_reference: Optional[str] = None
+    price_reference: Optional[str] = None
+    metrics: Optional[Dict[str, str]] = None
+    metrics_explicitly_provided: bool = False
+    dashboard_fields_preview: Optional[List[str]] = None
+    plan_name: Optional[str] = None
+    billing_interval: Optional[str] = None
+    trial_policy: Optional[str] = None
+    cancellation_policy: Optional[str] = None
+    invoice_requested: bool = False
+    payment_link_requested: bool = False
+    refund_policy: Optional[str] = None
+    chargeback_risk: Optional[str] = None
+    risk_level: str = "unknown"
+    experiment_name: Optional[str] = None
+    hypothesis: Optional[str] = None
+    pricing_variants: Optional[List[str]] = None
+    success_metrics: Optional[List[str]] = None
+    max_budget: Optional[str] = None
+    warnings: Optional[List[str]] = None
+    provider_requested: bool = False
+    provider_connection_requested: bool = False
+    bank_requested: bool = False
+    card_requested: bool = False
+    bank_or_card_data_requested: bool = False
+    money_movement_requested: bool = False
+    payment_requested: bool = False
+    refund_requested: bool = False
+    subscription_requested: bool = False
+    identity_requested: bool = False
+    secrets_requested: bool = False
+    payout_requested: bool = False
+    tax_requested: bool = False
+    legal_requested: bool = False
+    income_claim_requested: bool = False
+    income_guarantee_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -579,9 +644,58 @@ def create_app(
                 "asset_factory_web_builder": "prepare_only",
                 "deploy_publishing_control": "prepare_only",
                 "marketing_distribution_engine": "prepare_only",
+                "payments_revenue": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/payments-revenue/status")
+    def payments_revenue_status() -> dict:
+        return PaymentsRevenueStatus.placeholder().to_dict()
+
+    @app.get("/payments-revenue/policy")
+    def payments_revenue_policy() -> dict:
+        return PaymentsRevenuePolicy.placeholder().to_dict()
+
+    @app.post("/payments-revenue/pricing-preview")
+    def payments_revenue_pricing_preview(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return PricingModelPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/checkout-plan")
+    def payments_revenue_checkout_plan(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return CheckoutPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/provider-preview")
+    def payments_revenue_provider_preview(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return PaymentProviderPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/metrics-preview")
+    def payments_revenue_metrics_preview(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return RevenueMetricsPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/subscription-preview")
+    def payments_revenue_subscription_preview(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return SubscriptionPlanPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/invoice-payment-link-preview")
+    def payments_revenue_invoice_payment_link_preview(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return InvoicePaymentLinkPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/refund-chargeback-policy")
+    def payments_revenue_refund_chargeback_policy(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return RefundChargebackPolicyPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/financial-risk-guard")
+    def payments_revenue_financial_risk_guard(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return FinancialRiskGuardPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/revenue-experiment")
+    def payments_revenue_revenue_experiment(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return RevenueExperimentPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/payments-revenue/approval-requirements")
+    def payments_revenue_approval_requirements(payload: PaymentsRevenuePreviewRequest) -> dict:
+        return PaymentApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/marketing-distribution/status")
     def marketing_distribution_status() -> dict:
