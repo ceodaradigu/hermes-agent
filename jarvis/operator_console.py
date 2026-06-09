@@ -17,6 +17,7 @@ from jarvis.mobile.companion import (
 )
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
 from jarvis.policy.policy_engine import PolicyEngine
+from jarvis.sandbox_execution.foundation import SandboxExecutionStatus
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
     VoiceCompanionIntentPreview,
@@ -114,6 +115,9 @@ class OperatorConsoleCapabilityMatrix:
     read_ambient_vision_stop_control: bool = True
     read_multi_device_status: bool = True
     read_device_registry: bool = True
+    read_sandbox_execution_status: bool = True
+    read_sandbox_execution_policy: bool = True
+    preview_sandbox_dry_run: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -151,6 +155,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_ambient_vision_stop_control": True,
             "read_multi_device_status": True,
             "read_device_registry": True,
+            "read_sandbox_execution_status": True,
+            "read_sandbox_execution_policy": True,
+            "preview_sandbox_dry_run": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -348,6 +355,7 @@ class OperatorConsoleSnapshot:
     ambient_vision_stop_control: AmbientVisionStopControl = field(default_factory=AmbientVisionStopControl.placeholder)
     multi_device_runtime_status: MultiDeviceRuntimeStatus = field(default_factory=MultiDeviceRuntimeStatus.placeholder)
     device_registry: DeviceRegistrySnapshot = field(default_factory=DeviceRegistrySnapshot.placeholder)
+    sandbox_execution_status: SandboxExecutionStatus = field(default_factory=SandboxExecutionStatus.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -402,6 +410,12 @@ class OperatorConsoleSnapshot:
             )
         if isinstance(self.device_registry, dict):
             object.__setattr__(self, "device_registry", DeviceRegistrySnapshot.from_dict(self.device_registry))
+        if isinstance(self.sandbox_execution_status, dict):
+            object.__setattr__(
+                self,
+                "sandbox_execution_status",
+                SandboxExecutionStatus.from_dict(self.sandbox_execution_status),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -428,6 +442,7 @@ class OperatorConsoleSnapshot:
             ambient_vision_stop_control=AmbientVisionStopControl.from_dict(source.get("ambient_vision_stop_control")),
             multi_device_runtime_status=MultiDeviceRuntimeStatus.from_dict(source.get("multi_device_runtime_status")),
             device_registry=DeviceRegistrySnapshot.from_dict(source.get("device_registry")),
+            sandbox_execution_status=SandboxExecutionStatus.from_dict(source.get("sandbox_execution_status")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -448,6 +463,7 @@ class OperatorConsoleSnapshot:
             "ambient_vision_stop_control": self.ambient_vision_stop_control.to_dict(),
             "multi_device_runtime_status": self.multi_device_runtime_status.to_dict(),
             "device_registry": self.device_registry.to_dict(),
+            "sandbox_execution_status": self.sandbox_execution_status.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -464,6 +480,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "store_connected": False,
             "operator_console": "prepare_only",
             "multi_device_runtime": "prepare_only",
+            "sandbox_execution": "prepare_only",
         },
     )
 
@@ -493,6 +510,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "external_calls_enabled": False,
             "safe_read_only_mode": True,
             "multi_device_runtime": "prepare_only",
+            "sandbox_execution": "prepare_only",
         },
     )
 
@@ -523,6 +541,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "external_calls_enabled": False,
         "safe_read_only_mode": True,
         "multi_device_runtime": "prepare_only",
+        "sandbox_execution": "prepare_only",
     }
     return safe
 
