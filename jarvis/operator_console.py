@@ -10,6 +10,11 @@ from jarvis.ambient_vision.companion import (
 )
 from jarvis.asset_factory.foundation import AssetFactoryStatus, AssetGenerationPolicy
 from jarvis.command_center import CommandCenterViewModel, build_command_center_view_model
+from jarvis.continuous_learning.foundation import (
+    ContinuousLearningStatus,
+    LearningBacklogPreview,
+    TechRadarSafetyPolicy,
+)
 from jarvis.deploy_publishing.foundation import (
     DeployPublishingPolicy,
     DeployPublishingStatus,
@@ -153,6 +158,9 @@ class OperatorConsoleCapabilityMatrix:
     read_daily_operator_status: bool = True
     read_scheduler_safety_policy: bool = True
     preview_daily_operator: bool = True
+    read_continuous_learning_status: bool = True
+    read_tech_radar_policy: bool = True
+    preview_learning_backlog: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -210,6 +218,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_daily_operator_status": True,
             "read_scheduler_safety_policy": True,
             "preview_daily_operator": True,
+            "read_continuous_learning_status": True,
+            "read_tech_radar_policy": True,
+            "preview_learning_backlog": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -422,6 +433,9 @@ class OperatorConsoleSnapshot:
     financial_readiness: FinancialRiskGuardPreview = field(default_factory=FinancialRiskGuardPreview)
     daily_operator_status: DailyOperatorSchedulerStatus = field(default_factory=DailyOperatorSchedulerStatus.placeholder)
     scheduler_safety_policy: SchedulerSafetyPolicy = field(default_factory=SchedulerSafetyPolicy.placeholder)
+    continuous_learning_status: ContinuousLearningStatus = field(default_factory=ContinuousLearningStatus.placeholder)
+    tech_radar_safety_policy: TechRadarSafetyPolicy = field(default_factory=TechRadarSafetyPolicy.placeholder)
+    learning_backlog_readiness: LearningBacklogPreview = field(default_factory=LearningBacklogPreview)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -562,6 +576,24 @@ class OperatorConsoleSnapshot:
                 "scheduler_safety_policy",
                 SchedulerSafetyPolicy.from_dict(self.scheduler_safety_policy),
             )
+        if isinstance(self.continuous_learning_status, dict):
+            object.__setattr__(
+                self,
+                "continuous_learning_status",
+                ContinuousLearningStatus.from_dict(self.continuous_learning_status),
+            )
+        if isinstance(self.tech_radar_safety_policy, dict):
+            object.__setattr__(
+                self,
+                "tech_radar_safety_policy",
+                TechRadarSafetyPolicy.from_dict(self.tech_radar_safety_policy),
+            )
+        if isinstance(self.learning_backlog_readiness, dict):
+            object.__setattr__(
+                self,
+                "learning_backlog_readiness",
+                LearningBacklogPreview.from_dict(self.learning_backlog_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -603,6 +635,9 @@ class OperatorConsoleSnapshot:
             financial_readiness=FinancialRiskGuardPreview.from_dict(source.get("financial_readiness")),
             daily_operator_status=DailyOperatorSchedulerStatus.from_dict(source.get("daily_operator_status")),
             scheduler_safety_policy=SchedulerSafetyPolicy.from_dict(source.get("scheduler_safety_policy")),
+            continuous_learning_status=ContinuousLearningStatus.from_dict(source.get("continuous_learning_status")),
+            tech_radar_safety_policy=TechRadarSafetyPolicy.from_dict(source.get("tech_radar_safety_policy")),
+            learning_backlog_readiness=LearningBacklogPreview.from_dict(source.get("learning_backlog_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -638,6 +673,9 @@ class OperatorConsoleSnapshot:
             "financial_readiness": self.financial_readiness.to_dict(),
             "daily_operator_status": self.daily_operator_status.to_dict(),
             "scheduler_safety_policy": self.scheduler_safety_policy.to_dict(),
+            "continuous_learning_status": self.continuous_learning_status.to_dict(),
+            "tech_radar_safety_policy": self.tech_radar_safety_policy.to_dict(),
+            "learning_backlog_readiness": self.learning_backlog_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -661,6 +699,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
             "daily_operator_scheduler": "prepare_only",
+            "continuous_learning_tech_radar": "prepare_only",
         },
     )
 
@@ -697,6 +736,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
             "daily_operator_scheduler": "prepare_only",
+            "continuous_learning_tech_radar": "prepare_only",
         },
     )
 
@@ -734,6 +774,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "marketing_distribution_engine": "prepare_only",
         "payments_revenue": "prepare_only",
         "daily_operator_scheduler": "prepare_only",
+        "continuous_learning_tech_radar": "prepare_only",
     }
     return safe
 

@@ -28,6 +28,20 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStopControl,
 )
 from jarvis.command_center import build_command_center_view_model
+from jarvis.continuous_learning.foundation import (
+    ApprovalWorkflowPreview,
+    ContinuousLearningStatus,
+    ContrarianReviewPreview,
+    LearningBacklogPreview,
+    LearningProposalPreview,
+    PRPlannerPreview,
+    ProposalImpactAnalysis,
+    ProposalRiskAnalysis,
+    RelevanceFilterPreview,
+    TechRadarDecisionPreview,
+    TechRadarSafetyPolicy,
+    TechnologyCandidateProfile,
+)
 from jarvis.deploy_publishing.foundation import (
     DeployPublishingPolicy,
     DeployPublishingStatus,
@@ -516,6 +530,79 @@ class DailyOperatorPreviewRequest(BaseModel):
     external_side_effect_requested: bool = False
 
 
+class ContinuousLearningPreviewRequest(BaseModel):
+    candidate_name: Optional[str] = None
+    category: Optional[str] = None
+    source_reference: Optional[str] = None
+    claimed_benefit: Optional[str] = None
+    use_case: Optional[str] = None
+    maturity: str = "unknown"
+    license: str = "unknown"
+    dependency_risk: str = "unknown"
+    security_risk: str = "unknown"
+    maintenance_signal: str = "unknown"
+    revenue_or_efficiency_hypothesis: Optional[str] = None
+    warnings: Optional[List[str]] = None
+    relevance_score: str = "unknown"
+    fit_reasons: Optional[List[str]] = None
+    rejection_reasons: Optional[List[str]] = None
+    monetization_relevance: str = "unknown"
+    time_saving_relevance: str = "unknown"
+    error_reduction_relevance: str = "unknown"
+    revenue_enablement_relevance: str = "unknown"
+    unknowns: Optional[List[str]] = None
+    skeptical_questions: Optional[List[str]] = None
+    failure_modes: Optional[List[str]] = None
+    hidden_costs: Optional[List[str]] = None
+    security_concerns: Optional[List[str]] = None
+    maintenance_concerns: Optional[List[str]] = None
+    vendor_lock_in_risk: str = "unknown"
+    overengineering_risk: str = "unknown"
+    recommendation_pressure_check: str = "unknown"
+    proposal_title: Optional[str] = None
+    summary: Optional[str] = None
+    expected_impact: Optional[List[str]] = None
+    risks: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    tests_required: Optional[List[str]] = None
+    rollback_plan: Optional[List[str]] = None
+    decision_recommendation: str = "unknown"
+    confidence: str = "unknown"
+    impact_categories: Optional[Dict[str, str]] = None
+    confirmed_roi: Optional[str] = None
+    confirmed_roi_explicitly_provided: bool = False
+    maintenance_risk: str = "unknown"
+    product_risk: str = "unknown"
+    cost_risk: str = "unknown"
+    privacy_risk: str = "unknown"
+    production_risk: str = "unknown"
+    secret_risk: str = "unknown"
+    runtime_risk: str = "unknown"
+    branch_name_preview: Optional[str] = None
+    files_likely_to_change: Optional[List[str]] = None
+    test_plan: Optional[List[str]] = None
+    review_plan: Optional[List[str]] = None
+    migration_notes: Optional[List[str]] = None
+    next_manual_review_steps: Optional[List[str]] = None
+    backlog_items: Optional[List[str]] = None
+    priority_order: Optional[List[str]] = None
+    reasons: Optional[List[str]] = None
+    blocked_items: Optional[List[str]] = None
+    review_cadence: Optional[str] = None
+    decision: str = "unknown"
+    rationale: Optional[List[str]] = None
+    required_evidence: Optional[List[str]] = None
+    required_approvals: Optional[List[str]] = None
+    install_requested: bool = False
+    runtime_requested: bool = False
+    prompt_requested: bool = False
+    production_requested: bool = False
+    credentials_requested: bool = False
+    secrets_requested: bool = False
+    deploy_requested: bool = False
+    dependency_modification_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -722,9 +809,58 @@ def create_app(
                 "marketing_distribution_engine": "prepare_only",
                 "payments_revenue": "prepare_only",
                 "daily_operator_scheduler": "prepare_only",
+                "continuous_learning_tech_radar": "prepare_only",
             },
         )
         return view.to_dict()
+
+    @app.get("/continuous-learning/status")
+    def continuous_learning_status() -> dict:
+        return ContinuousLearningStatus.placeholder().to_dict()
+
+    @app.get("/continuous-learning/policy")
+    def continuous_learning_policy() -> dict:
+        return TechRadarSafetyPolicy.placeholder().to_dict()
+
+    @app.post("/continuous-learning/candidate-profile")
+    def continuous_learning_candidate_profile(payload: ContinuousLearningPreviewRequest) -> dict:
+        return TechnologyCandidateProfile.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/relevance-filter")
+    def continuous_learning_relevance_filter(payload: ContinuousLearningPreviewRequest) -> dict:
+        return RelevanceFilterPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/contrarian-review")
+    def continuous_learning_contrarian_review(payload: ContinuousLearningPreviewRequest) -> dict:
+        return ContrarianReviewPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/proposal-preview")
+    def continuous_learning_proposal_preview(payload: ContinuousLearningPreviewRequest) -> dict:
+        return LearningProposalPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/impact-analysis")
+    def continuous_learning_impact_analysis(payload: ContinuousLearningPreviewRequest) -> dict:
+        return ProposalImpactAnalysis.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/risk-analysis")
+    def continuous_learning_risk_analysis(payload: ContinuousLearningPreviewRequest) -> dict:
+        return ProposalRiskAnalysis.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/pr-planner")
+    def continuous_learning_pr_planner(payload: ContinuousLearningPreviewRequest) -> dict:
+        return PRPlannerPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/approval-workflow")
+    def continuous_learning_approval_workflow(payload: ContinuousLearningPreviewRequest) -> dict:
+        return ApprovalWorkflowPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/backlog-preview")
+    def continuous_learning_backlog_preview(payload: ContinuousLearningPreviewRequest) -> dict:
+        return LearningBacklogPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/continuous-learning/decision-preview")
+    def continuous_learning_decision_preview(payload: ContinuousLearningPreviewRequest) -> dict:
+        return TechRadarDecisionPreview.from_request(payload.model_dump()).to_dict()
 
     @app.get("/daily-operator/status")
     def daily_operator_status() -> dict:

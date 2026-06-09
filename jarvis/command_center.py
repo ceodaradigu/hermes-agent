@@ -945,6 +945,7 @@ def build_command_center_view_model(
             "marketing_distribution_engine": "prepare_only",
             "payments_revenue": "prepare_only",
             "daily_operator_scheduler": "prepare_only",
+            "continuous_learning_tech_radar": "prepare_only",
         },
     )
 
