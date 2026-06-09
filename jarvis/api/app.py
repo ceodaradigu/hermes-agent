@@ -117,6 +117,22 @@ from jarvis.operator_console import (
     OperatorConsoleStatus,
     build_operator_console_snapshot,
 )
+from jarvis.personal_os.foundation import (
+    AttentionProtectionPreview,
+    AwarenessSourcePreview,
+    ContextSourceConsentPreview,
+    ContextSwitchingPreview,
+    DailyStatePreview,
+    EnergyFocusSupportPreview,
+    GuestModeContextPreview,
+    LocalFilesScopePreview,
+    PCEnvironmentStatePreview,
+    PersonalOSApprovalRequirements,
+    PersonalOSEnvironmentStatus,
+    PersonalOSPrivacyPolicy,
+    PersonalRoutinePreview,
+    VisibleReasonAuditPreview,
+)
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
@@ -603,6 +619,75 @@ class ContinuousLearningPreviewRequest(BaseModel):
     dependency_modification_requested: bool = False
 
 
+class PersonalOSPreviewRequest(BaseModel):
+    source_name: Optional[str] = None
+    source_type: str = "unknown"
+    access_requested: bool = False
+    consent_status: str = "missing"
+    scope_preview: Optional[List[str]] = None
+    visible_reason: Optional[str] = None
+    warnings: Optional[List[str]] = None
+    date: Optional[str] = None
+    timezone: Optional[str] = None
+    mode: Optional[str] = None
+    priorities: Optional[List[str]] = None
+    focus_state: Optional[str] = None
+    open_loops: Optional[List[str]] = None
+    blocked_items: Optional[List[str]] = None
+    energy_hint: Optional[str] = None
+    source_data: str = "unknown"
+    device_state_summary: Optional[str] = None
+    active_context: Optional[str] = None
+    environment_signals: Optional[List[str]] = None
+    interruption_risk: Optional[str] = None
+    focus_mode_suggestion: Optional[str] = None
+    calendar_awareness_requested: bool = False
+    email_awareness_requested: bool = False
+    document_awareness_requested: bool = False
+    local_file_awareness_requested: bool = False
+    scope_name: Optional[str] = None
+    allowed_paths_preview: Optional[List[str]] = None
+    denied_paths_preview: Optional[List[str]] = None
+    current_context: Optional[str] = None
+    target_context: Optional[str] = None
+    switch_reason: Optional[str] = None
+    context_boundary_risk: Optional[str] = None
+    cross_context_requested: bool = False
+    private_professional_boundary: bool = False
+    focus_window: Optional[str] = None
+    interruption_policy: Optional[str] = None
+    allowed_interruptions: Optional[List[str]] = None
+    blocked_interruptions: Optional[List[str]] = None
+    routine_name: Optional[str] = None
+    routine_type: str = "unknown"
+    steps_preview: Optional[List[str]] = None
+    triggers_preview: Optional[List[str]] = None
+    energy_state: str = "unknown"
+    focus_recommendation: Optional[str] = None
+    workload_risk: Optional[str] = None
+    break_suggestion: Optional[str] = None
+    action_or_preview_name: Optional[str] = None
+    data_sources_used: Optional[List[str]] = None
+    data_sources_blocked: Optional[List[str]] = None
+    approvals_needed: Optional[List[str]] = None
+    uncertainty_notes: Optional[List[str]] = None
+    sensitive_source_requested: bool = False
+    private_source_requested: bool = False
+    sending_requested: bool = False
+    acting_requested: bool = False
+    camera_requested: bool = False
+    microphone_requested: bool = False
+    screen_requested: bool = False
+    external_account_requested: bool = False
+    private_files_requested: bool = False
+    broad_scope_requested: bool = False
+    private_scope_requested: bool = False
+    notification_requested: bool = False
+    system_change_requested: bool = False
+    contact_people_requested: bool = False
+    secrets_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -861,6 +946,62 @@ def create_app(
     @app.post("/continuous-learning/decision-preview")
     def continuous_learning_decision_preview(payload: ContinuousLearningPreviewRequest) -> dict:
         return TechRadarDecisionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.get("/personal-os/status")
+    def personal_os_status() -> dict:
+        return PersonalOSEnvironmentStatus.placeholder().to_dict()
+
+    @app.get("/personal-os/privacy-policy")
+    def personal_os_privacy_policy() -> dict:
+        return PersonalOSPrivacyPolicy.placeholder().to_dict()
+
+    @app.post("/personal-os/source-consent-preview")
+    def personal_os_source_consent_preview(payload: PersonalOSPreviewRequest) -> dict:
+        return ContextSourceConsentPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/daily-state")
+    def personal_os_daily_state(payload: PersonalOSPreviewRequest) -> dict:
+        return DailyStatePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/pc-environment-state")
+    def personal_os_pc_environment_state(payload: PersonalOSPreviewRequest) -> dict:
+        return PCEnvironmentStatePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/awareness-source-preview")
+    def personal_os_awareness_source_preview(payload: PersonalOSPreviewRequest) -> dict:
+        return AwarenessSourcePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/local-files-scope")
+    def personal_os_local_files_scope(payload: PersonalOSPreviewRequest) -> dict:
+        return LocalFilesScopePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/context-switch")
+    def personal_os_context_switch(payload: PersonalOSPreviewRequest) -> dict:
+        return ContextSwitchingPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/attention-protection")
+    def personal_os_attention_protection(payload: PersonalOSPreviewRequest) -> dict:
+        return AttentionProtectionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/personal-routine")
+    def personal_os_personal_routine(payload: PersonalOSPreviewRequest) -> dict:
+        return PersonalRoutinePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/energy-focus-support")
+    def personal_os_energy_focus_support(payload: PersonalOSPreviewRequest) -> dict:
+        return EnergyFocusSupportPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/guest-mode")
+    def personal_os_guest_mode(payload: PersonalOSPreviewRequest) -> dict:
+        return GuestModeContextPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/visible-reason-audit")
+    def personal_os_visible_reason_audit(payload: PersonalOSPreviewRequest) -> dict:
+        return VisibleReasonAuditPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personal-os/approval-requirements")
+    def personal_os_approval_requirements(payload: PersonalOSPreviewRequest) -> dict:
+        return PersonalOSApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/daily-operator/status")
     def daily_operator_status() -> dict:

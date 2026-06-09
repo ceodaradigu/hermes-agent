@@ -38,6 +38,7 @@ from jarvis.payments_revenue.foundation import (
     PaymentsRevenuePolicy,
     PaymentsRevenueStatus,
 )
+from jarvis.personal_os.foundation import PersonalOSEnvironmentStatus, PersonalOSPrivacyPolicy
 from jarvis.policy.policy_engine import PolicyEngine
 from jarvis.sandbox_execution.foundation import SandboxExecutionStatus
 from jarvis.tool_adoption.pipeline import ToolAdoptionStatus
@@ -161,6 +162,9 @@ class OperatorConsoleCapabilityMatrix:
     read_continuous_learning_status: bool = True
     read_tech_radar_policy: bool = True
     preview_learning_backlog: bool = True
+    read_personal_os_status: bool = True
+    read_personal_os_privacy_policy: bool = True
+    preview_personal_os_context: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -221,6 +225,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_continuous_learning_status": True,
             "read_tech_radar_policy": True,
             "preview_learning_backlog": True,
+            "read_personal_os_status": True,
+            "read_personal_os_privacy_policy": True,
+            "preview_personal_os_context": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -436,6 +443,8 @@ class OperatorConsoleSnapshot:
     continuous_learning_status: ContinuousLearningStatus = field(default_factory=ContinuousLearningStatus.placeholder)
     tech_radar_safety_policy: TechRadarSafetyPolicy = field(default_factory=TechRadarSafetyPolicy.placeholder)
     learning_backlog_readiness: LearningBacklogPreview = field(default_factory=LearningBacklogPreview)
+    personal_os_status: PersonalOSEnvironmentStatus = field(default_factory=PersonalOSEnvironmentStatus.placeholder)
+    personal_os_privacy_policy: PersonalOSPrivacyPolicy = field(default_factory=PersonalOSPrivacyPolicy.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -594,6 +603,18 @@ class OperatorConsoleSnapshot:
                 "learning_backlog_readiness",
                 LearningBacklogPreview.from_dict(self.learning_backlog_readiness),
             )
+        if isinstance(self.personal_os_status, dict):
+            object.__setattr__(
+                self,
+                "personal_os_status",
+                PersonalOSEnvironmentStatus.from_dict(self.personal_os_status),
+            )
+        if isinstance(self.personal_os_privacy_policy, dict):
+            object.__setattr__(
+                self,
+                "personal_os_privacy_policy",
+                PersonalOSPrivacyPolicy.from_dict(self.personal_os_privacy_policy),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -638,6 +659,8 @@ class OperatorConsoleSnapshot:
             continuous_learning_status=ContinuousLearningStatus.from_dict(source.get("continuous_learning_status")),
             tech_radar_safety_policy=TechRadarSafetyPolicy.from_dict(source.get("tech_radar_safety_policy")),
             learning_backlog_readiness=LearningBacklogPreview.from_dict(source.get("learning_backlog_readiness")),
+            personal_os_status=PersonalOSEnvironmentStatus.from_dict(source.get("personal_os_status")),
+            personal_os_privacy_policy=PersonalOSPrivacyPolicy.from_dict(source.get("personal_os_privacy_policy")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -676,6 +699,8 @@ class OperatorConsoleSnapshot:
             "continuous_learning_status": self.continuous_learning_status.to_dict(),
             "tech_radar_safety_policy": self.tech_radar_safety_policy.to_dict(),
             "learning_backlog_readiness": self.learning_backlog_readiness.to_dict(),
+            "personal_os_status": self.personal_os_status.to_dict(),
+            "personal_os_privacy_policy": self.personal_os_privacy_policy.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -700,6 +725,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "payments_revenue": "prepare_only",
             "daily_operator_scheduler": "prepare_only",
             "continuous_learning_tech_radar": "prepare_only",
+            "personal_os_environment_intelligence": "prepare_only",
         },
     )
 
@@ -737,6 +763,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "payments_revenue": "prepare_only",
             "daily_operator_scheduler": "prepare_only",
             "continuous_learning_tech_radar": "prepare_only",
+            "personal_os_environment_intelligence": "prepare_only",
         },
     )
 
@@ -775,6 +802,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "payments_revenue": "prepare_only",
         "daily_operator_scheduler": "prepare_only",
         "continuous_learning_tech_radar": "prepare_only",
+        "personal_os_environment_intelligence": "prepare_only",
     }
     return safe
 
