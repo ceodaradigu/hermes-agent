@@ -15,6 +15,7 @@ from jarvis.mobile.companion import (
     MobileCompanionStatus,
     MobileIntentPreview,
 )
+from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
 from jarvis.policy.policy_engine import PolicyEngine
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
@@ -111,6 +112,8 @@ class OperatorConsoleCapabilityMatrix:
     read_ambient_vision_status: bool = True
     read_ambient_vision_privacy_policy: bool = True
     read_ambient_vision_stop_control: bool = True
+    read_multi_device_status: bool = True
+    read_device_registry: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -146,6 +149,8 @@ class OperatorConsoleCapabilityMatrix:
             "read_ambient_vision_status": True,
             "read_ambient_vision_privacy_policy": True,
             "read_ambient_vision_stop_control": True,
+            "read_multi_device_status": True,
+            "read_device_registry": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -341,6 +346,8 @@ class OperatorConsoleSnapshot:
     ambient_vision_status: AmbientVisionStatus = field(default_factory=AmbientVisionStatus.placeholder)
     ambient_vision_privacy_policy: AmbientVisionPrivacyPolicy = field(default_factory=AmbientVisionPrivacyPolicy.placeholder)
     ambient_vision_stop_control: AmbientVisionStopControl = field(default_factory=AmbientVisionStopControl.placeholder)
+    multi_device_runtime_status: MultiDeviceRuntimeStatus = field(default_factory=MultiDeviceRuntimeStatus.placeholder)
+    device_registry: DeviceRegistrySnapshot = field(default_factory=DeviceRegistrySnapshot.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -387,6 +394,14 @@ class OperatorConsoleSnapshot:
                 "ambient_vision_stop_control",
                 AmbientVisionStopControl.from_dict(self.ambient_vision_stop_control),
             )
+        if isinstance(self.multi_device_runtime_status, dict):
+            object.__setattr__(
+                self,
+                "multi_device_runtime_status",
+                MultiDeviceRuntimeStatus.from_dict(self.multi_device_runtime_status),
+            )
+        if isinstance(self.device_registry, dict):
+            object.__setattr__(self, "device_registry", DeviceRegistrySnapshot.from_dict(self.device_registry))
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -411,6 +426,8 @@ class OperatorConsoleSnapshot:
             ambient_vision_status=AmbientVisionStatus.from_dict(source.get("ambient_vision_status")),
             ambient_vision_privacy_policy=AmbientVisionPrivacyPolicy.from_dict(source.get("ambient_vision_privacy_policy")),
             ambient_vision_stop_control=AmbientVisionStopControl.from_dict(source.get("ambient_vision_stop_control")),
+            multi_device_runtime_status=MultiDeviceRuntimeStatus.from_dict(source.get("multi_device_runtime_status")),
+            device_registry=DeviceRegistrySnapshot.from_dict(source.get("device_registry")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -429,6 +446,8 @@ class OperatorConsoleSnapshot:
             "ambient_vision_status": self.ambient_vision_status.to_dict(),
             "ambient_vision_privacy_policy": self.ambient_vision_privacy_policy.to_dict(),
             "ambient_vision_stop_control": self.ambient_vision_stop_control.to_dict(),
+            "multi_device_runtime_status": self.multi_device_runtime_status.to_dict(),
+            "device_registry": self.device_registry.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -444,6 +463,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "source": "operator_console_placeholder_snapshot",
             "store_connected": False,
             "operator_console": "prepare_only",
+            "multi_device_runtime": "prepare_only",
         },
     )
 
@@ -472,6 +492,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "approval_gateway_called": False,
             "external_calls_enabled": False,
             "safe_read_only_mode": True,
+            "multi_device_runtime": "prepare_only",
         },
     )
 
@@ -501,6 +522,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "approval_gateway_called": False,
         "external_calls_enabled": False,
         "safe_read_only_mode": True,
+        "multi_device_runtime": "prepare_only",
     }
     return safe
 
