@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from jarvis.ambient_vision.companion import (
+    AmbientVisionPrivacyPolicy,
+    AmbientVisionStatus,
+    AmbientVisionStopControl,
+)
 from jarvis.command_center import CommandCenterViewModel, build_command_center_view_model
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
@@ -103,6 +108,9 @@ class OperatorConsoleCapabilityMatrix:
     preview_mobile_intent: bool = True
     inspect_safety: bool = True
     inspect_capabilities: bool = True
+    read_ambient_vision_status: bool = True
+    read_ambient_vision_privacy_policy: bool = True
+    read_ambient_vision_stop_control: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -135,6 +143,9 @@ class OperatorConsoleCapabilityMatrix:
             "preview_mobile_intent": True,
             "inspect_safety": True,
             "inspect_capabilities": True,
+            "read_ambient_vision_status": True,
+            "read_ambient_vision_privacy_policy": True,
+            "read_ambient_vision_stop_control": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -327,6 +338,9 @@ class OperatorConsoleSnapshot:
         default_factory=MobileCompanionPermissionPolicy.placeholder
     )
     mobile_command_center: MobileCommandCenterSnapshot = field(default_factory=MobileCommandCenterSnapshot.placeholder)
+    ambient_vision_status: AmbientVisionStatus = field(default_factory=AmbientVisionStatus.placeholder)
+    ambient_vision_privacy_policy: AmbientVisionPrivacyPolicy = field(default_factory=AmbientVisionPrivacyPolicy.placeholder)
+    ambient_vision_stop_control: AmbientVisionStopControl = field(default_factory=AmbientVisionStopControl.placeholder)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -359,6 +373,20 @@ class OperatorConsoleSnapshot:
                 "mobile_command_center",
                 MobileCommandCenterSnapshot.from_dict(self.mobile_command_center),
             )
+        if isinstance(self.ambient_vision_status, dict):
+            object.__setattr__(self, "ambient_vision_status", AmbientVisionStatus.from_dict(self.ambient_vision_status))
+        if isinstance(self.ambient_vision_privacy_policy, dict):
+            object.__setattr__(
+                self,
+                "ambient_vision_privacy_policy",
+                AmbientVisionPrivacyPolicy.from_dict(self.ambient_vision_privacy_policy),
+            )
+        if isinstance(self.ambient_vision_stop_control, dict):
+            object.__setattr__(
+                self,
+                "ambient_vision_stop_control",
+                AmbientVisionStopControl.from_dict(self.ambient_vision_stop_control),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -380,6 +408,9 @@ class OperatorConsoleSnapshot:
             mobile_status=MobileCompanionStatus.from_dict(source.get("mobile_status")),
             mobile_permission_policy=MobileCompanionPermissionPolicy.from_dict(source.get("mobile_permission_policy")),
             mobile_command_center=MobileCommandCenterSnapshot.from_dict(source.get("mobile_command_center")),
+            ambient_vision_status=AmbientVisionStatus.from_dict(source.get("ambient_vision_status")),
+            ambient_vision_privacy_policy=AmbientVisionPrivacyPolicy.from_dict(source.get("ambient_vision_privacy_policy")),
+            ambient_vision_stop_control=AmbientVisionStopControl.from_dict(source.get("ambient_vision_stop_control")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -395,6 +426,9 @@ class OperatorConsoleSnapshot:
             "mobile_status": self.mobile_status.to_dict(),
             "mobile_permission_policy": self.mobile_permission_policy.to_dict(),
             "mobile_command_center": self.mobile_command_center.to_dict(),
+            "ambient_vision_status": self.ambient_vision_status.to_dict(),
+            "ambient_vision_privacy_policy": self.ambient_vision_privacy_policy.to_dict(),
+            "ambient_vision_stop_control": self.ambient_vision_stop_control.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
