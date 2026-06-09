@@ -942,6 +942,7 @@ def build_command_center_view_model(
             "tool_adoption_pipeline": "prepare_only",
             "asset_factory_web_builder": "prepare_only",
             "deploy_publishing_control": "prepare_only",
+            "marketing_distribution_engine": "prepare_only",
         },
     )
 
