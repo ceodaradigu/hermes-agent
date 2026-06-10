@@ -1,83 +1,66 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Dict, Optional
-from uuid import uuid4
+from typing import Any, Dict, Optional
 
-
-class ApprovalStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-
-
-@dataclass
-class ApprovalRequest:
-    request_id: str
-    action: str
-    rationale: str
-    requested_at: str
-    status: ApprovalStatus = ApprovalStatus.PENDING
-    decided_at: Optional[str] = None
-    decision_note: Optional[str] = None
+from jarvis.approval_hardening import (
+    ApprovalHardeningService,
+    ApprovalKind,
+    ApprovalRequest,
+    ApprovalStatus,
+)
 
 
 class ApprovalGateway:
     def __init__(self):
-        self._requests: Dict[str, ApprovalRequest] = {}
+        self._service = ApprovalHardeningService()
 
-    def create_request(self, action: str, rationale: str = "") -> ApprovalRequest:
+    def create_request(
+        self,
+        action: str,
+        rationale: str = "",
+        *,
+        requested_by: str = "jarvis",
+        context: Optional[Dict[str, Any]] = None,
+        approval_kind: ApprovalKind | str = ApprovalKind.NORMAL,
+        expires_in_seconds: int = 900,
+        expires_at: Optional[str] = None,
+    ) -> ApprovalRequest:
         action_normalized = (action or "").strip()
         if not action_normalized:
             raise ValueError("action must be a non-empty string")
-
-        request_id = str(uuid4())
-        req = ApprovalRequest(
-            request_id=request_id,
-            action=action_normalized,
-            rationale=rationale,
-            requested_at=self._now_iso(),
+        return self._service.request(
+            action_type=action_normalized,
+            requested_by=requested_by,
+            reason=rationale,
+            context=context,
+            approval_kind=approval_kind,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
         )
-        self._requests[request_id] = req
-        return req
 
-    def approve(self, request_id: str, note: str = "") -> ApprovalRequest:
-        req = self._get_existing(request_id)
-        self._ensure_pending(req)
-        req.status = ApprovalStatus.APPROVED
-        req.decided_at = self._now_iso()
-        req.decision_note = note
-        return req
+    def approve(self, request_id: str, note: str = "", confirmation_phrase: Optional[str] = None) -> ApprovalRequest:
+        return self._service.decide(
+            request_id,
+            "approved",
+            reason=note,
+            confirmation_phrase=confirmation_phrase,
+        )
 
     def reject(self, request_id: str, note: str = "") -> ApprovalRequest:
-        req = self._get_existing(request_id)
-        self._ensure_pending(req)
-        req.status = ApprovalStatus.REJECTED
-        req.decided_at = self._now_iso()
-        req.decision_note = note
-        return req
+        return self._service.decide(request_id, "rejected", reason=note)
+
+    def revoke(self, request_id: str, note: str = "") -> ApprovalRequest:
+        return self._service.revoke(request_id, reason=note)
 
     def get_status(self, request_id: str) -> ApprovalStatus:
-        return self._get_existing(request_id).status
+        req = self._get_existing(request_id)
+        return self._service.refresh_expiration(req).status
 
     def get_request(self, request_id: str) -> ApprovalRequest:
         return self._get_existing(request_id)
 
     def list_requests(self) -> list[ApprovalRequest]:
-        return list(self._requests.values())
+        return self._service.list_records()
 
     def _get_existing(self, request_id: str) -> ApprovalRequest:
-        if request_id not in self._requests:
-            raise KeyError(f"Approval request not found: {request_id}")
-        return self._requests[request_id]
-
-    @staticmethod
-    def _ensure_pending(req: ApprovalRequest) -> None:
-        if req.status != ApprovalStatus.PENDING:
-            raise ValueError(f"request {req.request_id} is already {req.status.value}")
-
-    @staticmethod
-    def _now_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return self._service.get(request_id)

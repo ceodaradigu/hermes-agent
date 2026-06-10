@@ -63,9 +63,9 @@ La matriz diferencia explícitamente:
 - falta de readiness para ejecución real;
 - requisitos pendientes, approvals, riesgo y siguiente paso seguro.
 
-Ninguna capacidad aparece lista para ejecución real. Los requisitos pendientes
-incluyen hardening de approval/audit/permisos, decisión explícita de runtime,
-rollback verificado y evidencia de seguridad de producción.
+Ninguna capacidad aparece lista para ejecución real. Post-S Macro 2 aporta
+hardening de approval/audit/permisos, pero siguen pendientes el bridge controlado,
+la decisión explícita de runtime, rollback verificado y evidencia de seguridad de producción.
 
 ## Safety boundaries
 
@@ -88,10 +88,10 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 2 - Real Approval, Audit & Permission Hardening**
+**Post-S Macro 3 - Controlled Runtime Execution Bridge**
 
-Ese trabajo debe completarse antes de considerar cualquier bridge de ejecución
-real. Esta consolidación no crea approvals, misiones o tareas reales.
+Post-S Macro 2 completa el hardening prepare-only necesario antes de considerar
+ese bridge. Esta consolidación no crea approvals, misiones o tareas reales.
 
 ## Smoke tests
 
