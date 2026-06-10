@@ -18,6 +18,7 @@ from jarvis.operational_consolidation import (
     CapabilityReadiness,
     CapabilitySummary,
     NEXT_MACRO_PR,
+    NEXT_RECOMMENDED_MACRO_PR,
     OperationalSystemStatus,
     SafetyBoundarySummary,
     build_capability_registry,
@@ -199,7 +200,7 @@ def test_operator_console_summary_and_command_center_marker_are_consolidated_pre
 
     assert summary["prepare_only"] is True
     assert summary["operational_status"]["prepare_only"] is True
-    assert summary["next_recommended_macro_pr"] == NEXT_MACRO_PR
+    assert summary["next_recommended_macro_pr"] == NEXT_RECOMMENDED_MACRO_PR
     assert summary["blocked_actions"]
     assert summary["visible_reasons"]
     assert command_center.metadata["post_s_operational_consolidation"] is True

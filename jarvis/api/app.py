@@ -154,12 +154,14 @@ from jarvis.operator_console import (
     build_operational_console_summary,
     build_operator_console_snapshot,
 )
+from jarvis.personal_memory import PersonalMemoryControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
     build_readiness_matrix_view,
     build_safety_boundary_summary,
 )
+from jarvis.personal_os.control_plane import PersonalOSControlPlane
 from jarvis.personal_os.foundation import (
     AttentionProtectionPreview,
     AwarenessSourcePreview,
@@ -202,6 +204,7 @@ from jarvis.tool_adoption.pipeline import (
 from jarvis.tool_connectors import preview_connector
 from jarvis.tool_invocation_layer import ToolInvocationLayer
 from jarvis.tool_registry import preview_tool_registration
+from jarvis.scheduler_control import SchedulerControlPlane
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
@@ -386,6 +389,90 @@ class ToolInvocationPreviewRequest(BaseModel):
     timeout_present: bool = False
     rollback_available: bool = False
     rollback_steps: Optional[List[str]] = None
+
+
+class MemoryRecordPreviewRequest(BaseModel):
+    memory_id: Optional[str] = None
+    memory_type: str = "unknown"
+    content_summary: str = ""
+    source: str = "operator_provided"
+    created_by: str = "jarvis"
+    reason: str = ""
+    sensitivity_level: str = "normal"
+    approved: bool = False
+    approval_id: Optional[str] = None
+    active: bool = False
+    reversible: bool = True
+    created_at: str = ""
+    approved_at: Optional[str] = None
+    activated_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    tags: Optional[List[str]] = None
+    blocked_reasons: Optional[List[str]] = None
+    persistent: bool = False
+    private_data: bool = False
+    external_source: bool = False
+    stop_controls_blocked: bool = False
+
+
+class PersonalOSStatePreviewRequest(BaseModel):
+    active_mode: str = "manual"
+    focus_mode: str = "off"
+    daily_priorities: Optional[List[str]] = None
+    weekly_priorities: Optional[List[str]] = None
+    routines: Optional[List[Dict[str, Any]]] = None
+    reminders: Optional[List[Dict[str, Any]]] = None
+    review_queue: Optional[List[Dict[str, Any]]] = None
+    authorized_sources: Optional[List[str]] = None
+    blocked_sources: Optional[List[str]] = None
+    blocked_reasons: Optional[List[str]] = None
+
+
+class SchedulerControlPreviewRequest(BaseModel):
+    item_id: Optional[str] = None
+    title: str = "untitled scheduler preview"
+    item_type: str = "reminder"
+    schedule_expression: Optional[str] = None
+    due_at: Optional[str] = None
+    timezone: str = "UTC"
+    payload_summary: Optional[Dict[str, Any]] = None
+    requires_approval: bool = False
+    requires_strong_approval: bool = False
+    side_effects: bool = False
+    tool_invocation_required: bool = False
+    controlled_runtime_required: bool = False
+    external_call_required: bool = False
+    private_source_required: bool = False
+    status: str = "draft"
+    created_at: str = ""
+    last_previewed_at: Optional[str] = None
+    blocked_reasons: Optional[List[str]] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    now: Optional[str] = None
+    review_id: Optional[str] = None
+    date: Optional[str] = None
+    week: Optional[str] = None
+    priorities: Optional[List[str]] = None
+    pending_approvals: Optional[List[str]] = None
+    pending_memory_reviews: Optional[List[str]] = None
+    due_scheduler_items: Optional[List[str]] = None
+    money_or_roi_items: Optional[List[str]] = None
+    completed_items: Optional[List[str]] = None
+    pending_items: Optional[List[str]] = None
+    postponed_items: Optional[List[str]] = None
+    memory_changes: Optional[List[str]] = None
+    scheduler_changes: Optional[List[str]] = None
+    roi_or_monetization_signals: Optional[List[str]] = None
+    risks: Optional[List[str]] = None
+    recommended_next_actions: Optional[List[str]] = None
+    global_pause: bool = False
+    memory_activation_paused: bool = False
+    scheduler_paused: bool = False
+    routines_paused: bool = False
+    personal_os_paused: bool = False
+    external_sources_paused: bool = True
+    tool_invocations_paused: bool = True
+    reason: str = ""
 
 
 class PersonalizationPreviewRequest(BaseModel):
@@ -1179,6 +1266,11 @@ def create_app(
         runtime_bridge=app.state.controlled_runtime_bridge,
         audit_trail=app.state.approval_hardening.audit_trail,
     )
+    app.state.personal_memory_control = PersonalMemoryControlPlane(
+        audit_trail=app.state.approval_hardening.audit_trail,
+    )
+    app.state.personal_os_control = PersonalOSControlPlane()
+    app.state.scheduler_control = SchedulerControlPlane()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1403,6 +1495,112 @@ def create_app(
             rollback_steps=payload.rollback_steps,
         ).to_dict()
 
+    def memory_record(payload: MemoryRecordPreviewRequest):
+        values = payload.model_dump(exclude={"stop_controls_blocked"})
+        values["tags"] = values["tags"] or []
+        values["blocked_reasons"] = values["blocked_reasons"] or []
+        return app.state.personal_memory_control.preview_record(**values)
+
+    @app.post("/memory/preview-record")
+    def memory_preview_record(payload: MemoryRecordPreviewRequest) -> dict:
+        return memory_record(payload).to_dict()
+
+    @app.post("/memory/preview-activation")
+    def memory_preview_activation(payload: MemoryRecordPreviewRequest) -> dict:
+        approval = None
+        if payload.approval_id:
+            try:
+                approval = app.state.approval_hardening.get(payload.approval_id)
+                app.state.approval_hardening.refresh_expiration(approval)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return app.state.personal_memory_control.preview_activation(
+            memory_record(payload),
+            approval=approval,
+            stop_controls_blocked=payload.stop_controls_blocked,
+        ).to_dict()
+
+    @app.post("/memory/preview-deactivation")
+    def memory_preview_deactivation(payload: MemoryRecordPreviewRequest) -> dict:
+        return app.state.personal_memory_control.preview_deactivation(
+            memory_record(payload),
+            reason=payload.reason,
+        )
+
+    def scheduler_item(payload: SchedulerControlPreviewRequest):
+        values = payload.model_dump(
+            include={
+                "item_id",
+                "title",
+                "item_type",
+                "schedule_expression",
+                "due_at",
+                "timezone",
+                "payload_summary",
+                "requires_approval",
+                "requires_strong_approval",
+                "side_effects",
+                "tool_invocation_required",
+                "controlled_runtime_required",
+                "external_call_required",
+                "private_source_required",
+                "status",
+                "created_at",
+                "last_previewed_at",
+                "blocked_reasons",
+            }
+        )
+        values["payload_summary"] = values["payload_summary"] or {}
+        values["blocked_reasons"] = values["blocked_reasons"] or []
+        return app.state.scheduler_control.preview_item(**values)
+
+    @app.get("/scheduler/status")
+    def scheduler_status() -> dict:
+        return app.state.scheduler_control.status()
+
+    @app.get("/scheduler/policy")
+    def scheduler_policy() -> dict:
+        return app.state.scheduler_control.policy()
+
+    @app.post("/scheduler/preview-item")
+    def scheduler_preview_item(payload: SchedulerControlPreviewRequest) -> dict:
+        return scheduler_item(payload).to_dict()
+
+    @app.post("/scheduler/preview-due")
+    def scheduler_preview_due(payload: SchedulerControlPreviewRequest) -> dict:
+        items = [
+            app.state.scheduler_control.preview_item(**dict(item))
+            for item in (payload.items or [])
+        ]
+        if not items and payload.item_id:
+            items = [scheduler_item(payload)]
+        return app.state.scheduler_control.preview_due(items, now=payload.now).to_dict()
+
+    @app.post("/scheduler/preview-daily-review")
+    def scheduler_preview_daily_review(payload: SchedulerControlPreviewRequest) -> dict:
+        return app.state.scheduler_control.preview_daily_review(**payload.model_dump()).to_dict()
+
+    @app.post("/scheduler/preview-weekly-review")
+    def scheduler_preview_weekly_review(payload: SchedulerControlPreviewRequest) -> dict:
+        return app.state.scheduler_control.preview_weekly_review(**payload.model_dump()).to_dict()
+
+    @app.post("/scheduler/preview-stop-controls")
+    def scheduler_preview_stop_controls(payload: SchedulerControlPreviewRequest) -> dict:
+        return app.state.scheduler_control.preview_stop_controls(
+            **payload.model_dump(
+                include={
+                    "global_pause",
+                    "memory_activation_paused",
+                    "scheduler_paused",
+                    "routines_paused",
+                    "personal_os_paused",
+                    "external_sources_paused",
+                    "tool_invocations_paused",
+                    "reason",
+                }
+            )
+        ).to_dict()
+
     @app.get("/command-center")
     def command_center() -> dict:
         view = build_command_center_view_model(
@@ -1598,7 +1796,30 @@ def create_app(
 
     @app.get("/personal-os/status")
     def personal_os_status() -> dict:
-        return PersonalOSEnvironmentStatus.placeholder().to_dict()
+        return {
+            **app.state.personal_os_control.status(),
+            **PersonalOSEnvironmentStatus.placeholder().to_dict(),
+        }
+
+    @app.get("/personal-os/policy")
+    def personal_os_policy() -> dict:
+        return app.state.personal_os_control.policy()
+
+    @app.post("/personal-os/preview-state")
+    def personal_os_preview_state(payload: PersonalOSStatePreviewRequest) -> dict:
+        values = payload.model_dump()
+        for name in (
+            "daily_priorities",
+            "weekly_priorities",
+            "routines",
+            "reminders",
+            "review_queue",
+            "authorized_sources",
+            "blocked_sources",
+            "blocked_reasons",
+        ):
+            values[name] = values[name] or []
+        return app.state.personal_os_control.preview_state(**values).to_dict()
 
     @app.get("/personal-os/privacy-policy")
     def personal_os_privacy_policy() -> dict:
