@@ -15,6 +15,7 @@ from jarvis.api.app import create_app
 MASTER_MAP = Path("docs/JARVIS_MASTER_BUILD_MAP.md")
 
 STATUS_ROUTES = (
+    "/operational/status",
     "/voice/companion/status",
     "/mobile/companion/status",
     "/ambient-vision/status",
