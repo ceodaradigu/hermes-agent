@@ -947,6 +947,7 @@ def build_command_center_view_model(
             "daily_operator_scheduler": "prepare_only",
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
+            "advanced_personalization_user_model": "prepare_only",
         },
     )
 

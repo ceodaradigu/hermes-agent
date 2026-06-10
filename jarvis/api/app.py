@@ -21,6 +21,23 @@ from jarvis.asset_factory.foundation import (
     WebProjectBrief,
     WebsiteStructurePlan,
 )
+from jarvis.advanced_personalization.foundation import (
+    AdvancedPersonalizationStatus,
+    BusinessGoalModelPreview,
+    ContrarianModeProfilePreview,
+    DecisionModelPreview,
+    MemoryAuditReversalPreview,
+    MemoryLifecyclePreview,
+    MemoryProposalPreview,
+    MemoryReviewPreview,
+    PersonalizationApprovalRequirements,
+    PersonalizationRecommendationPreview,
+    SensitiveInferenceGuardPreview,
+    SpeechStylePatternPreview,
+    UncertaintyHandlingPreview,
+    UserModelSafetyPolicy,
+    UserPreferenceProfilePreview,
+)
 from jarvis.ambient_vision.companion import (
     AmbientVisionPrivacyPolicy,
     AmbientVisionSessionPreview,
@@ -221,6 +238,70 @@ class MobileIntentPreviewRequest(BaseModel):
 
 class OperatorConsolePreviewRequest(BaseModel):
     text: str
+
+
+class PersonalizationPreviewRequest(BaseModel):
+    preference_name: Optional[str] = None
+    preference_type: str = "unknown"
+    evidence_preview: Optional[List[str]] = None
+    confidence: str = "unknown"
+    uncertainty_notes: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+    pattern_name: Optional[str] = None
+    observed_style_preview: Optional[str] = None
+    preferred_response_style: Optional[str] = None
+    examples_preview: Optional[List[str]] = None
+    decision_axis: Optional[str] = None
+    observed_preference: Optional[str] = None
+    tradeoffs: Optional[List[str]] = None
+    risk_tolerance: Optional[str] = None
+    monetization_bias: Optional[str] = None
+    contrarian_needed: bool = False
+    goal_name: Optional[str] = None
+    goal_type: str = "unknown"
+    expected_value: Optional[str] = None
+    constraints: Optional[List[str]] = None
+    risks: Optional[List[str]] = None
+    priority_reason: Optional[str] = None
+    contrarian_mode_requested: bool = False
+    critique_style: Optional[str] = None
+    challenge_threshold: Optional[str] = None
+    allowed_pushback: Optional[List[str]] = None
+    blocked_pushback: Optional[List[str]] = None
+    proposal_id_preview: Optional[str] = None
+    proposed_memory: Optional[str] = None
+    memory_category: str = "unknown"
+    evidence: Optional[List[str]] = None
+    usefulness: Optional[str] = None
+    sensitivity_level: str = "unknown"
+    review_status: str = "unknown"
+    acceptance_reasons: Optional[List[str]] = None
+    rejection_reasons: Optional[List[str]] = None
+    sensitivity_warnings: Optional[List[str]] = None
+    suggested_revision: Optional[str] = None
+    requested_action: str = "unknown"
+    memory_id_preview: Optional[str] = None
+    audit_reason: Optional[str] = None
+    current_state_preview: Optional[str] = None
+    claim_or_preference: Optional[str] = None
+    unknowns: Optional[List[str]] = None
+    assumptions: Optional[List[str]] = None
+    evidence_needed: Optional[List[str]] = None
+    recommendation_name: Optional[str] = None
+    basis: Optional[List[str]] = None
+    expected_benefit: Optional[str] = None
+    recommendation_type: str = "unknown"
+    input_category: Optional[str] = None
+    sensitive_attribute_risk: str = "unknown"
+    blocked_inferences: Optional[List[str]] = None
+    allowed_non_sensitive_summary: Optional[str] = None
+    sensitive_memory_requested: bool = False
+    sensitive_source_requested: bool = False
+    private_source_requested: bool = False
+    cross_context_requested: bool = False
+    action_based_on_personalization_requested: bool = False
+    private_data_requested: bool = False
+    sensitive_attribute_requested: bool = False
 
 
 class AmbientVisionSessionPreviewRequest(BaseModel):
@@ -895,6 +976,7 @@ def create_app(
                 "payments_revenue": "prepare_only",
                 "daily_operator_scheduler": "prepare_only",
                 "continuous_learning_tech_radar": "prepare_only",
+                "advanced_personalization_user_model": "prepare_only",
             },
         )
         return view.to_dict()
@@ -946,6 +1028,66 @@ def create_app(
     @app.post("/continuous-learning/decision-preview")
     def continuous_learning_decision_preview(payload: ContinuousLearningPreviewRequest) -> dict:
         return TechRadarDecisionPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.get("/personalization/status")
+    def personalization_status() -> dict:
+        return AdvancedPersonalizationStatus.placeholder().to_dict()
+
+    @app.get("/personalization/policy")
+    def personalization_policy() -> dict:
+        return UserModelSafetyPolicy.placeholder().to_dict()
+
+    @app.post("/personalization/preference-profile")
+    def personalization_preference_profile(payload: PersonalizationPreviewRequest) -> dict:
+        return UserPreferenceProfilePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/speech-style")
+    def personalization_speech_style(payload: PersonalizationPreviewRequest) -> dict:
+        return SpeechStylePatternPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/decision-model")
+    def personalization_decision_model(payload: PersonalizationPreviewRequest) -> dict:
+        return DecisionModelPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/business-goal")
+    def personalization_business_goal(payload: PersonalizationPreviewRequest) -> dict:
+        return BusinessGoalModelPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/contrarian-mode")
+    def personalization_contrarian_mode(payload: PersonalizationPreviewRequest) -> dict:
+        return ContrarianModeProfilePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/memory-proposal")
+    def personalization_memory_proposal(payload: PersonalizationPreviewRequest) -> dict:
+        return MemoryProposalPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/memory-review")
+    def personalization_memory_review(payload: PersonalizationPreviewRequest) -> dict:
+        return MemoryReviewPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/memory-lifecycle")
+    def personalization_memory_lifecycle(payload: PersonalizationPreviewRequest) -> dict:
+        return MemoryLifecyclePreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/memory-audit-reversal")
+    def personalization_memory_audit_reversal(payload: PersonalizationPreviewRequest) -> dict:
+        return MemoryAuditReversalPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/uncertainty")
+    def personalization_uncertainty(payload: PersonalizationPreviewRequest) -> dict:
+        return UncertaintyHandlingPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/recommendation")
+    def personalization_recommendation(payload: PersonalizationPreviewRequest) -> dict:
+        return PersonalizationRecommendationPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/sensitive-inference-guard")
+    def personalization_sensitive_inference_guard(payload: PersonalizationPreviewRequest) -> dict:
+        return SensitiveInferenceGuardPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/personalization/approval-requirements")
+    def personalization_approval_requirements(payload: PersonalizationPreviewRequest) -> dict:
+        return PersonalizationApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/personal-os/status")
     def personal_os_status() -> dict:
