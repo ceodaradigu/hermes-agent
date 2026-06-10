@@ -128,7 +128,7 @@ git status --short
 - Cualquier comando con `.env`, password, token, credenciales, banco o tarjeta debe ir a `requires_approval`.
 - JARVIS puede sugerir, preparar, proponer y documentar, pero no debe actuar peligrosamente sin aprobación.
 
-## 5. Estado actual de JARVIS después de PR #99
+## 5. Estado actual de JARVIS después de Phase S
 
 `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
 
@@ -136,15 +136,12 @@ Estado alineado de las fases maestras:
 
 | Fase maestra | Estado actual |
 |---|---|
-| Phase A — Mission Core Foundation | Completada como foundation contractual prepare-only. |
-| Phase B — Approval & Safety Bridge | Completada en modo prepare-only. |
-| Phase C — Hermes Runtime Bridge | Foundation contractual completada; runtime de ejecución real pendiente. |
-| Phase D — Command Center Visual Interface | Foundation completada con view model y API read-only; UI visual completa pendiente. |
-| Phase E — Voice Companion | Foundation completada en modo prepare-only; runtime de voz companion pendiente. |
-| Phase F — Mobile Companion | Foundation completada en modo prepare-only; app móvil y runtime remoto pendientes. |
-| Phase G — Ambient Vision / Camera Companion | Foundation completada en modo prepare-only; runtime visual real pendiente. |
+| Phase A-Phase S | Cerradas como foundations del mapa maestro actual. |
+| Phase S — Future/Moonshot Layer | Última fase maestra implementada; no existe Phase T aprobada. |
 
 Operator Console Foundation está completada como extensión read-only de Command Center / operator layer. No es Phase G maestra y no sustituye Ambient Vision / Camera Companion.
+
+El cierre de Phase A-Phase S no activa capacidades runtime/producción reales. Los trabajos posteriores son backlog transversal/no-fase y deben mantener prepare-only, approvals, strong approval, privacidad, auditoría y rollback según aplique.
 
 Ya existe:
 
@@ -220,9 +217,9 @@ PR #98 está mergeado y completa la foundation de Phase F — Mobile Companion e
 
 PR #99 está mergeado y completa Operator Console Foundation como extensión read-only de Command Center / operator layer. No es una Phase G maestra ni sustituye Ambient Vision / Camera Companion.
 
-PR actual: Phase G — Ambient Vision / Camera Companion foundation prepare-only, con contratos seguros, endpoints de lectura/preview, integración read-only, tests y documentación.
+Phase S — Future/Moonshot Layer foundation prepare-only está completada. Es la última fase maestra implementada del mapa actual.
 
-Siguiente fase maestra recomendada: Phase H — Multi-device Runtime.
+No existe una siguiente fase maestra aprobada. Para el backlog seguro posterior a Phase S, ver `docs/JARVIS_MASTER_BUILD_MAP.md`.
 
 ## 6. Validaciones reales ya confirmadas
 
@@ -351,44 +348,11 @@ Transcript:
 
 ## 10. Roadmap inmediato recomendado
 
-Ya completado:
+Phase A-Phase S están cerradas. No existe una Phase T aprobada ni una siguiente fase maestra recomendada.
 
-- PR #51 - docs: add JARVIS handoff context and working protocol.
-- PR #52 - documentar `docs/integrations/jarvis-local-memory-quickstart-smoke-test.md` como checklist de smoke test manual de JARVIS local memory. PR mergeado y validado con smoke test real manual.
-- PR #53 - diseño de conversational runtime natural. PR mergeado.
-- PR #54 - natural runtime contracts. PR mergeado.
-- PR #55 - future capabilities backlog / moonshot map. PR mergeado.
-- PR #56 - Hermes inside JARVIS integration contract. PR mergeado.
-- PR #57 - deployment modes local/server/hybrid contract. PR mergeado.
-- PR #58 - mobile voice command and approval contract. PR mergeado.
-- PR #59 - restriction registry and policy override contract. PR mergeado.
-- PR #60 - Code Intelligence / CodeGraph Evaluation Contract. PR mergeado.
-- PR #61 - Home / Voice / Sensor Hardware Layer. PR mergeado.
-- PR #62 - Personal OS / Environment Intelligence Backlog. PR mergeado.
-- PR #63 - Distributed Personal OS Capabilities Backlog. PR mergeado.
-- PR #64 - Authorized Security Research / Bug Bounty Mode Contract. PR mergeado.
-- PR #65 - Personal Memory / User Model Layer. PR mergeado.
-- PR #66 - Core Intelligence and Personal Memory Backlog. PR mergeado.
-- PR #67 - Developer / Stark Workshop Layer. PR mergeado.
-- PR #68 - Personal Knowledge / RAG Layer. PR mergeado.
-- PR #69 - Mission Autonomy / Self-Improvement / Revenue Execution Contract. PR mergeado.
-- PR #70 - Mission Envelope v1. PR mergeado.
-- PR #71 - Mission Approval Request v1. PR mergeado.
-- PR #72 - Mission Audit Log v1. PR mergeado.
-- PR #73 - Mission State Store v1. PR mergeado.
-- PR #74 - Mission Lifecycle Validator v1. PR mergeado.
+El trabajo inmediato recomendado es backlog transversal/no-fase: alineación documental, smoke validation end-to-end, consolidación UX de Operator Console, hardening del workflow real de approvals y evaluación controlada de futuros bridges/runtime. Ver `docs/JARVIS_MASTER_BUILD_MAP.md` para el orden, límites y criterios obligatorios.
 
-Actual:
-
-- PR #75 - Mission Command Builder v1: comando preparado serializable y validable, sin runtime ni ejecución real.
-
-Siguiente recomendado:
-
-- PR #76 - Mission Snapshot Serializer v1 o Mission Dry-Run Evaluator v1.
-
-Después:
-
-- No seguir ampliando backlog general salvo necesidad concreta. Nuevas ideas deben entrar como misiones/spikes, no como arquitectura infinita.
+No seguir ampliando backlog general salvo necesidad concreta. Nuevas ideas deben entrar como misiones/spikes o requerir una actualización explícita del mapa maestro antes de crear una nueva fase.
 
 ## 11. Cómo iniciar un hilo nuevo
 

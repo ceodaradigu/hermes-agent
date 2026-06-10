@@ -8,6 +8,8 @@ Este documento es el mapa maestro operativo para construir JARVIS por fases sin 
 
 Las foundations prepare-only pueden completarse antes que el objetivo runtime completo de una fase. Una extensión transversal, como Operator Console, no crea ni sustituye una fase maestra.
 
+Las fases maestras Phase A-Phase S están cerradas en el mapa actual. Phase S es la última fase maestra implementada; cerrar una fase foundation no implica que sus capacidades runtime/producción estén activas.
+
 ## JARVIS vs Hermes
 
 - JARVIS = cerebro, orquestador, interfaz, control, negocio y seguridad.
@@ -96,6 +98,7 @@ Piezas relevantes ya documentadas:
 
 Límites actuales:
 
+- Phase A-Phase S están cerradas como foundations del mapa maestro actual; Phase S es la última fase maestra implementada.
 - Mission Safety Baseline Gate de misión ya está mergeado.
 - PR #81 completa los bridges/guards restantes de Phase B en modo prepare-only: Policy Bridge, Budget Guard, Approval Payload Hardening y Legal/AI Content Safety Baseline.
 - Hermes Runtime Bridge foundation está completada en modo contrato/prepare-only; no hay ejecución Hermes real para misiones.
@@ -226,6 +229,8 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 
 ### Phase H - Multi-device Runtime
 
+Estado: foundation prepare-only completada; runtime multi-dispositivo real pendiente.
+
 - Objetivo: coordinar desktop, móvil, reloj, gafas, tablet, servidor y workers sin varios cerebros.
 - Incluye: device registry, trusted devices, revoke device, approval from trusted devices, device capability model, sync state y notification routing.
 - Permite: presencia distribuida, handoff, aprobaciones y estado sincronizado.
@@ -235,6 +240,8 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 - Approval: trusted device no sustituye strong approval; solo habilita canal autorizado.
 
 ### Phase I - Sandbox Execution
+
+Estado: foundation prepare-only completada; ejecución real pendiente.
 
 - Objetivo: ejecutar comandos y tools con aislamiento y límites.
 - Incluye: safe command executor, filesystem scope guard, allowlist, no secrets scanner, rollback plan, execution audit, dry-run required before execution y no production without strong approval.
@@ -246,6 +253,8 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 
 ### Phase J - Tool Adoption Pipeline
 
+Estado: foundation prepare-only completada; adopción, instalación y ejecución real de herramientas pendientes.
+
 - Objetivo: evaluar herramientas externas antes de adoptarlas.
 - Incluye: discover tool, license check, repo health, dependency risk, sandbox install proposal, spike runner, value measurement, keep/rollback decision, Graphify/CodeGraph/Open Design as candidates y no silent core dependency.
 - Permite: investigar y medir herramientas.
@@ -256,6 +265,8 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 
 ### Phase K - Asset Factory / Web Builder
 
+Estado: foundation prepare-only completada; generación y escritura real de activos pendientes.
+
 - Objetivo: transformar oportunidades en activos digitales medibles.
 - Incluye: landing generator, website generator, offer builder, copy generator, design assets, templates, demo builder, GitHub PR automation y Open Design evaluation when useful.
 - Permite: crear borradores, demos, landings, ofertas y assets revisables.
@@ -265,6 +276,8 @@ Estado: foundation prepare-only completada; runtime visual real pendiente.
 - Approval: publicar, comprar dominio, conectar cuenta externa o usar identidad requiere strong approval.
 
 ### Phase L - Deploy & Publishing
+
+Estado: foundation prepare-only completada; deploy y publicación reales pendientes.
 
 - Objetivo: llevar assets a preview y producción con control.
 - Incluye: preview deploy, Vercel/Render adapters, env guard, domain checklist, production approval, rollback deploy y publication audit.
@@ -288,6 +301,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 
 ### Phase N - Payments & Revenue
 
+Estado: foundation prepare-only completada; pagos, cobros y conexión real con providers pendientes.
+
 - Objetivo: medir y operar revenue sin confundir proyección con dinero real.
 - Incluye: Stripe/Gumroad adapter, checkout proposal, pricing model, expense tracker, confirmed vs projected revenue, net revenue calculator, ROI tracker, budget guard advanced y no payments without strong approval.
 - Permite: proponer precios, checkouts, métricas y tracking financiero.
@@ -297,6 +312,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 - Approval: pagos, checkouts, gastos, contratos y datos financieros requieren strong approval.
 
 ### Phase O - Daily Operator / Scheduler
+
+Estado: foundation prepare-only completada; scheduling y ejecución recurrente reales pendientes.
 
 - Objetivo: operar el día con planes, reportes y colas de aprobación.
 - Incluye: daily mission loop, morning plan, evening report, stop conditions, retry logic, notifications, approval queue y weekly review.
@@ -308,6 +325,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 
 ### Phase P - Continuous Learning / Tech Radar
 
+Estado: foundation prepare-only completada; investigación externa y aplicación real de cambios pendientes.
+
 - Objetivo: mantener JARVIS actualizado sin auto-modificación.
 - Incluye: tech radar, relevance filter, contrarian review, proposal creation, approval workflow, PR planner, no auto-update, no auto-install y no auto-deploy.
 - Permite: investigar, filtrar, proponer y planificar PRs.
@@ -317,6 +336,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 - Approval: aplicar cambios, instalar dependencias o modificar runtime requiere approval; producción/credenciales requieren strong approval.
 
 ### Phase Q - Personal OS / Environment Intelligence
+
+Estado: foundation prepare-only completada; lectura de fuentes y awareness real pendientes.
 
 - Objetivo: coordinar contexto, atención, entorno y rutinas de David.
 - Incluye: PC state awareness, calendar/email/doc awareness with approval, local files scope, context switching, attention protection, environment signals, personal routines y energy/focus support.
@@ -328,6 +349,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 
 ### Phase R - Advanced Personalization / User Model
 
+Estado: foundation prepare-only completada; aprendizaje y memoria real pendientes.
+
 - Objetivo: aprender cómo piensa, habla, decide y monetiza David de forma explícita.
 - Incluye: David understanding, preferences, speech patterns, business goals, contrarian mode, memory proposals, approved/reversible memory, uncertainty handling y no opaque learning.
 - Permite: memoria aprobada, tono adaptativo, preferencias y mejores decisiones.
@@ -337,6 +360,8 @@ Estado: foundation completada en modo prepare-only; distribución, cuentas y eje
 - Approval: memoria puede orientar; nunca autoriza acciones sensibles.
 
 ### Phase S - Future/Moonshot Layer
+
+Estado: foundation prepare-only completada. Es la última fase maestra implementada del mapa actual; no existe Phase T aprobada.
 
 - Objetivo: explorar capacidades avanzadas sin saltarse seguridad.
 - Incluye: smart glasses deeper integration, AR overlays, robotics/drones only if safe/legal, deep simulation, physical-world automation y always with safety and approval.
@@ -400,19 +425,31 @@ Debe separar:
 
 JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medir señales. Nunca debe prometer ingresos garantizados ni tratar proyecciones como dinero confirmado.
 
-## Orden Inmediato Recomendado
+## Estado después de Phase S
 
-Orden conceptual actualizado durante Phase G:
+- Phase A-Phase S están cerradas como foundations del mapa maestro actual.
+- Phase S es la última fase maestra implementada.
+- No existe una siguiente fase maestra aprobada ni una Phase T implícita.
+- El cierre de las fases no activa ejecución real: los límites prepare-only, approvals, strong approval, privacidad, sandbox y auditoría siguen vigentes.
+- Wake Phrase, Voz y Cámara; Herramientas Externas; y Monetización son áreas transversales/post-fase. No deben convertirse en una nueva fase sin una decisión explícita y una actualización previa de este mapa.
 
-1. PR #79 - Mission Approval Bridge v1. Mergeado.
-2. PR #80 - Mission Safety Baseline Gate v1. Mergeado.
-3. PR #81 - Complete Phase B remaining bridges/guards. Mergeado.
-4. PR #82 - Hermes Runtime Bridge Contract. Mergeado.
-5. PRs #93-#94 - Command Center foundation. Mergeadas.
-6. PRs #95-#97 - Voice Companion foundation. Mergeadas.
-7. PR #98 - Mobile Companion foundation. Mergeado.
-8. PR #99 - Operator Console Foundation como extensión de Command Center / operator layer. Mergeado; no es Phase G maestra.
-9. Phase G - Ambient Vision / Camera Companion foundation prepare-only completada.
-10. Siguiente fase maestra recomendada - Phase H: Multi-device Runtime.
+## Siguientes trabajos recomendados no-fase
 
-Los números pueden ajustarse si el repo cambia su secuencia, pero el orden conceptual debe mantenerse: approvals, safety, policy bridge y budget guard antes de revenue execution, y Hermes bridge antes de ejecución real.
+Backlog seguro posterior a Phase S:
+
+1. Roadmap alignment / documentation refresh para mantener mapa, handoff y estado real sincronizados.
+2. End-to-end smoke validation de los flujos prepare-only y sus límites de seguridad.
+3. Operator Console UX consolidation sin habilitar rutas de ejecución ni aprobación.
+4. Real approval workflow hardening antes de conectar cualquier side effect.
+5. Runtime execution bridge solo después de aprobación explícita, policy aplicable, strong approval cuando corresponda, auditoría y rollback.
+6. Wake phrase / voice / camera como trabajo futuro controlado, opt-in y con privacidad visible.
+7. External tools evaluation mediante un pipeline de herramientas no confiables antes de instalar, ejecutar o adoptar.
+8. Monetization engine hardening sin claims falsos de revenue ni confusión entre proyección y resultado real.
+
+Criterios obligatorios:
+
+- No crear nuevas fases sin actualizar primero este mapa maestro y registrar la decisión explícita.
+- No pasar de prepare-only a ejecución real sin approval y strong approval cuando aplique.
+- No ejecutar revenue ni afirmar resultados sin separar `projected`, `confirmed`, `gross`, `expenses` y `net`.
+- No instalar, ejecutar ni adoptar herramientas externas sin evaluar licencia, seguridad, permisos y valor.
+- No habilitar cámara o voz continua sin indicador visible, stop inmediato y controles de privacidad.
