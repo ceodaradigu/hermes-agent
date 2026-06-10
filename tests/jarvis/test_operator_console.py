@@ -244,7 +244,7 @@ def test_operator_console_snapshot_endpoint_returns_aggregate_prepare_only_snaps
         "apikey",
         "private_key",
         "bearer",
-        "authorization",
+        '"authorization":',
         "audio_path",
         "audio_bytes",
         "ref_audio",

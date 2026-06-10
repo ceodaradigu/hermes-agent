@@ -9,6 +9,11 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStopControl,
 )
 from jarvis.asset_factory.foundation import AssetFactoryStatus, AssetGenerationPolicy
+from jarvis.advanced_personalization.foundation import (
+    AdvancedPersonalizationStatus,
+    MemoryProposalPreview,
+    UserModelSafetyPolicy,
+)
 from jarvis.command_center import CommandCenterViewModel, build_command_center_view_model
 from jarvis.continuous_learning.foundation import (
     ContinuousLearningStatus,
@@ -165,6 +170,9 @@ class OperatorConsoleCapabilityMatrix:
     read_personal_os_status: bool = True
     read_personal_os_privacy_policy: bool = True
     preview_personal_os_context: bool = True
+    read_advanced_personalization_status: bool = True
+    read_user_model_safety_policy: bool = True
+    preview_memory_proposal: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -228,6 +236,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_personal_os_status": True,
             "read_personal_os_privacy_policy": True,
             "preview_personal_os_context": True,
+            "read_advanced_personalization_status": True,
+            "read_user_model_safety_policy": True,
+            "preview_memory_proposal": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -445,6 +456,9 @@ class OperatorConsoleSnapshot:
     learning_backlog_readiness: LearningBacklogPreview = field(default_factory=LearningBacklogPreview)
     personal_os_status: PersonalOSEnvironmentStatus = field(default_factory=PersonalOSEnvironmentStatus.placeholder)
     personal_os_privacy_policy: PersonalOSPrivacyPolicy = field(default_factory=PersonalOSPrivacyPolicy.placeholder)
+    advanced_personalization_status: AdvancedPersonalizationStatus = field(default_factory=AdvancedPersonalizationStatus.placeholder)
+    user_model_safety_policy: UserModelSafetyPolicy = field(default_factory=UserModelSafetyPolicy.placeholder)
+    memory_proposal_readiness: MemoryProposalPreview = field(default_factory=MemoryProposalPreview)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -615,6 +629,24 @@ class OperatorConsoleSnapshot:
                 "personal_os_privacy_policy",
                 PersonalOSPrivacyPolicy.from_dict(self.personal_os_privacy_policy),
             )
+        if isinstance(self.advanced_personalization_status, dict):
+            object.__setattr__(
+                self,
+                "advanced_personalization_status",
+                AdvancedPersonalizationStatus.from_dict(self.advanced_personalization_status),
+            )
+        if isinstance(self.user_model_safety_policy, dict):
+            object.__setattr__(
+                self,
+                "user_model_safety_policy",
+                UserModelSafetyPolicy.from_dict(self.user_model_safety_policy),
+            )
+        if isinstance(self.memory_proposal_readiness, dict):
+            object.__setattr__(
+                self,
+                "memory_proposal_readiness",
+                MemoryProposalPreview.from_dict(self.memory_proposal_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -661,6 +693,9 @@ class OperatorConsoleSnapshot:
             learning_backlog_readiness=LearningBacklogPreview.from_dict(source.get("learning_backlog_readiness")),
             personal_os_status=PersonalOSEnvironmentStatus.from_dict(source.get("personal_os_status")),
             personal_os_privacy_policy=PersonalOSPrivacyPolicy.from_dict(source.get("personal_os_privacy_policy")),
+            advanced_personalization_status=AdvancedPersonalizationStatus.from_dict(source.get("advanced_personalization_status")),
+            user_model_safety_policy=UserModelSafetyPolicy.from_dict(source.get("user_model_safety_policy")),
+            memory_proposal_readiness=MemoryProposalPreview.from_dict(source.get("memory_proposal_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -701,6 +736,9 @@ class OperatorConsoleSnapshot:
             "learning_backlog_readiness": self.learning_backlog_readiness.to_dict(),
             "personal_os_status": self.personal_os_status.to_dict(),
             "personal_os_privacy_policy": self.personal_os_privacy_policy.to_dict(),
+            "advanced_personalization_status": self.advanced_personalization_status.to_dict(),
+            "user_model_safety_policy": self.user_model_safety_policy.to_dict(),
+            "memory_proposal_readiness": self.memory_proposal_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -726,6 +764,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "daily_operator_scheduler": "prepare_only",
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
+            "advanced_personalization_user_model": "prepare_only",
         },
     )
 
@@ -764,6 +803,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "daily_operator_scheduler": "prepare_only",
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
+            "advanced_personalization_user_model": "prepare_only",
         },
     )
 
@@ -803,6 +843,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "daily_operator_scheduler": "prepare_only",
         "continuous_learning_tech_radar": "prepare_only",
         "personal_os_environment_intelligence": "prepare_only",
+        "advanced_personalization_user_model": "prepare_only",
     }
     return safe
 
