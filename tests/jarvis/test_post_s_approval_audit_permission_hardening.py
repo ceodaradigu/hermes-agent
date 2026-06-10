@@ -71,7 +71,7 @@ def test_status_is_post_s_prepare_only_without_phase_t_or_runtime():
     assert status["no_phase_t"] is True
     assert status["runtime_execution_enabled"] is False
     assert status["side_effects_enabled"] is False
-    assert NEXT_MACRO_PR == "Post-S Macro 3 - Controlled Runtime Execution Bridge"
+    assert NEXT_MACRO_PR == "Post-S Macro 4 - Real Connectors & Tool Execution Layer"
 
 
 def test_approval_request_starts_pending_and_approved_record_executes_nothing():

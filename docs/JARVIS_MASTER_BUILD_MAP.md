@@ -441,10 +441,11 @@ Backlog seguro posterior a Phase S:
 2. End-to-end smoke validation de los flujos prepare-only y sus límites de seguridad.
 3. Operator Console UX consolidation sin habilitar rutas de ejecución ni aprobación.
 4. Real approval workflow hardening antes de conectar cualquier side effect. Completado como Post-S Macro 2 en modo prepare-only.
-5. Controlled Runtime Execution Bridge como siguiente macro recomendada, solo después de aprobación explícita, policy aplicable, strong approval cuando corresponda, auditoría y rollback.
-6. Wake phrase / voice / camera como trabajo futuro controlado, opt-in y con privacidad visible.
-7. External tools evaluation mediante un pipeline de herramientas no confiables antes de instalar, ejecutar o adoptar.
-8. Monetization engine hardening sin claims falsos de revenue ni confusión entre proyección y resultado real.
+5. Controlled Runtime Execution Bridge completado como Post-S Macro 3 en modo prepare-only, con dry-run, sandbox requirements, rollback, policy, approvals, permission gates y readiness explícita sin ejecución.
+6. Real Connectors & Tool Execution Layer como siguiente macro recomendada, solo tras revisión explícita del bridge controlado y sin degradar sus gates.
+7. Wake phrase / voice / camera como trabajo futuro controlado, opt-in y con privacidad visible.
+8. External tools evaluation mediante un pipeline de herramientas no confiables antes de instalar, ejecutar o adoptar.
+9. Monetization engine hardening sin claims falsos de revenue ni confusión entre proyección y resultado real.
 
 Criterios obligatorios:
 

@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
-NEXT_MACRO_PR = "Post-S Macro 3 - Controlled Runtime Execution Bridge"
+NEXT_MACRO_PR = "Post-S Macro 4 - Real Connectors & Tool Execution Layer"
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,14 @@ class OperationalSystemStatus:
     approval_audit_available: bool = True
     strong_approval_policy_available: bool = True
     permission_gates_available: bool = True
+    controlled_runtime_bridge_available: bool = True
+    dry_run_required: bool = True
+    sandbox_required: bool = True
+    rollback_required_for_side_effects: bool = True
+    permission_gates_enforced: bool = True
+    approval_gates_enforced: bool = True
+    strong_approval_enforced: bool = True
+    safe_to_execute_is_readiness_only: bool = True
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
 
@@ -41,6 +49,14 @@ class OperationalSystemStatus:
             "approval_audit_available",
             "strong_approval_policy_available",
             "permission_gates_available",
+            "controlled_runtime_bridge_available",
+            "dry_run_required",
+            "sandbox_required",
+            "rollback_required_for_side_effects",
+            "permission_gates_enforced",
+            "approval_gates_enforced",
+            "strong_approval_enforced",
+            "safe_to_execute_is_readiness_only",
         ):
             object.__setattr__(self, name, True)
         for name in (
@@ -317,11 +333,19 @@ def build_command_center_system_map() -> Dict[str, Any]:
             "permission_gates": "prepare_only",
             "context_fingerprint": "prepare_only",
             "side_effect_gate_readiness": "prepare_only",
+            "post_s_controlled_runtime_bridge": "prepare_only",
+            "dry_run_bridge": "prepare_only",
+            "sandbox_requirements": "prepare_only",
+            "rollback_plan": "prepare_only",
+            "runtime_permission_gate": "prepare_only",
+            "runtime_approval_gate": "prepare_only",
+            "safe_to_execute_readiness_only": "prepare_only",
+            "runtime_execution_disabled": "prepare_only",
         },
         "safe_next_steps": [
             "review consolidated capability and readiness evidence",
             NEXT_MACRO_PR,
-            "retain prepare-only defaults until the controlled runtime bridge is explicitly reviewed",
+            "retain prepare-only defaults until real connectors and tool execution are explicitly reviewed",
         ],
     }
 
@@ -344,8 +368,8 @@ def build_operational_console_summary() -> Dict[str, Any]:
         "visible_reasons": [
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
             "No Phase T exists or is implied.",
-            "Approval, audit, and permission hardening must precede real execution.",
-            "Post-S Macro 2 provides that hardening without enabling execution.",
+            "Approval, audit, permission, sandbox, dry-run, and rollback gates precede real execution.",
+            "Post-S Macro 3 provides controlled runtime readiness without enabling execution.",
         ],
         "command_center": build_command_center_system_map(),
     }
