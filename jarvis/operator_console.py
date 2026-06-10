@@ -26,6 +26,11 @@ from jarvis.deploy_publishing.foundation import (
     PublishingReadinessChecklist,
 )
 from jarvis.daily_operator.scheduler import DailyOperatorSchedulerStatus, SchedulerSafetyPolicy
+from jarvis.future_moonshot.foundation import (
+    FutureMoonshotStatus,
+    MoonshotCapabilityPreview,
+    MoonshotSafetyPolicy,
+)
 from jarvis.mobile.companion import (
     MobileCommandCenterSnapshot,
     MobileCompanionPermissionPolicy,
@@ -173,6 +178,9 @@ class OperatorConsoleCapabilityMatrix:
     read_advanced_personalization_status: bool = True
     read_user_model_safety_policy: bool = True
     preview_memory_proposal: bool = True
+    read_future_moonshot_status: bool = True
+    read_moonshot_safety_policy: bool = True
+    preview_moonshot_capability: bool = True
     execute_mission: bool = False
     approve: bool = False
     reject: bool = False
@@ -239,6 +247,9 @@ class OperatorConsoleCapabilityMatrix:
             "read_advanced_personalization_status": True,
             "read_user_model_safety_policy": True,
             "preview_memory_proposal": True,
+            "read_future_moonshot_status": True,
+            "read_moonshot_safety_policy": True,
+            "preview_moonshot_capability": True,
             "execute_mission": False,
             "approve": False,
             "reject": False,
@@ -459,6 +470,9 @@ class OperatorConsoleSnapshot:
     advanced_personalization_status: AdvancedPersonalizationStatus = field(default_factory=AdvancedPersonalizationStatus.placeholder)
     user_model_safety_policy: UserModelSafetyPolicy = field(default_factory=UserModelSafetyPolicy.placeholder)
     memory_proposal_readiness: MemoryProposalPreview = field(default_factory=MemoryProposalPreview)
+    future_moonshot_status: FutureMoonshotStatus = field(default_factory=FutureMoonshotStatus.placeholder)
+    moonshot_safety_policy: MoonshotSafetyPolicy = field(default_factory=MoonshotSafetyPolicy.placeholder)
+    moonshot_readiness: MoonshotCapabilityPreview = field(default_factory=MoonshotCapabilityPreview)
     capability_matrix: OperatorConsoleCapabilityMatrix = field(default_factory=OperatorConsoleCapabilityMatrix.placeholder)
     safety_summary: OperatorSafetySummary = field(default_factory=OperatorSafetySummary.placeholder)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -647,6 +661,24 @@ class OperatorConsoleSnapshot:
                 "memory_proposal_readiness",
                 MemoryProposalPreview.from_dict(self.memory_proposal_readiness),
             )
+        if isinstance(self.future_moonshot_status, dict):
+            object.__setattr__(
+                self,
+                "future_moonshot_status",
+                FutureMoonshotStatus.from_dict(self.future_moonshot_status),
+            )
+        if isinstance(self.moonshot_safety_policy, dict):
+            object.__setattr__(
+                self,
+                "moonshot_safety_policy",
+                MoonshotSafetyPolicy.from_dict(self.moonshot_safety_policy),
+            )
+        if isinstance(self.moonshot_readiness, dict):
+            object.__setattr__(
+                self,
+                "moonshot_readiness",
+                MoonshotCapabilityPreview.from_dict(self.moonshot_readiness),
+            )
         if isinstance(self.capability_matrix, dict):
             object.__setattr__(
                 self,
@@ -696,6 +728,9 @@ class OperatorConsoleSnapshot:
             advanced_personalization_status=AdvancedPersonalizationStatus.from_dict(source.get("advanced_personalization_status")),
             user_model_safety_policy=UserModelSafetyPolicy.from_dict(source.get("user_model_safety_policy")),
             memory_proposal_readiness=MemoryProposalPreview.from_dict(source.get("memory_proposal_readiness")),
+            future_moonshot_status=FutureMoonshotStatus.from_dict(source.get("future_moonshot_status")),
+            moonshot_safety_policy=MoonshotSafetyPolicy.from_dict(source.get("moonshot_safety_policy")),
+            moonshot_readiness=MoonshotCapabilityPreview.from_dict(source.get("moonshot_readiness")),
             capability_matrix=OperatorConsoleCapabilityMatrix.from_dict(source.get("capability_matrix")),
             safety_summary=OperatorSafetySummary.from_dict(source.get("safety_summary")),
             metadata=dict(source.get("metadata") or {}),
@@ -739,6 +774,9 @@ class OperatorConsoleSnapshot:
             "advanced_personalization_status": self.advanced_personalization_status.to_dict(),
             "user_model_safety_policy": self.user_model_safety_policy.to_dict(),
             "memory_proposal_readiness": self.memory_proposal_readiness.to_dict(),
+            "future_moonshot_status": self.future_moonshot_status.to_dict(),
+            "moonshot_safety_policy": self.moonshot_safety_policy.to_dict(),
+            "moonshot_readiness": self.moonshot_readiness.to_dict(),
             "capability_matrix": self.capability_matrix.to_dict(),
             "safety_summary": self.safety_summary.to_dict(),
             "metadata": dict(self.metadata),
@@ -765,6 +803,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
+            "future_moonshot_layer": "prepare_only",
         },
     )
 
@@ -804,6 +843,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
+            "future_moonshot_layer": "prepare_only",
         },
     )
 
@@ -844,6 +884,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "continuous_learning_tech_radar": "prepare_only",
         "personal_os_environment_intelligence": "prepare_only",
         "advanced_personalization_user_model": "prepare_only",
+        "future_moonshot_layer": "prepare_only",
     }
     return safe
 

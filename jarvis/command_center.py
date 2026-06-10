@@ -948,6 +948,7 @@ def build_command_center_view_model(
             "continuous_learning_tech_radar": "prepare_only",
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
+            "future_moonshot_layer": "prepare_only",
         },
     )
 

@@ -85,6 +85,23 @@ from jarvis.daily_operator.scheduler import (
     SchedulerSafetyPolicy,
     TaskQueuePreview,
 )
+from jarvis.future_moonshot.foundation import (
+    AROverlayPreview,
+    ControlledEnvironmentPreview,
+    DeepSimulationPreview,
+    FutureMoonshotStatus,
+    IdentityImpersonationGuardPreview,
+    ImmediateStopPreview,
+    LegalSafetyReviewPreview,
+    MonetizationAdvantageReviewPreview,
+    MoonshotApprovalRequirements,
+    MoonshotAuditRollbackPreview,
+    MoonshotCapabilityPreview,
+    MoonshotSafetyPolicy,
+    PhysicalWorldAutomationPreview,
+    RoboticsDroneSafetyReviewPreview,
+    SmartGlassesIntegrationPreview,
+)
 from jarvis.mission_control import MissionControl
 from jarvis.marketing_distribution.foundation import (
     AudienceSegmentPreview,
@@ -769,6 +786,88 @@ class PersonalOSPreviewRequest(BaseModel):
     secrets_requested: bool = False
 
 
+class FutureMoonshotPreviewRequest(BaseModel):
+    capability_name: Optional[str] = None
+    capability_type: str = "unknown"
+    concept_summary: Optional[str] = None
+    intended_value: Optional[str] = None
+    monetization_or_efficiency_hypothesis: Optional[str] = None
+    device_name: Optional[str] = None
+    integration_goal: Optional[str] = None
+    data_inputs_preview: Optional[List[str]] = None
+    output_modes_preview: Optional[List[str]] = None
+    overlay_name: Optional[str] = None
+    overlay_goal: Optional[str] = None
+    display_context: Optional[str] = None
+    data_sources_preview: Optional[List[str]] = None
+    system_name: Optional[str] = None
+    system_type: str = "unknown"
+    intended_use: Optional[str] = None
+    simulation_name: Optional[str] = None
+    simulation_goal: Optional[str] = None
+    simulated_domain: Optional[str] = None
+    assumptions: Optional[List[str]] = None
+    limits: Optional[List[str]] = None
+    failure_modes: Optional[List[str]] = None
+    automation_name: Optional[str] = None
+    target_environment: Optional[str] = None
+    intended_action: Optional[str] = None
+    safety_controls: Optional[List[str]] = None
+    stop_plan: Optional[str] = None
+    rollback_plan: Optional[Any] = None
+    review_subject: Optional[str] = None
+    legal_questions: Optional[List[str]] = None
+    safety_questions: Optional[List[str]] = None
+    required_evidence: Optional[List[str]] = None
+    jurisdiction: Optional[str] = None
+    environment_name: Optional[str] = None
+    isolation_level: Optional[str] = None
+    allowed_capabilities: Optional[List[str]] = None
+    blocked_capabilities: Optional[List[str]] = None
+    stop_name: Optional[str] = None
+    stop_scope: Optional[List[str]] = None
+    stop_triggers: Optional[List[str]] = None
+    automatic_stop_preview: Optional[List[str]] = None
+    subject: Optional[str] = None
+    audit_events_preview: Optional[List[str]] = None
+    evidence_required: Optional[List[str]] = None
+    idea_name: Optional[str] = None
+    claimed_advantage: Optional[str] = None
+    practical_value: Optional[str] = None
+    revenue_or_efficiency_path: Optional[str] = None
+    evidence_needed: Optional[List[str]] = None
+    scenario_name: Optional[str] = None
+    prohibited_impersonation_actions: Optional[List[str]] = None
+    allowed_safe_summary: Optional[str] = None
+    spectacle_risk: str = "unknown"
+    safety_risk: str = "unknown"
+    legal_risk: str = "unknown"
+    identity_risk: str = "unknown"
+    privacy_risk: str = "unknown"
+    always_on_risk: str = "unknown"
+    bystander_privacy_risk: str = "unknown"
+    distraction_risk: str = "unknown"
+    physical_world_dependency: Optional[str] = None
+    bystander_safety_risk: str = "unknown"
+    property_damage_risk: str = "unknown"
+    physical_risk: str = "unknown"
+    impersonation_risk: str = "unknown"
+    warnings: Optional[List[str]] = None
+    physical_requested: bool = False
+    legal_requested: bool = False
+    identity_requested: bool = False
+    money_requested: bool = False
+    safety_requested: bool = False
+    camera_requested: bool = False
+    microphone_requested: bool = False
+    screen_requested: bool = False
+    surveillance_requested: bool = False
+    external_device_requested: bool = False
+    robotics_requested: bool = False
+    drones_requested: bool = False
+    ar_overlay_requested: bool = False
+
+
 class VoiceRuntimeFeedbackRequest(BaseModel):
     original_text: str
     interpreted_intent: Optional[str] = None
@@ -977,6 +1076,7 @@ def create_app(
                 "daily_operator_scheduler": "prepare_only",
                 "continuous_learning_tech_radar": "prepare_only",
                 "advanced_personalization_user_model": "prepare_only",
+                "future_moonshot_layer": "prepare_only",
             },
         )
         return view.to_dict()
@@ -1088,6 +1188,66 @@ def create_app(
     @app.post("/personalization/approval-requirements")
     def personalization_approval_requirements(payload: PersonalizationPreviewRequest) -> dict:
         return PersonalizationApprovalRequirements.from_request(payload.model_dump()).to_dict()
+
+    @app.get("/future-moonshot/status")
+    def future_moonshot_status() -> dict:
+        return FutureMoonshotStatus.placeholder().to_dict()
+
+    @app.get("/future-moonshot/policy")
+    def future_moonshot_policy() -> dict:
+        return MoonshotSafetyPolicy.placeholder().to_dict()
+
+    @app.post("/future-moonshot/capability-preview")
+    def future_moonshot_capability_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return MoonshotCapabilityPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/smart-glasses-preview")
+    def future_moonshot_smart_glasses_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return SmartGlassesIntegrationPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/ar-overlay-preview")
+    def future_moonshot_ar_overlay_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return AROverlayPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/robotics-drone-safety-review")
+    def future_moonshot_robotics_drone_safety_review(payload: FutureMoonshotPreviewRequest) -> dict:
+        return RoboticsDroneSafetyReviewPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/deep-simulation-preview")
+    def future_moonshot_deep_simulation_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return DeepSimulationPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/physical-automation-preview")
+    def future_moonshot_physical_automation_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return PhysicalWorldAutomationPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/legal-safety-review")
+    def future_moonshot_legal_safety_review(payload: FutureMoonshotPreviewRequest) -> dict:
+        return LegalSafetyReviewPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/controlled-environment-preview")
+    def future_moonshot_controlled_environment_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return ControlledEnvironmentPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/immediate-stop-preview")
+    def future_moonshot_immediate_stop_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return ImmediateStopPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/audit-rollback-preview")
+    def future_moonshot_audit_rollback_preview(payload: FutureMoonshotPreviewRequest) -> dict:
+        return MoonshotAuditRollbackPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/monetization-advantage-review")
+    def future_moonshot_monetization_advantage_review(payload: FutureMoonshotPreviewRequest) -> dict:
+        return MonetizationAdvantageReviewPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/identity-impersonation-guard")
+    def future_moonshot_identity_impersonation_guard(payload: FutureMoonshotPreviewRequest) -> dict:
+        return IdentityImpersonationGuardPreview.from_request(payload.model_dump()).to_dict()
+
+    @app.post("/future-moonshot/approval-requirements")
+    def future_moonshot_approval_requirements(payload: FutureMoonshotPreviewRequest) -> dict:
+        return MoonshotApprovalRequirements.from_request(payload.model_dump()).to_dict()
 
     @app.get("/personal-os/status")
     def personal_os_status() -> dict:
