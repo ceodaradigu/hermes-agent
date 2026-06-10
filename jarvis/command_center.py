@@ -17,6 +17,7 @@ from jarvis.missions.dry_run import MissionDryRunRiskLevel
 from jarvis.missions.hermes_bridge import HermesAgentDescriptor, HermesCommandPayload
 from jarvis.missions.state_store import MissionState, MissionStatus
 from jarvis.multidevice.runtime import MultiDeviceRuntimeStatus
+from jarvis.operational_consolidation import build_command_center_system_map
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
     VoiceCompanionIntentPreview,
@@ -949,6 +950,7 @@ def build_command_center_view_model(
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
             "future_moonshot_layer": "prepare_only",
+            **build_command_center_system_map(),
         },
     )
 

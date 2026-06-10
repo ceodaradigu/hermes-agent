@@ -149,7 +149,14 @@ from jarvis.operator_console import (
     OperatorConsoleCapabilityMatrix,
     OperatorConsolePreview,
     OperatorConsoleStatus,
+    build_operational_console_summary,
     build_operator_console_snapshot,
+)
+from jarvis.operational_consolidation import (
+    build_capability_registry_view,
+    build_operational_system_status,
+    build_readiness_matrix_view,
+    build_safety_boundary_summary,
 )
 from jarvis.personal_os.foundation import (
     AttentionProtectionPreview,
@@ -1055,6 +1062,26 @@ def create_app(
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.get("/operational/status")
+    def operational_status() -> dict:
+        return build_operational_system_status().to_dict()
+
+    @app.get("/operational/capabilities")
+    def operational_capabilities() -> dict:
+        return build_capability_registry_view().to_dict()
+
+    @app.get("/operational/readiness")
+    def operational_readiness() -> dict:
+        return build_readiness_matrix_view().to_dict()
+
+    @app.get("/operational/safety-boundaries")
+    def operational_safety_boundaries() -> dict:
+        return build_safety_boundary_summary().to_dict()
+
+    @app.get("/operational/console-summary")
+    def operational_console_summary() -> dict:
+        return build_operational_console_summary()
 
     @app.get("/command-center")
     def command_center() -> dict:

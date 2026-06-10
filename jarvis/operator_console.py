@@ -43,6 +43,7 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
 )
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
+from jarvis.operational_consolidation import build_operational_console_summary as _build_operational_console_summary
 from jarvis.payments_revenue.foundation import (
     FinancialRiskGuardPreview,
     PaymentsRevenuePolicy,
@@ -94,6 +95,11 @@ _SENSITIVE_MARKERS = (
     "tarjeta",
     "token",
 )
+
+
+def build_operational_console_summary() -> Dict[str, Any]:
+    """Return the post-S read-only operational consolidation view."""
+    return _build_operational_console_summary()
 
 
 @dataclass(frozen=True)
@@ -823,6 +829,11 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
         metadata={
             "phase": "G",
             "source": "operator_console_snapshot",
+            "post_s_operational_consolidation": True,
+            "global_readiness": "foundation_complete_prepare_only",
+            "phase_range": "A-S",
+            "last_master_phase": "Phase S",
+            "no_phase_t": True,
             "prepare_only": True,
             "frontend_available": False,
             "websocket_enabled": False,
