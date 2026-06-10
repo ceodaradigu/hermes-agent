@@ -258,4 +258,5 @@ def test_post_s_operational_consolidation_docs_keep_no_phase_t_and_next_macro_pr
     assert "Post-S Macro 2" in content
     assert "Post-S Macro 3" in content
     assert "Controlled Runtime Execution Bridge" in content
+    assert "Post-S Macro 4" in content
     assert "test_e2e_prepare_only_smoke_after_phase_s.py" in content

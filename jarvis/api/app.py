@@ -46,6 +46,7 @@ from jarvis.ambient_vision.companion import (
 )
 from jarvis.approval_hardening import ApprovalHardeningService, StrongApprovalPolicy
 from jarvis.command_center import build_command_center_view_model
+from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
 from jarvis.continuous_learning.foundation import (
     ApprovalWorkflowPreview,
     ContinuousLearningStatus,
@@ -286,6 +287,36 @@ class ApprovalDecisionPreviewRequest(BaseModel):
 class ApprovalGatePreviewRequest(BaseModel):
     approval_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+
+
+class RuntimePreviewRequest(BaseModel):
+    request_id: Optional[str] = None
+    action_type: str = ""
+    target: str = ""
+    scope: Optional[List[str]] = None
+    command: Optional[str] = None
+    tool_name: Optional[str] = None
+    payload_summary: Optional[Dict[str, Any]] = None
+    environment: str = "preview"
+    production: bool = False
+    external_call: bool = False
+    secrets: bool = False
+    filesystem_write: bool = False
+    network_access: bool = False
+    side_effects: bool = False
+    persistent_changes: bool = False
+    requested_by: str = "jarvis"
+    reason: str = ""
+    approval_id: Optional[str] = None
+    policy_allowed: bool = False
+    sandbox_available: bool = False
+    filesystem_scope_present: bool = False
+    network_allowed: bool = False
+    secrets_authorized: bool = False
+    timeout_present: bool = False
+    rollback_available: bool = False
+    rollback_steps: Optional[List[str]] = None
+    rollback_notes: str = ""
 
 
 class PersonalizationPreviewRequest(BaseModel):
@@ -1072,6 +1103,9 @@ def create_app(
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.approval_hardening = ApprovalHardeningService()
+    app.state.controlled_runtime_bridge = ControlledRuntimeBridge(
+        audit_trail=app.state.approval_hardening.audit_trail,
+    )
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1149,6 +1183,85 @@ def create_app(
             payload.context or {},
             approval,
             audit_trail=app.state.approval_hardening.audit_trail,
+        ).to_dict()
+
+    def runtime_request(payload: RuntimePreviewRequest):
+        values = payload.model_dump(
+            exclude={
+                "approval_id",
+                "policy_allowed",
+                "sandbox_available",
+                "filesystem_scope_present",
+                "network_allowed",
+                "secrets_authorized",
+                "timeout_present",
+                "rollback_available",
+                "rollback_steps",
+                "rollback_notes",
+            }
+        )
+        values["request_id"] = values["request_id"] or str(uuid4())
+        values["scope"] = values["scope"] or []
+        values["payload_summary"] = values["payload_summary"] or {}
+        return app.state.controlled_runtime_bridge.prepare_request(**values)
+
+    @app.get("/runtime/status")
+    def runtime_status() -> dict:
+        return app.state.controlled_runtime_bridge.status()
+
+    @app.get("/runtime/policy")
+    def runtime_policy() -> dict:
+        return app.state.controlled_runtime_bridge.policy()
+
+    @app.post("/runtime/preview-plan")
+    def runtime_preview_plan(payload: RuntimePreviewRequest) -> dict:
+        return runtime_request(payload).to_dict()
+
+    @app.post("/runtime/preview-dry-run")
+    def runtime_preview_dry_run(payload: RuntimePreviewRequest) -> dict:
+        return app.state.controlled_runtime_bridge.preview_dry_run(runtime_request(payload)).to_dict()
+
+    @app.post("/runtime/preview-rollback")
+    def runtime_preview_rollback(payload: RuntimePreviewRequest) -> dict:
+        return app.state.controlled_runtime_bridge.preview_rollback(
+            runtime_request(payload),
+            rollback_available=payload.rollback_available,
+            rollback_steps=payload.rollback_steps,
+            rollback_notes=payload.rollback_notes,
+        ).to_dict()
+
+    @app.post("/runtime/preview-gate")
+    def runtime_preview_gate(payload: RuntimePreviewRequest) -> dict:
+        request = runtime_request(payload)
+        approval = None
+        if payload.approval_id:
+            try:
+                approval = app.state.approval_hardening.get(payload.approval_id)
+                app.state.approval_hardening.refresh_expiration(approval)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        dry_run = app.state.controlled_runtime_bridge.preview_dry_run(request)
+        sandbox = app.state.controlled_runtime_bridge.preview_sandbox(
+            request,
+            sandbox_available=payload.sandbox_available,
+            filesystem_scope_present=payload.filesystem_scope_present,
+            network_allowed=payload.network_allowed,
+            secrets_authorized=payload.secrets_authorized,
+            timeout_present=payload.timeout_present,
+        )
+        rollback = app.state.controlled_runtime_bridge.preview_rollback(
+            request,
+            rollback_available=payload.rollback_available,
+            rollback_steps=payload.rollback_steps,
+            rollback_notes=payload.rollback_notes,
+        )
+        return app.state.controlled_runtime_bridge.preview_gate(
+            request,
+            dry_run=dry_run,
+            sandbox=sandbox,
+            rollback=rollback,
+            approval=approval,
+            policy_allowed=payload.policy_allowed,
         ).to_dict()
 
     @app.get("/command-center")

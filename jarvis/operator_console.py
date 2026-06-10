@@ -816,6 +816,14 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "permission_gates": "prepare_only",
             "context_fingerprint": "prepare_only",
             "side_effect_gate_readiness": "prepare_only",
+            "post_s_controlled_runtime_bridge": "prepare_only",
+            "dry_run_bridge": "prepare_only",
+            "sandbox_requirements": "prepare_only",
+            "rollback_plan": "prepare_only",
+            "runtime_permission_gate": "prepare_only",
+            "runtime_approval_gate": "prepare_only",
+            "safe_to_execute_readiness_only": "prepare_only",
+            "runtime_execution_disabled": "prepare_only",
         },
     )
 
@@ -867,6 +875,14 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "permission_gates": "prepare_only",
             "context_fingerprint": "prepare_only",
             "side_effect_gate_readiness": "prepare_only",
+            "post_s_controlled_runtime_bridge": "prepare_only",
+            "dry_run_bridge": "prepare_only",
+            "sandbox_requirements": "prepare_only",
+            "rollback_plan": "prepare_only",
+            "runtime_permission_gate": "prepare_only",
+            "runtime_approval_gate": "prepare_only",
+            "safe_to_execute_readiness_only": "prepare_only",
+            "runtime_execution_disabled": "prepare_only",
         },
     )
 
@@ -914,6 +930,14 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "permission_gates": "prepare_only",
         "context_fingerprint": "prepare_only",
         "side_effect_gate_readiness": "prepare_only",
+        "post_s_controlled_runtime_bridge": "prepare_only",
+        "dry_run_bridge": "prepare_only",
+        "sandbox_requirements": "prepare_only",
+        "rollback_plan": "prepare_only",
+        "runtime_permission_gate": "prepare_only",
+        "runtime_approval_gate": "prepare_only",
+        "safe_to_execute_readiness_only": "prepare_only",
+        "runtime_execution_disabled": "prepare_only",
     }
     return safe
 

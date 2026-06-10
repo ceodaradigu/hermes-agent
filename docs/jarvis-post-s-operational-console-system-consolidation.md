@@ -63,9 +63,10 @@ La matriz diferencia explícitamente:
 - falta de readiness para ejecución real;
 - requisitos pendientes, approvals, riesgo y siguiente paso seguro.
 
-Ninguna capacidad aparece lista para ejecución real. Post-S Macro 2 aporta
-hardening de approval/audit/permisos, pero siguen pendientes el bridge controlado,
-la decisión explícita de runtime, rollback verificado y evidencia de seguridad de producción.
+Ninguna capacidad aparece lista para ejecución real. Post-S Macro 3 aporta el
+bridge controlado con dry-run, sandbox, rollback y gates de readiness, pero
+siguen pendientes la decisión explícita de runtime, connectors reales y
+evidencia de seguridad de producción.
 
 ## Safety boundaries
 
@@ -88,10 +89,16 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 3 - Controlled Runtime Execution Bridge**
+**Post-S Macro 4 - Real Connectors & Tool Execution Layer**
 
-Post-S Macro 2 completa el hardening prepare-only necesario antes de considerar
-ese bridge. Esta consolidación no crea approvals, misiones o tareas reales.
+Post-S Macro 3 completa el bridge prepare-only necesario antes de considerar
+connectors o tool execution reales. Esta consolidación no crea approvals,
+misiones o tareas reales.
+
+Post-S Macro 2 aportó previamente el hardening de approval, audit y permission
+gates que este bridge consume sin degradar.
+
+El Controlled Runtime Execution Bridge sigue siendo exclusivamente prepare-only.
 
 ## Smoke tests
 
