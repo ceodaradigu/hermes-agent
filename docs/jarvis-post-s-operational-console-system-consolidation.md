@@ -89,11 +89,14 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 5 - Memory, Personal OS & Scheduler Real**
+**Post-S Macro 6 - Voice / Wake / Camera Controlled Runtime**
 
-Post-S Macro 4 completa la capa control-plane de registry, connector contracts,
-invocation previews y permission gates sin activar connectors o tool execution
-reales. Esta consolidación no crea approvals, misiones o tareas reales.
+Post-S Macro 5 completa memoria aprobada, Personal OS, scheduler, reviews y stop
+controls en modo control-plane sin autoload, workers, watchers, notificaciones
+ni ejecución. Esta consolidación no crea approvals, misiones o tareas reales.
+
+Post-S Macro 4 aportó previamente registry, connector contracts, invocation
+previews y permission gates sin activar connectors o tool execution reales.
 
 Post-S Macro 2 aportó previamente el hardening de approval, audit y permission
 gates que este bridge consume sin degradar.

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
 NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
+NEXT_RECOMMENDED_MACRO_PR = "Post-S Macro 6 - Voice / Wake / Camera Controlled Runtime"
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,7 @@ class OperationalSystemStatus:
     last_master_phase: str = "Phase S"
     no_phase_t: bool = True
     runtime_execution_enabled: bool = False
+    execution_enabled: bool = False
     side_effects_enabled: bool = False
     external_calls_enabled: bool = False
     secrets_access_enabled: bool = False
@@ -48,6 +50,25 @@ class OperationalSystemStatus:
     api_calls_enabled: bool = False
     controlled_runtime_bridge_required: bool = True
     safe_to_invoke_is_readiness_only: bool = True
+    approved_memory_records_available: bool = True
+    personal_os_control_plane_available: bool = True
+    scheduler_control_plane_available: bool = True
+    daily_review_preview_available: bool = True
+    weekly_review_preview_available: bool = True
+    stop_controls_available: bool = True
+    audit_summary_available: bool = True
+    memory_autoload_enabled: bool = False
+    memory_auto_activation_enabled: bool = False
+    scheduler_worker_enabled: bool = False
+    watcher_enabled: bool = False
+    external_sources_enabled: bool = False
+    private_sources_enabled: bool = False
+    scheduler_execution_enabled: bool = False
+    notifications_enabled: bool = False
+    tool_invocation_from_scheduler_enabled: bool = False
+    memory_is_not_permission: bool = True
+    scheduler_due_is_not_execution: bool = True
+    next_recommended_macro_pr: str = NEXT_RECOMMENDED_MACRO_PR
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
 
@@ -75,10 +96,20 @@ class OperationalSystemStatus:
             "real_connectors_control_plane_available",
             "controlled_runtime_bridge_required",
             "safe_to_invoke_is_readiness_only",
+            "approved_memory_records_available",
+            "personal_os_control_plane_available",
+            "scheduler_control_plane_available",
+            "daily_review_preview_available",
+            "weekly_review_preview_available",
+            "stop_controls_available",
+            "audit_summary_available",
+            "memory_is_not_permission",
+            "scheduler_due_is_not_execution",
         ):
             object.__setattr__(self, name, True)
         for name in (
             "runtime_execution_enabled",
+            "execution_enabled",
             "side_effects_enabled",
             "external_calls_enabled",
             "secrets_access_enabled",
@@ -91,8 +122,18 @@ class OperationalSystemStatus:
             "github_actions_enabled",
             "browser_actions_enabled",
             "api_calls_enabled",
+            "memory_autoload_enabled",
+            "memory_auto_activation_enabled",
+            "scheduler_worker_enabled",
+            "watcher_enabled",
+            "external_sources_enabled",
+            "private_sources_enabled",
+            "scheduler_execution_enabled",
+            "notifications_enabled",
+            "tool_invocation_from_scheduler_enabled",
         ):
             object.__setattr__(self, name, False)
+        object.__setattr__(self, "next_recommended_macro_pr", NEXT_RECOMMENDED_MACRO_PR)
         object.__setattr__(self, "global_readiness", GLOBAL_READINESS)
         object.__setattr__(self, "warnings", list(self.warnings))
 
@@ -343,6 +384,20 @@ def build_command_center_system_map() -> Dict[str, Any]:
     return {
         "prepare_only": True,
         "post_s_operational_consolidation": True,
+        "post_s_memory_personal_os_scheduler": "prepare_only",
+        "approved_memory_records": "prepare_only",
+        "personal_os_control_plane": "prepare_only",
+        "scheduler_control_plane": "prepare_only",
+        "daily_review_preview": "prepare_only",
+        "weekly_review_preview": "prepare_only",
+        "stop_controls": "prepare_only",
+        "memory_autoload_disabled": "prepare_only",
+        "memory_is_not_permission": "prepare_only",
+        "scheduler_due_not_execution": "prepare_only",
+        "scheduler_worker_disabled": "prepare_only",
+        "watchers_disabled": "prepare_only",
+        "external_sources_disabled": "prepare_only",
+        "notifications_disabled": "prepare_only",
         "global_readiness": GLOBAL_READINESS,
         "system_map": {
             "phase_range": "A-S",
@@ -375,10 +430,24 @@ def build_command_center_system_map() -> Dict[str, Any]:
             "tool_execution_disabled": "prepare_only",
             "external_calls_disabled": "prepare_only",
             "access_material_disabled": "prepare_only",
+            "post_s_memory_personal_os_scheduler": "prepare_only",
+            "approved_memory_records": "prepare_only",
+            "personal_os_control_plane": "prepare_only",
+            "scheduler_control_plane": "prepare_only",
+            "daily_review_preview": "prepare_only",
+            "weekly_review_preview": "prepare_only",
+            "stop_controls": "prepare_only",
+            "memory_autoload_disabled": "prepare_only",
+            "memory_is_not_permission": "prepare_only",
+            "scheduler_due_not_execution": "prepare_only",
+            "scheduler_worker_disabled": "prepare_only",
+            "watchers_disabled": "prepare_only",
+            "external_sources_disabled": "prepare_only",
+            "notifications_disabled": "prepare_only",
         },
         "safe_next_steps": [
             "review consolidated capability and readiness evidence",
-            NEXT_MACRO_PR,
+            NEXT_RECOMMENDED_MACRO_PR,
             "retain prepare-only defaults until tool invocation is explicitly reviewed and enabled",
         ],
     }
@@ -393,17 +462,18 @@ def build_operational_console_summary() -> Dict[str, Any]:
         "readiness_matrix": [item.to_dict() for item in build_readiness_matrix()],
         "safety_boundaries": boundaries.to_dict(),
         "pending_macro_work": [
-            NEXT_MACRO_PR,
+            NEXT_RECOMMENDED_MACRO_PR,
             "runtime execution bridge only after explicit approval and permission gate validation",
             "future opt-in voice, camera, external tools, and physical-world work",
         ],
-        "next_recommended_macro_pr": NEXT_MACRO_PR,
+        "next_recommended_macro_pr": NEXT_RECOMMENDED_MACRO_PR,
         "blocked_actions": list(boundaries.blocked_actions),
         "visible_reasons": [
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
             "No Phase T exists or is implied.",
             "Approval, audit, permission, sandbox, dry-run, and rollback gates precede real execution.",
             "Post-S Macro 4 provides connector and tool invocation readiness without enabling execution.",
+            "Post-S Macro 5 provides approved-memory, Personal OS, scheduler, review, and stop-control previews without autoload or execution.",
         ],
         "command_center": build_command_center_system_map(),
     }
