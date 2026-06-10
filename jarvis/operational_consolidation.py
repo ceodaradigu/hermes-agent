@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
-NEXT_MACRO_PR = "Post-S Macro 2 - Real Approval, Audit & Permission Hardening"
+NEXT_MACRO_PR = "Post-S Macro 3 - Controlled Runtime Execution Bridge"
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,10 @@ class OperationalSystemStatus:
     operator_console_available: bool = True
     command_center_available: bool = True
     smoke_validation_available: bool = True
+    approval_hardening_available: bool = True
+    approval_audit_available: bool = True
+    strong_approval_policy_available: bool = True
+    permission_gates_available: bool = True
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
 
@@ -32,6 +36,13 @@ class OperationalSystemStatus:
         object.__setattr__(self, "phase_range", "A-S")
         object.__setattr__(self, "last_master_phase", "Phase S")
         object.__setattr__(self, "no_phase_t", True)
+        for name in (
+            "approval_hardening_available",
+            "approval_audit_available",
+            "strong_approval_policy_available",
+            "permission_gates_available",
+        ):
+            object.__setattr__(self, name, True)
         for name in (
             "runtime_execution_enabled",
             "side_effects_enabled",
@@ -300,11 +311,17 @@ def build_command_center_system_map() -> Dict[str, Any]:
             "operator_console": "read_only_consolidated_view",
             "command_center": "prepare_only_system_map",
             "future_capabilities": "not_activated",
+            "post_s_approval_hardening": "prepare_only",
+            "strong_approval_policy": "prepare_only",
+            "approval_audit": "prepare_only",
+            "permission_gates": "prepare_only",
+            "context_fingerprint": "prepare_only",
+            "side_effect_gate_readiness": "prepare_only",
         },
         "safe_next_steps": [
             "review consolidated capability and readiness evidence",
             NEXT_MACRO_PR,
-            "retain prepare-only defaults until approval hardening is complete",
+            "retain prepare-only defaults until the controlled runtime bridge is explicitly reviewed",
         ],
     }
 
@@ -319,7 +336,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
         "safety_boundaries": boundaries.to_dict(),
         "pending_macro_work": [
             NEXT_MACRO_PR,
-            "runtime execution bridge only after explicit approval hardening",
+            "runtime execution bridge only after explicit approval and permission gate validation",
             "future opt-in voice, camera, external tools, and physical-world work",
         ],
         "next_recommended_macro_pr": NEXT_MACRO_PR,
@@ -328,6 +345,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
             "No Phase T exists or is implied.",
             "Approval, audit, and permission hardening must precede real execution.",
+            "Post-S Macro 2 provides that hardening without enabling execution.",
         ],
         "command_center": build_command_center_system_map(),
     }
@@ -344,7 +362,7 @@ def _approval_requirements(capability: CapabilitySummary) -> List[str]:
 
 def _missing_requirements(capability: CapabilitySummary) -> List[str]:
     requirements = [
-        "real approval, audit, and permission hardening",
+        "controlled runtime execution bridge security review",
         "explicit runtime enablement decision",
         "verified rollback and production safety evidence",
     ]

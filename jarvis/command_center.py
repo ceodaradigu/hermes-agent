@@ -950,6 +950,12 @@ def build_command_center_view_model(
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
             "future_moonshot_layer": "prepare_only",
+            "post_s_approval_hardening": "prepare_only",
+            "strong_approval_policy": "prepare_only",
+            "approval_audit": "prepare_only",
+            "permission_gates": "prepare_only",
+            "context_fingerprint": "prepare_only",
+            "side_effect_gate_readiness": "prepare_only",
             **build_command_center_system_map(),
         },
     )

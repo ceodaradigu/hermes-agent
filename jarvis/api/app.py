@@ -44,6 +44,7 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStatus,
     AmbientVisionStopControl,
 )
+from jarvis.approval_hardening import ApprovalHardeningService, StrongApprovalPolicy
 from jarvis.command_center import build_command_center_view_model
 from jarvis.continuous_learning.foundation import (
     ApprovalWorkflowPreview,
@@ -176,6 +177,7 @@ from jarvis.personal_os.foundation import (
 )
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
+from jarvis.permission_gates import evaluate_permission_gate
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.sandbox_execution.foundation import (
     SandboxAuditPreview,
@@ -262,6 +264,28 @@ class MobileIntentPreviewRequest(BaseModel):
 
 class OperatorConsolePreviewRequest(BaseModel):
     text: str
+
+
+class ApprovalPreviewRequest(BaseModel):
+    action_type: str
+    requested_by: str = "jarvis"
+    reason: str = ""
+    approval_kind: str = "normal"
+    expires_in_seconds: int = 900
+    context: Optional[Dict[str, Any]] = None
+
+
+class ApprovalDecisionPreviewRequest(BaseModel):
+    approval_id: str
+    decision: str
+    actor: str = "operator"
+    reason: str = ""
+    confirmation_phrase: Optional[str] = None
+
+
+class ApprovalGatePreviewRequest(BaseModel):
+    approval_id: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
 
 
 class PersonalizationPreviewRequest(BaseModel):
@@ -1047,6 +1071,7 @@ def create_app(
 
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
+    app.state.approval_hardening = ApprovalHardeningService()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1082,6 +1107,49 @@ def create_app(
     @app.get("/operational/console-summary")
     def operational_console_summary() -> dict:
         return build_operational_console_summary()
+
+    @app.get("/approvals/status")
+    def approvals_status() -> dict:
+        return app.state.approval_hardening.status()
+
+    @app.get("/approvals/policy")
+    def approvals_policy() -> dict:
+        return StrongApprovalPolicy().to_dict()
+
+    @app.get("/approvals/audit-preview")
+    def approvals_audit_preview() -> dict:
+        return app.state.approval_hardening.audit_trail.preview()
+
+    @app.post("/approvals/preview-request")
+    def approvals_preview_request(payload: ApprovalPreviewRequest) -> dict:
+        try:
+            record = app.state.approval_hardening.request(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return record.to_dict()
+
+    @app.post("/approvals/preview-decision")
+    def approvals_preview_decision(payload: ApprovalDecisionPreviewRequest) -> dict:
+        try:
+            record = app.state.approval_hardening.decide(**payload.model_dump())
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return record.to_dict()
+
+    @app.post("/approvals/preview-gate")
+    def approvals_preview_gate(payload: ApprovalGatePreviewRequest) -> dict:
+        approval = None
+        if payload.approval_id:
+            try:
+                approval = app.state.approval_hardening.get(payload.approval_id)
+                app.state.approval_hardening.refresh_expiration(approval)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return evaluate_permission_gate(
+            payload.context or {},
+            approval,
+            audit_trail=app.state.approval_hardening.audit_trail,
+        ).to_dict()
 
     @app.get("/command-center")
     def command_center() -> dict:

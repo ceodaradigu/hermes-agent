@@ -810,6 +810,12 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
             "future_moonshot_layer": "prepare_only",
+            "post_s_approval_hardening": "prepare_only",
+            "strong_approval_policy": "prepare_only",
+            "approval_audit": "prepare_only",
+            "permission_gates": "prepare_only",
+            "context_fingerprint": "prepare_only",
+            "side_effect_gate_readiness": "prepare_only",
         },
     )
 
@@ -855,6 +861,12 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
             "future_moonshot_layer": "prepare_only",
+            "post_s_approval_hardening": "prepare_only",
+            "strong_approval_policy": "prepare_only",
+            "approval_audit": "prepare_only",
+            "permission_gates": "prepare_only",
+            "context_fingerprint": "prepare_only",
+            "side_effect_gate_readiness": "prepare_only",
         },
     )
 
@@ -896,6 +908,12 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "personal_os_environment_intelligence": "prepare_only",
         "advanced_personalization_user_model": "prepare_only",
         "future_moonshot_layer": "prepare_only",
+        "post_s_approval_hardening": "prepare_only",
+        "strong_approval_policy": "prepare_only",
+        "approval_audit": "prepare_only",
+        "permission_gates": "prepare_only",
+        "context_fingerprint": "prepare_only",
+        "side_effect_gate_readiness": "prepare_only",
     }
     return safe
 
