@@ -89,11 +89,11 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 4 - Real Connectors & Tool Execution Layer**
+**Post-S Macro 5 - Memory, Personal OS & Scheduler Real**
 
-Post-S Macro 3 completa el bridge prepare-only necesario antes de considerar
-connectors o tool execution reales. Esta consolidación no crea approvals,
-misiones o tareas reales.
+Post-S Macro 4 completa la capa control-plane de registry, connector contracts,
+invocation previews y permission gates sin activar connectors o tool execution
+reales. Esta consolidación no crea approvals, misiones o tareas reales.
 
 Post-S Macro 2 aportó previamente el hardening de approval, audit y permission
 gates que este bridge consume sin degradar.

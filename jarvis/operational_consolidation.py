@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
-NEXT_MACRO_PR = "Post-S Macro 4 - Real Connectors & Tool Execution Layer"
+NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,18 @@ class OperationalSystemStatus:
     approval_gates_enforced: bool = True
     strong_approval_enforced: bool = True
     safe_to_execute_is_readiness_only: bool = True
+    tool_registry_available: bool = True
+    connector_contracts_available: bool = True
+    tool_invocation_preview_available: bool = True
+    real_connectors_control_plane_available: bool = True
+    tool_execution_enabled: bool = False
+    credentials_enabled: bool = False
+    filesystem_writes_enabled: bool = False
+    github_actions_enabled: bool = False
+    browser_actions_enabled: bool = False
+    api_calls_enabled: bool = False
+    controlled_runtime_bridge_required: bool = True
+    safe_to_invoke_is_readiness_only: bool = True
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
 
@@ -57,6 +69,12 @@ class OperationalSystemStatus:
             "approval_gates_enforced",
             "strong_approval_enforced",
             "safe_to_execute_is_readiness_only",
+            "tool_registry_available",
+            "connector_contracts_available",
+            "tool_invocation_preview_available",
+            "real_connectors_control_plane_available",
+            "controlled_runtime_bridge_required",
+            "safe_to_invoke_is_readiness_only",
         ):
             object.__setattr__(self, name, True)
         for name in (
@@ -67,6 +85,12 @@ class OperationalSystemStatus:
             "hermes_called",
             "approval_gateway_called",
             "persistence_enabled",
+            "tool_execution_enabled",
+            "credentials_enabled",
+            "filesystem_writes_enabled",
+            "github_actions_enabled",
+            "browser_actions_enabled",
+            "api_calls_enabled",
         ):
             object.__setattr__(self, name, False)
         object.__setattr__(self, "global_readiness", GLOBAL_READINESS)
@@ -341,11 +365,21 @@ def build_command_center_system_map() -> Dict[str, Any]:
             "runtime_approval_gate": "prepare_only",
             "safe_to_execute_readiness_only": "prepare_only",
             "runtime_execution_disabled": "prepare_only",
+            "post_s_real_connectors_tool_layer": "prepare_only",
+            "tool_registry": "prepare_only",
+            "connector_contracts": "prepare_only",
+            "tool_invocation_preview": "prepare_only",
+            "connector_permission_gate": "prepare_only",
+            "controlled_runtime_required": "prepare_only",
+            "safe_to_invoke_readiness_only": "prepare_only",
+            "tool_execution_disabled": "prepare_only",
+            "external_calls_disabled": "prepare_only",
+            "access_material_disabled": "prepare_only",
         },
         "safe_next_steps": [
             "review consolidated capability and readiness evidence",
             NEXT_MACRO_PR,
-            "retain prepare-only defaults until real connectors and tool execution are explicitly reviewed",
+            "retain prepare-only defaults until tool invocation is explicitly reviewed and enabled",
         ],
     }
 
@@ -369,7 +403,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
             "No Phase T exists or is implied.",
             "Approval, audit, permission, sandbox, dry-run, and rollback gates precede real execution.",
-            "Post-S Macro 3 provides controlled runtime readiness without enabling execution.",
+            "Post-S Macro 4 provides connector and tool invocation readiness without enabling execution.",
         ],
         "command_center": build_command_center_system_map(),
     }
