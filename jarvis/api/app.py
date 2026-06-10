@@ -199,6 +199,9 @@ from jarvis.tool_adoption.pipeline import (
     ToolSpikePlan,
     ToolValueMeasurementPreview,
 )
+from jarvis.tool_connectors import preview_connector
+from jarvis.tool_invocation_layer import ToolInvocationLayer
+from jarvis.tool_registry import preview_tool_registration
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest
 from jarvis.voice.companion import (
     VoiceCompanionControlPolicy,
@@ -317,6 +320,72 @@ class RuntimePreviewRequest(BaseModel):
     rollback_available: bool = False
     rollback_steps: Optional[List[str]] = None
     rollback_notes: str = ""
+
+
+class ToolRegistrationPreviewRequest(BaseModel):
+    tool_id: str = ""
+    name: str = ""
+    connector_type: str = "mock_safe"
+    description: str = ""
+    capabilities: Optional[List[str]] = None
+    required_permissions: Optional[List[str]] = None
+    risk_level: str = "medium"
+    requires_approval: bool = True
+    requires_strong_approval: bool = False
+    external_call_required: bool = False
+    filesystem_access_required: bool = False
+    network_access_required: bool = False
+    secrets_required: bool = False
+    production_capable: bool = False
+    write_capable: bool = False
+    side_effect_capable: bool = False
+    enabled: bool = False
+
+
+class ConnectorPreviewRequest(BaseModel):
+    connector_id: str = ""
+    connector_type: str = "mock_safe"
+    allowed_scopes: Optional[List[str]] = None
+    denied_scopes: Optional[List[str]] = None
+    requires_credentials: bool = False
+    network_required: bool = False
+    external_call_required: bool = False
+    filesystem_scope_required: bool = False
+    approval_required: bool = True
+    strong_approval_required: bool = False
+    enabled: bool = False
+    status: str = "preview_only"
+    blocked_reasons: Optional[List[str]] = None
+
+
+class ToolInvocationPreviewRequest(BaseModel):
+    invocation_id: Optional[str] = None
+    tool_id: str = ""
+    connector_id: str = ""
+    action_type: str = ""
+    target: str = ""
+    scope: Optional[List[str]] = None
+    payload_summary: Optional[Dict[str, Any]] = None
+    requested_by: str = "jarvis"
+    reason: str = ""
+    environment: str = "preview"
+    external_call: bool = False
+    filesystem_write: bool = False
+    credentials: bool = False
+    production: bool = False
+    side_effects: bool = False
+    persistent_changes: bool = False
+    network_access: bool = False
+    approval_id: Optional[str] = None
+    granted_permissions: Optional[List[str]] = None
+    policy_allowed: bool = False
+    sandbox_available: bool = False
+    filesystem_scope_present: bool = False
+    network_allowed: bool = False
+    secrets_authorized: bool = False
+    timeout_present: bool = False
+    rollback_available: bool = False
+    rollback_steps: Optional[List[str]] = None
 
 
 class PersonalizationPreviewRequest(BaseModel):
@@ -1106,6 +1175,10 @@ def create_app(
     app.state.controlled_runtime_bridge = ControlledRuntimeBridge(
         audit_trail=app.state.approval_hardening.audit_trail,
     )
+    app.state.tool_invocation_layer = ToolInvocationLayer(
+        runtime_bridge=app.state.controlled_runtime_bridge,
+        audit_trail=app.state.approval_hardening.audit_trail,
+    )
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1262,6 +1335,72 @@ def create_app(
             rollback=rollback,
             approval=approval,
             policy_allowed=payload.policy_allowed,
+        ).to_dict()
+
+    def tool_invocation_preview(payload: ToolInvocationPreviewRequest):
+        values = payload.model_dump(
+            exclude={
+                "approval_id",
+                "granted_permissions",
+                "policy_allowed",
+                "sandbox_available",
+                "filesystem_scope_present",
+                "network_allowed",
+                "secrets_authorized",
+                "timeout_present",
+                "rollback_available",
+                "rollback_steps",
+            }
+        )
+        values["scope"] = values["scope"] or []
+        values["payload_summary"] = values["payload_summary"] or {}
+        return app.state.tool_invocation_layer.preview_invocation(**values)
+
+    @app.get("/tools/status")
+    def tools_status() -> dict:
+        return app.state.tool_invocation_layer.status()
+
+    @app.get("/tools/registry")
+    def tools_registry() -> dict:
+        return app.state.tool_invocation_layer.registry.snapshot().to_dict()
+
+    @app.get("/tools/policy")
+    def tools_policy() -> dict:
+        return app.state.tool_invocation_layer.policy()
+
+    @app.post("/tools/preview-registration")
+    def tools_preview_registration(payload: ToolRegistrationPreviewRequest) -> dict:
+        return preview_tool_registration(payload.model_dump()).to_dict()
+
+    @app.post("/tools/preview-connector")
+    def tools_preview_connector(payload: ConnectorPreviewRequest) -> dict:
+        return preview_connector(payload.model_dump()).to_dict()
+
+    @app.post("/tools/preview-invocation")
+    def tools_preview_invocation(payload: ToolInvocationPreviewRequest) -> dict:
+        return tool_invocation_preview(payload).to_dict()
+
+    @app.post("/tools/preview-permission")
+    def tools_preview_permission(payload: ToolInvocationPreviewRequest) -> dict:
+        approval = None
+        if payload.approval_id:
+            try:
+                approval = app.state.approval_hardening.get(payload.approval_id)
+                app.state.approval_hardening.refresh_expiration(approval)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return app.state.tool_invocation_layer.preview_permission(
+            tool_invocation_preview(payload),
+            approval=approval,
+            granted_permissions=payload.granted_permissions,
+            policy_allowed=payload.policy_allowed,
+            sandbox_available=payload.sandbox_available,
+            filesystem_scope_present=payload.filesystem_scope_present,
+            network_allowed=payload.network_allowed,
+            secrets_authorized=payload.secrets_authorized,
+            timeout_present=payload.timeout_present,
+            rollback_available=payload.rollback_available,
+            rollback_steps=payload.rollback_steps,
         ).to_dict()
 
     @app.get("/command-center")

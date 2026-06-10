@@ -824,6 +824,16 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "runtime_approval_gate": "prepare_only",
             "safe_to_execute_readiness_only": "prepare_only",
             "runtime_execution_disabled": "prepare_only",
+            "post_s_real_connectors_tool_layer": "prepare_only",
+            "tool_registry": "prepare_only",
+            "connector_contracts": "prepare_only",
+            "tool_invocation_preview": "prepare_only",
+            "connector_permission_gate": "prepare_only",
+            "controlled_runtime_required": "prepare_only",
+            "safe_to_invoke_readiness_only": "prepare_only",
+            "tool_execution_disabled": "prepare_only",
+            "external_calls_disabled": "prepare_only",
+            "access_material_disabled": "prepare_only",
         },
     )
 
@@ -883,6 +893,16 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "runtime_approval_gate": "prepare_only",
             "safe_to_execute_readiness_only": "prepare_only",
             "runtime_execution_disabled": "prepare_only",
+            "post_s_real_connectors_tool_layer": "prepare_only",
+            "tool_registry": "prepare_only",
+            "connector_contracts": "prepare_only",
+            "tool_invocation_preview": "prepare_only",
+            "connector_permission_gate": "prepare_only",
+            "controlled_runtime_required": "prepare_only",
+            "safe_to_invoke_readiness_only": "prepare_only",
+            "tool_execution_disabled": "prepare_only",
+            "external_calls_disabled": "prepare_only",
+            "access_material_disabled": "prepare_only",
         },
     )
 
@@ -938,6 +958,16 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "runtime_approval_gate": "prepare_only",
         "safe_to_execute_readiness_only": "prepare_only",
         "runtime_execution_disabled": "prepare_only",
+        "post_s_real_connectors_tool_layer": "prepare_only",
+        "tool_registry": "prepare_only",
+        "connector_contracts": "prepare_only",
+        "tool_invocation_preview": "prepare_only",
+        "connector_permission_gate": "prepare_only",
+        "controlled_runtime_required": "prepare_only",
+        "safe_to_invoke_readiness_only": "prepare_only",
+        "tool_execution_disabled": "prepare_only",
+        "external_calls_disabled": "prepare_only",
+        "access_material_disabled": "prepare_only",
     }
     return safe
 

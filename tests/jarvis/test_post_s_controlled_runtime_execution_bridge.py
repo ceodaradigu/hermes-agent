@@ -86,7 +86,7 @@ def test_runtime_status_is_prepare_only_post_s_without_phase_t():
     assert status["side_effects_enabled"] is False
     assert status["safe_to_execute"] is False
     assert status["allowed_for_future_execution"] is False
-    assert NEXT_MACRO_PR == "Post-S Macro 4 - Real Connectors & Tool Execution Layer"
+    assert NEXT_MACRO_PR == "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
 
 
 def test_defaults_cannot_enable_execution_or_side_effects():
