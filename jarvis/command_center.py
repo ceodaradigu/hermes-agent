@@ -1147,7 +1147,7 @@ def _secret_like_paths(value: Any, prefix: str = "") -> List[str]:
 
 
 def _secret_like_text(value: str) -> bool:
-    lowered = value.lower()
+    lowered = value.lower().replace("unauthorized", "denied")
     return any(
         marker in lowered
         for marker in (

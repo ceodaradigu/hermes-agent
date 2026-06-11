@@ -14,6 +14,11 @@ crear una nueva fase ni ampliar permisos.
 
 ## Estado global
 
+PR #122 aclara que **Restrictions are approval gates, not permanent bans.**
+La consola sigue siendo read-only/control-plane, pero muestra que JARVIS no es
+prepare-only para siempre y que la ejecución futura exige aprobación válida,
+strong approval/doble confirmación cuando aplique y todas las gates.
+
 `foundation_complete_prepare_only` significa:
 
 - las foundations A-S y sus contratos de preview están implementados;
@@ -89,7 +94,7 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 7 - Monetization Engine Real**
+**PR #123 - Monetization Engine Real**
 
 Post-S Macro 5 completa memoria aprobada, Personal OS, scheduler, reviews y stop
 controls en modo control-plane sin autoload, workers, watchers, notificaciones

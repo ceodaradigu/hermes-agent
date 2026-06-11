@@ -8,6 +8,7 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStatus,
     AmbientVisionStopControl,
 )
+from jarvis.approval_execution_semantics import global_execution_markers
 from jarvis.asset_factory.foundation import AssetFactoryStatus, AssetGenerationPolicy
 from jarvis.advanced_personalization.foundation import (
     AdvancedPersonalizationStatus,
@@ -114,6 +115,7 @@ _POST_S_VOICE_CAMERA_MARKERS = {
     "voice_execution_disabled": "prepare_only",
     "camera_execution_disabled": "prepare_only",
 }
+_GLOBAL_APPROVAL_EXECUTION_MARKERS = global_execution_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -868,6 +870,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
             **_POST_S_VOICE_CAMERA_MARKERS,
+            **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
         },
     )
 
@@ -952,6 +955,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
             **_POST_S_VOICE_CAMERA_MARKERS,
+            **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
         },
     )
 
@@ -1032,6 +1036,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "external_sources_disabled": "prepare_only",
         "notifications_disabled": "prepare_only",
         **_POST_S_VOICE_CAMERA_MARKERS,
+        **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
     }
     return safe
 

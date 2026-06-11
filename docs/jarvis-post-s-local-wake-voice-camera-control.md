@@ -27,8 +27,9 @@ palabra normal.
 
 La wake phrase no es permiso. Voz no evita `PolicyEngine`, approvals, strong
 approval, controlled runtime ni tool gates. Una orden como `"Jarvis despliega
-producción"` se clasifica como sensible, exige strong approval y nunca se
-ejecuta en esta macro.
+producción"` se clasifica como crítica, exige strong approval y doble
+confirmación, y nunca se ejecuta en esta macro. Restrictions are approval gates,
+not permanent bans.
 
 Push-to-talk permanece como fallback explícito cuando wake listening está
 deshabilitado. Las stop phrases de voz son `no escuches`, `para`, `cállate`,
@@ -70,7 +71,7 @@ no envía mensajes, no despliega, no paga y no toca producción.
 
 ## Siguiente macro PR
 
-Esta capa prepara **Post-S Macro 7 - Monetization Engine Real**, que también
+Esta capa prepara **PR #123 - Monetization Engine Real**, que también
 deberá conservar approvals, separación projected/confirmed y el límite
 prepare-only mientras no exista autorización explícita de ejecución.
 

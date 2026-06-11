@@ -234,6 +234,11 @@ class ControlledRuntimeBridge:
     def status(self) -> Dict[str, Any]:
         return {
             "prepare_only": True,
+            "current_implementation_remains_control_plane_only": True,
+            "restrictions_are_approval_gates": True,
+            "default_denied_without_approval": True,
+            "safe_to_execute_potentially_true_after_valid_approval_and_gates": True,
+            "permanent_denial_never_safe_to_execute": True,
             "controlled_runtime_bridge_available": True,
             "runtime_execution_enabled": False,
             "side_effects_enabled": False,
@@ -257,6 +262,8 @@ class ControlledRuntimeBridge:
             "open_scope_blocked": True,
             "ambiguous_command_blocked": True,
             "production_requires_strong_approval": True,
+            "critical_execution_requires_double_confirmation": True,
+            "approval_cannot_override_permanent_denial": True,
             "approval_does_not_execute": True,
             "permission_gate_does_not_execute": True,
             "strong_approval_policy": self.strong_policy.to_dict(),

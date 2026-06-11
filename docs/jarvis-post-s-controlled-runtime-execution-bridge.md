@@ -14,6 +14,11 @@ a Phase S que mantiene todas las superficies prepare-only.
 
 ## Contratos
 
+PR #122 define `safe_to_execute` como elegibilidad potencial después de
+aprobación válida y gates, no como ejecución real. Sin aprobación es false;
+puede ser true como readiness si todo pasa; nunca puede ser true ante
+`permanent_denial`. **Restrictions are approval gates, not permanent bans.**
+
 `ControlledRuntimeExecutionRequest` describe acción, target, scope, comando o
 tool opcional, resumen redactado, entorno, flags de riesgo, actor, razón y
 context fingerprint.

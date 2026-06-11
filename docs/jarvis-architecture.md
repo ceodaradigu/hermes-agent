@@ -44,6 +44,13 @@ Hermes Runtime Bridge v1 prepara payloads, dry-runs, resultados futuros, auditor
 - `POST /missions/{mission_id}/cancel`
 
 ## Reglas de ejecución de steps
+
+La regla arquitectónica global es: **Restrictions are approval gates, not
+permanent bans.** La implementación actual conserva superficies
+control-plane/preview, pero JARVIS está diseñado para ejecutar acciones legales,
+seguras, autorizadas y soportadas después de aprobación válida y todas las
+gates. Strong approval protege acciones sensibles; doble confirmación protege
+acciones críticas; las denegaciones permanentes no admiten override.
 1. **denied**
    - no ejecuta Hermes;
    - step queda `denied`;
