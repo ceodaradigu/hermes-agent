@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
 NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
-NEXT_RECOMMENDED_MACRO_PR = "Post-S Macro 6 - Voice / Wake / Camera Controlled Runtime"
+NEXT_RECOMMENDED_MACRO_PR = "Post-S Macro 7 - Monetization Engine Real"
 
 
 @dataclass(frozen=True)
@@ -68,6 +68,23 @@ class OperationalSystemStatus:
     tool_invocation_from_scheduler_enabled: bool = False
     memory_is_not_permission: bool = True
     scheduler_due_is_not_execution: bool = True
+    wake_voice_runtime_available: bool = True
+    wake_phrases_supported: List[str] = field(default_factory=lambda: ["Hola Jarvis", "Jarvis"])
+    wake_phrase_command_parsing_available: bool = True
+    wake_phrase_is_not_permission: bool = True
+    push_to_talk_fallback_available: bool = True
+    voice_session_control_available: bool = True
+    camera_control_available: bool = True
+    camera_opt_in_required: bool = True
+    visible_indicators_required: bool = True
+    audio_retention_enabled: bool = False
+    recording_enabled: bool = False
+    external_audio_enabled: bool = False
+    external_video_enabled: bool = False
+    camera_active: bool = False
+    microphone_active: bool = False
+    voice_execution_enabled: bool = False
+    camera_execution_enabled: bool = False
     next_recommended_macro_pr: str = NEXT_RECOMMENDED_MACRO_PR
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
@@ -105,6 +122,14 @@ class OperationalSystemStatus:
             "audit_summary_available",
             "memory_is_not_permission",
             "scheduler_due_is_not_execution",
+            "wake_voice_runtime_available",
+            "wake_phrase_command_parsing_available",
+            "wake_phrase_is_not_permission",
+            "push_to_talk_fallback_available",
+            "voice_session_control_available",
+            "camera_control_available",
+            "camera_opt_in_required",
+            "visible_indicators_required",
         ):
             object.__setattr__(self, name, True)
         for name in (
@@ -131,9 +156,18 @@ class OperationalSystemStatus:
             "scheduler_execution_enabled",
             "notifications_enabled",
             "tool_invocation_from_scheduler_enabled",
+            "audio_retention_enabled",
+            "recording_enabled",
+            "external_audio_enabled",
+            "external_video_enabled",
+            "camera_active",
+            "microphone_active",
+            "voice_execution_enabled",
+            "camera_execution_enabled",
         ):
             object.__setattr__(self, name, False)
         object.__setattr__(self, "next_recommended_macro_pr", NEXT_RECOMMENDED_MACRO_PR)
+        object.__setattr__(self, "wake_phrases_supported", ["Hola Jarvis", "Jarvis"])
         object.__setattr__(self, "global_readiness", GLOBAL_READINESS)
         object.__setattr__(self, "warnings", list(self.warnings))
 
@@ -398,6 +432,23 @@ def build_command_center_system_map() -> Dict[str, Any]:
         "watchers_disabled": "prepare_only",
         "external_sources_disabled": "prepare_only",
         "notifications_disabled": "prepare_only",
+        "post_s_local_wake_voice_camera_control": "prepare_only",
+        "wake_phrase_hola_jarvis": "prepare_only",
+        "wake_phrase_jarvis": "prepare_only",
+        "wake_phrase_command_parser": "prepare_only",
+        "wake_phrase_is_not_permission": "prepare_only",
+        "voice_session_control": "prepare_only",
+        "push_to_talk_fallback": "prepare_only",
+        "camera_opt_in_control": "prepare_only",
+        "visible_indicators_required": "prepare_only",
+        "audio_retention_disabled": "prepare_only",
+        "recording_disabled": "prepare_only",
+        "external_audio_disabled": "prepare_only",
+        "external_video_disabled": "prepare_only",
+        "microphone_inactive": "prepare_only",
+        "camera_inactive": "prepare_only",
+        "voice_execution_disabled": "prepare_only",
+        "camera_execution_disabled": "prepare_only",
         "global_readiness": GLOBAL_READINESS,
         "system_map": {
             "phase_range": "A-S",
@@ -444,6 +495,23 @@ def build_command_center_system_map() -> Dict[str, Any]:
             "watchers_disabled": "prepare_only",
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
+            "post_s_local_wake_voice_camera_control": "prepare_only",
+            "wake_phrase_hola_jarvis": "prepare_only",
+            "wake_phrase_jarvis": "prepare_only",
+            "wake_phrase_command_parser": "prepare_only",
+            "wake_phrase_is_not_permission": "prepare_only",
+            "voice_session_control": "prepare_only",
+            "push_to_talk_fallback": "prepare_only",
+            "camera_opt_in_control": "prepare_only",
+            "visible_indicators_required": "prepare_only",
+            "audio_retention_disabled": "prepare_only",
+            "recording_disabled": "prepare_only",
+            "external_audio_disabled": "prepare_only",
+            "external_video_disabled": "prepare_only",
+            "microphone_inactive": "prepare_only",
+            "camera_inactive": "prepare_only",
+            "voice_execution_disabled": "prepare_only",
+            "camera_execution_disabled": "prepare_only",
         },
         "safe_next_steps": [
             "review consolidated capability and readiness evidence",
@@ -474,6 +542,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Approval, audit, permission, sandbox, dry-run, and rollback gates precede real execution.",
             "Post-S Macro 4 provides connector and tool invocation readiness without enabling execution.",
             "Post-S Macro 5 provides approved-memory, Personal OS, scheduler, review, and stop-control previews without autoload or execution.",
+            "Post-S Macro 6 provides local wake phrase, voice session, and camera opt-in previews without activating sensors or execution.",
         ],
         "command_center": build_command_center_system_map(),
     }

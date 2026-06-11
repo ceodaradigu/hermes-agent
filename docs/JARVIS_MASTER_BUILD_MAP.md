@@ -444,9 +444,9 @@ Backlog seguro posterior a Phase S:
 5. Controlled Runtime Execution Bridge completado como Post-S Macro 3 en modo prepare-only, con dry-run, sandbox requirements, rollback, policy, approvals, permission gates y readiness explícita sin ejecución.
 6. Real Connectors & Tool Execution Layer completado como Post-S Macro 4 en modo control-plane prepare-only, con registry, connector contracts, invocation preview y gates, sin tool calls reales.
 7. Memory, Personal OS & Scheduler Real completado como Post-S Macro 5 en modo control-plane prepare-only, con memoria aprobada, estado Personal OS, scheduler, reviews y stop controls, sin autoload, workers, watchers, notificaciones ni ejecución.
-8. Voice / Wake / Camera Controlled Runtime como Post-S Macro 6 recomendado, opt-in y con privacidad visible.
+8. Local Wake Voice Runtime & Camera Control completado como Post-S Macro 6 en modo control-plane prepare-only, opt-in y con privacidad visible, sin activar sensores.
 9. External tools evaluation mediante un pipeline de herramientas no confiables antes de instalar, ejecutar o adoptar.
-10. Monetization engine hardening sin claims falsos de revenue ni confusión entre proyección y resultado real.
+10. Monetization Engine Real como Post-S Macro 7 recomendado, sin claims falsos de revenue ni confusión entre proyección y resultado real.
 
 Criterios obligatorios:
 
