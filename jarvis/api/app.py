@@ -45,6 +45,7 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStopControl,
 )
 from jarvis.approval_hardening import ApprovalHardeningService, StrongApprovalPolicy
+from jarvis.approval_execution_semantics import GlobalApprovalExecutionSemantics
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
@@ -312,6 +313,35 @@ class ApprovalDecisionPreviewRequest(BaseModel):
 class ApprovalGatePreviewRequest(BaseModel):
     approval_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+
+
+class ApprovalExecutionDecisionPreviewRequest(BaseModel):
+    action_name: str = ""
+    action_category: str = "normal"
+    risk_level: str = "medium"
+    valid_approval_present: bool = False
+    strong_approval_present: bool = False
+    double_confirmation_present: bool = False
+    context_fingerprint_matches: bool = False
+    permission_gates_passed: bool = False
+    audit_present: bool = False
+    rollback_or_stop_plan_required: bool = False
+    rollback_or_stop_plan_present: bool = False
+    execution_capable_when_approved: bool = False
+    illegal: bool = False
+    unsafe: bool = False
+    unauthorized: bool = False
+    impossible: bool = False
+    unsupported: bool = False
+
+
+class CriticalActionWarningPreviewRequest(BaseModel):
+    action_name: str = ""
+    affected_system: str = "unspecified system"
+    possible_consequences: Optional[List[str]] = None
+    estimated_cost: Optional[str] = None
+    irreversible_or_hard_to_reverse: bool = True
+    rollback_available: bool = False
 
 
 class RuntimePreviewRequest(BaseModel):
@@ -1278,6 +1308,7 @@ def create_app(
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.approval_hardening = ApprovalHardeningService()
+    app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.controlled_runtime_bridge = ControlledRuntimeBridge(
         audit_trail=app.state.approval_hardening.audit_trail,
     )
@@ -1389,6 +1420,29 @@ def create_app(
     @app.get("/approvals/audit-preview")
     def approvals_audit_preview() -> dict:
         return app.state.approval_hardening.audit_trail.preview()
+
+    @app.get("/approval-execution/status")
+    def approval_execution_status() -> dict:
+        return app.state.approval_execution_semantics.status()
+
+    @app.get("/approval-execution/policy")
+    def approval_execution_policy() -> dict:
+        return app.state.approval_execution_semantics.policy()
+
+    @app.post("/approval-execution/preview-decision")
+    def approval_execution_preview_decision(payload: ApprovalExecutionDecisionPreviewRequest) -> dict:
+        try:
+            return app.state.approval_execution_semantics.preview_decision(**payload.model_dump()).to_dict()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/approval-execution/preview-critical-warning")
+    def approval_execution_preview_critical_warning(payload: CriticalActionWarningPreviewRequest) -> dict:
+        return app.state.approval_execution_semantics.preview_critical_warning(**payload.model_dump()).to_dict()
+
+    @app.get("/roadmap/marks")
+    def roadmap_marks() -> dict:
+        return app.state.approval_execution_semantics.roadmap().to_dict()
 
     @app.post("/approvals/preview-request")
     def approvals_preview_request(payload: ApprovalPreviewRequest) -> dict:

@@ -262,6 +262,10 @@ class ApprovalHardeningService:
             self.refresh_expiration(record)
         return {
             "prepare_only": True,
+            "approval_state_authority_for_execution_eligibility": True,
+            "restrictions_are_approval_gates": True,
+            "approval_can_satisfy_global_execution_gate": True,
+            "approval_alone_never_enables_execution": True,
             "approval_hardening_available": True,
             "approval_audit_available": True,
             "strong_approval_policy_available": True,

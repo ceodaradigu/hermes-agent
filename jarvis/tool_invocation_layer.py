@@ -125,6 +125,11 @@ class ToolInvocationLayer:
     def status(self) -> Dict[str, Any]:
         return {
             "prepare_only": True,
+            "current_implementation_remains_control_plane_only": True,
+            "restrictions_are_approval_gates": True,
+            "default_denied_without_approval": True,
+            "safe_to_invoke_potentially_true_after_valid_approval_and_gates": True,
+            "permanent_denial_never_safe_to_invoke": True,
             "tool_registry_available": True,
             "connector_contracts_available": True,
             "tool_invocation_preview_available": True,
@@ -153,6 +158,8 @@ class ToolInvocationLayer:
             "read_only_by_default": True,
             "write_disabled_by_default": True,
             "registration_does_not_grant_permission": True,
+            "critical_invocation_requires_double_confirmation": True,
+            "approval_cannot_override_permanent_denial": True,
             "approval_does_not_invoke": True,
             "runtime_safe_to_execute_does_not_invoke": True,
             "permission_gate_allowed_does_not_invoke": True,

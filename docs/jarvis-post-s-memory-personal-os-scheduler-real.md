@@ -56,6 +56,11 @@ arranca ni detiene workers reales porque no existen en esta macro.
 
 ## Gates heredados
 
+PR #122 aclara la semántica global: memoria activa no es permiso y scheduler
+due no es permiso. Acciones programadas sensibles requieren aprobación válida;
+acciones críticas requieren strong approval y doble confirmación antes de una
+futura ejecución.
+
 Macro 5 consume `ApprovalRecord`, `StrongApprovalPolicy`, context fingerprint,
 `PermissionGateResult` y audit trail de Macro 2. Approval aprobado no activa ni
 ejecuta.

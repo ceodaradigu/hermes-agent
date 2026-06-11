@@ -430,28 +430,25 @@ JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medi
 - Phase A-Phase S están cerradas como foundations del mapa maestro actual.
 - Phase S es la última fase maestra implementada.
 - No existe una siguiente fase maestra aprobada ni una Phase T implícita.
-- El cierre de las fases no activa ejecución real: los límites prepare-only, approvals, strong approval, privacidad, sandbox y auditoría siguen vigentes.
+- El cierre de las fases no activa ejecución real todavía: la implementación actual sigue siendo control-plane segura.
+- **Restrictions are approval gates, not permanent bans.** JARVIS no es prepare-only para siempre: acciones legales, seguras, autorizadas y soportadas podrán ejecutarse tras aprobación válida y todas las gates.
+- Ilegal, inseguro, no autorizado, imposible o unsupported permanece como denegación permanente que ninguna aprobación puede superar.
 - Wake Phrase, Voz y Cámara; Herramientas Externas; y Monetización son áreas transversales/post-fase. No deben convertirse en una nueva fase sin una decisión explícita y una actualización previa de este mapa.
 
-## Siguientes trabajos recomendados no-fase
+## Roadmap Mark 1 / Mark 2 / Mark 3
 
-Backlog seguro posterior a Phase S:
+El roadmap usa macro-PRs grandes y coherentes, no cientos de micro-PRs por Mark.
 
-1. Roadmap alignment / documentation refresh para mantener mapa, handoff y estado real sincronizados.
-2. End-to-end smoke validation de los flujos prepare-only y sus límites de seguridad.
-3. Operator Console UX consolidation sin habilitar rutas de ejecución ni aprobación.
-4. Real approval workflow hardening antes de conectar cualquier side effect. Completado como Post-S Macro 2 en modo prepare-only.
-5. Controlled Runtime Execution Bridge completado como Post-S Macro 3 en modo prepare-only, con dry-run, sandbox requirements, rollback, policy, approvals, permission gates y readiness explícita sin ejecución.
-6. Real Connectors & Tool Execution Layer completado como Post-S Macro 4 en modo control-plane prepare-only, con registry, connector contracts, invocation preview y gates, sin tool calls reales.
-7. Memory, Personal OS & Scheduler Real completado como Post-S Macro 5 en modo control-plane prepare-only, con memoria aprobada, estado Personal OS, scheduler, reviews y stop controls, sin autoload, workers, watchers, notificaciones ni ejecución.
-8. Local Wake Voice Runtime & Camera Control completado como Post-S Macro 6 en modo control-plane prepare-only, opt-in y con privacidad visible, sin activar sensores.
-9. External tools evaluation mediante un pipeline de herramientas no confiables antes de instalar, ejecutar o adoptar.
-10. Monetization Engine Real como Post-S Macro 7 recomendado, sin claims falsos de revenue ni confusión entre proyección y resultado real.
+- **Mark 1:** PR #122 semántica global; PR #123 Monetization Engine Real; PR #124 SaaS/Product Builder + Publishing/Deploy Execution; PR #125 hardening, E2E Real Ops y release candidate.
+- **Mark 2:** daemon/wake/desktop real; tools reales; UI y approval console; deploy/Stripe/email reales; release candidate hardening.
+- **Mark 3:** multiagente; aprendizaje continuo; opportunity/product/growth engine; operación 24/7, monitorización, recuperación y costes; release candidate hardening.
+
+La definición completa está en `docs/jarvis-post-s-global-approval-controlled-execution-semantics-mark-roadmap.md`.
 
 Criterios obligatorios:
 
 - No crear nuevas fases sin actualizar primero este mapa maestro y registrar la decisión explícita.
-- No pasar de prepare-only a ejecución real sin approval y strong approval cuando aplique.
+- No pasar del control-plane actual a ejecución real sin approval válido, strong approval y doble confirmación cuando aplique.
 - No ejecutar revenue ni afirmar resultados sin separar `projected`, `confirmed`, `gross`, `expenses` y `net`.
 - No instalar, ejecutar ni adoptar herramientas externas sin evaluar licencia, seguridad, permisos y valor.
 - No habilitar cámara o voz continua sin indicador visible, stop inmediato y controles de privacidad.

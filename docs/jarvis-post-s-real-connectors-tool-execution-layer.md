@@ -28,6 +28,11 @@ Todos los conectores son read-only y write-disabled por defecto.
 
 ## Tool Invocation Preview
 
+PR #122 define `safe_to_invoke` como elegibilidad potencial después de
+aprobación válida y gates, no como tool call real. Sin aprobación es false;
+puede ser true como readiness si todo pasa; nunca puede ser true para una
+capacidad ilegal, insegura, no autorizada, imposible o unsupported.
+
 `ToolInvocationPreview` representa acción, target, scope, payload redactado,
 riesgo e intención solicitada. Puede preparar un
 `ControlledRuntimeExecutionRequest`, pero siempre devuelve

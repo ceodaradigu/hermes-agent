@@ -350,9 +350,15 @@ Transcript:
 
 Phase A-Phase S están cerradas. No existe una Phase T aprobada ni una siguiente fase maestra recomendada.
 
-El trabajo inmediato recomendado es backlog transversal/no-fase: alineación documental, smoke validation end-to-end, consolidación UX de Operator Console, hardening del workflow real de approvals y evaluación controlada de futuros bridges/runtime. Ver `docs/JARVIS_MASTER_BUILD_MAP.md` para el orden, límites y criterios obligatorios.
+La regla global post-S es **Restrictions are approval gates, not permanent bans.**
+La implementación actual sigue siendo control-plane segura; JARVIS no es
+prepare-only para siempre y está diseñado para ejecutar tras aprobación válida,
+strong approval/doble confirmación cuando aplique y todas las gates. Ilegal,
+inseguro, no autorizado, imposible o unsupported permanece denegado.
 
-No seguir ampliando backlog general salvo necesidad concreta. Nuevas ideas deben entrar como misiones/spikes o requerir una actualización explícita del mapa maestro antes de crear una nueva fase.
+El roadmap usa Mark 1, Mark 2 y Mark 3 mediante macro-PRs grandes. El siguiente
+trabajo recomendado es PR #123 - Monetization Engine Real. Ver
+`docs/jarvis-post-s-global-approval-controlled-execution-semantics-mark-roadmap.md`.
 
 ## 11. Cómo iniciar un hilo nuevo
 

@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Tuple
 
+from jarvis.approval_execution_semantics import global_execution_markers
+
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
 NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
-NEXT_RECOMMENDED_MACRO_PR = "Post-S Macro 7 - Monetization Engine Real"
+NEXT_RECOMMENDED_MACRO_PR = "PR #123 - Monetization Engine Real"
 
 
 @dataclass(frozen=True)
@@ -72,6 +74,19 @@ class OperationalSystemStatus:
     wake_phrases_supported: List[str] = field(default_factory=lambda: ["Hola Jarvis", "Jarvis"])
     wake_phrase_command_parsing_available: bool = True
     wake_phrase_is_not_permission: bool = True
+    memory_active_is_not_permission: bool = True
+    scheduler_due_is_not_permission: bool = True
+    restrictions_are_approval_gates: bool = True
+    default_denied_without_approval: bool = True
+    executable_after_valid_approval: bool = True
+    strong_approval_for_sensitive_actions: bool = True
+    double_confirmation_for_critical_actions: bool = True
+    permanent_denial_for_illegal_unsafe_unauthorized_impossible_unsupported: bool = True
+    audit_required_for_execution: bool = True
+    context_fingerprint_required_for_sensitive_execution: bool = True
+    permission_gates_required_for_execution: bool = True
+    rollback_or_stop_plan_required_when_possible: bool = True
+    no_micro_pr_policy: bool = True
     push_to_talk_fallback_available: bool = True
     voice_session_control_available: bool = True
     camera_control_available: bool = True
@@ -125,6 +140,19 @@ class OperationalSystemStatus:
             "wake_voice_runtime_available",
             "wake_phrase_command_parsing_available",
             "wake_phrase_is_not_permission",
+            "memory_active_is_not_permission",
+            "scheduler_due_is_not_permission",
+            "restrictions_are_approval_gates",
+            "default_denied_without_approval",
+            "executable_after_valid_approval",
+            "strong_approval_for_sensitive_actions",
+            "double_confirmation_for_critical_actions",
+            "permanent_denial_for_illegal_unsafe_unauthorized_impossible_unsupported",
+            "audit_required_for_execution",
+            "context_fingerprint_required_for_sensitive_execution",
+            "permission_gates_required_for_execution",
+            "rollback_or_stop_plan_required_when_possible",
+            "no_micro_pr_policy",
             "push_to_talk_fallback_available",
             "voice_session_control_available",
             "camera_control_available",
@@ -417,6 +445,7 @@ def build_safety_boundary_summary() -> SafetyBoundarySummary:
 def build_command_center_system_map() -> Dict[str, Any]:
     return {
         "prepare_only": True,
+        **global_execution_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -451,6 +480,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         "camera_execution_disabled": "prepare_only",
         "global_readiness": GLOBAL_READINESS,
         "system_map": {
+            **global_execution_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
@@ -539,6 +569,8 @@ def build_operational_console_summary() -> Dict[str, Any]:
         "visible_reasons": [
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
             "No Phase T exists or is implied.",
+            "Restrictions are approval gates, not permanent bans.",
+            "The current implementation remains control-plane only, while valid approval and all gates can make supported actions execution-eligible.",
             "Approval, audit, permission, sandbox, dry-run, and rollback gates precede real execution.",
             "Post-S Macro 4 provides connector and tool invocation readiness without enabling execution.",
             "Post-S Macro 5 provides approved-memory, Personal OS, scheduler, review, and stop-control previews without autoload or execution.",

@@ -6,10 +6,17 @@ de runtime. Es trabajo post-Phase S y no es Phase T. No existe Phase T aprobada 
 
 ## Boundary prepare-only
 
+PR #122 conserva esta implementación control-plane, pero aclara su destino:
+**Restrictions are approval gates, not permanent bans.** Approval hardening
+sigue siendo la autoridad de approval, strong approval, expiración, revocación,
+context fingerprint y audit; una aprobación válida puede satisfacer su gate
+para ejecución futura, pero nunca supera una denegación permanente.
+
 La macro no ejecuta acciones, comandos, despliegues, pagos, mensajes, llamadas externas, acceso a
 secretos, captura de sensores ni automatizacion fisica. Un approval aprobado solo produce estado
-verificable. Incluso un gate valido devuelve `safe_to_execute=false`; solo queda marcado como
-permitido para una futura capa de ejecucion que todavia no existe.
+verificable. Un gate válido puede satisfacer la parte de approval de una decisión global futura,
+pero approval por sí solo nunca activa ejecución y las demás gates deben volver a validarse. En
+esta capa aislada `safe_to_execute=false` porque todavía no representa la decisión global completa.
 
 ## Approval normal y strong approval
 
