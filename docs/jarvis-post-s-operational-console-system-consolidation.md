@@ -94,7 +94,11 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution**
+**Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release Candidate**
+
+Post-S Macro 9 aporta Product Builder Adaptativo, validación, diferenciación,
+blueprints específicos, planes de publishing/deploy y execution candidates sin
+crear repos, escribir scaffolds, publicar, desplegar o llamar plataformas.
 
 Post-S Macro 8 aporta pricing, revenue modeling, budget guard, payment approval,
 Stripe readiness y unit economics en control-plane. No mueve dinero real ni

@@ -451,6 +451,12 @@ readiness y unit economics/ROI. No mueve dinero real ni llama Stripe. La
 siguiente recomendación es **Post-S Macro 9 — SaaS/Product Builder +
 Publishing/Deploy Execution**.
 
+PR #124 / Post-S Macro 9 consolida el **Product Builder Adaptativo / Adaptive
+SaaS Builder** y los candidatos de publishing/deploy bajo aprobación, sin crear
+repos, escribir scaffolds externos, publicar o desplegar. La siguiente
+recomendación es **Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release
+Candidate**.
+
 Criterios obligatorios:
 
 - No crear nuevas fases sin actualizar primero este mapa maestro y registrar la decisión explícita.

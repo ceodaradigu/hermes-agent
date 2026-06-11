@@ -100,7 +100,9 @@ creación Stripe live.
 
 ## Siguiente macro
 
-**Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution**
+Post-S Macro 9 consume esta capa desde el Product Builder Adaptativo. Después de
+Macro 9, la siguiente recomendación es **Post-S Macro 10 — Mark 1 Hardening, E2E
+Real Ops & Release Candidate**.
 
 ## Tests
 

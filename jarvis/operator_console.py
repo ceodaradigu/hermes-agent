@@ -44,6 +44,7 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
 )
 from jarvis.monetization_engine import monetization_markers
+from jarvis.adaptive_saas_builder import adaptive_saas_builder_markers
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
 from jarvis.operational_consolidation import build_operational_console_summary as _build_operational_console_summary
 from jarvis.payments_revenue.foundation import (
@@ -118,6 +119,7 @@ _POST_S_VOICE_CAMERA_MARKERS = {
 }
 _GLOBAL_APPROVAL_EXECUTION_MARKERS = global_execution_markers()
 _MONETIZATION_MARKERS = monetization_markers()
+_ADAPTIVE_SAAS_BUILDER_MARKERS = adaptive_saas_builder_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -874,6 +876,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
             **_MONETIZATION_MARKERS,
+            **_ADAPTIVE_SAAS_BUILDER_MARKERS,
         },
     )
 
@@ -1042,6 +1045,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         **_POST_S_VOICE_CAMERA_MARKERS,
         **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
         **_MONETIZATION_MARKERS,
+        **_ADAPTIVE_SAAS_BUILDER_MARKERS,
     }
     return safe
 
