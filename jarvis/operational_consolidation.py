@@ -4,11 +4,11 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from jarvis.approval_execution_semantics import global_execution_markers
+from jarvis.monetization_engine import NEXT_RECOMMENDED_MACRO_PR, monetization_markers
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
 NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
-NEXT_RECOMMENDED_MACRO_PR = "PR #123 - Monetization Engine Real"
 
 
 @dataclass(frozen=True)
@@ -100,6 +100,23 @@ class OperationalSystemStatus:
     microphone_active: bool = False
     voice_execution_enabled: bool = False
     camera_execution_enabled: bool = False
+    monetization_engine_available: bool = True
+    pricing_strategy_available: bool = True
+    revenue_modeling_available: bool = True
+    budget_guard_available: bool = True
+    payment_approval_control_available: bool = True
+    stripe_readiness_available: bool = True
+    real_money_movement_enabled: bool = False
+    external_payment_calls_enabled: bool = False
+    live_payments_enabled: bool = False
+    money_actions_blocked_without_approval: bool = True
+    money_actions_executable_after_valid_approval: bool = True
+    live_money_actions_require_strong_approval: bool = True
+    critical_money_actions_require_double_confirmation: bool = True
+    budget_guard_required_for_spend: bool = True
+    revenue_estimates_are_not_confirmed: bool = True
+    no_real_money_moved: bool = True
+    current_mark: str = "Mark 1"
     next_recommended_macro_pr: str = NEXT_RECOMMENDED_MACRO_PR
     global_readiness: str = GLOBAL_READINESS
     warnings: List[str] = field(default_factory=list)
@@ -158,6 +175,19 @@ class OperationalSystemStatus:
             "camera_control_available",
             "camera_opt_in_required",
             "visible_indicators_required",
+            "monetization_engine_available",
+            "pricing_strategy_available",
+            "revenue_modeling_available",
+            "budget_guard_available",
+            "payment_approval_control_available",
+            "stripe_readiness_available",
+            "money_actions_blocked_without_approval",
+            "money_actions_executable_after_valid_approval",
+            "live_money_actions_require_strong_approval",
+            "critical_money_actions_require_double_confirmation",
+            "budget_guard_required_for_spend",
+            "revenue_estimates_are_not_confirmed",
+            "no_real_money_moved",
         ):
             object.__setattr__(self, name, True)
         for name in (
@@ -192,11 +222,15 @@ class OperationalSystemStatus:
             "microphone_active",
             "voice_execution_enabled",
             "camera_execution_enabled",
+            "real_money_movement_enabled",
+            "external_payment_calls_enabled",
+            "live_payments_enabled",
         ):
             object.__setattr__(self, name, False)
         object.__setattr__(self, "next_recommended_macro_pr", NEXT_RECOMMENDED_MACRO_PR)
         object.__setattr__(self, "wake_phrases_supported", ["Hola Jarvis", "Jarvis"])
         object.__setattr__(self, "global_readiness", GLOBAL_READINESS)
+        object.__setattr__(self, "current_mark", "Mark 1")
         object.__setattr__(self, "warnings", list(self.warnings))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -446,6 +480,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
     return {
         "prepare_only": True,
         **global_execution_markers(),
+        **monetization_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -481,6 +516,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         "global_readiness": GLOBAL_READINESS,
         "system_map": {
             **global_execution_markers(),
+            **monetization_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
@@ -575,6 +611,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Post-S Macro 4 provides connector and tool invocation readiness without enabling execution.",
             "Post-S Macro 5 provides approved-memory, Personal OS, scheduler, review, and stop-control previews without autoload or execution.",
             "Post-S Macro 6 provides local wake phrase, voice session, and camera opt-in previews without activating sensors or execution.",
+            "Post-S Macro 8 provides monetization previews, budget gates, and payment eligibility without moving real money.",
         ],
         "command_center": build_command_center_system_map(),
     }

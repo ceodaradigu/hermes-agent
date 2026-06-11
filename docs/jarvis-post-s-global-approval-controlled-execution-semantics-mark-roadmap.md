@@ -82,6 +82,10 @@ controlado y release candidate.
 - PR #124 - SaaS/Product Builder + Publishing/Deploy Execution
 - PR #125 - Mark 1 Hardening, E2E Real Ops & Release Candidate
 
+PR #123 / Post-S Macro 8 implementa la capa monetaria de control-plane y
+approval eligibility sin mover dinero real. La siguiente recomendación es
+**Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution**.
+
 ### Mark 2
 
 Ejecución real profunda: daemon local, wake real, UI seria,

@@ -119,6 +119,7 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
     MeasurementPlanPreview,
 )
+from jarvis.monetization_engine import MonetizationEngine
 from jarvis.payments_revenue.foundation import (
     CheckoutPlanPreview,
     FinancialRiskGuardPreview,
@@ -849,6 +850,60 @@ class PaymentsRevenuePreviewRequest(BaseModel):
     income_guarantee_requested: bool = False
 
 
+class MonetizationPreviewRequest(BaseModel):
+    plan_id: Optional[str] = None
+    name: Optional[str] = None
+    price_amount: Optional[float] = None
+    currency: str = "EUR"
+    billing_interval: str = "monthly"
+    included_usage: Optional[str] = None
+    overage_price: Optional[float] = None
+    target_customer: Optional[str] = None
+    value_proposition: Optional[str] = None
+    margin_notes: Optional[List[str]] = None
+    risk_notes: Optional[List[str]] = None
+    expected_customers: Optional[float] = None
+    conversion_rate: Optional[float] = None
+    churn_rate: Optional[float] = None
+    monthly_price: Optional[float] = None
+    confidence_level: Optional[str] = None
+    assumptions: Optional[List[str]] = None
+    unknowns: Optional[List[str]] = None
+    monthly_budget_limit: Optional[float] = None
+    per_action_spend_limit: Optional[float] = None
+    current_spend_estimate: Optional[float] = None
+    proposed_spend: Optional[float] = None
+    action_name: Optional[str] = None
+    action_type: Optional[str] = None
+    amount: Optional[float] = None
+    provider: str = "unknown"
+    mode: str = "preview"
+    valid_approval_present: bool = False
+    strong_approval_present: bool = False
+    double_confirmation_present: bool = False
+    context_fingerprint_matches: bool = False
+    permission_gates_passed: bool = False
+    audit_present: bool = False
+    rollback_or_stop_plan_present: bool = False
+    real_money_requested: bool = False
+    illegal: bool = False
+    fraudulent: bool = False
+    unsafe: bool = False
+    unauthorized: bool = False
+    impossible: bool = False
+    unsupported: bool = False
+    product_catalog_preview: Optional[List[Dict[str, Any]]] = None
+    checkout_preview: Optional[Dict[str, Any]] = None
+    acquisition_spend: Optional[float] = None
+    acquired_customers: Optional[float] = None
+    monthly_revenue_per_customer: Optional[float] = None
+    gross_margin_rate: Optional[float] = None
+    monthly_churn_rate: Optional[float] = None
+    investment: Optional[float] = None
+    return_amount: Optional[float] = None
+    confidence: Optional[str] = None
+
+
 class DailyOperatorPreviewRequest(BaseModel):
     date: Optional[str] = None
     timezone: str = "unknown"
@@ -1309,6 +1364,7 @@ def create_app(
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.approval_hardening = ApprovalHardeningService()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
+    app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.controlled_runtime_bridge = ControlledRuntimeBridge(
         audit_trail=app.state.approval_hardening.audit_trail,
     )
@@ -2093,6 +2149,42 @@ def create_app(
     @app.post("/payments-revenue/approval-requirements")
     def payments_revenue_approval_requirements(payload: PaymentsRevenuePreviewRequest) -> dict:
         return PaymentApprovalRequirements.from_request(payload.model_dump()).to_dict()
+
+    @app.get("/monetization/status")
+    def monetization_status() -> dict:
+        return app.state.monetization_engine.status()
+
+    @app.get("/monetization/policy")
+    def monetization_policy() -> dict:
+        return app.state.monetization_engine.policy()
+
+    @app.post("/monetization/preview-pricing")
+    def monetization_preview_pricing(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_pricing(payload.model_dump())
+
+    @app.post("/monetization/preview-revenue")
+    def monetization_preview_revenue(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_revenue(payload.model_dump())
+
+    @app.post("/monetization/preview-budget")
+    def monetization_preview_budget(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_budget(payload.model_dump())
+
+    @app.post("/monetization/preview-payment-approval")
+    def monetization_preview_payment_approval(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_payment_approval(payload.model_dump())
+
+    @app.post("/monetization/preview-stripe-readiness")
+    def monetization_preview_stripe_readiness(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_stripe_readiness(payload.model_dump())
+
+    @app.post("/monetization/preview-action")
+    def monetization_preview_action(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_action(payload.model_dump())
+
+    @app.post("/monetization/preview-unit-economics")
+    def monetization_preview_unit_economics(payload: MonetizationPreviewRequest) -> dict:
+        return app.state.monetization_engine.preview_unit_economics(payload.model_dump())
 
     @app.get("/marketing-distribution/status")
     def marketing_distribution_status() -> dict:

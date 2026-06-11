@@ -445,6 +445,12 @@ El roadmap usa macro-PRs grandes y coherentes, no cientos de micro-PRs por Mark.
 
 La definición completa está en `docs/jarvis-post-s-global-approval-controlled-execution-semantics-mark-roadmap.md`.
 
+Post-S Macro 8 / PR #123 implementa Monetization Engine Real dentro de Mark 1:
+pricing, revenue projections, budget guard, payment approval readiness, Stripe
+readiness y unit economics/ROI. No mueve dinero real ni llama Stripe. La
+siguiente recomendación es **Post-S Macro 9 — SaaS/Product Builder +
+Publishing/Deploy Execution**.
+
 Criterios obligatorios:
 
 - No crear nuevas fases sin actualizar primero este mapa maestro y registrar la decisión explícita.
