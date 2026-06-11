@@ -481,3 +481,12 @@ Criterios obligatorios:
 - No ejecutar revenue ni afirmar resultados sin separar `projected`, `confirmed`, `gross`, `expenses` y `net`.
 - No instalar, ejecutar ni adoptar herramientas externas sin evaluar licencia, seguridad, permisos y valor.
 - No habilitar cámara o voz continua sin indicador visible, stop inmediato y controles de privacidad.
+
+## Mark 2 Macro 1 iniciada
+
+PR #126 inicia Mark 2 con local daemon desactivado por defecto, desktop runtime
+visible, real wake listener preparado sin acceso real al micrófono y Voice
+Approval Channel. La voz puede aprobar tras readback y confirmaciones fuertes;
+la wake phrase nunca concede permiso. No completa Mark 2 ni activa ejecución
+externa. La siguiente recomendación es **Mark 2 Macro 2 — Real Tool Execution:
+Browser, GitHub, Filesystem & APIs**.

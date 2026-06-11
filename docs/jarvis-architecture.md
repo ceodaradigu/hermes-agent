@@ -85,6 +85,15 @@ Phase G — Ambient Vision / Camera Companion tiene una foundation prepare-only 
 
 Para la fase posterior al Command Center base, ver la propuesta de **Dominion / Overdrive Mode** en `docs/roadmap/pr-future-overdrive-dominion-mode.md` (capa visual/conversacional futura, sin cambios al modelo de seguridad).
 
+## Mark 2 Macro 1
+
+Mark 2 empieza con una capa local desactivada por defecto: contratos de daemon,
+desktop runtime visible, wake listener real preparado y canal de approval por
+voz. El micrófono no se activa, no se guarda audio bruto y no existe ejecución
+externa. La voz puede satisfacer un approval explícito con readback,
+expiración, audit y doble/triple confirmación; una wake phrase solo abre sesión
+y nunca es permiso.
+
 JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.
 
 También ver `docs/roadmap/pr-future-voice-runtime-adapter.md` para el roadmap de integración de voz mediante adapters desacoplados, manteniendo `PolicyEngine`, `ApprovalGateway` y control humano en acciones sensibles.

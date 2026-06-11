@@ -188,3 +188,9 @@ governance, approval, audit, readiness, monetización, builder y operación est�
 consolidadas y validadas sin ocultar límites reales. No significa terminado
 para siempre. Phase S sigue siendo la última fase maestra, no existe Phase T y
 el siguiente avance se realiza mediante macro-PRs de Mark 2.
+
+Mark 2 Macro 1 inicia ese avance con runtime local controlado y desactivado por
+defecto. La voz puede ser un canal de approval explícito, pero `Hola Jarvis` o
+`Jarvis` solo despiertan: nunca autorizan. Producción, dinero y acciones
+críticas conservan readback, strong approval, doble/triple confirmación, audit,
+expiración y stop controls.

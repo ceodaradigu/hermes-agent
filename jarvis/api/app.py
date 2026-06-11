@@ -50,6 +50,7 @@ from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
+from jarvis.desktop_runtime import DesktopRuntime
 from jarvis.continuous_learning.foundation import (
     ApprovalWorkflowPreview,
     ContinuousLearningStatus,
@@ -129,6 +130,8 @@ from jarvis.mark_1_release_candidate import (
     Mark1DocumentationStatus,
     Mark1ReleaseCandidateStatus,
 )
+from jarvis.local_daemon import LocalDaemonControl
+from jarvis.local_runtime_safety import LocalRuntimeSafetyPolicy
 from jarvis.monetization_engine import MonetizationEngine
 from jarvis.payments_revenue.foundation import (
     CheckoutPlanPreview,
@@ -194,6 +197,7 @@ from jarvis.personal_os.foundation import (
 from jarvis.policy.approval_gateway import ApprovalGateway
 from jarvis.policy.policy_engine import PolicyDecision, PolicyEngine
 from jarvis.permission_gates import evaluate_permission_gate
+from jarvis.real_wake_listener import RealWakeListener
 from jarvis.runtime.hermes_adapter import HermesRuntimeAdapter
 from jarvis.sandbox_execution.foundation import (
     SandboxAuditPreview,
@@ -232,6 +236,7 @@ from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
 from jarvis.voice.understanding_feedback import UserUnderstandingAppliedFeedbackRule, UserUnderstandingFeedback
 from jarvis.voice_session_control import VoiceSessionControl
+from jarvis.voice_approval_channel import VoiceApprovalChannel
 from jarvis.wake_voice_runtime import WakeVoiceRuntime
 
 
@@ -284,6 +289,18 @@ class WakeVoicePreviewRequest(BaseModel):
     text: str = ""
     confidence: float = 1.0
     answer_mode: str = "text"
+
+
+class Mark2VoiceApprovalRequest(BaseModel):
+    approval_id: Optional[str] = None
+    action: str = "deploy production"
+    phrase: str = ""
+    phrases: Optional[List[str]] = None
+    risk_level: Optional[str] = None
+    require_triple_confirmation: bool = False
+    cost_summary: str = "unknown; operator review required"
+    production_impact_summary: str = "none in preview"
+    rollback_or_stop_plan_summary: str = "stop before execution; rollback required when applicable"
 
 
 class CameraControlPreviewRequest(BaseModel):
@@ -1401,6 +1418,11 @@ def create_app(
         policy_engine=app.state.policy_engine,
     )
     app.state.camera_control_runtime = CameraControlRuntime()
+    app.state.local_daemon_control = LocalDaemonControl()
+    app.state.desktop_runtime = DesktopRuntime()
+    app.state.local_runtime_safety_policy = LocalRuntimeSafetyPolicy()
+    app.state.real_wake_listener = RealWakeListener(session_control=app.state.voice_session_control)
+    app.state.voice_approval_channel = VoiceApprovalChannel()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1420,6 +1442,69 @@ def create_app(
     @app.get("/mark-1/status")
     def mark_1_status() -> dict:
         return Mark1ReleaseCandidateStatus().to_dict()
+
+    @app.get("/mark-2/local-daemon/status")
+    def mark_2_local_daemon_status() -> dict:
+        return app.state.local_daemon_control.status()
+
+    @app.get("/mark-2/desktop-runtime/status")
+    def mark_2_desktop_runtime_status() -> dict:
+        return app.state.desktop_runtime.status().to_dict()
+
+    @app.get("/mark-2/local-runtime/safety-policy")
+    def mark_2_local_runtime_safety_policy() -> dict:
+        return app.state.local_runtime_safety_policy.to_dict()
+
+    @app.get("/mark-2/wake-listener/status")
+    def mark_2_wake_listener_status() -> dict:
+        return app.state.real_wake_listener.status()
+
+    @app.post("/mark-2/wake-listener/preview-transcript")
+    def mark_2_wake_listener_preview_transcript(payload: WakeVoicePreviewRequest) -> dict:
+        return app.state.real_wake_listener.preview_transcript(payload.text, confidence=payload.confidence)
+
+    @app.get("/mark-2/voice-approval/status")
+    def mark_2_voice_approval_status() -> dict:
+        return app.state.voice_approval_channel.status()
+
+    @app.post("/mark-2/voice-approval/preview-start")
+    def mark_2_voice_approval_preview_start(payload: Mark2VoiceApprovalRequest) -> dict:
+        try:
+            return app.state.voice_approval_channel.start(
+                action=payload.action,
+                risk_level=payload.risk_level,
+                require_triple_confirmation=payload.require_triple_confirmation,
+                cost_summary=payload.cost_summary,
+                production_impact_summary=payload.production_impact_summary,
+                rollback_or_stop_plan_summary=payload.rollback_or_stop_plan_summary,
+            ).to_dict()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-2/voice-approval/preview-confirm")
+    def mark_2_voice_approval_preview_confirm(payload: Mark2VoiceApprovalRequest) -> dict:
+        if not payload.approval_id:
+            raise HTTPException(status_code=400, detail="approval_id is required")
+        try:
+            return app.state.voice_approval_channel.confirm(payload.approval_id, payload.phrase).to_dict()
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="voice approval preview not found") from exc
+
+    @app.post("/mark-2/voice-approval/preview-flow")
+    def mark_2_voice_approval_preview_flow(payload: Mark2VoiceApprovalRequest) -> dict:
+        return app.state.voice_approval_channel.preview_flow(
+            payload.action,
+            payload.phrases or [],
+            require_triple_confirmation=payload.require_triple_confirmation,
+        )
+
+    @app.get("/mark-2/local-daemon/command-preview")
+    def mark_2_local_daemon_command_preview(command: str = "daemon_status") -> dict:
+        return app.state.local_daemon_control.preview_command(command).to_dict()
+
+    @app.get("/mark-2/local-audit/preview")
+    def mark_2_local_audit_preview() -> dict:
+        return app.state.voice_approval_channel.audit_preview()
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

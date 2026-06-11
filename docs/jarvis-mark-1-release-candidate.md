@@ -55,6 +55,10 @@ avanzado ni aprendizaje continuo autónomo.
 Las primeras capacidades pertenecen a Mark 2. Multiagente avanzado,
 aprendizaje continuo y operación 24/7 pertenecen a Mark 3.
 
+Mark 2 Macro 1 empieza en PR #126 con una base local desactivada por defecto:
+daemon, desktop runtime, wake listener preparado y approval por voz. Esto no
+cambia el estado cerrado de Mark 1 ni significa que Mark 2 esté completo.
+
 ## Endpoints
 
 Todos son GET, read-only y control-plane:
