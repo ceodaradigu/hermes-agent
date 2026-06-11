@@ -183,3 +183,8 @@ Cualquier fase futura de JARVIS debe respetarlo:
 - documentación.
 
 JARVIS debe evolucionar para entender a David mejor con el tiempo, sin perder transparencia, control, privacidad ni pensamiento crítico.
+Mark 1 se considera release candidate cuando sus capacidades de control,
+governance, approval, audit, readiness, monetización, builder y operación están
+consolidadas y validadas sin ocultar límites reales. No significa terminado
+para siempre. Phase S sigue siendo la última fase maestra, no existe Phase T y
+el siguiente avance se realiza mediante macro-PRs de Mark 2.

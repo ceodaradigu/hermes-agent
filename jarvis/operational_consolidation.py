@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 from jarvis.approval_execution_semantics import global_execution_markers
 from jarvis.adaptive_saas_builder import NEXT_RECOMMENDED_MACRO_PR, adaptive_saas_builder_markers
+from jarvis.mark_1_release_candidate import mark_1_release_candidate_markers
 from jarvis.monetization_engine import monetization_markers
 
 
@@ -287,7 +288,14 @@ class OperationalSystemStatus:
         object.__setattr__(self, "warnings", list(self.warnings))
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return {
+            **asdict(self),
+            **mark_1_release_candidate_markers(),
+            "mark_1_runtime_ready": True,
+            "mark_1_tools_ready": True,
+            "mark_1_memory_ready": True,
+            "mark_1_voice_camera_ready": True,
+        }
 
 
 @dataclass(frozen=True)
@@ -535,6 +543,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         **global_execution_markers(),
         **monetization_markers(),
         **adaptive_saas_builder_markers(),
+        **mark_1_release_candidate_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -572,6 +581,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
             **global_execution_markers(),
             **monetization_markers(),
             **adaptive_saas_builder_markers(),
+            **mark_1_release_candidate_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
@@ -668,6 +678,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Post-S Macro 6 provides local wake phrase, voice session, and camera opt-in previews without activating sensors or execution.",
             "Post-S Macro 8 provides monetization previews, budget gates, and payment eligibility without moving real money.",
             "Post-S Macro 9 provides the Adaptive SaaS Builder and approval-gated publishing/deploy candidates without executing them.",
+            "Post-S Macro 10 closes Mark 1 as a release candidate and recommends Mark 2 next; it does not create Phase T.",
         ],
         "command_center": build_command_center_system_map(),
     }

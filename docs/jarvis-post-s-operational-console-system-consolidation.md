@@ -129,3 +129,11 @@ pytest tests/jarvis/test_e2e_prepare_only_smoke_after_phase_s.py -q
 
 El smoke post-S usa superficies prepare-only y falla si se llama a Hermes o al
 ApprovalGateway real. No instala dependencias, no despliega y no llama a red.
+
+## Mark 1 Release Candidate
+
+PR #125 añade markers de cierre Mark 1 a Operational Console, Command Center y
+Operator Console. Reflejan readiness de governance, runtime bridge, tool layer,
+memory/Personal OS/scheduler, wake/voice/camera, monetización, Adaptive SaaS
+Builder, smoke E2E, docs y runbook. `real_external_execution_enabled=false`
+permanece visible y la siguiente recomendación es Mark 2, no Phase T.

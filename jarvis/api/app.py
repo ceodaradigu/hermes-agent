@@ -120,6 +120,15 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
     MeasurementPlanPreview,
 )
+from jarvis.mark_1_e2e_readiness import Mark1E2ERealOpsSmoke
+from jarvis.mark_1_operational_runbook import Mark1KnownLimitations, Mark1OperationalRunbook, Mark2NextPlan
+from jarvis.mark_1_release_candidate import (
+    Mark1ApprovalPathAudit,
+    Mark1CapabilityMatrix,
+    Mark1DangerousRouteAudit,
+    Mark1DocumentationStatus,
+    Mark1ReleaseCandidateStatus,
+)
 from jarvis.monetization_engine import MonetizationEngine
 from jarvis.payments_revenue.foundation import (
     CheckoutPlanPreview,
@@ -1407,6 +1416,45 @@ def create_app(
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.get("/mark-1/status")
+    def mark_1_status() -> dict:
+        return Mark1ReleaseCandidateStatus().to_dict()
+
+    @app.get("/mark-1/capabilities")
+    def mark_1_capabilities() -> dict:
+        return Mark1CapabilityMatrix().to_dict()
+
+    @app.get("/mark-1/e2e-smoke")
+    def mark_1_e2e_smoke() -> dict:
+        return Mark1E2ERealOpsSmoke(
+            builder=app.state.adaptive_saas_builder,
+            monetization=app.state.monetization_engine,
+        ).run()
+
+    @app.get("/mark-1/dangerous-route-audit")
+    def mark_1_dangerous_route_audit() -> dict:
+        return Mark1DangerousRouteAudit().audit(route.path for route in app.routes)
+
+    @app.get("/mark-1/approval-path-audit")
+    def mark_1_approval_path_audit() -> dict:
+        return Mark1ApprovalPathAudit(app.state.approval_execution_semantics).audit()
+
+    @app.get("/mark-1/docs-status")
+    def mark_1_docs_status() -> dict:
+        return Mark1DocumentationStatus().to_dict()
+
+    @app.get("/mark-1/runbook")
+    def mark_1_runbook() -> dict:
+        return Mark1OperationalRunbook().to_dict()
+
+    @app.get("/mark-1/known-limitations")
+    def mark_1_known_limitations() -> dict:
+        return Mark1KnownLimitations().to_dict()
+
+    @app.get("/mark-1/next-plan")
+    def mark_1_next_plan() -> dict:
+        return Mark2NextPlan().to_dict()
 
     @app.get("/operational/status")
     def operational_status() -> dict:
