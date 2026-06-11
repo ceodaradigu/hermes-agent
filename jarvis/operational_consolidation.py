@@ -7,10 +7,12 @@ from jarvis.approval_execution_semantics import global_execution_markers
 from jarvis.adaptive_saas_builder import NEXT_RECOMMENDED_MACRO_PR, adaptive_saas_builder_markers
 from jarvis.mark_1_release_candidate import mark_1_release_candidate_markers
 from jarvis.monetization_engine import monetization_markers
+from jarvis.voice_approval_channel import mark_2_macro_1_markers
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
 NEXT_MACRO_PR = "Post-S Macro 5 - Memory, Personal OS & Scheduler Real"
+MARK_2_NEXT_RECOMMENDED_MACRO_PR = "Mark 2 Macro 2 — Real Tool Execution: Browser, GitHub, Filesystem & APIs"
 
 
 @dataclass(frozen=True)
@@ -291,6 +293,7 @@ class OperationalSystemStatus:
         return {
             **asdict(self),
             **mark_1_release_candidate_markers(),
+            **mark_2_macro_1_markers(),
             "mark_1_runtime_ready": True,
             "mark_1_tools_ready": True,
             "mark_1_memory_ready": True,
@@ -544,6 +547,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         **monetization_markers(),
         **adaptive_saas_builder_markers(),
         **mark_1_release_candidate_markers(),
+        **mark_2_macro_1_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -582,6 +586,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
             **monetization_markers(),
             **adaptive_saas_builder_markers(),
             **mark_1_release_candidate_markers(),
+            **mark_2_macro_1_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
@@ -666,6 +671,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "future opt-in voice, camera, external tools, and physical-world work",
         ],
         "next_recommended_macro_pr": NEXT_RECOMMENDED_MACRO_PR,
+        "mark_2_next_recommended_macro_pr": MARK_2_NEXT_RECOMMENDED_MACRO_PR,
         "blocked_actions": list(boundaries.blocked_actions),
         "visible_reasons": [
             "Phase A-Phase S are foundation-complete, not runtime-enabled.",
@@ -679,6 +685,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Post-S Macro 8 provides monetization previews, budget gates, and payment eligibility without moving real money.",
             "Post-S Macro 9 provides the Adaptive SaaS Builder and approval-gated publishing/deploy candidates without executing them.",
             "Post-S Macro 10 closes Mark 1 as a release candidate and recommends Mark 2 next; it does not create Phase T.",
+            "Mark 2 Macro 1 starts the disabled-by-default local daemon, desktop runtime, real wake listener plan, and voice approval channel.",
         ],
         "command_center": build_command_center_system_map(),
     }

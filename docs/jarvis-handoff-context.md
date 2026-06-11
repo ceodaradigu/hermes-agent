@@ -363,6 +363,12 @@ Macro 1 - Local Daemon, Real Wake Listener & Desktop Runtime**. Ver
 `docs/jarvis-mark-1-release-candidate.md` y
 `docs/jarvis-mark-1-operational-runbook.md`.
 
+PR #126 inicia Mark 2 Macro 1: local daemon, desktop runtime, real wake listener
+preparado y Voice Approval Channel. Todo queda disabled by default; no hay
+micrófono real, audio bruto, red, servicios del sistema ni ejecución crítica.
+La siguiente recomendación es **Mark 2 Macro 2 — Real Tool Execution: Browser,
+GitHub, Filesystem & APIs**.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

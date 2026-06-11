@@ -65,3 +65,8 @@ git status --short
 No crear Phase T. Iniciar Mark 2 únicamente con la siguiente macro aprobada:
 **Mark 2 Macro 1 - Local Daemon, Real Wake Listener & Desktop Runtime**. Mantener
 approval gates, audit, permission gates, stop controls y defaults seguros.
+
+PR #126 inicia esta macro sin arrancar daemon ni micrófono. Para validarla usa
+`pytest tests/jarvis/test_mark_2_local_daemon_real_wake_desktop_runtime_voice_approval.py -q`.
+Una wake phrase no es permission; approval por voz exige el flow explícito,
+readback, audit, expiración y confirmaciones acordes al riesgo.

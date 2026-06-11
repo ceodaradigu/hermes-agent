@@ -23,6 +23,7 @@ from jarvis.voice.companion import (
     VoiceCompanionIntentPreview,
     VoiceCompanionStatus,
 )
+from jarvis.voice_approval_channel import mark_2_macro_1_markers
 
 
 class CommandCenterViewStatus(str, Enum):
@@ -950,6 +951,7 @@ def build_command_center_view_model(
             "personal_os_environment_intelligence": "prepare_only",
             "advanced_personalization_user_model": "prepare_only",
             "future_moonshot_layer": "prepare_only",
+            **mark_2_macro_1_markers(),
             "post_s_approval_hardening": "prepare_only",
             "strong_approval_policy": "prepare_only",
             "approval_audit": "prepare_only",
