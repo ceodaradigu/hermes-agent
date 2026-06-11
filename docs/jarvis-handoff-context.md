@@ -356,9 +356,12 @@ prepare-only para siempre y está diseñado para ejecutar tras aprobación váli
 strong approval/doble confirmación cuando aplique y todas las gates. Ilegal,
 inseguro, no autorizado, imposible o unsupported permanece denegado.
 
-El roadmap usa Mark 1, Mark 2 y Mark 3 mediante macro-PRs grandes. El siguiente
-trabajo recomendado es PR #123 - Monetization Engine Real. Ver
-`docs/jarvis-post-s-global-approval-controlled-execution-semantics-mark-roadmap.md`.
+El roadmap usa Mark 1, Mark 2 y Mark 3 mediante macro-PRs grandes. PR #125
+cierra Mark 1 como release candidate seguro y operacionalmente claro, sin
+activar ejecución externa real. El siguiente trabajo recomendado es **Mark 2
+Macro 1 - Local Daemon, Real Wake Listener & Desktop Runtime**. Ver
+`docs/jarvis-mark-1-release-candidate.md` y
+`docs/jarvis-mark-1-operational-runbook.md`.
 
 ## 11. Cómo iniciar un hilo nuevo
 

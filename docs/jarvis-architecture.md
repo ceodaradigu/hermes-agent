@@ -214,3 +214,15 @@ Este PR añade almacenamiento local opcional y seguro para audio generado por `P
 - No publica audio ni agrega UI/streaming.
 - La respuesta JSON no expone `audio_bytes`; solo devuelve `audio_path` cuando existe.
 - El almacenamiento valida formato (`wav/mp3/ogg`) y evita path traversal.
+## Mark 1 Release Candidate
+
+Mark 1 cierra la arquitectura control-plane post-S: governance global,
+approval/audit/permission gates, controlled runtime y tool readiness,
+memory/Personal OS/scheduler, voice/camera control-plane, monetización,
+Adaptive SaaS Builder y consolas operacionales. Phase S sigue siendo la última
+fase maestra; no existe Phase T.
+
+Los endpoints `/mark-1/*` son GET read-only. Componen estado, readiness,
+auditorías, smoke E2E, runbook y roadmap sin ejecutar, llamar red, leer
+credenciales, publicar, desplegar, mover dinero o activar sensores. Mark 2 es la
+siguiente capa de ejecución real bajo las mismas gates.

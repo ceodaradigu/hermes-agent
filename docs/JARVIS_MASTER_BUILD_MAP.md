@@ -457,6 +457,23 @@ repos, escribir scaffolds externos, publicar o desplegar. La siguiente
 recomendación es **Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release
 Candidate**.
 
+## Mark 1 Release Candidate
+
+PR #125 / Post-S Macro 10 cierra Mark 1 como release candidate coherente,
+documentado, testeado y operacionalmente claro. Phase S continúa siendo la
+última fase maestra y no existe Phase T.
+
+Mark 1 consolida governance, approval-controlled execution semantics, audit,
+permission gates, runtime/tool readiness, memory/Personal OS/scheduler,
+wake/voice/camera control-plane, monetización, Adaptive SaaS Builder,
+publishing/deploy candidates y consolas operacionales. La ejecución externa
+real, dinero real, deploy/publicación reales y sensores reales permanecen
+deshabilitados por defecto.
+
+La siguiente recomendación es **Mark 2 Macro 1 - Local Daemon, Real Wake
+Listener & Desktop Runtime**. Ver `docs/jarvis-mark-1-release-candidate.md` y
+`docs/jarvis-mark-1-operational-runbook.md`.
+
 Criterios obligatorios:
 
 - No crear nuevas fases sin actualizar primero este mapa maestro y registrar la decisión explícita.
