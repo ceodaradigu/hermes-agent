@@ -43,6 +43,7 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionPolicy,
     MarketingDistributionStatus,
 )
+from jarvis.monetization_engine import monetization_markers
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
 from jarvis.operational_consolidation import build_operational_console_summary as _build_operational_console_summary
 from jarvis.payments_revenue.foundation import (
@@ -116,6 +117,7 @@ _POST_S_VOICE_CAMERA_MARKERS = {
     "camera_execution_disabled": "prepare_only",
 }
 _GLOBAL_APPROVAL_EXECUTION_MARKERS = global_execution_markers()
+_MONETIZATION_MARKERS = monetization_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -871,6 +873,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "notifications_disabled": "prepare_only",
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
+            **_MONETIZATION_MARKERS,
         },
     )
 
@@ -956,6 +959,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "notifications_disabled": "prepare_only",
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
+            **_MONETIZATION_MARKERS,
         },
     )
 
@@ -1037,6 +1041,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "notifications_disabled": "prepare_only",
         **_POST_S_VOICE_CAMERA_MARKERS,
         **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
+        **_MONETIZATION_MARKERS,
     }
     return safe
 

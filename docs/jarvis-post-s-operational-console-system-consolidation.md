@@ -94,7 +94,11 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**PR #123 - Monetization Engine Real**
+**Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution**
+
+Post-S Macro 8 aporta pricing, revenue modeling, budget guard, payment approval,
+Stripe readiness y unit economics en control-plane. No mueve dinero real ni
+llama Stripe.
 
 Post-S Macro 5 completa memoria aprobada, Personal OS, scheduler, reviews y stop
 controls en modo control-plane sin autoload, workers, watchers, notificaciones
