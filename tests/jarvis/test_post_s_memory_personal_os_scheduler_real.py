@@ -82,7 +82,7 @@ def test_statuses_are_control_plane_without_phase_t_or_enabled_runtime():
     assert personal["personal_os_control_plane_available"] is True
     assert scheduler["scheduler_control_plane_available"] is True
     assert operational["no_phase_t"] is True
-    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution"
+    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release Candidate"
     for payload in (personal, scheduler, operational):
         for field in ("execution_enabled", "side_effects_enabled", "watcher_enabled", "external_sources_enabled"):
             assert payload[field] is False

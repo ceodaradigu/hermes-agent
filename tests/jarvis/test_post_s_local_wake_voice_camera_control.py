@@ -57,7 +57,7 @@ def test_wake_config_status_and_no_phase_t_are_safe_by_default():
     assert VoiceCameraSafetyStatus().camera_control_available is True
     assert status["microphone_active"] is False
     assert operational["no_phase_t"] is True
-    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution"
+    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release Candidate"
     assert "Phase T" in DOC.read_text(encoding="utf-8")
 
 

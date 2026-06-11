@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from jarvis.asset_factory.foundation import (
     AssetFactoryStatus,
@@ -46,6 +46,7 @@ from jarvis.ambient_vision.companion import (
 )
 from jarvis.approval_hardening import ApprovalHardeningService, StrongApprovalPolicy
 from jarvis.approval_execution_semantics import GlobalApprovalExecutionSemantics
+from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
@@ -904,6 +905,13 @@ class MonetizationPreviewRequest(BaseModel):
     confidence: Optional[str] = None
 
 
+class ProductBuilderPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    action_type: str = ""
+    environment: str = "preview"
+
+
 class DailyOperatorPreviewRequest(BaseModel):
     date: Optional[str] = None
     timezone: str = "unknown"
@@ -1365,6 +1373,7 @@ def create_app(
     app.state.approval_hardening = ApprovalHardeningService()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
+    app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
     app.state.controlled_runtime_bridge = ControlledRuntimeBridge(
         audit_trail=app.state.approval_hardening.audit_trail,
     )
@@ -2185,6 +2194,66 @@ def create_app(
     @app.post("/monetization/preview-unit-economics")
     def monetization_preview_unit_economics(payload: MonetizationPreviewRequest) -> dict:
         return app.state.monetization_engine.preview_unit_economics(payload.model_dump())
+
+    @app.get("/product-builder/status")
+    def product_builder_status() -> dict:
+        return app.state.adaptive_saas_builder.status()
+
+    @app.get("/product-builder/policy")
+    def product_builder_policy() -> dict:
+        return app.state.adaptive_saas_builder.policy()
+
+    @app.post("/product-builder/preview-intake")
+    def product_builder_preview_intake(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_intake(payload.model_dump())
+
+    @app.post("/product-builder/preview-validation")
+    def product_builder_preview_validation(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_validation(payload.model_dump())
+
+    @app.post("/product-builder/preview-differentiation")
+    def product_builder_preview_differentiation(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_differentiation(payload.model_dump())
+
+    @app.post("/product-builder/preview-capability-blocks")
+    def product_builder_preview_capability_blocks(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_capability_blocks(payload.model_dump())
+
+    @app.post("/product-builder/preview-blueprint")
+    def product_builder_preview_blueprint(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_blueprint(payload.model_dump())
+
+    @app.post("/product-builder/preview-stack")
+    def product_builder_preview_stack(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_stack(payload.model_dump())
+
+    @app.post("/product-builder/preview-scaffold")
+    def product_builder_preview_scaffold(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_scaffold(payload.model_dump())
+
+    @app.post("/product-builder/preview-landing")
+    def product_builder_preview_landing(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_landing(payload.model_dump())
+
+    @app.post("/product-builder/preview-publishing")
+    def product_builder_preview_publishing(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_publishing(payload.model_dump())
+
+    @app.post("/product-builder/preview-deploy")
+    def product_builder_preview_deploy(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_deploy(payload.model_dump())
+
+    @app.post("/product-builder/preview-execution-candidate")
+    def product_builder_preview_execution_candidate(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_execution_candidate(payload.model_dump())
+
+    @app.post("/product-builder/preview-launch-readiness")
+    def product_builder_preview_launch_readiness(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_launch_readiness(payload.model_dump())
+
+    @app.post("/product-builder/preview-action")
+    def product_builder_preview_action(payload: ProductBuilderPreviewRequest) -> dict:
+        return app.state.adaptive_saas_builder.preview_action(payload.model_dump())
 
     @app.get("/marketing-distribution/status")
     def marketing_distribution_status() -> dict:

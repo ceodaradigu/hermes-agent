@@ -4,7 +4,8 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from jarvis.approval_execution_semantics import global_execution_markers
-from jarvis.monetization_engine import NEXT_RECOMMENDED_MACRO_PR, monetization_markers
+from jarvis.adaptive_saas_builder import NEXT_RECOMMENDED_MACRO_PR, adaptive_saas_builder_markers
+from jarvis.monetization_engine import monetization_markers
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
@@ -116,6 +117,32 @@ class OperationalSystemStatus:
     budget_guard_required_for_spend: bool = True
     revenue_estimates_are_not_confirmed: bool = True
     no_real_money_moved: bool = True
+    adaptive_saas_builder_available: bool = True
+    product_builder_adaptativo_available: bool = True
+    template_builder_mode: bool = False
+    rigid_boilerplate_generation: bool = False
+    cloned_product_generation_allowed: bool = False
+    reusable_patterns_are_guardrails: bool = True
+    capability_blocks_are_composable: bool = True
+    product_validation_available: bool = True
+    differentiation_engine_available: bool = True
+    product_blueprint_available: bool = True
+    scaffold_planning_available: bool = True
+    publishing_plan_available: bool = True
+    deploy_plan_available: bool = True
+    product_execution_candidates_available: bool = True
+    launch_readiness_review_available: bool = True
+    real_repo_creation_enabled: bool = False
+    real_filesystem_write_enabled: bool = False
+    real_publish_enabled: bool = False
+    real_deploy_enabled: bool = False
+    external_platform_calls_enabled: bool = False
+    production_operations_enabled: bool = False
+    builder_actions_blocked_without_approval: bool = True
+    builder_actions_executable_after_valid_approval: bool = True
+    production_deploy_requires_strong_approval: bool = True
+    production_deploy_requires_double_confirmation: bool = True
+    rollback_required_for_production: bool = True
     current_mark: str = "Mark 1"
     next_recommended_macro_pr: str = NEXT_RECOMMENDED_MACRO_PR
     global_readiness: str = GLOBAL_READINESS
@@ -188,6 +215,23 @@ class OperationalSystemStatus:
             "budget_guard_required_for_spend",
             "revenue_estimates_are_not_confirmed",
             "no_real_money_moved",
+            "adaptive_saas_builder_available",
+            "product_builder_adaptativo_available",
+            "reusable_patterns_are_guardrails",
+            "capability_blocks_are_composable",
+            "product_validation_available",
+            "differentiation_engine_available",
+            "product_blueprint_available",
+            "scaffold_planning_available",
+            "publishing_plan_available",
+            "deploy_plan_available",
+            "product_execution_candidates_available",
+            "launch_readiness_review_available",
+            "builder_actions_blocked_without_approval",
+            "builder_actions_executable_after_valid_approval",
+            "production_deploy_requires_strong_approval",
+            "production_deploy_requires_double_confirmation",
+            "rollback_required_for_production",
         ):
             object.__setattr__(self, name, True)
         for name in (
@@ -225,6 +269,15 @@ class OperationalSystemStatus:
             "real_money_movement_enabled",
             "external_payment_calls_enabled",
             "live_payments_enabled",
+            "template_builder_mode",
+            "rigid_boilerplate_generation",
+            "cloned_product_generation_allowed",
+            "real_repo_creation_enabled",
+            "real_filesystem_write_enabled",
+            "real_publish_enabled",
+            "real_deploy_enabled",
+            "external_platform_calls_enabled",
+            "production_operations_enabled",
         ):
             object.__setattr__(self, name, False)
         object.__setattr__(self, "next_recommended_macro_pr", NEXT_RECOMMENDED_MACRO_PR)
@@ -481,6 +534,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         "prepare_only": True,
         **global_execution_markers(),
         **monetization_markers(),
+        **adaptive_saas_builder_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -517,6 +571,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         "system_map": {
             **global_execution_markers(),
             **monetization_markers(),
+            **adaptive_saas_builder_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
@@ -612,6 +667,7 @@ def build_operational_console_summary() -> Dict[str, Any]:
             "Post-S Macro 5 provides approved-memory, Personal OS, scheduler, review, and stop-control previews without autoload or execution.",
             "Post-S Macro 6 provides local wake phrase, voice session, and camera opt-in previews without activating sensors or execution.",
             "Post-S Macro 8 provides monetization previews, budget gates, and payment eligibility without moving real money.",
+            "Post-S Macro 9 provides the Adaptive SaaS Builder and approval-gated publishing/deploy candidates without executing them.",
         ],
         "command_center": build_command_center_system_map(),
     }

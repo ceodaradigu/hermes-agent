@@ -266,7 +266,7 @@ def test_mark_roadmap_uses_marks_and_large_macro_prs():
     assert len(roadmap["mark_2_macro_prs"]) == 5
     assert len(roadmap["mark_3_macro_prs"]) == 5
     assert roadmap["no_micro_pr_policy"] is True
-    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution"
+    assert NEXT_RECOMMENDED_MACRO_PR == "Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release Candidate"
 
 
 def test_operational_command_center_and_operator_console_expose_global_markers():
@@ -280,7 +280,7 @@ def test_operational_command_center_and_operator_console_expose_global_markers()
         assert command.metadata[marker] is True
         assert operator.metadata[marker] is True
     assert operational["restrictions_are_approval_gates"] is True
-    assert summary["next_recommended_macro_pr"] == "Post-S Macro 9 — SaaS/Product Builder + Publishing/Deploy Execution"
+    assert summary["next_recommended_macro_pr"] == "Post-S Macro 10 — Mark 1 Hardening, E2E Real Ops & Release Candidate"
 
 
 def test_docs_define_new_semantics_marks_and_do_not_create_phase_t():
