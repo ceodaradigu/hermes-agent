@@ -95,6 +95,25 @@ _SENSITIVE_MARKERS = (
     "tarjeta",
     "token",
 )
+_POST_S_VOICE_CAMERA_MARKERS = {
+    "post_s_local_wake_voice_camera_control": "prepare_only",
+    "wake_phrase_hola_jarvis": "prepare_only",
+    "wake_phrase_jarvis": "prepare_only",
+    "wake_phrase_command_parser": "prepare_only",
+    "wake_phrase_is_not_permission": "prepare_only",
+    "voice_session_control": "prepare_only",
+    "push_to_talk_fallback": "prepare_only",
+    "camera_opt_in_control": "prepare_only",
+    "visible_indicators_required": "prepare_only",
+    "audio_retention_disabled": "prepare_only",
+    "recording_disabled": "prepare_only",
+    "external_audio_disabled": "prepare_only",
+    "external_video_disabled": "prepare_only",
+    "microphone_inactive": "prepare_only",
+    "camera_inactive": "prepare_only",
+    "voice_execution_disabled": "prepare_only",
+    "camera_execution_disabled": "prepare_only",
+}
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -848,6 +867,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "watchers_disabled": "prepare_only",
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
+            **_POST_S_VOICE_CAMERA_MARKERS,
         },
     )
 
@@ -931,6 +951,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "watchers_disabled": "prepare_only",
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
+            **_POST_S_VOICE_CAMERA_MARKERS,
         },
     )
 
@@ -1010,6 +1031,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "watchers_disabled": "prepare_only",
         "external_sources_disabled": "prepare_only",
         "notifications_disabled": "prepare_only",
+        **_POST_S_VOICE_CAMERA_MARKERS,
     }
     return safe
 

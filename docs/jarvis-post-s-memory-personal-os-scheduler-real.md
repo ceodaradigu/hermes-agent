@@ -102,8 +102,8 @@ read-email/read-calendar/read-files/sync-external/start-agent.
 
 ## Siguiente macro PR
 
-Esta capa prepara **Post-S Macro 6 - Voice / Wake / Camera Controlled Runtime**.
-Esa macro futura debe ser opt-in, mantener privacidad visible y no degradar
+Esta capa preparó **Post-S Macro 6 - Local Wake Voice Runtime & Camera Control**.
+Esa macro es opt-in, mantiene privacidad visible y no degrada
 approvals, stop controls ni el límite de ejecución.
 
 ## Tests

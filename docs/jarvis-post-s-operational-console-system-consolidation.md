@@ -89,7 +89,7 @@ activate o start-worker.
 
 La siguiente macro PR recomendada es:
 
-**Post-S Macro 6 - Voice / Wake / Camera Controlled Runtime**
+**Post-S Macro 7 - Monetization Engine Real**
 
 Post-S Macro 5 completa memoria aprobada, Personal OS, scheduler, reviews y stop
 controls en modo control-plane sin autoload, workers, watchers, notificaciones

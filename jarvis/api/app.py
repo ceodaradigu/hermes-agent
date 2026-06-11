@@ -45,6 +45,7 @@ from jarvis.ambient_vision.companion import (
     AmbientVisionStopControl,
 )
 from jarvis.approval_hardening import ApprovalHardeningService, StrongApprovalPolicy
+from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
 from jarvis.continuous_learning.foundation import (
@@ -218,6 +219,8 @@ from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
 from jarvis.voice.understanding_feedback import UserUnderstandingAppliedFeedbackRule, UserUnderstandingFeedback
+from jarvis.voice_session_control import VoiceSessionControl
+from jarvis.wake_voice_runtime import WakeVoiceRuntime
 
 
 class CreateTaskRequest(BaseModel):
@@ -263,6 +266,22 @@ class VoiceRuntimeTextRequest(BaseModel):
 
 class VoiceCompanionPreviewRequest(BaseModel):
     text: str
+
+
+class WakeVoicePreviewRequest(BaseModel):
+    text: str = ""
+    confidence: float = 1.0
+    answer_mode: str = "text"
+
+
+class CameraControlPreviewRequest(BaseModel):
+    opt_in_present: bool = False
+    visible_indicator_ready: bool = False
+    recording_requested: bool = False
+    analyze_people_requested: bool = False
+    screen_capture_requested: bool = False
+    external_video_requested: bool = False
+    phrase: str = ""
 
 
 class MobileIntentPreviewRequest(BaseModel):
@@ -1271,6 +1290,12 @@ def create_app(
     )
     app.state.personal_os_control = PersonalOSControlPlane()
     app.state.scheduler_control = SchedulerControlPlane()
+    app.state.wake_voice_runtime = WakeVoiceRuntime()
+    app.state.voice_session_control = VoiceSessionControl(
+        wake_runtime=app.state.wake_voice_runtime,
+        policy_engine=app.state.policy_engine,
+    )
+    app.state.camera_control_runtime = CameraControlRuntime()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1306,6 +1331,52 @@ def create_app(
     @app.get("/operational/console-summary")
     def operational_console_summary() -> dict:
         return build_operational_console_summary()
+
+    @app.get("/voice-runtime/status")
+    def wake_voice_status() -> dict:
+        return app.state.wake_voice_runtime.status()
+
+    @app.get("/voice-runtime/policy")
+    def wake_voice_policy() -> dict:
+        return app.state.wake_voice_runtime.policy()
+
+    @app.post("/voice-runtime/preview-wake-parse")
+    def wake_voice_preview_parse(payload: WakeVoicePreviewRequest) -> dict:
+        return app.state.wake_voice_runtime.parse(payload.text, confidence=payload.confidence).to_dict()
+
+    @app.post("/voice-runtime/preview-session")
+    def wake_voice_preview_session(payload: WakeVoicePreviewRequest) -> dict:
+        return app.state.voice_session_control.preview_session(
+            payload.text,
+            confidence=payload.confidence,
+            answer_mode=payload.answer_mode,
+        ).to_dict()
+
+    @app.post("/voice-runtime/preview-command")
+    def wake_voice_preview_command(payload: WakeVoicePreviewRequest) -> dict:
+        return app.state.voice_session_control.preview_command(payload.text, confidence=payload.confidence).to_dict()
+
+    @app.post("/voice-runtime/preview-stop")
+    def wake_voice_preview_stop(payload: WakeVoicePreviewRequest) -> dict:
+        return app.state.voice_session_control.preview_stop(payload.text).to_dict()
+
+    @app.get("/camera-control/status")
+    def camera_control_status() -> dict:
+        return app.state.camera_control_runtime.status()
+
+    @app.get("/camera-control/policy")
+    def camera_control_policy() -> dict:
+        return app.state.camera_control_runtime.policy()
+
+    @app.post("/camera-control/preview-session")
+    def camera_control_preview_session(payload: CameraControlPreviewRequest) -> dict:
+        return app.state.camera_control_runtime.preview_session(
+            **payload.model_dump(exclude={"phrase"})
+        ).to_dict()
+
+    @app.post("/camera-control/preview-stop")
+    def camera_control_preview_stop(payload: CameraControlPreviewRequest) -> dict:
+        return app.state.camera_control_runtime.preview_stop(payload.phrase).to_dict()
 
     @app.get("/approvals/status")
     def approvals_status() -> dict:
