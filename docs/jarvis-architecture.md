@@ -94,6 +94,14 @@ externa. La voz puede satisfacer un approval explícito con readback,
 expiración, audit y doble/triple confirmación; una wake phrase solo abre sesión
 y nunca es permiso.
 
+## Mark 2 Macro 2
+
+La capa de tool execution distingue preview, candidate, gated execution y
+blocked/unsupported. Adapters de filesystem, GitHub, browser y APIs preparan
+acciones bajo sandbox, allowlist/denylist, approval, audit y rollback sin
+activar red, credenciales, producción, dinero ni ejecución externa por defecto.
+Voice Approval Channel puede satisfacer approval; wake phrase nunca aprueba.
+
 JARVIS North Star: principio rector del proyecto para que JARVIS evolucione de asistente de comandos a operador personal de David, aprendiendo progresivamente cómo piensa, decide, habla, prioriza y monetiza, manteniendo privacidad, pensamiento crítico, incertidumbre explícita y ApprovalGateway para acciones sensibles en `docs/jarvis-north-star.md`.
 
 También ver `docs/roadmap/pr-future-voice-runtime-adapter.md` para el roadmap de integración de voz mediante adapters desacoplados, manteniendo `PolicyEngine`, `ApprovalGateway` y control humano en acciones sensibles.

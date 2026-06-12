@@ -369,6 +369,12 @@ micrófono real, audio bruto, red, servicios del sistema ni ejecución crítica.
 La siguiente recomendación es **Mark 2 Macro 2 — Real Tool Execution: Browser,
 GitHub, Filesystem & APIs**.
 
+PR #127 inicia Mark 2 Macro 2 con policy, requests/candidates, adapters seguros,
+sandbox, allowlist/denylist, approvals, audit y rollback. Los endpoints siguen
+siendo preview-only y toda ejecución externa real queda disabled by default. La
+siguiente recomendación es **Mark 2 Macro 3 — Visual Command Center UI & Human
+Approval Console**.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

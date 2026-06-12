@@ -70,3 +70,8 @@ PR #126 inicia esta macro sin arrancar daemon ni micrófono. Para validarla usa
 `pytest tests/jarvis/test_mark_2_local_daemon_real_wake_desktop_runtime_voice_approval.py -q`.
 Una wake phrase no es permission; approval por voz exige el flow explícito,
 readback, audit, expiración y confirmaciones acordes al riesgo.
+
+PR #127 / Mark 2 Macro 2 prepara tool execution gobernado. Valídala con
+`pytest tests/jarvis/test_mark_2_real_tool_execution_browser_github_filesystem_apis.py -q`.
+Preview y candidate no equivalen a ejecución; red, credenciales, browser,
+GitHub, APIs, producción y dinero permanecen disabled by default.

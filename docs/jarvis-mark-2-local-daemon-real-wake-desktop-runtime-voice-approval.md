@@ -87,6 +87,12 @@ No existen rutas para start-real, install-service, start-microphone, record,
 stream, approve-all, auto-approve, execute, deploy, pay, publish, create-repo o
 write-files.
 
+PR #127 continúa con Mark 2 Macro 2: tool execution requests/candidates,
+filesystem/GitHub/browser/API adapters, sandbox, allowlist/denylist, audit y
+rollback. Voice Approval Channel puede satisfacer su approval; wake phrase
+nunca concede permiso. La siguiente macro pasa a ser **Mark 2 Macro 3 — Visual
+Command Center UI & Human Approval Console**.
+
 ## Integración con Mark 1
 
 La clasificación strong/critical reutiliza `StrongApprovalPolicy`; la

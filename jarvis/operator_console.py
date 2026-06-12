@@ -44,6 +44,7 @@ from jarvis.marketing_distribution.foundation import (
     MarketingDistributionStatus,
 )
 from jarvis.mark_1_release_candidate import mark_1_release_candidate_markers
+from jarvis.mark_2_tool_execution_policy import mark_2_tool_execution_markers
 from jarvis.monetization_engine import monetization_markers
 from jarvis.adaptive_saas_builder import adaptive_saas_builder_markers
 from jarvis.multidevice.runtime import DeviceRegistrySnapshot, MultiDeviceRuntimeStatus
@@ -124,6 +125,7 @@ _MONETIZATION_MARKERS = monetization_markers()
 _ADAPTIVE_SAAS_BUILDER_MARKERS = adaptive_saas_builder_markers()
 _MARK_1_RELEASE_CANDIDATE_MARKERS = mark_1_release_candidate_markers()
 _MARK_2_MACRO_1_MARKERS = mark_2_macro_1_markers()
+_MARK_2_MACRO_2_MARKERS = mark_2_tool_execution_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -878,6 +880,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
             **_MARK_2_MACRO_1_MARKERS,
+            **_MARK_2_MACRO_2_MARKERS,
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
             **_MONETIZATION_MARKERS,
@@ -967,6 +970,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "external_sources_disabled": "prepare_only",
             "notifications_disabled": "prepare_only",
             **_MARK_2_MACRO_1_MARKERS,
+            **_MARK_2_MACRO_2_MARKERS,
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
             **_MONETIZATION_MARKERS,
@@ -1052,6 +1056,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "external_sources_disabled": "prepare_only",
         "notifications_disabled": "prepare_only",
         **_MARK_2_MACRO_1_MARKERS,
+        **_MARK_2_MACRO_2_MARKERS,
         **_POST_S_VOICE_CAMERA_MARKERS,
         **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
         **_MONETIZATION_MARKERS,
