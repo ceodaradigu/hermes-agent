@@ -211,3 +211,10 @@ CLI sin convertirlos en cerebros libres. JARVIS clasifica misión/riesgo,
 selecciona adapter, exige approvals, muestra coste/límite/pagador, audita y
 mantiene rollback/stop plan. No usa cookies, no roba tokens, no guarda access
 material y no toca producción o dinero desde previews.
+
+Mark 2 queda cerrado por PR #130 como Release Candidate controlado, no como
+autonomía libre. La North Star mantiene control humano: restrictions are
+approval gates, wake phrase no es permiso, producción/dinero requieren gates
+reforzadas y la ejecución real sigue desactivada por defecto. El siguiente
+avance recomendado es Mark 3 planning o un piloto Mark 2 con manual setup y
+approvals válidos.

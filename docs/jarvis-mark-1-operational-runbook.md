@@ -87,3 +87,7 @@ AI CLI adapters y Routine Execution Bridge. Valídala con
 `pytest tests/jarvis/test_mark_2_real_deploy_stripe_email_external_ops_ai_cli_adapters.py -q`.
 Toda operación externa permanece preview/candidate, con manual handoff,
 approval, audit y rollback/stop plan.
+
+PR #130 cierra Mark 2 como Release Candidate controlado. Usa
+`docs/jarvis-mark-2-operational-runbook.md` para operar y validar; no habilita
+autonomía libre, red externa, producción, dinero ni ejecución real por defecto.

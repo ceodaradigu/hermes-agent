@@ -131,11 +131,20 @@ from jarvis.mark_1_release_candidate import (
     Mark1ReleaseCandidateStatus,
 )
 from jarvis.mark_2_tool_execution import Mark2ToolExecutionLayer
+from jarvis.mark_2_approval_path_audit import Mark2ApprovalPathAudit
+from jarvis.mark_2_dangerous_route_audit import Mark2DangerousRouteAudit
 from jarvis.mark_2_deploy_adapter import Mark2DeployAdapter
 from jarvis.mark_2_domain_publishing_adapter import Mark2DomainPublishingAdapter
 from jarvis.mark_2_email_adapter import Mark2EmailAdapter
 from jarvis.mark_2_external_operations_policy import ExternalOperationsPolicyEngine
 from jarvis.mark_2_stripe_adapter import Mark2StripeAdapter
+from jarvis.mark_2_e2e_readiness import Mark2E2EReadinessSmoke
+from jarvis.mark_2_operational_runbook import Mark2KnownLimitations, Mark2NextSteps, Mark2OperationalRunbook
+from jarvis.mark_2_release_candidate import (
+    Mark2CapabilityMatrix,
+    Mark2ReadinessMatrix,
+    Mark2ReleaseCandidateStatus,
+)
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -1760,6 +1769,42 @@ def create_app(
     @app.get("/mark-2/external-ops/audit-preview")
     def mark_2_external_ops_audit_preview() -> dict:
         return build_external_operation_audit_event().to_dict()
+
+    @app.get("/mark-2/release-candidate/status")
+    def mark_2_release_candidate_status() -> dict:
+        return Mark2ReleaseCandidateStatus().to_dict()
+
+    @app.get("/mark-2/release-candidate/capabilities")
+    def mark_2_release_candidate_capabilities() -> dict:
+        return Mark2CapabilityMatrix().to_dict()
+
+    @app.get("/mark-2/release-candidate/readiness")
+    def mark_2_release_candidate_readiness() -> dict:
+        return Mark2ReadinessMatrix().to_dict()
+
+    @app.get("/mark-2/release-candidate/dangerous-route-audit")
+    def mark_2_release_candidate_dangerous_route_audit() -> dict:
+        return Mark2DangerousRouteAudit().audit(route.path for route in app.routes)
+
+    @app.get("/mark-2/release-candidate/approval-path-audit")
+    def mark_2_release_candidate_approval_path_audit() -> dict:
+        return Mark2ApprovalPathAudit().audit()
+
+    @app.get("/mark-2/release-candidate/e2e-smoke")
+    def mark_2_release_candidate_e2e_smoke() -> dict:
+        return Mark2E2EReadinessSmoke().run()
+
+    @app.get("/mark-2/release-candidate/runbook")
+    def mark_2_release_candidate_runbook() -> dict:
+        return Mark2OperationalRunbook().to_dict()
+
+    @app.get("/mark-2/release-candidate/known-limitations")
+    def mark_2_release_candidate_known_limitations() -> dict:
+        return Mark2KnownLimitations().to_dict()
+
+    @app.get("/mark-2/release-candidate/next-steps")
+    def mark_2_release_candidate_next_steps() -> dict:
+        return Mark2NextSteps().to_dict()
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

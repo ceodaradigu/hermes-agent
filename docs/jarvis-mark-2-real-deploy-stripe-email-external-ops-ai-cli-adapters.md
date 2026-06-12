@@ -102,6 +102,10 @@ uso de cookies/session tokens, auto-approval, approve-all o ejecución libre.
 
 La siguiente macro es **Mark 2 Release Candidate Hardening**.
 
+PR #130 cierra después Mark 2 como Release Candidate controlado. Macro 4 queda
+consolidada, pero deploy, Stripe live, email send, domain publish y AI CLI real
+siguen desactivados por defecto y requieren manual setup más approvals válidos.
+
 ```bash
 source ~/venvs/hermes-agent/bin/activate
 export PYTHONPATH=.

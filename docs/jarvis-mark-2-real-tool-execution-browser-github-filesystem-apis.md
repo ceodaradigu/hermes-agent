@@ -109,3 +109,7 @@ Operations & AI CLI Adapters**.
 PR #129 añade esa capa de operaciones externas encima de tool execution:
 deploy, Stripe, email, domain publishing y AI CLI son candidates higher-level,
 sin romper ni activar los adapters filesystem/GitHub/browser/API de Macro 2.
+
+PR #130 consolida esta Macro 2 dentro de Mark 2 Release Candidate. Candidate
+ready sigue separado de execution ready; ejecución real, red externa y access
+material continúan desactivados por defecto.
