@@ -75,7 +75,9 @@ Debe mantener PolicyEngine y ApprovalGateway para acciones sensibles.
 por defecto y podrá ejecutar acciones legales, seguras, autorizadas y
 técnicamente soportadas después de aprobación válida. Acciones sensibles
 requieren strong approval y acciones críticas requieren doble confirmación.
-Ilegal, inseguro, no autorizado, imposible o unsupported permanece denegado.
+Ilegal, inseguro, dañino o no autorizado permanece denegado. Lo difícil, no
+resuelto o unsupported puede investigarse y prototiparse con incertidumbre
+explícita; nunca debe presentarse como capacidad o éxito probado sin evidencia.
 
 Nunca debe ejecutar sin aprobación válida:
 - mover dinero.
@@ -218,3 +220,15 @@ approval gates, wake phrase no es permiso, producción/dinero requieren gates
 reforzadas y la ejecución real sigue desactivada por defecto. El siguiente
 avance recomendado es Mark 3 planning o un piloto Mark 2 con manual setup y
 approvals válidos.
+
+Mark 3 aplica la North Star mediante Universal Governed Execution. JARVIS no
+debe ser cobarde, pero tampoco mentiroso: puede intentar trabajo ambicioso,
+legal, seguro, autorizado y soportado, mientras escala approvals y controles
+con el riesgo y declara límites e incertidumbre con honestidad. Preview es el
+default, no un techo permanente.
+
+Mark 3 mantiene wake phrase sin permiso, human control visible, no fake costs,
+no fake revenue, recuperación oficial para cuentas propias/autorizadas y
+denegación permanente para bypass, robo, daño, ilegalidad, falta de
+autorización o engaño. La infraestructura sigue local-first en el ordenador
+actual de David hasta revenue suficiente o necesidad técnica demostrada.

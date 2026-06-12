@@ -432,7 +432,10 @@ JARVIS puede maximizar probabilidad, reducir coste, preparar experimentos y medi
 - No existe una siguiente fase maestra aprobada ni una Phase T implícita.
 - El cierre de las fases no activa ejecución real todavía: la implementación actual sigue siendo control-plane segura.
 - **Restrictions are approval gates, not permanent bans.** JARVIS no es prepare-only para siempre: acciones legales, seguras, autorizadas y soportadas podrán ejecutarse tras aprobación válida y todas las gates.
-- Ilegal, inseguro, no autorizado, imposible o unsupported permanece como denegación permanente que ninguna aprobación puede superar.
+- Ilegal, inseguro, dañino o no autorizado permanece como denegación
+  permanente. Lo difícil, no resuelto o actualmente unsupported puede avanzar
+  como investigación, hipótesis o prototipo, pero nunca como capacidad o éxito
+  falsamente afirmado.
 - Wake Phrase, Voz y Cámara; Herramientas Externas; y Monetización son áreas transversales/post-fase. No deben convertirse en una nueva fase sin una decisión explícita y una actualización previa de este mapa.
 
 ## Roadmap Mark 1 / Mark 2 / Mark 3
@@ -441,7 +444,10 @@ El roadmap usa macro-PRs grandes y coherentes, no cientos de micro-PRs por Mark.
 
 - **Mark 1:** PR #122 semántica global; PR #123 Monetization Engine Real; PR #124 SaaS/Product Builder + Publishing/Deploy Execution; PR #125 hardening, E2E Real Ops y release candidate.
 - **Mark 2:** daemon/wake/desktop real; tools reales; UI y approval console; deploy/Stripe/email reales; release candidate hardening.
-- **Mark 3:** multiagente; aprendizaje continuo; opportunity/product/growth engine; operación 24/7, monitorización, recuperación y costes; release candidate hardening.
+- **Mark 3:** Universal Governed Execution; mission loop; multiagente;
+  aprendizaje continuo; product/revenue factory; rutinas locales supervisadas;
+  authorized account assistance; Moonshot Lab; medición/ROI; release candidate
+  hardening.
 
 La definición completa está en `docs/jarvis-post-s-global-approval-controlled-execution-semantics-mark-roadmap.md`.
 
@@ -534,3 +540,18 @@ selección antes del tipo de rutina. PR #131 corrige esa decisión para respetar
 `preferred_mode` y los flags `allow_*`, devolver un preview local seguro cuando
 Codex/Claude reales están deshabilitados y bloquear API fallback sin red. No
 activa ejecución real ni abre Mark 3.
+
+## Mark 3 Master Planning
+
+PR #132 abre Mark 3 como **Universal Governed Execution**. Mark 3 no es
+read-only ni preview-only permanente: preview/read-only es el default inicial,
+y las acciones legales, seguras, autorizadas, técnicamente posibles y
+soportadas pueden avanzar con aprobación y controles proporcionales al riesgo.
+
+PR #132 solo planifica y añade endpoints GET deterministas. Define niveles de
+aprobación 0-5, Autonomous Mission Loop, Continuous Learning, Multi-Agent
+Orchestration, Product/Revenue Factory, supervised local routines, authorized
+account recovery, Moonshot Lab, Measurement/ROI y local-first infrastructure.
+No activa ejecución Mark 3. El roadmap continúa con macro-PRs #133-#140; no
+usa micro-PR explosion. Ver
+`docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.

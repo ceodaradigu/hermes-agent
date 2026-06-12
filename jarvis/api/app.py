@@ -145,6 +145,16 @@ from jarvis.mark_2_release_candidate import (
     Mark2ReadinessMatrix,
     Mark2ReleaseCandidateStatus,
 )
+from jarvis.mark_3_master_planning import (
+    get_mark_3_capability_areas,
+    get_mark_3_execution_principles,
+    get_mark_3_guardrails,
+    get_mark_3_macro_roadmap,
+    get_mark_3_pilot_plan,
+    get_mark_3_planning_status,
+    get_mark_3_readiness,
+    get_mark_3_risk_approval_model,
+)
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -1816,6 +1826,38 @@ def create_app(
     @app.get("/mark-2/release-candidate/next-steps")
     def mark_2_release_candidate_next_steps() -> dict:
         return Mark2NextSteps().to_dict()
+
+    @app.get("/mark-3/planning/status")
+    def mark_3_planning_status() -> dict:
+        return get_mark_3_planning_status()
+
+    @app.get("/mark-3/planning/principles")
+    def mark_3_planning_principles() -> dict:
+        return get_mark_3_execution_principles()
+
+    @app.get("/mark-3/planning/risk-approval-model")
+    def mark_3_planning_risk_approval_model() -> dict:
+        return get_mark_3_risk_approval_model()
+
+    @app.get("/mark-3/planning/capabilities")
+    def mark_3_planning_capabilities() -> dict:
+        return get_mark_3_capability_areas()
+
+    @app.get("/mark-3/planning/roadmap")
+    def mark_3_planning_roadmap() -> dict:
+        return get_mark_3_macro_roadmap()
+
+    @app.get("/mark-3/planning/guardrails")
+    def mark_3_planning_guardrails() -> dict:
+        return get_mark_3_guardrails()
+
+    @app.get("/mark-3/planning/pilot-plan")
+    def mark_3_planning_pilot_plan() -> dict:
+        return get_mark_3_pilot_plan()
+
+    @app.get("/mark-3/planning/readiness")
+    def mark_3_planning_readiness() -> dict:
+        return get_mark_3_readiness()
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

@@ -269,3 +269,23 @@ auditorías, smoke y runbook. No añade autonomía libre ni activa ejecución re
 por defecto. Producción y dinero conservan strong approval, doble confirmación
 y rollback; wake phrase nunca es permiso y Voice Approval Channel sí puede
 aprobar cuando satisface todas las gates.
+
+## Mark 3 Master Planning
+
+PR #132 define Mark 3 como Universal Governed Execution sobre el control-plane
+de Mark 1/2. El flujo arquitectónico objetivo es mission intake -> capability
+and risk classification -> plan/preview -> approval gates -> bounded execution
+candidate -> evidence/result capture -> post-mortem -> approved learning ->
+next action.
+
+La coordinación multi-agent asigna roles, permisos, scope, budgets, locks,
+prioridad, handoffs, conflictos y audit a Planner, Builder, Reviewer, Tester,
+Operator, Researcher, Product, CFO, Security, LegalRisk, Growth, Memory,
+Routine y ToolRouter. Ningún agente puede saltar policy, approvals, kill switch
+o stop controls.
+
+Los endpoints `/mark-3/planning/*` de PR #132 son GET read-only y
+`safe_to_render`; describen la arquitectura futura sin ejecutar herramientas.
+Mark 3 como sistema no queda limitado a read-only: una capacidad futura puede
+ejecutar tras aprobación válida y controles proporcionales al riesgo. Ver
+`docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.

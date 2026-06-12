@@ -77,3 +77,12 @@ y explicar los requisitos incumplidos.
 El preview añade un `improvement_plan_preview` basado solo en el payload,
 `risk_review` y `audit_summary`. No inspecciona el repo, no escribe archivos,
 no usa red ni access material y no activa ejecución real.
+
+## Next: Mark 3 Master Planning
+
+PR #132 define Mark 3 como Universal Governed Execution. Corrige la lectura
+equivocada de “read-only permanente”: preview/read-only sigue siendo el default
+seguro, pero no el techo. Acciones legales, seguras, autorizadas y soportadas
+pueden avanzar con approval, scope, budget, audit y rollback/stop proporcionales
+al riesgo. PR #132 solo planifica; la primera implementación futura del Mission
+Loop corresponde a PR #133.
