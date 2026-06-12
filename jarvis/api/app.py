@@ -363,6 +363,17 @@ class Mark2ExternalOperationPreviewRequest(BaseModel):
     task_summary: str = ""
     routine_type: str = "unknown"
     use_case: str = ""
+    preferred_mode: str = ""
+    repo: str = ""
+    worktree: str = ""
+    expected_outputs: Optional[List[str]] = None
+    allow_real_execution: bool = False
+    allow_file_write: bool = False
+    allow_network: bool = False
+    allow_codex_real: bool = False
+    allow_claude_real: bool = False
+    allow_deploy: bool = False
+    allow_money: bool = False
     project_name: str = ""
     artifact_summary: str = ""
     build_command_preview: str = ""

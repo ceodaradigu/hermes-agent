@@ -395,6 +395,14 @@ material, producción, dinero y ejecución real siguen disabled by default. La
 siguiente recomendación es Mark 3 planning o piloto Mark 2 con setup manual y
 approvals válidos.
 
+El piloto local controlado posterior detectó que `RoutineExecutionBridge`
+seleccionaba Codex CLI para una misión `local_first_preview` aunque Codex y
+Claude reales estuvieran deshabilitados. PR #131 endurece la selección:
+`preferred_mode` y flags `allow_*` se respetan, el caso local-first usa
+`LocalScriptAdapter` preview-only y se añaden plan de mejora genérico,
+`risk_review`, `audit_summary` y requisitos incumplidos. No se activa ejecución
+real, red, escritura, deploy ni dinero.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
