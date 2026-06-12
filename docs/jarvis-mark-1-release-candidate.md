@@ -66,6 +66,11 @@ PR #129 inicia Mark 2 Macro 4 con deploy/Stripe/email/domain candidates,
 adapters Codex/Claude/Cowork/API fallback y Routine Execution Bridge. Toda
 invocación externa real permanece desactivada y Mark 2 aún no está completo.
 
+PR #130 cierra posteriormente Mark 2 como Release Candidate controlado. Esto no
+modifica el cierre de Mark 1 ni convierte Mark 2 en autonomía libre. El
+siguiente paso pasa a Mark 3 planning o a un piloto Mark 2 con setup manual y
+approvals válidos.
+
 ## Endpoints
 
 Todos son GET, read-only y control-plane:

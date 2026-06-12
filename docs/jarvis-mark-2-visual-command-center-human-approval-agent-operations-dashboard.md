@@ -104,6 +104,11 @@ status, deploy/Stripe/email/domain candidates, adapters Codex/Claude/Cowork/API
 fallback y Routine Execution Bridge. Costes y límites siguen unknown/manuales
 cuando no existe evidencia; no se consulta billing ni se inventan costes.
 
+PR #130 consolida esta Macro 3 dentro de Mark 2 Release Candidate. Dashboard,
+approval console, agent operations, costes, worktrees, tests, review y audit
+quedan listos como control-plane, con no fake costs y sin autoridad de
+ejecución.
+
 ## Tests
 
 ```bash

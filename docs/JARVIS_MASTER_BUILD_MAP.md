@@ -516,3 +516,12 @@ email y domain publishing, junto con adapters Codex CLI, Claude Code, Claude
 Cowork/Desktop, API fallback, Routine Execution Bridge y audit seguro. No
 ejecuta proveedores reales, no usa cookies/tokens/access material y no completa
 Mark 2. La siguiente recomendación es **Mark 2 Release Candidate Hardening**.
+
+## Mark 2 Release Candidate
+
+PR #130 cierra Mark 2 como Release Candidate controlado. Consolida las cuatro
+macros, capability/readiness matrices, dangerous-route y approval-path audits,
+E2E prepare-only smoke y runbook operacional. Mark 2 no es autonomía libre:
+ejecución real, red externa, access material, producción y dinero permanecen
+desactivados por defecto. La siguiente recomendación es Mark 3 planning o un
+piloto Mark 2 limitado con setup manual y approvals válidos.

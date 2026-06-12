@@ -388,6 +388,13 @@ Bridge y external-operation audit. Toda invocación real, red, access material,
 producción y dinero permanecen disabled by default. La siguiente recomendación
 es **Mark 2 Release Candidate Hardening**.
 
+PR #130 cierra Mark 2 como Release Candidate serio: cuatro macros consolidadas,
+capability/readiness matrices, dangerous-route audit, approval-path audit, E2E
+prepare-only smoke y runbook. Mark 2 no es autonomía libre; red externa, access
+material, producción, dinero y ejecución real siguen disabled by default. La
+siguiente recomendación es Mark 3 planning o piloto Mark 2 con setup manual y
+approvals válidos.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

@@ -117,3 +117,7 @@ ni ejecución real. La siguiente macro es Mark 2 Macro 4.
 PR #129 implementa Macro 4 como candidatos de operaciones externas y adapters
 AI CLI gobernados. Voice Approval Channel válido puede satisfacer approval;
 wake phrase nunca aprueba y kill switch/stop phrase bloquean candidates.
+
+PR #130 consolida esta Macro 1 dentro de Mark 2 Release Candidate. Local daemon,
+desktop runtime, wake listener, Voice Approval Channel y stop controls quedan
+auditados, manteniendo sensores y ejecución real desactivados por defecto.

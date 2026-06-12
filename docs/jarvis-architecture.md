@@ -260,3 +260,12 @@ Policy clasifica deploy/payment/email/domain/AI CLI/API fallback; candidatos
 preparan approval, manual handoff, coste, audit y rollback/stop; Routine
 Execution Bridge selecciona local, subscription CLI o API según misión. No hay
 invocación externa real, procesos AI CLI, producción o money movement.
+
+## Mark 2 Release Candidate
+
+Mark 2 RC consolida runtime local, tool candidates, dashboard y external
+operations/AI CLI adapters bajo una capa read-only de status, matrices,
+auditorías, smoke y runbook. No añade autonomía libre ni activa ejecución real
+por defecto. Producción y dinero conservan strong approval, doble confirmación
+y rollback; wake phrase nunca es permiso y Voice Approval Channel sí puede
+aprobar cuando satisface todas las gates.

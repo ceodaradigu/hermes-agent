@@ -66,6 +66,7 @@ from jarvis.voice.companion import (
 from jarvis.voice_approval_channel import mark_2_macro_1_markers
 from jarvis.visual_command_center import mark_2_visual_dashboard_markers
 from jarvis.mark_2_external_operations_policy import mark_2_external_operations_markers
+from jarvis.mark_2_release_candidate import mark_2_release_candidate_markers
 
 
 _OPERATOR_PREVIEW_REASON = "Operator Console preview is prepare-only; no execution, approval, Hermes, or persistence path is enabled."
@@ -130,6 +131,7 @@ _MARK_2_MACRO_1_MARKERS = mark_2_macro_1_markers()
 _MARK_2_MACRO_2_MARKERS = mark_2_tool_execution_markers()
 _MARK_2_MACRO_3_MARKERS = mark_2_visual_dashboard_markers()
 _MARK_2_MACRO_4_MARKERS = mark_2_external_operations_markers()
+_MARK_2_RELEASE_CANDIDATE_MARKERS = mark_2_release_candidate_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -892,6 +894,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             **_MONETIZATION_MARKERS,
             **_ADAPTIVE_SAAS_BUILDER_MARKERS,
             **_MARK_1_RELEASE_CANDIDATE_MARKERS,
+            **_MARK_2_RELEASE_CANDIDATE_MARKERS,
         },
     )
 
@@ -984,6 +987,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             **_MONETIZATION_MARKERS,
             **_ADAPTIVE_SAAS_BUILDER_MARKERS,
             **_MARK_1_RELEASE_CANDIDATE_MARKERS,
+            **_MARK_2_RELEASE_CANDIDATE_MARKERS,
         },
     )
 
@@ -1072,6 +1076,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         **_MONETIZATION_MARKERS,
         **_ADAPTIVE_SAAS_BUILDER_MARKERS,
         **_MARK_1_RELEASE_CANDIDATE_MARKERS,
+        **_MARK_2_RELEASE_CANDIDATE_MARKERS,
     }
     return safe
 
