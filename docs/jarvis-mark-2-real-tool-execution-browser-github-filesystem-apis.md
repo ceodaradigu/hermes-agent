@@ -99,3 +99,9 @@ pytest tests/jarvis -q -x --durations=20
 ```
 
 Siguiente macro: **Mark 2 Macro 3 — Visual Command Center UI & Human Approval Console**.
+
+PR #128 implementa esa Macro 3 con paneles operacionales, agent/session
+monitor, approval console, costes/límites, riesgos, worktree, diff/tests/review
+y audit timeline. Los candidates de Macro 2 se muestran, pero no se ejecutan.
+La siguiente macro es **Mark 2 Macro 4 — Real Deploy, Stripe, Email, External
+Operations & AI CLI Adapters**.

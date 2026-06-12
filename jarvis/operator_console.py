@@ -64,6 +64,7 @@ from jarvis.voice.companion import (
     VoiceCompanionStatus,
 )
 from jarvis.voice_approval_channel import mark_2_macro_1_markers
+from jarvis.visual_command_center import mark_2_visual_dashboard_markers
 
 
 _OPERATOR_PREVIEW_REASON = "Operator Console preview is prepare-only; no execution, approval, Hermes, or persistence path is enabled."
@@ -126,6 +127,7 @@ _ADAPTIVE_SAAS_BUILDER_MARKERS = adaptive_saas_builder_markers()
 _MARK_1_RELEASE_CANDIDATE_MARKERS = mark_1_release_candidate_markers()
 _MARK_2_MACRO_1_MARKERS = mark_2_macro_1_markers()
 _MARK_2_MACRO_2_MARKERS = mark_2_tool_execution_markers()
+_MARK_2_MACRO_3_MARKERS = mark_2_visual_dashboard_markers()
 
 
 def build_operational_console_summary() -> Dict[str, Any]:
@@ -881,6 +883,7 @@ def build_operator_command_center_view(*, view_id: str, generated_at: str) -> Co
             "notifications_disabled": "prepare_only",
             **_MARK_2_MACRO_1_MARKERS,
             **_MARK_2_MACRO_2_MARKERS,
+            **_MARK_2_MACRO_3_MARKERS,
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
             **_MONETIZATION_MARKERS,
@@ -971,6 +974,7 @@ def build_operator_console_snapshot(*, view_id: str, generated_at: str) -> Opera
             "notifications_disabled": "prepare_only",
             **_MARK_2_MACRO_1_MARKERS,
             **_MARK_2_MACRO_2_MARKERS,
+            **_MARK_2_MACRO_3_MARKERS,
             **_POST_S_VOICE_CAMERA_MARKERS,
             **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
             **_MONETIZATION_MARKERS,
@@ -1057,6 +1061,7 @@ def _safe_metadata(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "notifications_disabled": "prepare_only",
         **_MARK_2_MACRO_1_MARKERS,
         **_MARK_2_MACRO_2_MARKERS,
+        **_MARK_2_MACRO_3_MARKERS,
         **_POST_S_VOICE_CAMERA_MARKERS,
         **_GLOBAL_APPROVAL_EXECUTION_MARKERS,
         **_MONETIZATION_MARKERS,

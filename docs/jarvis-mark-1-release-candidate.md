@@ -60,6 +60,8 @@ daemon, desktop runtime, wake listener preparado y approval por voz. Esto no
 cambia el estado cerrado de Mark 1 ni significa que Mark 2 esté completo.
 PR #127 inicia Mark 2 Macro 2 con requests/candidates y adapters seguros de
 tools, sin activar ejecución externa libre ni completar Mark 2.
+PR #128 inicia Mark 2 Macro 3 con datos estructurados para dashboard visual,
+approval console y agent operations, sin frontend final ni ejecución real.
 
 ## Endpoints
 

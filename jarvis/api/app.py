@@ -238,6 +238,7 @@ from jarvis.voice.storage import VoiceAudioStorage
 from jarvis.voice.understanding_feedback import UserUnderstandingAppliedFeedbackRule, UserUnderstandingFeedback
 from jarvis.voice_session_control import VoiceSessionControl
 from jarvis.voice_approval_channel import VoiceApprovalChannel
+from jarvis.visual_command_center import VisualCommandCenter
 from jarvis.wake_voice_runtime import WakeVoiceRuntime
 
 
@@ -1453,6 +1454,7 @@ def create_app(
     app.state.real_wake_listener = RealWakeListener(session_control=app.state.voice_session_control)
     app.state.voice_approval_channel = VoiceApprovalChannel()
     app.state.mark_2_tool_execution = Mark2ToolExecutionLayer()
+    app.state.visual_command_center = VisualCommandCenter()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1601,6 +1603,54 @@ def create_app(
     @app.get("/mark-2/tools/audit-preview")
     def mark_2_tools_audit_preview() -> dict:
         return app.state.mark_2_tool_execution.audit_preview()
+
+    @app.get("/mark-2/dashboard/status")
+    def mark_2_dashboard_status() -> dict:
+        return app.state.visual_command_center.status()
+
+    @app.get("/mark-2/dashboard/overview")
+    def mark_2_dashboard_overview() -> dict:
+        return app.state.visual_command_center.overview()
+
+    @app.get("/mark-2/dashboard/panels")
+    def mark_2_dashboard_panels() -> dict:
+        return {"panels": app.state.visual_command_center.panels(), "safe_to_render": True}
+
+    @app.get("/mark-2/dashboard/agents")
+    def mark_2_dashboard_agents() -> dict:
+        return {"agents": app.state.visual_command_center.agents(), "real_agent_execution_enabled": False}
+
+    @app.get("/mark-2/dashboard/sessions")
+    def mark_2_dashboard_sessions() -> dict:
+        return {"sessions": app.state.visual_command_center.sessions(), "real_ai_cli_invocation_enabled": False}
+
+    @app.get("/mark-2/dashboard/costs")
+    def mark_2_dashboard_costs() -> dict:
+        return {"cost_usage": app.state.visual_command_center.costs(), "no_fake_costs": True}
+
+    @app.get("/mark-2/dashboard/approvals")
+    def mark_2_dashboard_approvals() -> dict:
+        return {"approvals": app.state.visual_command_center.approvals(), "preview_only": True}
+
+    @app.get("/mark-2/dashboard/risks")
+    def mark_2_dashboard_risks() -> dict:
+        return {"risks": app.state.visual_command_center.risks(), "safe_to_render": True}
+
+    @app.get("/mark-2/dashboard/worktree-guard")
+    def mark_2_dashboard_worktree_guard() -> dict:
+        return app.state.visual_command_center.worktree_guard()
+
+    @app.get("/mark-2/dashboard/diffs-tests-reviews")
+    def mark_2_dashboard_diffs_tests_reviews() -> dict:
+        return app.state.visual_command_center.diff_test_review()
+
+    @app.get("/mark-2/dashboard/audit")
+    def mark_2_dashboard_audit() -> dict:
+        return {"audit_timeline": app.state.visual_command_center.audit(), "safe_to_render": True}
+
+    @app.get("/mark-2/dashboard/next-actions")
+    def mark_2_dashboard_next_actions() -> dict:
+        return {"next_actions": app.state.visual_command_center.next_actions(), "would_execute": False}
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

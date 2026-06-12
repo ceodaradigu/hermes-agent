@@ -25,6 +25,7 @@ from jarvis.voice.companion import (
 )
 from jarvis.voice_approval_channel import mark_2_macro_1_markers
 from jarvis.mark_2_tool_execution_policy import mark_2_tool_execution_markers
+from jarvis.visual_command_center import mark_2_visual_dashboard_markers
 
 
 class CommandCenterViewStatus(str, Enum):
@@ -954,6 +955,7 @@ def build_command_center_view_model(
             "future_moonshot_layer": "prepare_only",
             **mark_2_macro_1_markers(),
             **mark_2_tool_execution_markers(),
+            **mark_2_visual_dashboard_markers(),
             "post_s_approval_hardening": "prepare_only",
             "strong_approval_policy": "prepare_only",
             "approval_audit": "prepare_only",

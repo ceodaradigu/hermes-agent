@@ -75,3 +75,9 @@ PR #127 / Mark 2 Macro 2 prepara tool execution gobernado. Valídala con
 `pytest tests/jarvis/test_mark_2_real_tool_execution_browser_github_filesystem_apis.py -q`.
 Preview y candidate no equivalen a ejecución; red, credenciales, browser,
 GitHub, APIs, producción y dinero permanecen disabled by default.
+
+PR #128 / Mark 2 Macro 3 prepara el dashboard operacional y sus endpoints GET.
+Valídala con
+`pytest tests/jarvis/test_mark_2_visual_command_center_human_approval_agent_operations_dashboard.py -q`.
+El dashboard muestra approvals, costes unknown/manuales, agentes y sesiones,
+pero no ejecuta ni aprueba acciones reales.
