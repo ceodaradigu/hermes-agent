@@ -278,24 +278,16 @@ Reglas de seguridad:
 - No instalar herramientas que requieran credenciales sin revisión explícita.
 - No degradar controles sensibles para ganar velocidad.
 
-## 11. Roadmap propuesto de PRs futuras
+## 11. Roadmap Mark 3
 
-Roadmap incremental propuesto:
+PR #134 será una macro-PR coherente de Continuous Learning dentro de Mark 3, no
+una explosión de micro-PRs. Debe integrar experiment registry, tech radar,
+outcome memory, failure memory, ROI memory, evidence links, revisión,
+reversibilidad y gates de persistencia/activación.
 
-- PR A: docs: add continuous learning design.
-- PR B: tech radar source model.
-- PR C: weekly technology scan report model.
-- PR D: relevance scoring for JARVIS.
-- PR E: learning proposal model.
-- PR F: approval workflow for learning proposals.
-- PR G: create implementation plan from approved learning.
-- PR H: create GitHub issue from approved learning proposal.
-- PR I: create PR from approved learning proposal.
-- PR J: memory integration for accepted learnings.
-- PR K: scheduled weekly tech radar.
-- PR L: dashboard/report view.
-
-Cada PR futura debe mantener alcance pequeño, revisión humana, tests y compatibilidad con `docs/jarvis-north-star.md`.
+La implementación puede dividir internamente el trabajo para revisión y tests,
+pero debe entregar una capacidad de aprendizaje útil de extremo a extremo y
+mantener compatibilidad con `docs/jarvis-north-star.md`.
 
 ## 12. Ejemplo narrativo
 
@@ -323,6 +315,7 @@ Continuous Learning no significa saltarse PRs.
 
 Continuous Learning no significa conectar con MissionControl o Hermes runtime sin una PR futura aprobada.
 
-Continuous Learning es investigación y propuesta supervisada.
-
-La regla final es simple: JARVIS puede aprender, resumir y proponer; David decide, revisa y aprueba antes de aplicar.
+Continuous Learning es aprendizaje gobernado por riesgo. Investigar, resumir y
+proponer puede ser low-risk; persistir, activar, modificar runtime o ejecutar
+acciones derivadas requiere el nivel de aprobación correspondiente. Memoria
+nunca es permiso y no existe autoload peligroso.

@@ -64,3 +64,11 @@ PR #131 añade `selected_adapter_mode`, flags efectivos, requisitos incumplidos,
 `improvement_plan_preview`, `risk_review` y `audit_summary`. El endpoint sigue
 sin ejecutar, escribir, llamar red, desplegar, mover dinero ni leer access
 material.
+
+## Handoff A Mark 3
+
+PR #132 es planificación y no cambia la operación Mark 2. Sus endpoints
+`GET /mark-3/planning/*` son read-only y seguros de renderizar. Mark 3 no será
+read-only permanente: implementará ejecución gobernada por riesgo en
+macro-PRs, empezando por PR #133, manteniendo visible el approval, scope,
+budget, audit, rollback/stop y kill switch.

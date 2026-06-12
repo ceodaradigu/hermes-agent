@@ -354,7 +354,9 @@ La regla global post-S es **Restrictions are approval gates, not permanent bans.
 La implementación actual sigue siendo control-plane segura; JARVIS no es
 prepare-only para siempre y está diseñado para ejecutar tras aprobación válida,
 strong approval/doble confirmación cuando aplique y todas las gates. Ilegal,
-inseguro, no autorizado, imposible o unsupported permanece denegado.
+inseguro, dañino o no autorizado permanece denegado. Lo difícil, no resuelto o
+unsupported puede tratarse como investigación/prototipo con incertidumbre
+explícita, nunca como capacidad o éxito fingido.
 
 El roadmap usa Mark 1, Mark 2 y Mark 3 mediante macro-PRs grandes. PR #125
 cierra Mark 1 como release candidate seguro y operacionalmente claro, sin
@@ -402,6 +404,20 @@ Claude reales estuvieran deshabilitados. PR #131 endurece la selección:
 `LocalScriptAdapter` preview-only y se añaden plan de mejora genérico,
 `risk_review`, `audit_summary` y requisitos incumplidos. No se activa ejecución
 real, red, escritura, deploy ni dinero.
+
+PR #132 abre Mark 3 Master Planning. Define Universal Governed Execution:
+preview/read-only es el default, no el techo permanente. El riesgo determina
+approval, scope, budget, audit y rollback/stop; solo lo ilegal, inseguro,
+dañino, no autorizado, engañoso o de bypass/robo queda permanentemente
+denegado. Wake phrase no es permiso y tono/contexto solo informan intención
+low-risk no sensible.
+
+El roadmap Mark 3 usa macro-PRs #132-#140 para Mission Loop, Continuous
+Learning, Multi-Agent Orchestration, Revenue Product Factory, Local Routine
+Scheduler, authorized account recovery, Moonshot Lab y RC pilot. JARVIS
+permanece en el ordenador actual de David; no Mac mini ni VPS hasta revenue
+suficiente o necesidad técnica demostrada. Ver
+`docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
 
 ## 11. Cómo iniciar un hilo nuevo
 
