@@ -499,3 +499,12 @@ rollback/stop plans. Todos los endpoints son preview/control-plane: red,
 credenciales, producción, dinero y ejecución externa real siguen disabled by
 default. La siguiente recomendación es **Mark 2 Macro 3 — Visual Command Center
 UI & Human Approval Console**.
+
+## Mark 2 Macro 3 iniciada
+
+PR #128 añade Visual Command Center, Human Approval Console, Agent Operations
+Dashboard, AI coding session control, costes/límites, riesgos, worktree guard,
+diff/tests/reviews y audit timeline como capa de datos control-plane. No crea
+un frontend final, no lanza Codex/Claude/Cowork, no consulta billing y no
+ejecuta agentes o tools. La siguiente recomendación es **Mark 2 Macro 4 — Real
+Deploy, Stripe, Email, External Operations & AI CLI Adapters**.

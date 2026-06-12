@@ -199,3 +199,9 @@ Mark 2 Macro 2 convierte tool execution en requests y candidates gobernados
 para filesystem, GitHub, browser y APIs. Mantiene default-deny, sandbox,
 allowlist/denylist, audit, rollback y approval fuerte para riesgo sensible. No
 activa ejecución libre ni externa por defecto.
+
+Mark 2 Macro 3 hace visibles esos controles mediante un dashboard operativo:
+agentes, sesiones, approvals, riesgos, costes/límites unknown o manuales,
+worktree, diffs/tests/reviews, audit, kill switch y siguientes acciones
+seguras. No completa Mark 2 ni convierte el dashboard en autoridad de
+ejecución.

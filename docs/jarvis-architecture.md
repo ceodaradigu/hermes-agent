@@ -243,3 +243,12 @@ Los endpoints `/mark-1/*` son GET read-only. Componen estado, readiness,
 auditorías, smoke E2E, runbook y roadmap sin ejecutar, llamar red, leer
 credenciales, publicar, desplegar, mover dinero o activar sensores. Mark 2 es la
 siguiente capa de ejecución real bajo las mismas gates.
+
+## Mark 2 Macro 3 - Visual operations control-plane
+
+La capa visual Mark 2 agrega snapshots seguros para status, agents, AI coding
+sessions, approvals, costes/límites, riesgos, tool candidates, worktree,
+diff/tests/reviews, audit, kill switch y next actions. Una UI futura consume
+estos endpoints, pero PolicyEngine, ApprovalGateway, audit y stop controls
+siguen siendo autoritativos. Codex CLI, Claude Code, Claude Cowork y API
+fallback se modelan como adapters gobernados; no se invocan realmente aquí.

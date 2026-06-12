@@ -375,6 +375,13 @@ siendo preview-only y toda ejecución externa real queda disabled by default. La
 siguiente recomendación es **Mark 2 Macro 3 — Visual Command Center UI & Human
 Approval Console**.
 
+PR #128 inicia Mark 2 Macro 3 con Visual Command Center, Human Approval
+Console, Agent Operations Dashboard, AI coding session previews, costes/límites
+sin datos inventados, riesgos, worktree guard, diff/tests/reviews y audit
+timeline. Sigue siendo control-plane: no lanza Codex/Claude/Cowork, no consulta
+billing y no ejecuta agentes o tools. La siguiente recomendación es **Mark 2
+Macro 4 — Real Deploy, Stripe, Email, External Operations & AI CLI Adapters**.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

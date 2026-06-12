@@ -109,3 +109,7 @@ export PYTHONPATH=.
 pytest tests/jarvis/test_mark_2_local_daemon_real_wake_desktop_runtime_voice_approval.py -q
 pytest tests/jarvis -q -x --durations=20
 ```
+
+PR #128 implementa Mark 2 Macro 3 como capa de datos visual/control-plane,
+integrando kill switch, stop phrase y Voice Approval Channel sin frontend final
+ni ejecución real. La siguiente macro es Mark 2 Macro 4.

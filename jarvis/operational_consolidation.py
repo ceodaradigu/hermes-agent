@@ -9,6 +9,7 @@ from jarvis.mark_1_release_candidate import mark_1_release_candidate_markers
 from jarvis.mark_2_tool_execution_policy import mark_2_tool_execution_markers
 from jarvis.monetization_engine import monetization_markers
 from jarvis.voice_approval_channel import mark_2_macro_1_markers
+from jarvis.visual_command_center import mark_2_visual_dashboard_markers
 
 
 GLOBAL_READINESS = "foundation_complete_prepare_only"
@@ -296,6 +297,7 @@ class OperationalSystemStatus:
             **mark_1_release_candidate_markers(),
             **mark_2_macro_1_markers(),
             **mark_2_tool_execution_markers(),
+            **mark_2_visual_dashboard_markers(),
             "mark_1_runtime_ready": True,
             "mark_1_tools_ready": True,
             "mark_1_memory_ready": True,
@@ -551,6 +553,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
         **mark_1_release_candidate_markers(),
         **mark_2_macro_1_markers(),
         **mark_2_tool_execution_markers(),
+        **mark_2_visual_dashboard_markers(),
         "post_s_operational_consolidation": True,
         "post_s_memory_personal_os_scheduler": "prepare_only",
         "approved_memory_records": "prepare_only",
@@ -591,6 +594,7 @@ def build_command_center_system_map() -> Dict[str, Any]:
             **mark_1_release_candidate_markers(),
             **mark_2_macro_1_markers(),
             **mark_2_tool_execution_markers(),
+            **mark_2_visual_dashboard_markers(),
             "phase_range": "A-S",
             "last_master_phase": "Phase S",
             "no_phase_t": True,
