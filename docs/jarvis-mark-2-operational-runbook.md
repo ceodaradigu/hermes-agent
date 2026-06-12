@@ -52,3 +52,15 @@ red externa, ejecución real, producción y dinero permanecen desactivados por
 defecto. Mark 2 Release Candidate no es autonomía libre. El siguiente paso es
 Mark 3 planning o un piloto Mark 2 limitado con setup manual y approvals
 válidos.
+
+## Verificación de Routine Execution Bridge tras el piloto
+
+Para `POST /mark-2/routine-execution/preview`, comprobar siempre que
+`preferred_mode` y los flags `allow_*` se reflejan en la respuesta. En
+`local_first_preview`, con Codex y Claude reales deshabilitados, la selección
+debe ser `LocalScriptAdapter` preview-only, nunca una invocación AI CLI real.
+
+PR #131 añade `selected_adapter_mode`, flags efectivos, requisitos incumplidos,
+`improvement_plan_preview`, `risk_review` y `audit_summary`. El endpoint sigue
+sin ejecutar, escribir, llamar red, desplegar, mover dinero ni leer access
+material.

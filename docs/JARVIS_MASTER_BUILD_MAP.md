@@ -525,3 +525,12 @@ E2E prepare-only smoke y runbook operacional. Mark 2 no es autonomía libre:
 ejecución real, red externa, access material, producción y dinero permanecen
 desactivados por defecto. La siguiente recomendación es Mark 3 planning o un
 piloto Mark 2 limitado con setup manual y approvals válidos.
+
+## Mark 2 Pilot Findings Hardening
+
+El piloto local controlado posterior a PR #130 detectó un gap en
+`RoutineExecutionBridge`: `local_first_preview` no estaba gobernando la
+selección antes del tipo de rutina. PR #131 corrige esa decisión para respetar
+`preferred_mode` y los flags `allow_*`, devolver un preview local seguro cuando
+Codex/Claude reales están deshabilitados y bloquear API fallback sin red. No
+activa ejecución real ni abre Mark 3.

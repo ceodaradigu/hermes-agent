@@ -61,6 +61,15 @@ cost mode es `api_tokens`, pero no se inventa coste ni se consulta billing.
 sea posible, subscription CLI para desarrollo pesado y API para JSON estable,
 workers, 24/7 o fallback. Siempre conserva `would_execute=false`.
 
+El piloto Mark 2 reveló que esa selección debía endurecerse: PR #131 hace que
+`preferred_mode` y los flags `allow_real_execution`, `allow_file_write`,
+`allow_network`, `allow_codex_real`, `allow_claude_real`, `allow_deploy` y
+`allow_money` gobiernen la selección mostrada. `local_first_preview` prioriza
+`LocalScriptAdapter`; Codex/Claude deshabilitados no se presentan como opción
+real preferida; API fallback sin red queda bloqueado. El bridge puede devolver
+un plan de mejora genérico basado solo en el payload, sin afirmar inspección
+del repo.
+
 ## Seguridad, approvals, costes y audit
 
 JARVIS no usa cookies, no roba tokens, no usa session tokens, no automatiza las
@@ -105,6 +114,8 @@ La siguiente macro es **Mark 2 Release Candidate Hardening**.
 PR #130 cierra después Mark 2 como Release Candidate controlado. Macro 4 queda
 consolidada, pero deploy, Stripe live, email send, domain publish y AI CLI real
 siguen desactivados por defecto y requieren manual setup más approvals válidos.
+
+PR #131 aplica el hardening derivado del piloto sin activar ejecución real.
 
 ```bash
 source ~/venvs/hermes-agent/bin/activate

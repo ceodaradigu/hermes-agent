@@ -143,7 +143,7 @@ def test_api_fallback_and_routine_bridge_choose_hybrid_adapters_without_executio
     worker = RoutineExecutionBridge.preview(routine_type="external_api", use_case="worker")
     assert api.cost_mode == "api_tokens" and api.budget_guard_required and api.would_call_api is False
     assert api.cost_known is False
-    assert coding.selected_adapter == "Codex CLI"
+    assert coding.selected_adapter == "LocalScriptAdapter"
     assert worker.selected_adapter == "ApiFallbackAdapter"
     assert coding.would_execute is False and worker.would_execute is False
 

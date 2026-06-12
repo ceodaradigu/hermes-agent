@@ -64,3 +64,16 @@ La ejecución real, red externa y proveedores permanecen desactivados por
 defecto. Costes y límites siguen estimados, manuales o unknown si no hay
 evidencia. El siguiente paso recomendado es Mark 3 planning o un piloto de
 producción Mark 2 limitado, con setup manual y approvals válidos.
+
+## Pilot finding y PR #131
+
+El piloto local controlado de Mark 2 detectó un gap de selección en
+`RoutineExecutionBridge`: una misión `local_first_preview` podía mostrar Codex
+CLI como primera opción aunque `allow_codex_real=false` y
+`allow_claude_real=false`. PR #131 endurece el bridge para respetar
+`preferred_mode` y los flags `allow_*`, priorizar un preview local conservador
+y explicar los requisitos incumplidos.
+
+El preview añade un `improvement_plan_preview` basado solo en el payload,
+`risk_review` y `audit_summary`. No inspecciona el repo, no escribe archivos,
+no usa red ni access material y no activa ejecución real.
