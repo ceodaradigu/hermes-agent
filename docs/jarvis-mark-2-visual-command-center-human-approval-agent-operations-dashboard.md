@@ -99,6 +99,11 @@ Mark 2 no está completo. La siguiente macro es **Mark 2 Macro 4 — Real Deploy
 Stripe, Email, External Operations & AI CLI Adapters**, siempre bajo approval,
 audit, permission gates, sandbox/worktree y stop controls.
 
+PR #129 implementa Macro 4 y alimenta este dashboard con external operations
+status, deploy/Stripe/email/domain candidates, adapters Codex/Claude/Cowork/API
+fallback y Routine Execution Bridge. Costes y límites siguen unknown/manuales
+cuando no existe evidencia; no se consulta billing ni se inventan costes.
+
 ## Tests
 
 ```bash

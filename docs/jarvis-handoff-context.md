@@ -382,6 +382,12 @@ timeline. Sigue siendo control-plane: no lanza Codex/Claude/Cowork, no consulta
 billing y no ejecuta agentes o tools. La siguiente recomendación es **Mark 2
 Macro 4 — Real Deploy, Stripe, Email, External Operations & AI CLI Adapters**.
 
+PR #129 inicia Mark 2 Macro 4 con deploy/Stripe/email/domain candidates,
+adapters Codex CLI/Claude Code/Claude Cowork/API fallback, Routine Execution
+Bridge y external-operation audit. Toda invocación real, red, access material,
+producción y dinero permanecen disabled by default. La siguiente recomendación
+es **Mark 2 Release Candidate Hardening**.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

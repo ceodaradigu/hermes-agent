@@ -36,6 +36,17 @@ def build_audit_timeline() -> List[AuditTimelineEvent]:
             risk_level="low",
             approval_state="not_required",
             tool_or_agent="VisualCommandCenter",
-        )
+        ),
+        AuditTimelineEvent(
+            event_id="macro-4-external-ops-ready",
+            timestamp="not_recorded",
+            actor="JARVIS",
+            channel="system",
+            event_type="control_plane_snapshot",
+            summary="Mark 2 Macro 4 external-operation candidates and AI CLI adapters are available; no external call or real invocation occurred.",
+            risk_level="high",
+            approval_state="required_before_future_execution",
+            tool_or_agent="RoutineExecutionBridge",
+            blocked_reasons=["real external invocation is disabled"],
+        ),
     ]
-

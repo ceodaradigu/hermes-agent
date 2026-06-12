@@ -113,3 +113,7 @@ pytest tests/jarvis -q -x --durations=20
 PR #128 implementa Mark 2 Macro 3 como capa de datos visual/control-plane,
 integrando kill switch, stop phrase y Voice Approval Channel sin frontend final
 ni ejecución real. La siguiente macro es Mark 2 Macro 4.
+
+PR #129 implementa Macro 4 como candidatos de operaciones externas y adapters
+AI CLI gobernados. Voice Approval Channel válido puede satisfacer approval;
+wake phrase nunca aprueba y kill switch/stop phrase bloquean candidates.

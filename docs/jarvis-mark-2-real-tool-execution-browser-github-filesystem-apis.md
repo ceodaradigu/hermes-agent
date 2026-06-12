@@ -105,3 +105,7 @@ monitor, approval console, costes/límites, riesgos, worktree, diff/tests/review
 y audit timeline. Los candidates de Macro 2 se muestran, pero no se ejecutan.
 La siguiente macro es **Mark 2 Macro 4 — Real Deploy, Stripe, Email, External
 Operations & AI CLI Adapters**.
+
+PR #129 añade esa capa de operaciones externas encima de tool execution:
+deploy, Stripe, email, domain publishing y AI CLI son candidates higher-level,
+sin romper ni activar los adapters filesystem/GitHub/browser/API de Macro 2.

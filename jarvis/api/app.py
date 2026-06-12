@@ -131,6 +131,17 @@ from jarvis.mark_1_release_candidate import (
     Mark1ReleaseCandidateStatus,
 )
 from jarvis.mark_2_tool_execution import Mark2ToolExecutionLayer
+from jarvis.mark_2_deploy_adapter import Mark2DeployAdapter
+from jarvis.mark_2_domain_publishing_adapter import Mark2DomainPublishingAdapter
+from jarvis.mark_2_email_adapter import Mark2EmailAdapter
+from jarvis.mark_2_external_operations_policy import ExternalOperationsPolicyEngine
+from jarvis.mark_2_stripe_adapter import Mark2StripeAdapter
+from jarvis.codex_cli_adapter import CodexCliAdapter
+from jarvis.claude_code_adapter import ClaudeCodeAdapter
+from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
+from jarvis.api_fallback_adapter import ApiFallbackAdapter
+from jarvis.routine_execution_bridge import RoutineExecutionBridge
+from jarvis.ai_cli_session_audit import build_external_operation_audit_event
 from jarvis.local_daemon import LocalDaemonControl
 from jarvis.local_runtime_safety import LocalRuntimeSafetyPolicy
 from jarvis.monetization_engine import MonetizationEngine
@@ -329,6 +340,46 @@ class Mark2ToolExecutionPreviewRequest(BaseModel):
     approval_context: Optional[Dict[str, Any]] = None
     voice_approval_context: Optional[Dict[str, Any]] = None
     rollback_or_stop_plan: str = ""
+    kill_switch_active: bool = False
+    stop_phrase_detected: bool = False
+
+
+class Mark2ExternalOperationPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    operation_type: str = "unknown"
+    provider: str = "unknown"
+    environment: str = "preview"
+    operation: str = "unknown"
+    task_summary: str = ""
+    routine_type: str = "unknown"
+    use_case: str = ""
+    project_name: str = ""
+    artifact_summary: str = ""
+    build_command_preview: str = ""
+    deploy_command_preview: str = ""
+    rollback_plan: str = ""
+    rollback_or_stop_plan: str = ""
+    rollback_or_unpublish_plan: str = ""
+    stripe_mode: str = "unknown"
+    amount: Optional[float] = None
+    currency: str = "unknown"
+    subject_summary: str = ""
+    body_summary: str = ""
+    target_summary: str = ""
+    contains_sensitive_data: bool = False
+    bulk_or_marketing: bool = False
+    production_impact: bool = False
+    money_movement: bool = False
+    valid_approval_present: bool = False
+    valid_voice_approval_present: bool = False
+    readback_completed: bool = False
+    strong_approval_present: bool = False
+    strong_approval_satisfied: bool = False
+    double_confirmation_present: bool = False
+    double_confirmation_satisfied: bool = False
+    triple_confirmation_present: bool = False
+    triple_confirmation_satisfied: bool = False
     kill_switch_active: bool = False
     stop_phrase_detected: bool = False
 
@@ -1454,6 +1505,11 @@ def create_app(
     app.state.real_wake_listener = RealWakeListener(session_control=app.state.voice_session_control)
     app.state.voice_approval_channel = VoiceApprovalChannel()
     app.state.mark_2_tool_execution = Mark2ToolExecutionLayer()
+    app.state.mark_2_external_operations_policy = ExternalOperationsPolicyEngine()
+    app.state.mark_2_deploy_adapter = Mark2DeployAdapter()
+    app.state.mark_2_stripe_adapter = Mark2StripeAdapter()
+    app.state.mark_2_email_adapter = Mark2EmailAdapter()
+    app.state.mark_2_domain_adapter = Mark2DomainPublishingAdapter()
     app.state.visual_command_center = VisualCommandCenter()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
@@ -1651,6 +1707,59 @@ def create_app(
     @app.get("/mark-2/dashboard/next-actions")
     def mark_2_dashboard_next_actions() -> dict:
         return {"next_actions": app.state.visual_command_center.next_actions(), "would_execute": False}
+
+    @app.get("/mark-2/external-ops/status")
+    def mark_2_external_ops_status() -> dict:
+        return app.state.mark_2_external_operations_policy.status()
+
+    @app.get("/mark-2/external-ops/policy")
+    def mark_2_external_ops_policy() -> dict:
+        return app.state.mark_2_external_operations_policy.policy()
+
+    @app.post("/mark-2/external-ops/preview-deploy")
+    def mark_2_external_ops_preview_deploy(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return app.state.mark_2_deploy_adapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/external-ops/preview-stripe")
+    def mark_2_external_ops_preview_stripe(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return app.state.mark_2_stripe_adapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/external-ops/preview-email")
+    def mark_2_external_ops_preview_email(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return app.state.mark_2_email_adapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/external-ops/preview-domain")
+    def mark_2_external_ops_preview_domain(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return app.state.mark_2_domain_adapter.preview(**payload.model_dump()).to_dict()
+
+    @app.get("/mark-2/ai-cli/status")
+    def mark_2_ai_cli_status() -> dict:
+        status = app.state.mark_2_external_operations_policy.status()
+        return {key: value for key, value in status.items() if "adapter" in key or "invocation" in key or key in {"current_mark", "mark_2_macro"}}
+
+    @app.post("/mark-2/ai-cli/preview-codex")
+    def mark_2_ai_cli_preview_codex(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return CodexCliAdapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/ai-cli/preview-claude-code")
+    def mark_2_ai_cli_preview_claude_code(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return ClaudeCodeAdapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/ai-cli/preview-claude-cowork")
+    def mark_2_ai_cli_preview_claude_cowork(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return ClaudeCoworkAdapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/ai-cli/preview-api-fallback")
+    def mark_2_ai_cli_preview_api_fallback(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return ApiFallbackAdapter.preview(**payload.model_dump()).to_dict()
+
+    @app.post("/mark-2/routine-execution/preview")
+    def mark_2_routine_execution_preview(payload: Mark2ExternalOperationPreviewRequest) -> dict:
+        return RoutineExecutionBridge.preview(**payload.model_dump()).to_dict()
+
+    @app.get("/mark-2/external-ops/audit-preview")
+    def mark_2_external_ops_audit_preview() -> dict:
+        return build_external_operation_audit_event().to_dict()
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

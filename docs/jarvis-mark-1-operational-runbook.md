@@ -81,3 +81,9 @@ Valídala con
 `pytest tests/jarvis/test_mark_2_visual_command_center_human_approval_agent_operations_dashboard.py -q`.
 El dashboard muestra approvals, costes unknown/manuales, agentes y sesiones,
 pero no ejecuta ni aprueba acciones reales.
+
+PR #129 / Mark 2 Macro 4 prepara deploy, Stripe, email, domain publishing,
+AI CLI adapters y Routine Execution Bridge. Valídala con
+`pytest tests/jarvis/test_mark_2_real_deploy_stripe_email_external_ops_ai_cli_adapters.py -q`.
+Toda operación externa permanece preview/candidate, con manual handoff,
+approval, audit y rollback/stop plan.
