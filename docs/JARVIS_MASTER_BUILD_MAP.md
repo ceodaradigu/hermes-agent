@@ -490,3 +490,12 @@ Approval Channel. La voz puede aprobar tras readback y confirmaciones fuertes;
 la wake phrase nunca concede permiso. No completa Mark 2 ni activa ejecución
 externa. La siguiente recomendación es **Mark 2 Macro 2 — Real Tool Execution:
 Browser, GitHub, Filesystem & APIs**.
+
+## Mark 2 Macro 2 iniciada
+
+PR #127 añade policy, requests, candidates, readiness, adapters seguros de
+filesystem/GitHub/browser/APIs, sandbox boundaries, allowlist/denylist, audit y
+rollback/stop plans. Todos los endpoints son preview/control-plane: red,
+credenciales, producción, dinero y ejecución externa real siguen disabled by
+default. La siguiente recomendación es **Mark 2 Macro 3 — Visual Command Center
+UI & Human Approval Console**.

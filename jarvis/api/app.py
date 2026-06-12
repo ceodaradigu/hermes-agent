@@ -130,6 +130,7 @@ from jarvis.mark_1_release_candidate import (
     Mark1DocumentationStatus,
     Mark1ReleaseCandidateStatus,
 )
+from jarvis.mark_2_tool_execution import Mark2ToolExecutionLayer
 from jarvis.local_daemon import LocalDaemonControl
 from jarvis.local_runtime_safety import LocalRuntimeSafetyPolicy
 from jarvis.monetization_engine import MonetizationEngine
@@ -301,6 +302,34 @@ class Mark2VoiceApprovalRequest(BaseModel):
     cost_summary: str = "unknown; operator review required"
     production_impact_summary: str = "none in preview"
     rollback_or_stop_plan_summary: str = "stop before execution; rollback required when applicable"
+
+
+class Mark2ToolExecutionPreviewRequest(BaseModel):
+    request_id: Optional[str] = None
+    actor: str = "David"
+    channel: str = "local_api"
+    natural_language_command: str = ""
+    action_type: str = "preview"
+    target_type: str = "filesystem"
+    target: str = ""
+    environment: str = "preview"
+    method: str = "GET"
+    content: str = ""
+    patch: str = ""
+    payload: Optional[Dict[str, Any]] = None
+    branch: str = ""
+    pr_number: Optional[int] = None
+    protected_branch: bool = False
+    requires_network: bool = False
+    requires_credentials: bool = False
+    requires_filesystem_write: bool = False
+    requires_external_write: bool = False
+    risk_level_declared: str = "medium"
+    approval_context: Optional[Dict[str, Any]] = None
+    voice_approval_context: Optional[Dict[str, Any]] = None
+    rollback_or_stop_plan: str = ""
+    kill_switch_active: bool = False
+    stop_phrase_detected: bool = False
 
 
 class CameraControlPreviewRequest(BaseModel):
@@ -1423,6 +1452,7 @@ def create_app(
     app.state.local_runtime_safety_policy = LocalRuntimeSafetyPolicy()
     app.state.real_wake_listener = RealWakeListener(session_control=app.state.voice_session_control)
     app.state.voice_approval_channel = VoiceApprovalChannel()
+    app.state.mark_2_tool_execution = Mark2ToolExecutionLayer()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
@@ -1505,6 +1535,72 @@ def create_app(
     @app.get("/mark-2/local-audit/preview")
     def mark_2_local_audit_preview() -> dict:
         return app.state.voice_approval_channel.audit_preview()
+
+    @app.get("/mark-2/tools/status")
+    def mark_2_tools_status() -> dict:
+        return app.state.mark_2_tool_execution.status()
+
+    @app.get("/mark-2/tools/policy")
+    def mark_2_tools_policy() -> dict:
+        return app.state.mark_2_tool_execution.policy()
+
+    def _mark_2_tool_request(payload: Mark2ToolExecutionPreviewRequest):
+        return app.state.mark_2_tool_execution.prepare_request(**payload.model_dump())
+
+    def _mark_2_adapter_preview(payload: Mark2ToolExecutionPreviewRequest):
+        request = _mark_2_tool_request(payload)
+        return request, app.state.mark_2_tool_execution.preview_adapter(request, **payload.model_dump())
+
+    @app.post("/mark-2/tools/preview-request")
+    def mark_2_tools_preview_request(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        return _mark_2_tool_request(payload).to_dict()
+
+    @app.post("/mark-2/tools/preview-candidate")
+    def mark_2_tools_preview_candidate(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request, preview = _mark_2_adapter_preview(payload)
+        return app.state.mark_2_tool_execution.prepare_candidate(
+            request,
+            adapter_preview=preview,
+            kill_switch_active=payload.kill_switch_active,
+            stop_phrase_detected=payload.stop_phrase_detected,
+        ).to_dict()
+
+    @app.post("/mark-2/tools/preview-filesystem")
+    def mark_2_tools_preview_filesystem(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request = app.state.mark_2_tool_execution.prepare_request(
+            **{**payload.model_dump(), "target_type": "filesystem"}
+        )
+        return app.state.mark_2_tool_execution.preview_adapter(request, **payload.model_dump())
+
+    @app.post("/mark-2/tools/preview-github")
+    def mark_2_tools_preview_github(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request = app.state.mark_2_tool_execution.prepare_request(**{**payload.model_dump(), "target_type": "github"})
+        return app.state.mark_2_tool_execution.preview_adapter(request, **payload.model_dump())
+
+    @app.post("/mark-2/tools/preview-browser")
+    def mark_2_tools_preview_browser(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request = app.state.mark_2_tool_execution.prepare_request(**{**payload.model_dump(), "target_type": "browser"})
+        return app.state.mark_2_tool_execution.preview_adapter(request, **payload.model_dump())
+
+    @app.post("/mark-2/tools/preview-api")
+    def mark_2_tools_preview_api(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request = app.state.mark_2_tool_execution.prepare_request(**{**payload.model_dump(), "target_type": "external_api"})
+        return app.state.mark_2_tool_execution.preview_adapter(request, **payload.model_dump())
+
+    @app.post("/mark-2/tools/preview-execution")
+    def mark_2_tools_preview_execution(payload: Mark2ToolExecutionPreviewRequest) -> dict:
+        request, preview = _mark_2_adapter_preview(payload)
+        candidate = app.state.mark_2_tool_execution.prepare_candidate(
+            request,
+            adapter_preview=preview,
+            kill_switch_active=payload.kill_switch_active,
+            stop_phrase_detected=payload.stop_phrase_detected,
+        )
+        return app.state.mark_2_tool_execution.preview_result(request, candidate).to_dict()
+
+    @app.get("/mark-2/tools/audit-preview")
+    def mark_2_tools_audit_preview() -> dict:
+        return app.state.mark_2_tool_execution.audit_preview()
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

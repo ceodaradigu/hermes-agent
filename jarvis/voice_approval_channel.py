@@ -317,6 +317,6 @@ def mark_2_macro_1_markers() -> Dict[str, Any]:
         "external_speech_api_enabled": False,
         "mark_1_release_candidate_complete": True,
         "mark_2_macro_2_planned": True,
-        "next_recommended_macro_pr": "Mark 2 Macro 2 — Real Tool Execution: Browser, GitHub, Filesystem & APIs",
+        "next_recommended_macro_pr": "Mark 2 Macro 3 — Visual Command Center UI & Human Approval Console",
         "restrictions_are_approval_gates": True,
     }

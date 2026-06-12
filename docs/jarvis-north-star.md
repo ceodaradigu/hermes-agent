@@ -194,3 +194,8 @@ defecto. La voz puede ser un canal de approval explícito, pero `Hola Jarvis` o
 `Jarvis` solo despiertan: nunca autorizan. Producción, dinero y acciones
 críticas conservan readback, strong approval, doble/triple confirmación, audit,
 expiración y stop controls.
+
+Mark 2 Macro 2 convierte tool execution en requests y candidates gobernados
+para filesystem, GitHub, browser y APIs. Mantiene default-deny, sandbox,
+allowlist/denylist, audit, rollback y approval fuerte para riesgo sensible. No
+activa ejecución libre ni externa por defecto.
