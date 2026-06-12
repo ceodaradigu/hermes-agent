@@ -68,9 +68,14 @@ def build_agent_operations_dashboard() -> List[AgentOperation]:
             strong_approval_required=True, **common,
         ),
         AgentOperation(
+            "routine-execution-bridge", "RoutineExecutionBridge", "Select a governed adapter by mission, risk, and cost.",
+            tool_or_model="RoutineExecutionBridge preview", provider="JARVIS", paid_by="selected adapter owner",
+            cost_mode="estimated_or_unknown", usage_limit_status="manual_input_required", risk_level="high",
+            strong_approval_required=True, **common,
+        ),
+        AgentOperation(
             "local-script", "LocalScriptAgent", "Govern a future local script adapter.",
             tool_or_model="LocalScriptAdapter planned", provider="local", paid_by="local machine",
             cost_mode="local_compute", usage_limit_status="unknown", **common,
         ),
     ]
-

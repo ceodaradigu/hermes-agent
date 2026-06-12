@@ -10,6 +10,12 @@ from jarvis.cost_usage_dashboard import build_cost_usage_dashboard
 from jarvis.human_approval_console import build_human_approval_console
 from jarvis.model_tool_router import build_model_tool_router_preview
 from jarvis.worktree_execution_guard import DiffTestReviewPanel, WorktreeExecutionGuardPanel
+from jarvis.mark_2_deploy_adapter import Mark2DeployAdapter
+from jarvis.mark_2_domain_publishing_adapter import Mark2DomainPublishingAdapter
+from jarvis.mark_2_email_adapter import Mark2EmailAdapter
+from jarvis.mark_2_external_operations_policy import mark_2_external_operations_markers
+from jarvis.mark_2_stripe_adapter import Mark2StripeAdapter
+from jarvis.routine_execution_bridge import RoutineExecutionBridge
 
 
 NEXT_RECOMMENDED_MACRO_PR = "Mark 2 Macro 4 — Real Deploy, Stripe, Email, External Operations & AI CLI Adapters"
@@ -210,6 +216,14 @@ class VisualCommandCenter:
             "diff_test_review": self.diff_test_review(),
             "audit_timeline": self.audit(),
             "next_actions": self.next_actions(),
+            "external_operations_status": mark_2_external_operations_markers(),
+            "external_operation_candidates": {
+                "deploy": Mark2DeployAdapter().preview().to_dict(),
+                "stripe": Mark2StripeAdapter().preview().to_dict(),
+                "email": Mark2EmailAdapter().preview().to_dict(),
+                "domain": Mark2DomainPublishingAdapter().preview().to_dict(),
+            },
+            "routine_execution_bridge": RoutineExecutionBridge.preview(routine_type="ai_coding").to_dict(),
             "dashboard_health": "ready_control_plane_only",
             "safe_to_render": True,
         }

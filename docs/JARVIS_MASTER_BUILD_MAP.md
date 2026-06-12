@@ -508,3 +508,11 @@ diff/tests/reviews y audit timeline como capa de datos control-plane. No crea
 un frontend final, no lanza Codex/Claude/Cowork, no consulta billing y no
 ejecuta agentes o tools. La siguiente recomendación es **Mark 2 Macro 4 — Real
 Deploy, Stripe, Email, External Operations & AI CLI Adapters**.
+
+## Mark 2 Macro 4 iniciada
+
+PR #129 prepara operaciones externas gobernadas de deploy, Stripe/payment,
+email y domain publishing, junto con adapters Codex CLI, Claude Code, Claude
+Cowork/Desktop, API fallback, Routine Execution Bridge y audit seguro. No
+ejecuta proveedores reales, no usa cookies/tokens/access material y no completa
+Mark 2. La siguiente recomendación es **Mark 2 Release Candidate Hardening**.

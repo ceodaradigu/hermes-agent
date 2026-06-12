@@ -62,6 +62,9 @@ PR #127 inicia Mark 2 Macro 2 con requests/candidates y adapters seguros de
 tools, sin activar ejecución externa libre ni completar Mark 2.
 PR #128 inicia Mark 2 Macro 3 con datos estructurados para dashboard visual,
 approval console y agent operations, sin frontend final ni ejecución real.
+PR #129 inicia Mark 2 Macro 4 con deploy/Stripe/email/domain candidates,
+adapters Codex/Claude/Cowork/API fallback y Routine Execution Bridge. Toda
+invocación externa real permanece desactivada y Mark 2 aún no está completo.
 
 ## Endpoints
 

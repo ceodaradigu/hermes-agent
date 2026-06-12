@@ -252,3 +252,11 @@ diff/tests/reviews, audit, kill switch y next actions. Una UI futura consume
 estos endpoints, pero PolicyEngine, ApprovalGateway, audit y stop controls
 siguen siendo autoritativos. Codex CLI, Claude Code, Claude Cowork y API
 fallback se modelan como adapters gobernados; no se invocan realmente aquí.
+
+## Mark 2 Macro 4 - External operations and AI CLI adapters
+
+Macro 4 añade una capa higher-level sobre tool execution: External Operations
+Policy clasifica deploy/payment/email/domain/AI CLI/API fallback; candidatos
+preparan approval, manual handoff, coste, audit y rollback/stop; Routine
+Execution Bridge selecciona local, subscription CLI o API según misión. No hay
+invocación externa real, procesos AI CLI, producción o money movement.

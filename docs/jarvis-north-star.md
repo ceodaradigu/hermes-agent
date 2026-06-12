@@ -205,3 +205,9 @@ agentes, sesiones, approvals, riesgos, costes/límites unknown o manuales,
 worktree, diffs/tests/reviews, audit, kill switch y siguientes acciones
 seguras. No completa Mark 2 ni convierte el dashboard en autoridad de
 ejecución.
+
+Mark 2 Macro 4 prepara operaciones externas reales gobernadas y adapters AI
+CLI sin convertirlos en cerebros libres. JARVIS clasifica misión/riesgo,
+selecciona adapter, exige approvals, muestra coste/límite/pagador, audita y
+mantiene rollback/stop plan. No usa cookies, no roba tokens, no guarda access
+material y no toca producción o dinero desde previews.
