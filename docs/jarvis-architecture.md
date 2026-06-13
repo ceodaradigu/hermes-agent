@@ -289,3 +289,8 @@ Los endpoints `/mark-3/planning/*` de PR #132 son GET read-only y
 Mark 3 como sistema no queda limitado a read-only: una capacidad futura puede
 ejecutar tras aprobación válida y controles proporcionales al riesgo. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
+
+PR #133 materializa ese flujo como control-plane in-memory bajo
+`/mark-3/mission-loop`: cada step conserva scope, budget, tool, riesgo,
+approval y fingerprint propios. Los candidates nunca significan ejecución y
+PR #134 es la única fase prevista para conectar ejecución externa gobernada.

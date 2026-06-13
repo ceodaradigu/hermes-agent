@@ -199,9 +199,9 @@ def test_planning_endpoints_return_200_safe_payloads_without_real_tools(monkeypa
         assert payload["safe_to_render"] is True
 
 
-def test_mark_3_registers_only_read_only_planning_routes():
+def test_mark_3_planning_routes_remain_read_only_when_mission_loop_routes_are_added():
     app = create_app(adapter_factory=lambda: pytest.fail("Hermes called"))
-    mark_3_routes = [route for route in app.routes if route.path.startswith("/mark-3/")]
+    mark_3_routes = [route for route in app.routes if route.path.startswith("/mark-3/planning/")]
 
     assert {route.path for route in mark_3_routes} == set(GET_ROUTES)
     assert all(route.methods == {"GET"} for route in mark_3_routes)

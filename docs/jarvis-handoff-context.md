@@ -419,6 +419,12 @@ permanece en el ordenador actual de David; no Mac mini ni VPS hasta revenue
 suficiente o necesidad técnica demostrada. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
 
+PR #133 implementa el primer Autonomous Mission Loop gobernado e in-memory:
+intake, clasificación 0-5, plan determinista, preview, approvals exactos por
+step, bounded execution candidates, outcomes/evidence, post-mortem y learning
+proposal preview. No ejecuta herramientas externas. PR #134 conectará el
+Governed Execution Engine; PR #135 añadirá persistencia de Outcome Memory.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
