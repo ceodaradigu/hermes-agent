@@ -555,3 +555,10 @@ account recovery, Moonshot Lab, Measurement/ROI y local-first infrastructure.
 No activa ejecución Mark 3. El roadmap continúa con macro-PRs #133-#140; no
 usa micro-PR explosion. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
+
+PR #133 añade el Autonomous Mission Loop in-memory y genera bounded execution
+candidates sin ejecución externa. El orden operativo posterior es: PR #134
+Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
+Multi-Agent Orchestration, #137 Product/Revenue Factory, #138 Local Routine
+Scheduler + Personal/Family Ops, #139 Moonshot Lab + Research/Experiment
+Engine y #140 Mark 3 Release Candidate + Pilot.

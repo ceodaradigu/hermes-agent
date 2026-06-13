@@ -155,6 +155,7 @@ from jarvis.mark_3_master_planning import (
     get_mark_3_readiness,
     get_mark_3_risk_approval_model,
 )
+from jarvis.mark_3_mission_loop import Mark3MissionLoop
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -452,6 +453,60 @@ class ApprovalDecisionPreviewRequest(BaseModel):
 class ApprovalGatePreviewRequest(BaseModel):
     approval_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+
+
+class Mark3MissionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    objective: str
+    allowed_scope: List[str]
+    context: str = ""
+    desired_outcome: str = "unknown"
+    success_criteria: Optional[List[str]] = None
+    declared_authorization: str = "unknown"
+    allowed_paths_resources: Optional[List[str]] = None
+    allowed_tools: Optional[List[str]] = None
+    prohibited_tools: Optional[List[str]] = None
+    monetary_budget: Optional[float] = None
+    time_budget_seconds: Optional[int] = None
+    max_steps: int = 10
+    allowed_data: Optional[List[str]] = None
+    constraints: Optional[List[str]] = None
+    stop_conditions: Optional[List[str]] = None
+    expected_rollback: str = "unknown"
+    instruction_origin: str = "api"
+    direct_intent_evidence: Optional[str] = None
+    requested_risk_level: Optional[int] = None
+    proposed_steps: Optional[List[Dict[str, Any]]] = None
+    uncertainties: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class Mark3MissionAdvanceRequest(BaseModel):
+    approval_id: Optional[str] = None
+    step_id: Optional[str] = None
+
+
+class Mark3MissionOutcomeRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    summary: str
+    step_id: Optional[str] = None
+    verification_state: str = "reported"
+    evidence: Optional[List[Dict[str, Any]]] = None
+    costs_known: Any = "unknown"
+    revenue_known: Any = "unknown"
+    time_known_seconds: Any = "unknown"
+
+
+class Mark3MissionFeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    feedback: str = ""
+
+
+class Mark3MissionStopRequest(BaseModel):
+    reason: str
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1508,6 +1563,7 @@ def create_app(
     app.state.policy_engine = policy_engine or PolicyEngine()
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.approval_hardening = ApprovalHardeningService()
+    app.state.mark_3_mission_loop = Mark3MissionLoop(approval_service=app.state.approval_hardening)
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -1858,6 +1914,73 @@ def create_app(
     @app.get("/mark-3/planning/readiness")
     def mark_3_planning_readiness() -> dict:
         return get_mark_3_readiness()
+
+    @app.get("/mark-3/mission-loop/status")
+    def mark_3_mission_loop_status() -> dict:
+        return app.state.mark_3_mission_loop.status()
+
+    @app.get("/mark-3/mission-loop/policy")
+    def mark_3_mission_loop_policy() -> dict:
+        return app.state.mark_3_mission_loop.policy()
+
+    @app.post("/mark-3/mission-loop/missions")
+    def mark_3_mission_loop_create(payload: Mark3MissionCreateRequest) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.create_mission(payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.get("/mark-3/mission-loop/missions/{mission_id}")
+    def mark_3_mission_loop_get(mission_id: str) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.get_mission(mission_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+
+    @app.post("/mark-3/mission-loop/missions/{mission_id}/advance")
+    def mark_3_mission_loop_advance(mission_id: str, payload: Mark3MissionAdvanceRequest) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.advance(
+                mission_id,
+                approval_id=payload.approval_id,
+                step_id=payload.step_id,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/mark-3/mission-loop/missions/{mission_id}/record-outcome")
+    def mark_3_mission_loop_record_outcome(mission_id: str, payload: Mark3MissionOutcomeRequest) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.record_outcome(mission_id, payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/mark-3/mission-loop/missions/{mission_id}/feedback")
+    def mark_3_mission_loop_feedback(mission_id: str, payload: Mark3MissionFeedbackRequest) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.add_feedback(mission_id, payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+
+    @app.post("/mark-3/mission-loop/missions/{mission_id}/stop")
+    def mark_3_mission_loop_stop(mission_id: str, payload: Mark3MissionStopRequest) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.stop(mission_id, reason=payload.reason)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.get("/mark-3/mission-loop/missions/{mission_id}/audit")
+    def mark_3_mission_loop_audit(mission_id: str) -> dict:
+        try:
+            return app.state.mark_3_mission_loop.audit(mission_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="mission not found")
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

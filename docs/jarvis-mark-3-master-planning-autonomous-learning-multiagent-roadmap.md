@@ -208,17 +208,15 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   endpoints read-only, tests, docs y piloto.
 - **PR #133** — Autonomous Mission Loop: controlled planner, executor, memory y
   feedback.
-- **PR #134** — Continuous Learning: outcome/failure/ROI memory, experiments y
-  tech radar.
-- **PR #135** — Multi-Agent Orchestration: roles, budgets, locks, handoffs y
-  conflict resolution.
-- **PR #136** — Revenue Product Factory: oportunidad a SaaS, monetización y
-  measurement.
-- **PR #137** — Local Routine Scheduler: supervised autonomy en el PC de David.
-- **PR #138** — Authorized Account and Credential Assistance: recuperación
-  oficial, consentimiento y seguridad.
-- **PR #139** — Moonshot Lab: hard problems, research, prototypes y evidence.
-- **PR #140** — Release Candidate hardening y controlled pilot.
+- **PR #134** — Governed Execution Engine.
+- **PR #135** — Continuous Learning + Outcome Memory.
+- **PR #136** — Multi-Agent Orchestration.
+- **PR #137** — Product/Revenue Factory.
+- **PR #138** — Local Routine Scheduler + Personal/Family Ops. Incluye
+  Authorized Account Assistance mediante recuperación oficial, consentimiento,
+  password manager, 2FA y prohibición de bypass.
+- **PR #139** — Moonshot Lab + Research/Experiment Engine.
+- **PR #140** — Mark 3 Release Candidate + Pilot.
 
 Son macro-PRs grandes y coherentes; no habrá micro-PR explosion.
 

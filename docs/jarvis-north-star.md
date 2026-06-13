@@ -79,6 +79,12 @@ Ilegal, inseguro, dañino o no autorizado permanece denegado. Lo difícil, no
 resuelto o unsupported puede investigarse y prototiparse con incertidumbre
 explícita; nunca debe presentarse como capacidad o éxito probado sin evidencia.
 
+El Mission Loop de Mark 3 convierte intención en intake, clasificación, plan,
+preview, approvals por step, candidates acotados, evidence, post-mortem y
+learning proposal. Approval no significa ejecución, memoria no significa
+permiso y ningún candidate puede salir del scope, budget, tools o riesgo
+aprobado.
+
 Nunca debe ejecutar sin aprobación válida:
 - mover dinero.
 - hacer compras.
