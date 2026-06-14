@@ -231,6 +231,13 @@ credenciales, bypass y autonomía sin límites. Captura outcomes, fallos, tiempo
 costes reales y post-mortem. El aprendizaje resultante es una propuesta que
 requiere revisión antes de persistirse o activarse.
 
+PR #135 materializa esa base como Outcome Memory, Failure Memory, Learning
+Proposal Engine y Research Radar. El radar no hace scraping ni llama red por sí
+solo: prepara candidatos gobernados para GitHub, web, docs o repo local. Si
+falta adapter/capability real devuelve `setup_required` y
+`capability_not_connected_yet`; con capability conectada y approval válido puede
+pasar a candidato ejecutable sin duplicar Hermes.
+
 ## Criterios De Éxito
 
 - Misiones útiles completan sin exceder riesgo, scope, budget o herramientas.
@@ -258,3 +265,19 @@ PR #132 añade únicamente:
 
 Todos devuelven `safe_to_render=true`, son deterministas, no llaman red, no
 leen access material, no ejecutan herramientas y no habilitan rutas peligrosas.
+
+PR #135 añade endpoints de memoria y research gobernado:
+
+- `GET /mark-3/growth/status`
+- `POST /mark-3/outcomes/record`
+- `GET /mark-3/outcomes`
+- `POST /mark-3/learning/proposals`
+- `GET /mark-3/learning/proposals`
+- `POST /mark-3/learning/proposals/{proposal_id}/approve`
+- `POST /mark-3/learning/proposals/{proposal_id}/reject`
+- `POST /mark-3/research-radar/plan`
+- `GET /mark-3/research-radar/status`
+
+Estas rutas no ejecutan internet, install, commit, deploy, dinero ni secrets.
+Preparan y auditan memoria/propuestas/candidatos para ejecución gobernada por
+Hermes cuando exista approval y capability.
