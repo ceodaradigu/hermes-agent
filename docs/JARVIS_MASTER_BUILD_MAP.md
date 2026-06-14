@@ -562,3 +562,20 @@ Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
 Multi-Agent Orchestration, #137 Product/Revenue Factory, #138 Local Routine
 Scheduler + Personal/Family Ops, #139 Moonshot Lab + Research/Experiment
 Engine y #140 Mark 3 Release Candidate + Pilot.
+
+PR #134 conecta el primer vertical slice de ejecución real gobernada con
+Hermes: `Mark3MissionLoop candidate -> governed validation ->
+HermesRuntimeAdapter -> AIAgent -> read_file -> outcome/evidence`. Sigue
+limitado a filesystem read local aprobado, sin red, terminal, browser, dinero,
+writes ni providers reales fuera del adapter gobernado.
+
+PR #135 añade Autonomous Growth + Outcome Learning + Research Radar. JARVIS no
+está enjaulado: acciones legales, seguras, autorizadas y técnicamente
+soportadas pueden avanzar con approval proporcional. Esta capa registra Outcome
+Memory y Failure Memory, genera Learning Proposals revisables, prepara research
+para GitHub/web/docs/local_repo y devuelve `setup_required` cuando falta adapter
+real en vez de convertirlo en permanent-deny. No crea otro Hermes ni otro
+executor: Hermes sigue siendo el motor; JARVIS gobierna, decide, clasifica
+riesgo, pide approval, audita y propone cambios a Hermes cuando necesita
+mejorar el motor. Ver
+`docs/jarvis-mark-3-autonomous-growth-learning-radar.md`.

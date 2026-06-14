@@ -156,6 +156,9 @@ from jarvis.mark_3_master_planning import (
     get_mark_3_risk_approval_model,
 )
 from jarvis.mark_3_mission_loop import Mark3MissionLoop
+from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
+from jarvis.mark_3_learning_proposals import LearningProposalEngine
+from jarvis.mark_3_growth_radar import ResearchRadar
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
@@ -518,6 +521,60 @@ class Mark3HermesRuntimeExecuteReadRequest(BaseModel):
 
 class Mark3HermesRuntimeStopRequest(BaseModel):
     reason: str = "operator stop"
+
+
+class Mark3OutcomeRecordRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    mission_id: str = "unknown"
+    step_id: str = "unknown"
+    candidate_id: str = "unknown"
+    goal: str = "unknown"
+    tool_used: str = "unknown"
+    capability_used: str = "unknown"
+    result_status: str = "unknown"
+    evidence_state: str = "unknown"
+    errors: Optional[List[str]] = None
+    duration_seconds: Any = "unknown"
+    cost: Any = "unknown"
+    approval_level: str = "unknown"
+    what_worked: str = "unknown"
+    what_failed: str = "unknown"
+    next_recommended_action: str = "unknown"
+
+
+class Mark3LearningProposalRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    proposal: str = ""
+    evidence: str = ""
+    confidence: str = "unknown"
+    risk: str = "unknown"
+    requires_approval: bool = True
+    source_outcome_id: Optional[str] = None
+    source_outcome_ids: Optional[List[str]] = None
+    source_failure_ids: Optional[List[str]] = None
+
+
+class Mark3LearningProposalDecisionRequest(BaseModel):
+    actor: str = "operator"
+    approval_level: str = "simple"
+    reason: str = ""
+
+
+class Mark3ResearchRadarPlanRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    source: str = "local_repo"
+    goal: str = "improve_jarvis"
+    query: str = ""
+    risk: str = "low"
+    approval_valid: bool = False
+    approval_level: str = "direct"
+    capabilities_connected: Optional[Any] = None
+    cost_estimate: Any = "unknown"
+    stop_conditions: Optional[List[str]] = None
+    evidence_required: Optional[List[str]] = None
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1577,6 +1634,9 @@ def create_app(
     app.state.approval_gateway = approval_gateway or ApprovalGateway()
     app.state.approval_hardening = ApprovalHardeningService()
     app.state.mark_3_mission_loop = Mark3MissionLoop(approval_service=app.state.approval_hardening)
+    app.state.mark_3_outcome_memory = OutcomeMemoryStore()
+    app.state.mark_3_learning_proposals = LearningProposalEngine()
+    app.state.mark_3_research_radar = ResearchRadar()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -2039,6 +2099,100 @@ def create_app(
             return app.state.mark_3_hermes_runtime_bridge.stop(session_id, reason=payload.reason)
         except KeyError:
             raise HTTPException(status_code=404, detail="session not found")
+
+    @app.get("/mark-3/growth/status")
+    def mark_3_growth_status() -> dict:
+        return {
+            "mark": "Mark 3",
+            "autonomous_growth_learning_radar_available": True,
+            "jarvis_not_caged": True,
+            "approval_gates_are_not_permanent_bans": True,
+            "legal_safe_authorized_supported_actions_can_advance_with_approval": True,
+            "hermes_remains_execution_engine": True,
+            "jarvis_governs_decides_classifies_approves_audits": True,
+            "no_duplicate_hermes_runtime": True,
+            "outcome_memory": app.state.mark_3_outcome_memory.status(),
+            "learning_proposals": app.state.mark_3_learning_proposals.status(),
+            "research_radar": app.state.mark_3_research_radar.status(),
+            "hermes_runtime": app.state.mark_3_hermes_runtime_bridge.status(),
+            "delicate_actions_require_approval": {
+                "install": "strong_or_higher",
+                "commit": "double_or_higher",
+                "deploy": "triple",
+                "production": "triple",
+                "money": "triple",
+                "secrets": "blocked",
+            },
+        }
+
+    @app.post("/mark-3/outcomes/record")
+    def mark_3_outcomes_record(payload: Mark3OutcomeRecordRequest) -> dict:
+        return app.state.mark_3_outcome_memory.record(payload.model_dump())
+
+    @app.get("/mark-3/outcomes")
+    def mark_3_outcomes_list() -> dict:
+        return {
+            "outcomes": app.state.mark_3_outcome_memory.list_outcomes(),
+            "failures": app.state.mark_3_outcome_memory.list_failures(),
+            "audit": app.state.mark_3_outcome_memory.audit(),
+        }
+
+    @app.post("/mark-3/learning/proposals")
+    def mark_3_learning_proposals_create(payload: Mark3LearningProposalRequest) -> dict:
+        data = payload.model_dump()
+        source_outcome_id = data.get("source_outcome_id")
+        try:
+            if source_outcome_id:
+                outcome = app.state.mark_3_outcome_memory.get_outcome(source_outcome_id)
+                return app.state.mark_3_learning_proposals.create_from_outcome(outcome, data)
+            return app.state.mark_3_learning_proposals.create(data)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="source outcome not found")
+
+    @app.get("/mark-3/learning/proposals")
+    def mark_3_learning_proposals_list() -> dict:
+        return {
+            "proposals": app.state.mark_3_learning_proposals.list(),
+            "audit": app.state.mark_3_learning_proposals.audit(),
+        }
+
+    @app.post("/mark-3/learning/proposals/{proposal_id}/approve")
+    def mark_3_learning_proposals_approve(proposal_id: str, payload: Mark3LearningProposalDecisionRequest) -> dict:
+        try:
+            return app.state.mark_3_learning_proposals.approve(
+                proposal_id,
+                actor=payload.actor,
+                approval_level=payload.approval_level,
+                reason=payload.reason,
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="proposal not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/mark-3/learning/proposals/{proposal_id}/reject")
+    def mark_3_learning_proposals_reject(proposal_id: str, payload: Mark3LearningProposalDecisionRequest) -> dict:
+        try:
+            return app.state.mark_3_learning_proposals.reject(
+                proposal_id,
+                actor=payload.actor,
+                reason=payload.reason,
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="proposal not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/mark-3/research-radar/plan")
+    def mark_3_research_radar_plan(payload: Mark3ResearchRadarPlanRequest) -> dict:
+        return app.state.mark_3_research_radar.plan(payload.model_dump())
+
+    @app.get("/mark-3/research-radar/status")
+    def mark_3_research_radar_status() -> dict:
+        return {
+            **app.state.mark_3_research_radar.status(),
+            "audit": app.state.mark_3_research_radar.audit(),
+        }
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:
