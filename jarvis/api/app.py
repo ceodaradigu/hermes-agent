@@ -156,6 +156,7 @@ from jarvis.mark_3_master_planning import (
     get_mark_3_risk_approval_model,
 )
 from jarvis.mark_3_mission_loop import Mark3MissionLoop
+from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -507,6 +508,16 @@ class Mark3MissionFeedbackRequest(BaseModel):
 
 class Mark3MissionStopRequest(BaseModel):
     reason: str
+
+
+class Mark3HermesRuntimeExecuteReadRequest(BaseModel):
+    mission_id: str
+    candidate_id: str
+    approval_id: str
+
+
+class Mark3HermesRuntimeStopRequest(BaseModel):
+    reason: str = "operator stop"
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1553,6 +1564,8 @@ def create_app(
     policy_engine: Optional[PolicyEngine] = None,
     approval_gateway: Optional[ApprovalGateway] = None,
     adapter_factory: Optional[Callable[[], HermesRuntimeAdapter]] = None,
+    hermes_runtime_adapter_factory: Optional[Callable[[Callable[[str, Dict[str, Any]], Any]], Any]] = None,
+    hermes_runtime_authorize: Optional[Callable[[str, Dict[str, Any]], bool]] = None,
     task_store: Optional[InMemoryTaskStore] = None,
     voice_adapter: Optional[VoiceAdapter] = None,
     voice_audio_storage: Optional[VoiceAudioStorage] = None,
@@ -1598,6 +1611,7 @@ def create_app(
     app.state.mark_2_domain_adapter = Mark2DomainPublishingAdapter()
     app.state.visual_command_center = VisualCommandCenter()
     app.state.adapter_factory = adapter_factory or (lambda: HermesRuntimeAdapter())
+    app.state.hermes_runtime_authorize = hermes_runtime_authorize
     app.state.voice_adapter = voice_adapter or create_voice_adapter_from_env()
     app.state.voice_runtime = voice_runtime or VoiceRuntime()
     app.state.task_store = task_store or InMemoryTaskStore()
@@ -1607,6 +1621,10 @@ def create_app(
         policy_engine=app.state.policy_engine,
         approval_gateway=app.state.approval_gateway,
         adapter_factory=app.state.adapter_factory,
+    )
+    app.state.mark_3_hermes_runtime_bridge = Mark3HermesRuntimeBridge(
+        app.state.mark_3_mission_loop,
+        adapter_factory=hermes_runtime_adapter_factory,
     )
 
     @app.get("/health")
@@ -1981,6 +1999,46 @@ def create_app(
             return app.state.mark_3_mission_loop.audit(mission_id)
         except KeyError:
             raise HTTPException(status_code=404, detail="mission not found")
+
+    @app.get("/mark-3/hermes-runtime/status")
+    def mark_3_hermes_runtime_status() -> dict:
+        return app.state.mark_3_hermes_runtime_bridge.status()
+
+    def _require_hermes_runtime_authorized(operation: str, payload: Dict[str, Any]) -> None:
+        callback = app.state.hermes_runtime_authorize
+        if callback is None:
+            raise HTTPException(status_code=503, detail="operator authorization channel not configured")
+        if callback(operation, payload) is not True:
+            raise HTTPException(status_code=403, detail="operator authorization denied")
+
+    @app.post("/mark-3/hermes-runtime/execute-read")
+    def mark_3_hermes_runtime_execute_read(payload: Mark3HermesRuntimeExecuteReadRequest) -> dict:
+        data = payload.model_dump()
+        _require_hermes_runtime_authorized("execute_read", data)
+        try:
+            approval = app.state.approval_hardening.get(payload.approval_id)
+            return app.state.mark_3_hermes_runtime_bridge.execute_read(
+                mission_id=payload.mission_id,
+                candidate_id=payload.candidate_id,
+                approval=approval,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    @app.get("/mark-3/hermes-runtime/sessions/{session_id}")
+    def mark_3_hermes_runtime_session(session_id: str) -> dict:
+        try:
+            return app.state.mark_3_hermes_runtime_bridge.get_session(session_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="session not found")
+
+    @app.post("/mark-3/hermes-runtime/sessions/{session_id}/stop")
+    def mark_3_hermes_runtime_stop(session_id: str, payload: Mark3HermesRuntimeStopRequest) -> dict:
+        _require_hermes_runtime_authorized("stop", {"session_id": session_id, "reason": payload.reason})
+        try:
+            return app.state.mark_3_hermes_runtime_bridge.stop(session_id, reason=payload.reason)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="session not found")
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

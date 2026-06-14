@@ -604,6 +604,15 @@ class AIAgent:
         checkpoint_max_snapshots: int = 50,
         pass_session_id: bool = False,
         persist_session: bool = True,
+        allowed_tools: List[str] = None,
+        allowed_tool_names: List[str] = None,
+        tool_guard: callable = None,
+        governed_mode: bool = False,
+        disable_memory_provider_tools: bool = False,
+        disable_context_engine: bool = False,
+        disable_plugins: bool = False,
+        disable_delegate_task: bool = False,
+        disable_mcp: bool = False,
     ):
         """
         Initialize the AI Agent.
@@ -664,7 +673,22 @@ class AIAgent:
         # would mangle the escape sequences.  None = use builtins.print.
         self._print_fn = None
         self.background_review_callback = None  # Optional sync callback for gateway delivery
+        self.governed_mode = bool(governed_mode)
+        if self.governed_mode:
+            skip_context_files = True
+            skip_memory = True
+            disable_memory_provider_tools = True
+            disable_context_engine = True
+            disable_plugins = True
+            disable_delegate_task = True
+            disable_mcp = True
         self.skip_context_files = skip_context_files
+        self.skip_memory = skip_memory
+        self.disable_memory_provider_tools = bool(disable_memory_provider_tools)
+        self.disable_context_engine = bool(disable_context_engine)
+        self.disable_plugins = bool(disable_plugins)
+        self.disable_delegate_task = bool(disable_delegate_task)
+        self.disable_mcp = bool(disable_mcp)
         self.pass_session_id = pass_session_id
         self.persist_session = persist_session
         self._credential_pool = credential_pool
@@ -736,6 +760,9 @@ class AIAgent:
         self.interim_assistant_callback = interim_assistant_callback
         self.status_callback = status_callback
         self.tool_gen_callback = tool_gen_callback
+        raw_allowed_tools = allowed_tools if allowed_tools is not None else allowed_tool_names
+        self.allowed_tools = set(raw_allowed_tools) if raw_allowed_tools is not None else None
+        self.tool_guard = tool_guard
 
         
         # Tool execution state — allows _vprint during tool execution
@@ -1016,8 +1043,8 @@ class AIAgent:
         
         # Show tool configuration and store valid tool names for validation
         self.valid_tool_names = set()
+        self._apply_allowed_tool_filter()
         if self.tools:
-            self.valid_tool_names = {tool["function"]["name"] for tool in self.tools}
             tool_names = sorted(self.valid_tool_names)
             if not self.quiet_mode:
                 print(f"🛠️  Loaded {len(self.tools)} tools: {', '.join(tool_names)}")
@@ -1129,7 +1156,7 @@ class AIAgent:
         self._memory_flush_min_turns = 6
         self._turns_since_memory = 0
         self._iters_since_skill = 0
-        if not skip_memory:
+        if not self.skip_memory:
             try:
                 mem_config = _agent_cfg.get("memory", {})
                 self._memory_enabled = mem_config.get("memory_enabled", False)
@@ -1151,7 +1178,7 @@ class AIAgent:
         # Memory provider plugin (external — one at a time, alongside built-in)
         # Reads memory.provider from config to select which plugin to activate.
         self._memory_manager = None
-        if not skip_memory:
+        if not self.skip_memory and not self.disable_memory_provider_tools:
             try:
                 _mem_provider_name = mem_config.get("provider", "") if mem_config else ""
 
@@ -1216,7 +1243,7 @@ class AIAgent:
                 self._memory_manager = None
 
         # Inject memory provider tool schemas into the tool surface
-        if self._memory_manager and self.tools is not None:
+        if self._memory_manager and not self.disable_memory_provider_tools and self.tools is not None:
             for _schema in self._memory_manager.get_all_tool_schemas():
                 _wrapped = {"type": "function", "function": _schema}
                 self.tools.append(_wrapped)
@@ -1304,6 +1331,9 @@ class AIAgent:
         except Exception:
             pass
 
+        if self.disable_context_engine:
+            _engine_name = "compressor"
+
         if _engine_name != "compressor":
             # Try loading from plugins/context_engine/<name>/
             try:
@@ -1365,7 +1395,12 @@ class AIAgent:
 
         # Inject context engine tool schemas (e.g. lcm_grep, lcm_describe, lcm_expand)
         self._context_engine_tool_names: set = set()
-        if hasattr(self, "context_compressor") and self.context_compressor and self.tools is not None:
+        if (
+            not self.disable_context_engine
+            and hasattr(self, "context_compressor")
+            and self.context_compressor
+            and self.tools is not None
+        ):
             for _schema in self.context_compressor.get_tool_schemas():
                 _wrapped = {"type": "function", "function": _schema}
                 self.tools.append(_wrapped)
@@ -1374,8 +1409,11 @@ class AIAgent:
                     self.valid_tool_names.add(_tname)
                     self._context_engine_tool_names.add(_tname)
 
+        self._apply_allowed_tool_filter()
+        self._enforce_governed_tool_surface()
+
         # Notify context engine of session start
-        if hasattr(self, "context_compressor") and self.context_compressor:
+        if not self.disable_context_engine and hasattr(self, "context_compressor") and self.context_compressor:
             try:
                 self.context_compressor.on_session_start(
                     self.session_id,
@@ -1474,6 +1512,44 @@ class AIAgent:
                 "anthropic_base_url": self._anthropic_base_url,
                 "is_anthropic_oauth": self._is_anthropic_oauth,
             })
+
+    @staticmethod
+    def _tool_schema_name(tool: Dict[str, Any]) -> str:
+        if not isinstance(tool, dict):
+            return ""
+        function_schema = tool.get("function")
+        if not isinstance(function_schema, dict):
+            return ""
+        name = function_schema.get("name")
+        return name if isinstance(name, str) else ""
+
+    def _apply_allowed_tool_filter(self) -> None:
+        if self.tools is None:
+            self.valid_tool_names = set()
+            return
+        if self.allowed_tools is not None:
+            self.tools = [
+                tool for tool in self.tools
+                if self._tool_schema_name(tool) in self.allowed_tools
+            ]
+        self.valid_tool_names = {
+            name for name in (self._tool_schema_name(tool) for tool in self.tools) if name
+        }
+        if hasattr(self, "_context_engine_tool_names"):
+            self._context_engine_tool_names &= self.valid_tool_names
+
+    def _enforce_governed_tool_surface(self) -> None:
+        if not self.governed_mode:
+            return
+        expected = {"read_file"}
+        configured = set(self.allowed_tools or set())
+        advertised = {
+            name for name in (self._tool_schema_name(tool) for tool in (self.tools or [])) if name
+        }
+        executable = set(self.valid_tool_names or set())
+        if configured != expected or advertised != expected or executable != expected:
+            observed = ", ".join(sorted(configured | advertised | executable)) or "none"
+            raise RuntimeError(f"governed session tool surface violation: {observed}")
 
     def reset_session_state(self):
         """Reset all session-scoped token counters to 0 for a fresh session.
@@ -6858,14 +6934,49 @@ class AIAgent:
         finally:
             self._executing_tools = False
 
+    def _guard_tool_call(self, function_name: str, function_args: dict) -> str | None:
+        if self.allowed_tools is not None and function_name not in self.allowed_tools:
+            return json.dumps({
+                "success": False,
+                "error": f"Tool '{function_name}' is not allowed in this governed runtime session.",
+                "blocked_by": "hermes_runtime_tool_allowlist",
+            })
+        if not self.tool_guard:
+            return None
+        try:
+            verdict = self.tool_guard(function_name, function_args or {})
+        except Exception as exc:
+            return json.dumps({
+                "success": False,
+                "error": str(exc),
+                "blocked_by": "hermes_runtime_tool_guard",
+            })
+        if verdict is False:
+            return json.dumps({
+                "success": False,
+                "error": "Tool call blocked by governed runtime guard.",
+                "blocked_by": "hermes_runtime_tool_guard",
+            })
+        if isinstance(verdict, str) and verdict:
+            return json.dumps({
+                "success": False,
+                "error": verdict,
+                "blocked_by": "hermes_runtime_tool_guard",
+            })
+        return None
+
     def _invoke_tool(self, function_name: str, function_args: dict, effective_task_id: str,
-                     tool_call_id: Optional[str] = None) -> str:
+                     tool_call_id: Optional[str] = None, *, already_guarded: bool = False) -> str:
         """Invoke a single tool and return the result string. No display logic.
 
         Handles both agent-level tools (todo, memory, etc.) and registry-dispatched
-        tools. Used by the concurrent execution path; the sequential path retains
-        its own inline invocation for backward-compatible display handling.
+        tools. All registry dispatch from AIAgent flows through this method so
+        governed runtime guards are enforced before handle_function_call.
         """
+        if not already_guarded:
+            guard_error = self._guard_tool_call(function_name, function_args)
+            if guard_error:
+                return guard_error
         if function_name == "todo":
             from tools.todo_tool import todo_tool as _todo_tool
             return _todo_tool(
@@ -6915,6 +7026,8 @@ class AIAgent:
                 callback=self.clarify_callback,
             )
         elif function_name == "delegate_task":
+            if self.disable_delegate_task:
+                return json.dumps({"success": False, "error": "delegate_task is disabled for this session."})
             from tools.delegate_tool import delegate_task as _delegate_task
             return _delegate_task(
                 goal=function_args.get("goal"),
@@ -6969,6 +7082,15 @@ class AIAgent:
                 function_args = {}
             if not isinstance(function_args, dict):
                 function_args = {}
+
+            guard_error = self._guard_tool_call(function_name, function_args)
+            if guard_error:
+                messages.append({
+                    "role": "tool",
+                    "content": guard_error,
+                    "tool_call_id": tool_call.id,
+                })
+                continue
 
             # Checkpoint for file-mutating tools
             if function_name in ("write_file", "patch") and self._checkpoint_mgr.enabled:
@@ -7030,7 +7152,13 @@ class AIAgent:
             """Worker function executed in a thread."""
             start = time.time()
             try:
-                result = self._invoke_tool(function_name, function_args, effective_task_id, tool_call.id)
+                result = self._invoke_tool(
+                    function_name,
+                    function_args,
+                    effective_task_id,
+                    tool_call.id,
+                    already_guarded=True,
+                )
             except Exception as tool_error:
                 result = f"Error executing tool '{function_name}': {tool_error}"
                 logger.error("_invoke_tool raised for %s: %s", function_name, tool_error, exc_info=True)
@@ -7174,6 +7302,15 @@ class AIAgent:
             if not isinstance(function_args, dict):
                 function_args = {}
 
+            guard_error = self._guard_tool_call(function_name, function_args)
+            if guard_error:
+                messages.append({
+                    "role": "tool",
+                    "content": guard_error,
+                    "tool_call_id": tool_call.id,
+                })
+                continue
+
             if not self.quiet_mode:
                 args_str = json.dumps(function_args, ensure_ascii=False)
                 if self.verbose_logging:
@@ -7283,7 +7420,6 @@ class AIAgent:
                 if self._should_emit_quiet_tool_messages():
                     self._vprint(f"  {_get_cute_tool_message_impl('clarify', function_args, tool_duration, result=function_result)}")
             elif function_name == "delegate_task":
-                from tools.delegate_tool import delegate_task as _delegate_task
                 tasks_arg = function_args.get("tasks")
                 if tasks_arg and isinstance(tasks_arg, list):
                     spinner_label = f"🔀 delegating {len(tasks_arg)} tasks"
@@ -7298,14 +7434,18 @@ class AIAgent:
                 self._delegate_spinner = spinner
                 _delegate_result = None
                 try:
-                    function_result = _delegate_task(
-                        goal=function_args.get("goal"),
-                        context=function_args.get("context"),
-                        toolsets=function_args.get("toolsets"),
-                        tasks=tasks_arg,
-                        max_iterations=function_args.get("max_iterations"),
-                        parent_agent=self,
-                    )
+                    if self.disable_delegate_task:
+                        function_result = json.dumps({"success": False, "error": "delegate_task is disabled for this session."})
+                    else:
+                        from tools.delegate_tool import delegate_task as _delegate_task
+                        function_result = _delegate_task(
+                            goal=function_args.get("goal"),
+                            context=function_args.get("context"),
+                            toolsets=function_args.get("toolsets"),
+                            tasks=tasks_arg,
+                            max_iterations=function_args.get("max_iterations"),
+                            parent_agent=self,
+                        )
                     _delegate_result = function_result
                 finally:
                     self._delegate_spinner = None
@@ -7372,16 +7512,17 @@ class AIAgent:
                     spinner.start()
                 _spinner_result = None
                 try:
-                    function_result = handle_function_call(
-                        function_name, function_args, effective_task_id,
-                        tool_call_id=tool_call.id,
-                        session_id=self.session_id or "",
-                        enabled_tools=list(self.valid_tool_names) if self.valid_tool_names else None,
+                    function_result = self._invoke_tool(
+                        function_name,
+                        function_args,
+                        effective_task_id,
+                        tool_call.id,
+                        already_guarded=True,
                     )
                     _spinner_result = function_result
                 except Exception as tool_error:
                     function_result = f"Error executing tool '{function_name}': {tool_error}"
-                    logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+                    logger.error("_invoke_tool raised for %s: %s", function_name, tool_error, exc_info=True)
                 finally:
                     tool_duration = time.time() - tool_start_time
                     cute_msg = _get_cute_tool_message_impl(function_name, function_args, tool_duration, result=_spinner_result)
@@ -7391,15 +7532,16 @@ class AIAgent:
                         self._vprint(f"  {cute_msg}")
             else:
                 try:
-                    function_result = handle_function_call(
-                        function_name, function_args, effective_task_id,
-                        tool_call_id=tool_call.id,
-                        session_id=self.session_id or "",
-                        enabled_tools=list(self.valid_tool_names) if self.valid_tool_names else None,
+                    function_result = self._invoke_tool(
+                        function_name,
+                        function_args,
+                        effective_task_id,
+                        tool_call.id,
+                        already_guarded=True,
                     )
                 except Exception as tool_error:
                     function_result = f"Error executing tool '{function_name}': {tool_error}"
-                    logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+                    logger.error("_invoke_tool raised for %s: %s", function_name, tool_error, exc_info=True)
                 tool_duration = time.time() - tool_start_time
 
             result_preview = function_result if self.verbose_logging else (
@@ -7707,6 +7849,7 @@ class AIAgent:
         # Guard stdio against OSError from broken pipes (systemd/headless/daemon).
         # Installed once, transparent when streams are healthy, prevents crash on write.
         _install_safe_stdio()
+        self._enforce_governed_tool_surface()
 
         # Tag all log records on this thread with the session ID so
         # ``hermes logs --session <id>`` can filter a single conversation.
@@ -7852,16 +7995,17 @@ class AIAgent:
                 # Fired once when a brand-new session is created (not on
                 # continuation).  Plugins can use this to initialise
                 # session-scoped state (e.g. warm a memory cache).
-                try:
-                    from hermes_cli.plugins import invoke_hook as _invoke_hook
-                    _invoke_hook(
-                        "on_session_start",
-                        session_id=self.session_id,
-                        model=self.model,
-                        platform=getattr(self, "platform", None) or "",
-                    )
-                except Exception as exc:
-                    logger.warning("on_session_start hook failed: %s", exc)
+                if not self.disable_plugins:
+                    try:
+                        from hermes_cli.plugins import invoke_hook as _invoke_hook
+                        _invoke_hook(
+                            "on_session_start",
+                            session_id=self.session_id,
+                            model=self.model,
+                            platform=getattr(self, "platform", None) or "",
+                        )
+                    except Exception as exc:
+                        logger.warning("on_session_start hook failed: %s", exc)
 
                 # Store the system prompt snapshot in SQLite
                 if self._session_db:
@@ -7943,28 +8087,29 @@ class AIAgent:
         #
         # All injected context is ephemeral (not persisted to session DB).
         _plugin_user_context = ""
-        try:
-            from hermes_cli.plugins import invoke_hook as _invoke_hook
-            _pre_results = _invoke_hook(
-                "pre_llm_call",
-                session_id=self.session_id,
-                user_message=original_user_message,
-                conversation_history=list(messages),
-                is_first_turn=(not bool(conversation_history)),
-                model=self.model,
-                platform=getattr(self, "platform", None) or "",
-                sender_id=getattr(self, "_user_id", None) or "",
-            )
-            _ctx_parts: list[str] = []
-            for r in _pre_results:
-                if isinstance(r, dict) and r.get("context"):
-                    _ctx_parts.append(str(r["context"]))
-                elif isinstance(r, str) and r.strip():
-                    _ctx_parts.append(r)
-            if _ctx_parts:
-                _plugin_user_context = "\n\n".join(_ctx_parts)
-        except Exception as exc:
-            logger.warning("pre_llm_call hook failed: %s", exc)
+        if not self.disable_plugins:
+            try:
+                from hermes_cli.plugins import invoke_hook as _invoke_hook
+                _pre_results = _invoke_hook(
+                    "pre_llm_call",
+                    session_id=self.session_id,
+                    user_message=original_user_message,
+                    conversation_history=list(messages),
+                    is_first_turn=(not bool(conversation_history)),
+                    model=self.model,
+                    platform=getattr(self, "platform", None) or "",
+                    sender_id=getattr(self, "_user_id", None) or "",
+                )
+                _ctx_parts: list[str] = []
+                for r in _pre_results:
+                    if isinstance(r, dict) and r.get("context"):
+                        _ctx_parts.append(str(r["context"]))
+                    elif isinstance(r, str) and r.strip():
+                        _ctx_parts.append(r)
+                if _ctx_parts:
+                    _plugin_user_context = "\n\n".join(_ctx_parts)
+            except Exception as exc:
+                logger.warning("pre_llm_call hook failed: %s", exc)
 
         # Main conversation loop
         api_call_count = 0
@@ -8234,26 +8379,27 @@ class AIAgent:
                     if self.api_mode == "codex_responses":
                         api_kwargs = self._preflight_codex_api_kwargs(api_kwargs, allow_stream=False)
 
-                    try:
-                        from hermes_cli.plugins import invoke_hook as _invoke_hook
-                        _invoke_hook(
-                            "pre_api_request",
-                            task_id=effective_task_id,
-                            session_id=self.session_id or "",
-                            platform=self.platform or "",
-                            model=self.model,
-                            provider=self.provider,
-                            base_url=self.base_url,
-                            api_mode=self.api_mode,
-                            api_call_count=api_call_count,
-                            message_count=len(api_messages),
-                            tool_count=len(self.tools or []),
-                            approx_input_tokens=approx_tokens,
-                            request_char_count=total_chars,
-                            max_tokens=self.max_tokens,
-                        )
-                    except Exception:
-                        pass
+                    if not self.disable_plugins:
+                        try:
+                            from hermes_cli.plugins import invoke_hook as _invoke_hook
+                            _invoke_hook(
+                                "pre_api_request",
+                                task_id=effective_task_id,
+                                session_id=self.session_id or "",
+                                platform=self.platform or "",
+                                model=self.model,
+                                provider=self.provider,
+                                base_url=self.base_url,
+                                api_mode=self.api_mode,
+                                api_call_count=api_call_count,
+                                message_count=len(api_messages),
+                                tool_count=len(self.tools or []),
+                                approx_input_tokens=approx_tokens,
+                                request_char_count=total_chars,
+                                max_tokens=self.max_tokens,
+                            )
+                        except Exception:
+                            pass
 
                     if env_var_enabled("HERMES_DUMP_REQUESTS"):
                         self._dump_api_request_debug(api_kwargs, reason="preflight")
@@ -9628,30 +9774,31 @@ class AIAgent:
                     else:
                         assistant_message.content = str(raw)
 
-                try:
-                    from hermes_cli.plugins import invoke_hook as _invoke_hook
-                    _assistant_tool_calls = getattr(assistant_message, "tool_calls", None) or []
-                    _assistant_text = assistant_message.content or ""
-                    _invoke_hook(
-                        "post_api_request",
-                        task_id=effective_task_id,
-                        session_id=self.session_id or "",
-                        platform=self.platform or "",
-                        model=self.model,
-                        provider=self.provider,
-                        base_url=self.base_url,
-                        api_mode=self.api_mode,
-                        api_call_count=api_call_count,
-                        api_duration=api_duration,
-                        finish_reason=finish_reason,
-                        message_count=len(api_messages),
-                        response_model=getattr(response, "model", None),
-                        usage=self._usage_summary_for_api_request_hook(response),
-                        assistant_content_chars=len(_assistant_text),
-                        assistant_tool_call_count=len(_assistant_tool_calls),
-                    )
-                except Exception:
-                    pass
+                if not self.disable_plugins:
+                    try:
+                        from hermes_cli.plugins import invoke_hook as _invoke_hook
+                        _assistant_tool_calls = getattr(assistant_message, "tool_calls", None) or []
+                        _assistant_text = assistant_message.content or ""
+                        _invoke_hook(
+                            "post_api_request",
+                            task_id=effective_task_id,
+                            session_id=self.session_id or "",
+                            platform=self.platform or "",
+                            model=self.model,
+                            provider=self.provider,
+                            base_url=self.base_url,
+                            api_mode=self.api_mode,
+                            api_call_count=api_call_count,
+                            api_duration=api_duration,
+                            finish_reason=finish_reason,
+                            message_count=len(api_messages),
+                            response_model=getattr(response, "model", None),
+                            usage=self._usage_summary_for_api_request_hook(response),
+                            assistant_content_chars=len(_assistant_text),
+                            assistant_tool_call_count=len(_assistant_tool_calls),
+                        )
+                    except Exception:
+                        pass
 
                 # Handle assistant response
                 if assistant_message.content and not self.quiet_mode:
@@ -10457,7 +10604,7 @@ class AIAgent:
         # Fired once per turn after the tool-calling loop completes.
         # Plugins can use this to persist conversation data (e.g. sync
         # to an external memory system).
-        if final_response and not interrupted:
+        if final_response and not interrupted and not self.disable_plugins:
             try:
                 from hermes_cli.plugins import invoke_hook as _invoke_hook
                 _invoke_hook(
@@ -10557,18 +10704,19 @@ class AIAgent:
         # Plugin hook: on_session_end
         # Fired at the very end of every run_conversation call.
         # Plugins can use this for cleanup, flushing buffers, etc.
-        try:
-            from hermes_cli.plugins import invoke_hook as _invoke_hook
-            _invoke_hook(
-                "on_session_end",
-                session_id=self.session_id,
-                completed=completed,
-                interrupted=interrupted,
-                model=self.model,
-                platform=getattr(self, "platform", None) or "",
-            )
-        except Exception as exc:
-            logger.warning("on_session_end hook failed: %s", exc)
+        if not self.disable_plugins:
+            try:
+                from hermes_cli.plugins import invoke_hook as _invoke_hook
+                _invoke_hook(
+                    "on_session_end",
+                    session_id=self.session_id,
+                    completed=completed,
+                    interrupted=interrupted,
+                    model=self.model,
+                    platform=getattr(self, "platform", None) or "",
+                )
+            except Exception as exc:
+                logger.warning("on_session_end hook failed: %s", exc)
 
         return result
 
