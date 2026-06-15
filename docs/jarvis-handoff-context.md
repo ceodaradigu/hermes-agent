@@ -412,10 +412,10 @@ dañino, no autorizado, engañoso o de bypass/robo queda permanentemente
 denegado. Wake phrase no es permiso y tono/contexto solo informan intención
 low-risk no sensible.
 
-El roadmap Mark 3 usa macro-PRs #132-#140 para Mission Loop, Continuous
+El roadmap Mark 3 usa macro-PRs #132-#141 para Mission Loop, Continuous
 Learning, Multi-Agent Orchestration, Product/Revenue Factory, Local Routine
 Scheduler, authorized account recovery y Moonshot Lab + Research/Experiment
-Engine. JARVIS
+Engine, cerrando con Release Candidate + Pilot plan. JARVIS
 permanece en el ordenador actual de David; no Mac mini ni VPS hasta revenue
 suficiente o necesidad técnica demostrada. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
@@ -483,6 +483,21 @@ dinero, no lee `.env`, no usa credenciales y no finge breakthroughs,
 benchmarks, resultados, costes ni revenue. Producción, publicación, identidad,
 dinero, live deploy y credenciales son Nivel 4; ilegal, inseguro, no
 autorizado, bypass, daño, engaño o fake capability son Nivel 5.
+
+PR #141 cierra **Mark 3 Release Candidate + Pilot**. Consolida status RC,
+capability matrix, readiness matrix, dangerous-route audit, approval-path audit,
+E2E prepare-only/gated smoke, pilot plan, pilot readiness, runbook, known
+limitations y next steps. Declara Mark 3
+`ready_as_controlled_release_candidate`, `not_ready_for_free_autonomy`,
+`local_first`, `human_control_required` y
+`restrictions_are_approval_gates_not_permanent_bans`. No ejecuta el piloto real,
+no activa autonomia libre, no crea scheduler real, no usa red externa,
+GitHub/web/providers reales, email, cuentas, credenciales, deploy, publish,
+Stripe live, checkout, dinero ni installs. El primer piloto recomendado es
+local, util, controlado, no-produccion, sin dinero, sin red externa, sin email,
+sin cuentas reales y sin credenciales. Despues de Mark 3 RC, el siguiente paso
+es ejecutar ese piloto local controlado, endurecer findings y empezar Mark 4
+solo si el piloto lo justifica; no crear micro-PR explosion.
 
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación

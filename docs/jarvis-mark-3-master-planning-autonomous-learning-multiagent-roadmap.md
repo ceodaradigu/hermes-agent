@@ -256,6 +256,11 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   safety/legal review y kill/continue/iterate recommendation, sin experimentos
   reales, red, GitHub/web real, providers, installs, procesos, publicación,
   deploy, dinero, `.env`, credenciales ni fake breakthrough/benchmark/result.
+- **PR #141** — Release Candidate + Pilot: status RC, capability matrix,
+  readiness matrix, dangerous-route audit, approval-path audit, E2E
+  prepare-only/gated smoke, pilot plan, runbook, known limitations y next
+  steps. Mark 3 queda `ready_as_controlled_release_candidate`, no libre
+  autonomia; el primer piloto local queda preparado, no ejecutado.
 
 Son macro-PRs grandes y coherentes; no habrá micro-PR explosion.
 
@@ -308,6 +313,14 @@ audit summary y next safe action. Mantiene `candidate_is_not_execution`,
 `no_money_movement`. Si falta capability devuelve `setup_required` o
 `capability_not_connected_yet`; no finge resultados, benchmarks, costes,
 revenue ni breakthroughs.
+
+PR #141 cierra **Mark 3 Release Candidate + Pilot**. El RC consolida matrices,
+auditorias y runbook, y deja listo el primer piloto local controlado. No ejecuta
+el piloto real, no activa autonomia libre, no crea scheduler real, no usa red
+externa, GitHub/web/proveedores reales, email, cuentas reales, credenciales,
+Stripe live, deploy, publish, dominios, installs ni money movement. El primer
+piloto debe ser local, util, controlado, no-produccion, sin dinero, sin red
+externa, sin email real, sin cuentas reales y sin credenciales.
 
 ## Criterios De Éxito
 
@@ -378,3 +391,22 @@ PR #140 añade endpoints de Moonshot Lab:
 Estas rutas preparan candidates y decisions revisables. No existe endpoint
 Moonshot Lab `/execute`, `/run`, `/install`, `/publish`, `/deploy`, `/pay` ni
 `/send`.
+
+PR #141 añade endpoints RC read-only/control-plane:
+
+- `GET /mark-3/release-candidate/status`
+- `GET /mark-3/release-candidate/capabilities`
+- `GET /mark-3/release-candidate/readiness`
+- `GET /mark-3/release-candidate/dangerous-route-audit`
+- `GET /mark-3/release-candidate/approval-path-audit`
+- `GET /mark-3/release-candidate/e2e-smoke`
+- `GET /mark-3/release-candidate/pilot-plan`
+- `GET /mark-3/release-candidate/runbook`
+- `GET /mark-3/release-candidate/known-limitations`
+- `GET /mark-3/release-candidate/next-steps`
+
+Estas rutas no ejecutan el piloto real, no llaman red/proveedores, no leen
+credenciales, no crean scheduler real y no duplican Hermes. Confirman que
+Hermes sigue siendo el motor de ejecucion soportada y que JARVIS gobierna,
+clasifica riesgo, pide approval, audita y enruta solo con capacidad real y
+approval valido.

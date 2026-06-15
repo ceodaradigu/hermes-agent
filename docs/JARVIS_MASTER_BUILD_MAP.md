@@ -101,6 +101,7 @@ Piezas relevantes ya documentadas:
 - Mark 3 Product/Revenue Factory de PR #138: prepara candidates de oportunidad, blueprint, pricing, unit economics, experimentos y decisiones sin publicacion, deploy, Stripe live, checkout, dominios, email, dinero, credenciales ni fake revenue/costs.
 - Mark 3 Local Routine Scheduler + Personal/Family Ops de PR #139: prepara candidates para rutinas locales, personal/family ops autorizadas, authorized account assistance por official recovery, password manager checklist, 2FA checklist y health checks sin scheduler real, email, calendar, Gmail, contacts, account access, password storage, 2FA bypass, cookie/token/session use ni fake completion.
 - Mark 3 Moonshot Lab + Research/Experiment Engine de PR #140: prepara moonshot intake, hypothesis framing, research experiment plans, prototype candidates, evidence scoring, uncertainty labels, reproducibility checklist, stage gates, safety/legal review y kill/continue/iterate decisions sin ejecutar experimentos, red, GitHub/web real, providers, installs, procesos, publicación, deploy, dinero, `.env`, credenciales ni fake breakthrough/benchmark/result.
+- Mark 3 Release Candidate + Pilot de PR #141: consolida status RC, capability/readiness matrices, dangerous-route audit, approval-path audit, E2E prepare-only/gated smoke, pilot plan, runbook, known limitations y next steps. Mark 3 queda listo como RC controlado, no como autonomia libre. El primer piloto queda preparado, no ejecutado.
 
 Límites actuales:
 
@@ -558,7 +559,7 @@ PR #132 solo planifica y añade endpoints GET deterministas. Define niveles de
 aprobación 0-5, Autonomous Mission Loop, Continuous Learning, Multi-Agent
 Orchestration, Product/Revenue Factory, supervised local routines, authorized
 account recovery, Moonshot Lab, Measurement/ROI y local-first infrastructure.
-No activa ejecución Mark 3. El roadmap continúa con macro-PRs #133-#140; no
+No activa ejecución Mark 3. El roadmap continúa con macro-PRs #133-#141; no
 usa micro-PR explosion. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
 
@@ -567,7 +568,8 @@ candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
 Governed Research Execution Control Plane, #137 Local Docs/Repo Research
 Adapter, #138 Product/Revenue Factory, #139 Local Routine Scheduler +
-Personal/Family Ops y #140 Moonshot Lab + Research/Experiment Engine.
+Personal/Family Ops, #140 Moonshot Lab + Research/Experiment Engine y #141
+Release Candidate + Pilot.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -630,3 +632,29 @@ dinero, no lee `.env`, no usa credenciales y no finge breakthroughs,
 benchmarks, resultados, costes ni revenue. Producción, publicación, identidad,
 dinero, live deploy y credenciales son Nivel 4; ilegal, inseguro, no autorizado,
 bypass, daño, engaño o fake capability son Nivel 5.
+
+## Mark 3 Release Candidate + Pilot
+
+PR #141 cierra Mark 3 como Release Candidate controlado y prepara el primer
+piloto local real sin ejecutarlo todavía. Consolida capability matrix,
+readiness matrix, dangerous-route audit, approval-path audit, E2E
+prepare-only/gated smoke, pilot plan, operational runbook, known limitations y
+post-Mark-3 next steps.
+
+Mark 3 RC declara:
+
+- `release_candidate_status=ready_as_controlled_release_candidate`;
+- `ready_as_controlled_release_candidate=true`;
+- `not_ready_for_free_autonomy=true`;
+- `local_first=true`;
+- `human_control_required=true`;
+- `restrictions_are_approval_gates_not_permanent_bans=true`.
+
+No activa scheduler real, autonomía libre, red externa, GitHub/web/providers
+reales, email real, cuentas reales, credenciales, `.env`, deploy, publish,
+dominios, Stripe live, checkout, money movement, installs ni background 24/7.
+El piloto inicial debe ser local, util, controlado, no-produccion, sin dinero,
+sin red externa, sin email, sin cuentas reales y sin credenciales. La siguiente
+recomendación es ejecutar ese piloto local controlado, endurecer findings y
+abrir Mark 4 solo si el piloto lo justifica con evidencia; no micro-PR
+explosion.

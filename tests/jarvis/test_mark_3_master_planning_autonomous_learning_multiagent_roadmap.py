@@ -155,13 +155,13 @@ def test_capabilities_cover_multi_agent_learning_revenue_measurement_and_local_f
     assert "revenue threshold or demonstrated technical necessity" in serialized
 
 
-def test_roadmap_is_large_coherent_macro_prs_from_132_through_140():
+def test_roadmap_is_large_coherent_macro_prs_from_132_through_141():
     roadmap = get_mark_3_macro_roadmap()
     items = roadmap["items"]
 
-    assert [item["pr_number"] for item in items] == list(range(132, 141))
+    assert [item["pr_number"] for item in items] == list(range(132, 142))
     assert roadmap["roadmap_strategy"] == "Large coherent macro-PRs; no micro-PR explosion."
-    assert len(items) == 9
+    assert len(items) == 10
     assert items[0]["planning_only"] is True
     assert all(item["major_deliverables"] and item["exit_criteria"] for item in items)
 
