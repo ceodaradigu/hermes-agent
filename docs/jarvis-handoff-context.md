@@ -509,6 +509,17 @@ fake capability, producción, dinero, deploy, email real, cuentas reales,
 providers, installs, subprocess, threads y red no conectada. No añade endpoints
 de ejecución ni activa capacidades reales.
 
+PR #143 corrige el caso restante observado al reiniciar la API despues de #142:
+el payload defensivo completo de Pilot 0 enviado a
+`POST /mark-3/mission-loop/missions` aun podia devolver
+`intake implies permanently denied level 5 action`. Mission Loop ahora reconoce
+prefijos `no_`, `sin ...`, `without ...`, listas de `prohibited_tools`,
+constraints defensivas y stop conditions tipo `Any action requests ...` /
+`Any result claims ...` como límites, no acciones. Las solicitudes reales de
+`.env`, tokens, password storage, bypass, acceso no autorizado, fake
+revenue/cost/result/capability, deploy/email/money reales y deception siguen
+bloqueadas como Nivel 5.
+
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
 permanente. Hermes sigue siendo el motor de ejecución; JARVIS gobierna,

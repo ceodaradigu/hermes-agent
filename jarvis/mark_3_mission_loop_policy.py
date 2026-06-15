@@ -10,6 +10,15 @@ LEVEL_5_MARKERS = (
     "steal", "robar", "bypass", "saltarse 2fa", "bypass 2fa", "steal cookie",
     "steal token", "credential theft", "unauthorized access", "sin autorizacion",
     "fake execution", "fingir ejecucion", "hide risk", "ocultar riesgo",
+    "read .env", "read env", "read secret", "read secrets", "use token",
+    "use credentials", "store password", "save password", "credential exfiltration",
+    "access account without authorization", "access account without authorisation",
+    "fake revenue", "invent revenue", "fabricate revenue", "fake cost",
+    "fake costs", "invent costs", "fabricate costs", "fake result",
+    "claim fake result", "fake capability", "claim fake capability",
+    "fake benchmark", "fabricate benchmark", "deploy production now",
+    "deploy to production now", "production deploy now", "send real email now",
+    "send email now", "move money", "process live payment",
 )
 LEVEL_4_MARKERS = (
     "production", "deploy", "stripe live", "move money", "payment", "modify dns",
