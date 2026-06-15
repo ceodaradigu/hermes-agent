@@ -559,9 +559,9 @@ usa micro-PR explosion. Ver
 PR #133 añade el Autonomous Mission Loop in-memory y genera bounded execution
 candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
-Multi-Agent Orchestration, #137 Product/Revenue Factory, #138 Local Routine
-Scheduler + Personal/Family Ops, #139 Moonshot Lab + Research/Experiment
-Engine y #140 Mark 3 Release Candidate + Pilot.
+Research Control Plane Minimal, #137 Product/Revenue Factory, #138 Local
+Routine Scheduler + Personal/Family Ops, #139 Moonshot Lab +
+Research/Experiment Engine y #140 Mark 3 Release Candidate + Pilot.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -579,3 +579,11 @@ executor: Hermes sigue siendo el motor; JARVIS gobierna, decide, clasifica
 riesgo, pide approval, audita y propone cambios a Hermes cuando necesita
 mejorar el motor. Ver
 `docs/jarvis-mark-3-autonomous-growth-learning-radar.md`.
+
+PR #136 añade el Mark 3 Governed Research Execution Bridge en modo control-plane
+mínimo. Normaliza requests de research, calcula policy, approval requirement,
+capability status y `candidate_state`, pero no ejecuta research real, no lee
+archivos, no escanea repos, no usa threads, no llama GitHub/web y no invoca
+adapters. Preview guarda solo snapshot seguro/redactado y `candidate` no
+rehidrata por `research_id`; requiere request completo para recalcular policy.
+Ver `docs/jarvis-mark-3-governed-research-execution-bridge.md`.

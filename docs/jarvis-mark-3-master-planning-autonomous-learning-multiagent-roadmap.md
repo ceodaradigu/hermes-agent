@@ -210,7 +210,7 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   feedback.
 - **PR #134** — Governed Execution Engine.
 - **PR #135** — Continuous Learning + Outcome Memory.
-- **PR #136** — Multi-Agent Orchestration.
+- **PR #136** — Research Control Plane Minimal.
 - **PR #137** — Product/Revenue Factory.
 - **PR #138** — Local Routine Scheduler + Personal/Family Ops. Incluye
   Authorized Account Assistance mediante recuperación oficial, consentimiento,
@@ -237,6 +237,14 @@ solo: prepara candidatos gobernados para GitHub, web, docs o repo local. Si
 falta adapter/capability real devuelve `setup_required` y
 `capability_not_connected_yet`; con capability conectada y approval válido puede
 pasar a candidato ejecutable sin duplicar Hermes.
+
+PR #136 recorta el siguiente paso a un control-plane mínimo para research
+execution. No crea multi-agent real todavía. Añade normalización segura, policy,
+approval requirement, capability status y `candidate_state` para requests de
+research. Todas las sources (`github`, `web`, `docs`, `local_repo`) quedan en
+`setup_required` por capability no conectada. Preview solo guarda snapshot
+redactado y `candidate` no rehidrata por `research_id`; exige request completo
+para recalcular policy y aun así no ejecuta adapters.
 
 ## Criterios De Éxito
 
@@ -281,3 +289,13 @@ PR #135 añade endpoints de memoria y research gobernado:
 Estas rutas no ejecutan internet, install, commit, deploy, dinero ni secrets.
 Preparan y auditan memoria/propuestas/candidatos para ejecución gobernada por
 Hermes cuando exista approval y capability.
+
+PR #136 añade rutas de research execution prepare-only:
+
+- `GET /mark-3/research-execution/status`
+- `POST /mark-3/research-execution/preview`
+- `POST /mark-3/research-execution/candidate`
+- `GET /mark-3/research-execution/{research_id}`
+
+No hay stop endpoint. `candidate` no lee archivos, no llama red, no usa threads,
+no invoca adapters y no convierte un snapshot redactado en request seguro.
