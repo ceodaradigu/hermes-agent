@@ -261,6 +261,10 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   prepare-only/gated smoke, pilot plan, runbook, known limitations y next
   steps. Mark 3 queda `ready_as_controlled_release_candidate`, no libre
   autonomia; el primer piloto local queda preparado, no ejecutado.
+- **PR #142** — Pilot Findings Hardening: parsing central para distinguir
+  solicitud peligrosa real de negación defensiva, flags `false`, stop
+  conditions, prohibited tools y listas de límites, sin habilitar endpoints o
+  capacidades reales nuevas.
 
 Son macro-PRs grandes y coherentes; no habrá micro-PR explosion.
 
@@ -321,6 +325,14 @@ externa, GitHub/web/proveedores reales, email, cuentas reales, credenciales,
 Stripe live, deploy, publish, dominios, installs ni money movement. El primer
 piloto debe ser local, util, controlado, no-produccion, sin dinero, sin red
 externa, sin email real, sin cuentas reales y sin credenciales.
+
+PR #142 endurece el resultado de Pilot 0 / Pilot 0B. Los módulos Mark 3 ya no
+bloquean payloads seguros por mencionar credenciales, fake claims, revenue,
+password storage, red o bypass dentro de límites defensivos, pero mantienen
+bloqueo/gating para solicitudes reales de secretos, `.env`, tokens, passwords,
+fake revenue/costs/results/capabilities, acceso no autorizado, bypass,
+producción, dinero, deploy, email, cuentas reales, providers, installs,
+subprocess, threads y red no conectada.
 
 ## Criterios De Éxito
 

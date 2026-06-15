@@ -2,7 +2,8 @@
 
 ## Local Verification
 
-Work from the dedicated PR #141 worktree. Use the known good venv:
+Work from the main repo or the current dedicated pilot-hardening worktree. Use
+the known good venv:
 
 ```bash
 source ~/venvs/hermes-agent/bin/activate
@@ -29,11 +30,13 @@ These endpoints are control-plane/read-only. They do not run the real pilot.
 ```bash
 git diff --check
 python -m py_compile $(find jarvis -name '*.py')
+pytest tests/jarvis/test_mark_3_pilot_findings_hardening.py -q -x --durations=20
 pytest tests/jarvis/test_mark_3_release_candidate_pilot.py -q -x --durations=20
 pytest tests/jarvis/test_mark_3_moonshot_lab_research_experiment_engine.py -q -x --durations=20
 pytest tests/jarvis/test_mark_3_local_routine_scheduler_personal_family_ops.py -q -x --durations=20
 pytest tests/jarvis/test_mark_3_product_revenue_factory.py -q -x --durations=20
 pytest tests/jarvis/test_mark_3_research_execution_bridge.py -q -x --durations=20
+pytest tests/jarvis/test_mark_3_autonomous_mission_loop.py -q -x --durations=20
 pytest tests/jarvis/test_api.py::test_health_ok -q -vv
 pytest tests/jarvis -q -x --durations=20
 ```
@@ -115,7 +118,7 @@ Stop immediately if:
 After implementation, tests and review pass, close outside Codex with:
 
 ```bash
-jarvis-finish-pr "Mark 3 Release Candidate Pilot"
+jarvis-finish-pr "Mark 3 Pilot Findings Hardening"
 ```
 
 Do not commit, push, merge or open a PR from Codex unless explicitly instructed.

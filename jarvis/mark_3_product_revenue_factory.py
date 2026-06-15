@@ -8,6 +8,11 @@ from uuid import uuid4
 
 from jarvis.approval_audit import redact_sensitive_data
 from jarvis.mark_3_mission_loop_models import UNKNOWN
+from jarvis.mark_3_negative_intent_parser import (
+    payload_has_actionable_marker,
+    payload_text,
+    redact_mark_3_payload,
+)
 
 
 FACTORY_ENDPOINTS = (
@@ -200,7 +205,7 @@ class Mark3ProductRevenueFactory:
 
     def _base_candidate(self, candidate_type: str, values: Dict[str, Any]) -> Dict[str, Any]:
         raw_input = dict(values or {})
-        safe_input, redacted_fields = redact_sensitive_data(raw_input)
+        safe_input, redacted_fields = redact_mark_3_payload(raw_input)
         blocked_reasons = _blocked_reasons(raw_input, redacted_fields)
         risk = classify_product_revenue_risk(raw_input)
         if _permanent_denial(blocked_reasons):
@@ -785,29 +790,27 @@ def _audit_summary(candidate_type: str, critical_actions: List[str], setup_gated
 
 
 def _critical_requested_actions(values: Dict[str, Any]) -> List[str]:
-    text = _combined(values)
     checks = {
-        "stripe_live": _truthy(values, "stripe_live_requested") or "stripe live" in text or "live stripe" in text,
-        "real_checkout": _truthy(values, "checkout_requested") or "create checkout" in text or "real checkout" in text,
-        "payment_processing": _truthy(values, "payment_requested") or "process payment" in text or "charge card" in text,
-        "money_movement": _truthy(values, "money_movement_requested") or _truthy(values, "spend_requested") or _truthy(values, "budget_spend_requested") or "move money" in text or "spend money" in text,
-        "production": _truthy(values, "production_requested") or "production" in text,
-        "domain_or_dns": _truthy(values, "domain_requested") or "buy domain" in text or "dns" in text,
-        "real_publication": _truthy(values, "publish_requested") or "publish real" in text or "real publication" in text,
-        "real_email_send": _truthy(values, "email_requested") or _truthy(values, "send_requested") or "send email" in text or "bulk email" in text,
-        "david_identity": _truthy(values, "identity_requested") or "david identity" in text or "as david" in text or "como david" in text,
+        "stripe_live": _truthy(values, "stripe_live_requested") or _action_requested(values, ("stripe live", "live stripe")),
+        "real_checkout": _truthy(values, "checkout_requested") or _action_requested(values, ("create checkout", "real checkout")),
+        "payment_processing": _truthy(values, "payment_requested") or _action_requested(values, ("process payment", "charge card")),
+        "money_movement": _truthy(values, "money_movement_requested") or _truthy(values, "spend_requested") or _truthy(values, "budget_spend_requested") or _action_requested(values, ("move money", "spend money")),
+        "production": _truthy(values, "production_requested") or _action_requested(values, ("production",)),
+        "domain_or_dns": _truthy(values, "domain_requested") or _action_requested(values, ("buy domain", "dns")),
+        "real_publication": _truthy(values, "publish_requested") or _action_requested(values, ("publish real", "real publication")),
+        "real_email_send": _truthy(values, "email_requested") or _truthy(values, "send_requested") or _action_requested(values, ("send email", "bulk email")),
+        "david_identity": _truthy(values, "identity_requested") or _action_requested(values, ("david identity", "as david", "como david")),
     }
-    if _truthy(values, "deploy_requested") or "deploy" in text:
+    if _truthy(values, "deploy_requested") or _action_requested(values, ("deploy",)):
         checks["production"] = True
     return [name for name, active in checks.items() if active]
 
 
 def _setup_gated_actions(values: Dict[str, Any]) -> List[str]:
-    text = _combined(values)
     checks = {
-        "web_research": _truthy(values, "web_requested") or "web search" in text or "call web" in text,
-        "github_research": _truthy(values, "github_requested") or "github" in text,
-        "stripe_provider": _truthy(values, "provider_requested") and "stripe" in text,
+        "web_research": _truthy(values, "web_requested") or _action_requested(values, ("web search", "call web")),
+        "github_research": _truthy(values, "github_requested") or _action_requested(values, ("github",)),
+        "stripe_provider": _truthy(values, "provider_requested") and _action_requested(values, ("stripe",)),
         "email_provider": _truthy(values, "external_email_requested"),
         "deploy_provider": _truthy(values, "external_deploy_requested"),
     }
@@ -815,17 +818,19 @@ def _setup_gated_actions(values: Dict[str, Any]) -> List[str]:
 
 
 def _blocked_reasons(values: Dict[str, Any], redacted_fields: Iterable[str]) -> List[str]:
-    text = _combined(values)
     reasons: List[str] = []
     if redacted_fields:
         reasons.append("credentials_or_sensitive_input_redacted")
-    if any(marker in text for marker in ("fake revenue", "invent revenue", "fabricate revenue")):
+    if _action_requested(values, ("fake revenue", "invent revenue", "fabricate revenue", "inventar ingresos", "ingresos falsos")):
         reasons.append("fake_revenue_request_blocked")
-    if any(marker in text for marker in ("fake costs", "invent costs", "fabricate costs")):
+    if _action_requested(values, ("fake costs", "invent costs", "fabricate costs", "inventar costes", "inventar costos", "costes falsos", "costos falsos")):
         reasons.append("fake_cost_request_blocked")
-    if any(marker in text for marker in ("steal", "bypass 2fa", "unauthorized access", "hack account")):
+    if _action_requested(values, ("steal", "bypass 2fa", "unauthorized access", "hack account")):
         reasons.append("illegal_or_unauthorized_request_blocked")
-    if _truthy(values, "secrets_requested") or ".env" in text or "api key" in text or "token" in text:
+    if _truthy(values, "secrets_requested") or _action_requested(
+        values,
+        (".env", "api key", "api-key", "api_key", "token", "credential", "credentials", "password", "private key", "secret"),
+    ):
         reasons.append("credentials_or_env_access_blocked")
     return _unique(reasons)
 
@@ -920,7 +925,7 @@ def _truthy(values: Dict[str, Any], key: str) -> bool:
 
 
 def _combined(values: Dict[str, Any]) -> str:
-    return " ".join(_flatten_text(values)).lower()
+    return payload_text(values)
 
 
 def _flatten_text(value: Any) -> List[str]:
@@ -943,3 +948,7 @@ def _text(value: Any) -> str:
 
 def _unique(items: Iterable[str]) -> List[str]:
     return list(dict.fromkeys(item for item in items if item))
+
+
+def _action_requested(values: Dict[str, Any], markers: Iterable[str]) -> bool:
+    return payload_has_actionable_marker(values, markers)

@@ -47,6 +47,7 @@ class Mark3ReleaseCandidateStatus:
         "PR #139 Local Routine Scheduler + Personal/Family Ops",
         "PR #140 Moonshot Lab + Research/Experiment Engine",
         "PR #141 Release Candidate + Pilot preparation",
+        "PR #142 Pilot Findings Hardening",
     ])
     next_safe_step: str = "Run the local controlled pilot only after operator approval and within the RC pilot plan."
     safe_to_render: bool = True
@@ -286,4 +287,5 @@ def mark_3_release_candidate_markers() -> Dict[str, Any]:
         "mark_3_no_fake_results": True,
         "mark_3_no_fake_benchmarks": True,
         "mark_3_no_fake_capabilities": True,
+        "mark_3_pilot_findings_hardened": True,
     }
