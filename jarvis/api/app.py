@@ -162,6 +162,7 @@ from jarvis.mark_3_growth_radar import ResearchRadar
 from jarvis.mark_3_research_execution import ResearchExecutionControlPlane
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.mark_3_product_revenue_factory import Mark3ProductRevenueFactory
+from jarvis.mark_3_local_routine_scheduler_personal_family_ops import Mark3RoutineOpsControlPlane
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -701,6 +702,79 @@ class Mark3ProductRevenueFactoryRequest(BaseModel):
     external_email_requested: bool = False
     external_deploy_requested: bool = False
     secrets_requested: bool = False
+
+
+class Mark3RoutineOpsRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    candidate_id: Optional[str] = None
+    routine_type: Optional[str] = None
+    ops_type: Optional[str] = None
+    plan_type: Optional[str] = None
+    title: Optional[str] = None
+    objective: Optional[str] = None
+    goal: Optional[str] = None
+    scope: Optional[str] = None
+    budget_limit: Optional[Any] = None
+    max_budget: Optional[Any] = None
+    cadence: Optional[str] = None
+    frequency: Optional[str] = None
+    schedule_expression: Optional[str] = None
+    schedule: Optional[str] = None
+    recurrence_rule: Optional[str] = None
+    timezone: Optional[str] = None
+    next_run_preview: Optional[str] = None
+    due_at: Optional[str] = None
+    start_time: Optional[str] = None
+    quiet_hours: Optional[str] = None
+    tasks: Optional[Any] = None
+    task_candidates: Optional[Any] = None
+    routine_steps: Optional[Any] = None
+    daily_plan: Optional[Any] = None
+    weekly_plan: Optional[Any] = None
+    health_checks: Optional[Any] = None
+    checks: Optional[Any] = None
+    checklist: Optional[Any] = None
+    evidence_required: Optional[Any] = None
+    stop_conditions: Optional[Any] = None
+    family_member: Optional[str] = None
+    consent_recorded: Optional[Any] = None
+    consent_valid: Optional[Any] = None
+    family_consent: Optional[Any] = None
+    authorized: Optional[Any] = None
+    authorization_valid: Optional[Any] = None
+    account_provider: Optional[str] = None
+    provider: Optional[str] = None
+    service: Optional[str] = None
+    account_owner: Optional[str] = None
+    account_identifier: Optional[str] = None
+    username_hint: Optional[str] = None
+    email_hint: Optional[str] = None
+    schedule_real_requested: Optional[Any] = None
+    create_cron: Optional[Any] = None
+    background_worker_requested: Optional[Any] = None
+    watcher_requested: Optional[Any] = None
+    email_requested: Optional[Any] = None
+    send_email: Optional[Any] = None
+    calendar_requested: Optional[Any] = None
+    calendar_access_requested: Optional[Any] = None
+    gmail_requested: Optional[Any] = None
+    gmail_access_requested: Optional[Any] = None
+    contacts_requested: Optional[Any] = None
+    contacts_access_requested: Optional[Any] = None
+    account_access_requested: Optional[Any] = None
+    login_requested: Optional[Any] = None
+    perform_recovery_requested: Optional[Any] = None
+    reset_password_now: Optional[Any] = None
+    store_password: Optional[Any] = None
+    password_storage_requested: Optional[Any] = None
+    repo_health_requested: Optional[Any] = None
+    local_file_health_requested: Optional[Any] = None
+    money_requested: Optional[Any] = None
+    production_requested: Optional[Any] = None
+    completed: Optional[Any] = None
+    execution_completed: Optional[Any] = None
+    mark_complete: Optional[Any] = None
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1770,6 +1844,7 @@ def create_app(
         research_radar=app.state.mark_3_research_radar,
     )
     app.state.mark_3_product_revenue_factory = Mark3ProductRevenueFactory()
+    app.state.mark_3_routine_ops = Mark3RoutineOpsControlPlane()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -2249,6 +2324,7 @@ def create_app(
             "research_radar": app.state.mark_3_research_radar.status(),
             "research_execution": app.state.mark_3_research_execution_bridge.status(),
             "product_revenue_factory": app.state.mark_3_product_revenue_factory.status(),
+            "routine_ops": app.state.mark_3_routine_ops.status(),
             "hermes_runtime": app.state.mark_3_hermes_runtime_bridge.status(),
             "delicate_actions_require_approval": {
                 "install": "strong_or_higher",
@@ -2285,6 +2361,36 @@ def create_app(
     @app.post("/mark-3/product-revenue/decision")
     def mark_3_product_revenue_decision(payload: Mark3ProductRevenueFactoryRequest) -> dict:
         return app.state.mark_3_product_revenue_factory.decision(_product_revenue_values(payload))
+
+    @app.get("/mark-3/routine-ops/status")
+    def mark_3_routine_ops_status() -> dict:
+        return {
+            **app.state.mark_3_routine_ops.status(),
+            "audit": app.state.mark_3_routine_ops.audit(),
+        }
+
+    def _routine_ops_values(payload: Mark3RoutineOpsRequest) -> Dict[str, Any]:
+        return payload.model_dump(exclude_none=True, exclude_defaults=True)
+
+    @app.post("/mark-3/routine-ops/plan")
+    def mark_3_routine_ops_plan(payload: Mark3RoutineOpsRequest) -> dict:
+        return app.state.mark_3_routine_ops.plan(_routine_ops_values(payload))
+
+    @app.post("/mark-3/routine-ops/personal")
+    def mark_3_routine_ops_personal(payload: Mark3RoutineOpsRequest) -> dict:
+        return app.state.mark_3_routine_ops.personal(_routine_ops_values(payload))
+
+    @app.post("/mark-3/routine-ops/family")
+    def mark_3_routine_ops_family(payload: Mark3RoutineOpsRequest) -> dict:
+        return app.state.mark_3_routine_ops.family(_routine_ops_values(payload))
+
+    @app.post("/mark-3/routine-ops/account-assistance")
+    def mark_3_routine_ops_account_assistance(payload: Mark3RoutineOpsRequest) -> dict:
+        return app.state.mark_3_routine_ops.account_assistance(_routine_ops_values(payload))
+
+    @app.post("/mark-3/routine-ops/decision")
+    def mark_3_routine_ops_decision(payload: Mark3RoutineOpsRequest) -> dict:
+        return app.state.mark_3_routine_ops.decision(_routine_ops_values(payload))
 
     @app.post("/mark-3/outcomes/record")
     def mark_3_outcomes_record(payload: Mark3OutcomeRecordRequest) -> dict:

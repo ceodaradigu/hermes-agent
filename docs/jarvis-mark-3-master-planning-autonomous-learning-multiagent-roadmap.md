@@ -167,6 +167,16 @@ Mark 3 planifica rutinas locales, tareas repetitivas, reports y health checks de
 repo, producto, métricas y budget. Deben ser acotadas, auditables, pausables y
 cancelables.
 
+PR #139 materializa esta capa como control-plane prepare-only. Prepara
+candidates para rutinas locales supervisadas, tareas repetitivas low-risk,
+daily/weekly routine plans, personal ops, family ops autorizadas, authorized
+account assistance por official recovery, password manager checklist, 2FA
+checklist, recordatorios sin scheduling real y health checks de
+repo/producto/budget sin ejecucion real. No crea scheduler real, cron,
+background workers, watchers, email, calendar, Gmail, contacts, account access
+ni providers reales. Si una capability no esta conectada devuelve
+`setup_required` o `capability_not_connected_yet`, no fake success.
+
 JARVIS corre en el ordenador actual de David mientras no genere ingresos
 suficientes o exista necesidad técnica demostrada. **No Mac mini ahora. No VPS
 ahora.** Cloud/VPS solo después de un revenue threshold definido o evidencia
@@ -192,6 +202,12 @@ guardar passwords en texto plano.
 Se deniegan permanentemente hackeo, acceso no autorizado, bypass de 2FA o
 controles, robo de cookies/tokens/credenciales, login ocultando riesgos y
 suplantación de terceros.
+
+PR #139 refuerza esta regla con invariantes `no_password_storage`,
+`no_2fa_bypass`, `no_cookie_or_token_use` y `no_fake_completion`. La ayuda de
+cuentas autorizadas queda limitada a official recovery, inventario seguro sin
+secretos, datos necesarios, password manager checklist, 2FA checklist, pasos
+oficiales y candidate de consentimiento/scope.
 
 ## Moonshot Policy
 
@@ -229,7 +245,11 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   blueprint, oferta/landing candidate, pricing, unit economics, revenue model,
   experiment plan, measurement plan y decisión kill/continue, sin publicación,
   deploy, Stripe live, checkout real, dominios, email, credenciales ni dinero.
-- **PR #139** — Moonshot Lab + Research/Experiment Engine.
+- **PR #139** — Local Routine Scheduler + Personal/Family Ops: candidates para
+  rutinas locales, personal/family ops autorizadas, authorized account
+  assistance, password manager checklist, 2FA checklist y health checks, sin
+  scheduler real, cron, workers, email, calendar, Gmail, contacts, account
+  access, password storage, 2FA bypass, cookie/token use ni fake completion.
 - **PR #140** — Mark 3 Release Candidate + Pilot.
 
 Son macro-PRs grandes y coherentes; no habrá micro-PR explosion.
@@ -314,3 +334,16 @@ PR #135 añade endpoints de memoria y research gobernado:
 Estas rutas no ejecutan internet, install, commit, deploy, dinero ni secrets.
 Preparan y auditan memoria/propuestas/candidatos para ejecución gobernada por
 Hermes cuando exista approval y capability.
+
+PR #139 añade endpoints de Routine Ops:
+
+- `GET /mark-3/routine-ops/status`
+- `POST /mark-3/routine-ops/plan`
+- `POST /mark-3/routine-ops/personal`
+- `POST /mark-3/routine-ops/family`
+- `POST /mark-3/routine-ops/account-assistance`
+- `POST /mark-3/routine-ops/decision`
+
+Estas rutas preparan candidates y decisions revisables. No existe endpoint
+Routine Ops `/execute`, `/run`, `/start-worker`, `/send`, `/login` ni
+`/bypass`.

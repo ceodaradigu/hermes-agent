@@ -98,6 +98,8 @@ Piezas relevantes ya documentadas:
 - Mark 3 Outcome Memory, Failure Memory, Learning Proposals y Research Radar de PR #135.
 - Governed Research Execution Control Plane de PR #136: JARVIS normaliza research requests, decide policy/approval, valida capability contract y prepara hooks de Outcome/Failure Memory y Learning Proposals.
 - Local Docs/Repo Research Adapter de PR #137: `docs/local_repo` tienen adapter local read-only conectado para un archivo exacto permitido. GitHub/web siguen en `capability_not_connected_yet`. No instala, no modifica, no hace commit/push/merge/deploy, no mueve dinero, no usa web/GitHub real, no crea threads, no ejecuta comandos, no sigue symlinks y no lee `.env`.
+- Mark 3 Product/Revenue Factory de PR #138: prepara candidates de oportunidad, blueprint, pricing, unit economics, experimentos y decisiones sin publicacion, deploy, Stripe live, checkout, dominios, email, dinero, credenciales ni fake revenue/costs.
+- Mark 3 Local Routine Scheduler + Personal/Family Ops de PR #139: prepara candidates para rutinas locales, personal/family ops autorizadas, authorized account assistance por official recovery, password manager checklist, 2FA checklist y health checks sin scheduler real, email, calendar, Gmail, contacts, account access, password storage, 2FA bypass, cookie/token/session use ni fake completion.
 
 Límites actuales:
 
@@ -563,8 +565,8 @@ PR #133 añade el Autonomous Mission Loop in-memory y genera bounded execution
 candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
 Governed Research Execution Control Plane, #137 Local Docs/Repo Research
-Adapter, #138 Product/Revenue Factory, #139 Moonshot Lab y Research/Experiment
-Engine y #140 Mark 3 Release Candidate + Pilot.
+Adapter, #138 Product/Revenue Factory, #139 Local Routine Scheduler +
+Personal/Family Ops y #140 Mark 3 Release Candidate + Pilot.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -601,3 +603,17 @@ usa credenciales y no inventa revenue, costes ni métricas. Siempre separa
 `net_revenue`; si falta evidencia devuelve `unknown`. Stripe live, producción,
 dominios, dinero, publicación real o identidad de David siguen como Nivel 4 con
 strong approval y doble/triple confirmación.
+
+PR #139 añade Mark 3 Local Routine Scheduler + Personal/Family Ops como
+control-plane seguro: rutinas locales supervisadas, tareas repetitivas
+low-risk, daily/weekly routine plans, personal ops, family ops autorizadas,
+authorized account assistance por official recovery, password manager checklist,
+2FA checklist, recordatorios sin scheduling real y health checks de
+repo/producto/budget sin ejecucion real. Todo candidate incluye risk,
+approval, scope, budget, schedule preview, evidence required, stop conditions,
+next safe action y audit summary. No hay scheduler real, cron, background
+worker, watcher, email, calendar, Gmail, contacts, provider real, account
+access, password storage, 2FA bypass, cookie/token/session use ni fake
+completion. Capacidades no conectadas devuelven `setup_required` o
+`capability_not_connected_yet`; bypass, hacking, robo, suplantacion y acceso no
+autorizado son Nivel 5.
