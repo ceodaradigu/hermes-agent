@@ -250,7 +250,12 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   assistance, password manager checklist, 2FA checklist y health checks, sin
   scheduler real, cron, workers, email, calendar, Gmail, contacts, account
   access, password storage, 2FA bypass, cookie/token use ni fake completion.
-- **PR #140** — Mark 3 Release Candidate + Pilot.
+- **PR #140** — Moonshot Lab + Research/Experiment Engine: moonshot intake,
+  hypothesis framing, research experiment plan, prototype candidate, evidence
+  scoring, uncertainty labels, reproducibility checklist, stage gates,
+  safety/legal review y kill/continue/iterate recommendation, sin experimentos
+  reales, red, GitHub/web real, providers, installs, procesos, publicación,
+  deploy, dinero, `.env`, credenciales ni fake breakthrough/benchmark/result.
 
 Son macro-PRs grandes y coherentes; no habrá micro-PR explosion.
 
@@ -290,6 +295,19 @@ path traversal, `.env`, tokens, passwords, credentials, secrets, keys y broad
 root scans sin approval/setup. No usa red, GitHub real, providers, threads,
 comandos ni endpoints `/execute`; `/candidate` exige request completa y no
 rehidrata snapshots por `research_id`.
+
+PR #140 conecta el **Moonshot Lab + Research/Experiment Engine** en modo
+prepare-only. Puede preparar candidates para moonshot intake, hypothesis
+framing, research experiment plan, prototype candidate, evidence scoring,
+uncertainty labels, reproducibility checklist, stage gates, approval
+requirements, experiment budget preview, stop conditions, safety/legal review,
+audit summary y next safe action. Mantiene `candidate_is_not_execution`,
+`hypothesis_is_not_result`, `prototype_is_not_capability`, `no_fake_breakthrough`,
+`no_fake_research_result`, `no_fake_benchmark`, `no_network`,
+`no_external_provider`, `no_install`, `no_publish`, `no_deploy` y
+`no_money_movement`. Si falta capability devuelve `setup_required` o
+`capability_not_connected_yet`; no finge resultados, benchmarks, costes,
+revenue ni breakthroughs.
 
 ## Criterios De Éxito
 
@@ -347,3 +365,16 @@ PR #139 añade endpoints de Routine Ops:
 Estas rutas preparan candidates y decisions revisables. No existe endpoint
 Routine Ops `/execute`, `/run`, `/start-worker`, `/send`, `/login` ni
 `/bypass`.
+
+PR #140 añade endpoints de Moonshot Lab:
+
+- `GET /mark-3/moonshot-lab/status`
+- `POST /mark-3/moonshot-lab/intake`
+- `POST /mark-3/moonshot-lab/hypothesis`
+- `POST /mark-3/moonshot-lab/experiment`
+- `POST /mark-3/moonshot-lab/prototype`
+- `POST /mark-3/moonshot-lab/decision`
+
+Estas rutas preparan candidates y decisions revisables. No existe endpoint
+Moonshot Lab `/execute`, `/run`, `/install`, `/publish`, `/deploy`, `/pay` ni
+`/send`.

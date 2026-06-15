@@ -414,7 +414,8 @@ low-risk no sensible.
 
 El roadmap Mark 3 usa macro-PRs #132-#140 para Mission Loop, Continuous
 Learning, Multi-Agent Orchestration, Product/Revenue Factory, Local Routine
-Scheduler, authorized account recovery, Moonshot Lab y RC pilot. JARVIS
+Scheduler, authorized account recovery y Moonshot Lab + Research/Experiment
+Engine. JARVIS
 permanece en el ordenador actual de David; no Mac mini ni VPS hasta revenue
 suficiente o necesidad técnica demostrada. Ver
 `docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md`.
@@ -464,6 +465,24 @@ tokens o session material y no finge completion. Si falta capability devuelve
 `setup_required` o `capability_not_connected_yet`; bypass, hacking, robo,
 suplantacion, password storage, 2FA bypass y cookie/token/session theft son
 Nivel 5.
+
+PR #140 es **Mark 3 Moonshot Lab + Research/Experiment Engine**. Añade
+candidates prepare-only para moonshot intake, hypothesis framing, research
+experiment plan, prototype candidate, evidence scoring, uncertainty labels,
+reproducibility checklist, stage gates, approval requirements, experiment budget
+preview, stop conditions, safety/legal review, kill/continue/iterate
+recommendation, audit summary y next safe action. Mantiene
+`candidate_is_not_execution`, `approval_is_not_execution`,
+`hypothesis_is_not_result`, `prototype_is_not_capability`,
+`no_fake_breakthrough`, `no_fake_research_result`, `no_fake_benchmark`,
+`no_fake_costs`, `no_fake_revenue`, `no_network`, `no_external_provider`,
+`no_install`, `no_publish`, `no_deploy` y `no_money_movement`. No ejecuta
+experimentos reales, no lanza tools reales, no usa red/GitHub/web/providers, no
+instala dependencias, no crea procesos, no publica, no despliega, no mueve
+dinero, no lee `.env`, no usa credenciales y no finge breakthroughs,
+benchmarks, resultados, costes ni revenue. Producción, publicación, identidad,
+dinero, live deploy y credenciales son Nivel 4; ilegal, inseguro, no
+autorizado, bypass, daño, engaño o fake capability son Nivel 5.
 
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
