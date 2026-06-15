@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+from typing import Any, Dict
+
+
+class Mark3ControlledPilotPlan:
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "current_mark": "Mark 3",
+            "release_candidate_status": "ready_as_controlled_release_candidate",
+            "pilot_goal": "Run one useful local Mark 3 mission through planning, gated candidates, evidence capture, and post-mortem without production side effects.",
+            "scope": {
+                "environment": "David's current computer",
+                "mode": "local controlled pilot",
+                "production": False,
+                "external_network": False,
+                "money": False,
+                "real_email": False,
+                "real_accounts": False,
+                "credentials": False,
+                "free_autonomy": False,
+                "scheduler_real": False,
+            },
+            "allowed_tools": [
+                "Mark 3 planning/status endpoints",
+                "mission loop prepare/control-plane",
+                "product/revenue prepare-only candidates",
+                "routine ops prepare-only candidates",
+                "moonshot lab prepare-only candidates",
+                "research execution preview for exact local docs/repo scope",
+                "governed Hermes read_file only if an exact local read is explicitly approved for the pilot",
+                "outcome/failure memory and learning proposal previews",
+            ],
+            "disallowed_tools": [
+                "external network",
+                "GitHub/web real calls",
+                "providers real calls",
+                "real scheduler, cron, worker, watcher, or 24/7 background operation",
+                "email send",
+                "Gmail, Calendar, Contacts, login, or account access",
+                "password storage",
+                "cookie, token, or session material use",
+                "Stripe live, checkout, payment, or money movement",
+                "deploy, publish, DNS, domain, or production changes",
+                "install, subprocess, thread, or unbounded execution",
+                "reading .env or credentials",
+            ],
+            "budget_limit": {
+                "money": "0 EUR",
+                "external_api_cost": "0 EUR",
+                "time_box": "operator-defined before pilot start",
+                "infrastructure": "current local machine only",
+            },
+            "risk_level": "Level 2 by default; Level 3 only for explicitly approved sensitive local data; Level 4 out of initial pilot scope.",
+            "approval_required": {
+                "pilot_start": "operator explicit approval",
+                "each_material_step": "risk-scaled approval; no inherited approval",
+                "governed_read_file": "exact path, candidate, approval, scope fingerprint, and operator authorization required",
+                "level_4_actions": "disallowed in initial pilot even though future legal supported actions can use Level 4 gates",
+            },
+            "stop_conditions": [
+                "Any request exceeds approved scope, budget, tool list, or risk level.",
+                "Any candidate asks for network, provider, email, scheduler, account, credential, deploy, publish, or money action.",
+                "Any output attempts to fake revenue, costs, benchmarks, results, capability, completion, or research evidence.",
+                "Any exact local scope is missing, broad, sensitive, symlinked, path-traversing, or multi-scope.",
+                "Operator stop or kill switch is requested.",
+            ],
+            "rollback_or_reset": [
+                "No production rollback should be needed because the pilot avoids production side effects.",
+                "Discard in-memory candidates and audit preview data.",
+                "Clear any local pilot scratch artifacts if an approved local read/write test is later added.",
+                "Record failure memory and learning proposal rather than retrying blindly.",
+            ],
+            "evidence_to_capture": [
+                "mission objective, scope, risk level, allowed and disallowed tools",
+                "approval records or explicit note that no execution step was approved",
+                "candidate payload summaries",
+                "blocked reasons, missing requirements, and setup_required states",
+                "exact local evidence references if a local read is approved",
+                "elapsed time and real costs, with unknown when not measured",
+                "post-mortem, failure memory, and learning proposal candidate",
+            ],
+            "success_criteria": [
+                "The pilot produces useful local output or a useful failure diagnosis.",
+                "No action exceeds approval, scope, budget, tools, or risk.",
+                "No external network, provider, account, email, scheduler, deploy, publish, or money side effect occurs.",
+                "No fake revenue, costs, benchmark, result, completion, or capability appears.",
+                "Hermes remains the execution engine for supported execution; JARVIS only governs, classifies, approves, audits, and routes.",
+            ],
+            "failure_criteria": [
+                "A candidate implies execution without approval.",
+                "A preview/read-only state is treated as a permanent ceiling instead of a setup/approval gate.",
+                "A missing capability is reported as success.",
+                "A dangerous route or side effect is introduced.",
+                "Evidence, revenue, cost, benchmark, result, or capability is invented.",
+            ],
+            "next_safe_step": "Review the RC endpoints, then run the local controlled pilot manually only after explicit operator approval.",
+            "safe_to_render": True,
+            "pilot_executed": False,
+        }

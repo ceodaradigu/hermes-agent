@@ -155,6 +155,9 @@ from jarvis.mark_3_master_planning import (
     get_mark_3_readiness,
     get_mark_3_risk_approval_model,
 )
+from jarvis.mark_3_approval_path_audit import Mark3ApprovalPathAudit
+from jarvis.mark_3_dangerous_route_audit import Mark3DangerousRouteAudit
+from jarvis.mark_3_e2e_readiness import Mark3E2EReadinessSmoke
 from jarvis.mark_3_mission_loop import Mark3MissionLoop
 from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
 from jarvis.mark_3_learning_proposals import LearningProposalEngine
@@ -164,6 +167,13 @@ from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.mark_3_product_revenue_factory import Mark3ProductRevenueFactory
 from jarvis.mark_3_local_routine_scheduler_personal_family_ops import Mark3RoutineOpsControlPlane
 from jarvis.mark_3_moonshot_lab_research_experiment_engine import Mark3MoonshotLabResearchExperimentEngine
+from jarvis.mark_3_operational_runbook import Mark3KnownLimitations, Mark3NextSteps, Mark3OperationalRunbook
+from jarvis.mark_3_pilot_plan import Mark3ControlledPilotPlan
+from jarvis.mark_3_release_candidate import (
+    Mark3CapabilityMatrix,
+    Mark3ReadinessMatrix,
+    Mark3ReleaseCandidateStatus,
+)
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -2246,6 +2256,46 @@ def create_app(
     @app.get("/mark-2/release-candidate/next-steps")
     def mark_2_release_candidate_next_steps() -> dict:
         return Mark2NextSteps().to_dict()
+
+    @app.get("/mark-3/release-candidate/status")
+    def mark_3_release_candidate_status() -> dict:
+        return Mark3ReleaseCandidateStatus().to_dict()
+
+    @app.get("/mark-3/release-candidate/capabilities")
+    def mark_3_release_candidate_capabilities() -> dict:
+        return Mark3CapabilityMatrix().to_dict()
+
+    @app.get("/mark-3/release-candidate/readiness")
+    def mark_3_release_candidate_readiness() -> dict:
+        return Mark3ReadinessMatrix().to_dict()
+
+    @app.get("/mark-3/release-candidate/dangerous-route-audit")
+    def mark_3_release_candidate_dangerous_route_audit() -> dict:
+        return Mark3DangerousRouteAudit().audit(route.path for route in app.routes)
+
+    @app.get("/mark-3/release-candidate/approval-path-audit")
+    def mark_3_release_candidate_approval_path_audit() -> dict:
+        return Mark3ApprovalPathAudit().audit()
+
+    @app.get("/mark-3/release-candidate/e2e-smoke")
+    def mark_3_release_candidate_e2e_smoke() -> dict:
+        return Mark3E2EReadinessSmoke().run()
+
+    @app.get("/mark-3/release-candidate/pilot-plan")
+    def mark_3_release_candidate_pilot_plan() -> dict:
+        return Mark3ControlledPilotPlan().to_dict()
+
+    @app.get("/mark-3/release-candidate/runbook")
+    def mark_3_release_candidate_runbook() -> dict:
+        return Mark3OperationalRunbook().to_dict()
+
+    @app.get("/mark-3/release-candidate/known-limitations")
+    def mark_3_release_candidate_known_limitations() -> dict:
+        return Mark3KnownLimitations().to_dict()
+
+    @app.get("/mark-3/release-candidate/next-steps")
+    def mark_3_release_candidate_next_steps() -> dict:
+        return Mark3NextSteps().to_dict()
 
     @app.get("/mark-3/planning/status")
     def mark_3_planning_status() -> dict:
