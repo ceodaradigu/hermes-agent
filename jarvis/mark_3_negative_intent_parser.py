@@ -88,6 +88,27 @@ _SAFE_SUFFIX_RE = re.compile(
     r"not\s+requested|not\s+allowed|must\s+stop)\b",
     re.IGNORECASE,
 )
+_SAFE_PREFIX_RE = re.compile(
+    r"(?:^|[\s,;:([{/])(?:no|non|without|sin)(?:[_\-\s/]+[\w./:-]+){0,6}[_\-\s/]+$",
+    re.IGNORECASE,
+)
+_STOP_CONDITION_RE = re.compile(
+    r"(?:^|\b)(?:"
+    r"stop(?:\s+conditions?)?|stop\s+if|stop\s+when|stop\s+on|stop\s+before|"
+    r"halt\s+if|halt\s+when|abort\s+if|abort\s+when|"
+    r"prohibited[_\s-]*tools?|prohibited[_\s-]*actions?|"
+    r"forbidden[_\s-]*tools?|disallowed[_\s-]*tools?|blocked[_\s-]*actions?|"
+    r"constraints?|guardrails?|limits?|out[_\s-]*of[_\s-]*scope|non[_\s-]*goals?|"
+    r"any\s+action\s+(?:requests?|attempts?|requires?|uses?|reads?|accesses?|claims?)|"
+    r"any\s+result\s+(?:claims?|reports?|asserts?)|"
+    r"any\s+output\s+(?:claims?|reports?|asserts?|attempts?)|"
+    r"si\s+cualquier\s+accion|si\s+alguna\s+accion|"
+    r"cualquier\s+accion\s+(?:pide|solicita|intenta|usa|lee|accede|afirma)|"
+    r"cualquier\s+resultado\s+(?:afirma|declara|finge)"
+    r")\b",
+    re.IGNORECASE,
+)
+_ACTION_TRANSITION_RE = re.compile(r"\b(?:then|but|however|anyway|now|please|go\s+ahead)\b", re.IGNORECASE)
 _UNAUTHORIZED_ACTION_RE = re.compile(
     r"\b(?:access|login|log\s+in|enter|use|acceder|entrar|usar)\b"
     r"[\w\s./:-]{0,60}\b(?:without\s+authorization|without\s+authorisation|sin\s+autorizaci[oó]n)\b",
@@ -151,7 +172,7 @@ def contains_actionable_marker(text: str, markers: Iterable[str]) -> bool:
             index = lowered.find(marker, start)
             if index < 0:
                 break
-            if not _marker_is_defensive(lowered, index, marker):
+            if _marker_has_boundaries(lowered, index, marker) and not _marker_is_defensive(lowered, index, marker):
                 return True
             start = index + max(1, len(marker))
     return False
@@ -188,7 +209,8 @@ def _segments(value: Any, *, ignored_fields: set[str], current_key: str) -> List
 
 
 def _marker_is_defensive(text: str, index: int, marker: str) -> bool:
-    line_start = max(text.rfind("\n", 0, index), text.rfind(";", 0, index), text.rfind(",", 0, index)) + 1
+    statement_start = max(text.rfind("\n", 0, index), text.rfind(";", 0, index)) + 1
+    line_start = max(statement_start - 1, text.rfind(",", 0, index)) + 1
     line_end_candidates = [pos for pos in (text.find("\n", index), text.find(";", index), text.find(",", index)) if pos >= 0]
     line_end = min(line_end_candidates) if line_end_candidates else len(text)
     line = text[line_start:line_end]
@@ -197,7 +219,30 @@ def _marker_is_defensive(text: str, index: int, marker: str) -> bool:
             return False
     before = text[max(line_start, index - 70):index]
     after = text[index + len(marker): min(line_end, index + len(marker) + 70)]
-    return bool(_NEGATION_RE.search(before) or _SAFE_SUFFIX_RE.search(after))
+    statement_before = text[statement_start:index]
+    return bool(
+        _SAFE_PREFIX_RE.search(before)
+        or _NEGATION_RE.search(before)
+        or _SAFE_SUFFIX_RE.search(after)
+        or _STOP_CONDITION_RE.search(line[: index - line_start])
+        or (
+            _STOP_CONDITION_RE.search(statement_before)
+            and not _ACTION_TRANSITION_RE.search(before)
+        )
+    )
+
+
+def _marker_has_boundaries(text: str, index: int, marker: str) -> bool:
+    if not marker:
+        return False
+    before = text[index - 1] if index > 0 else ""
+    after_index = index + len(marker)
+    after = text[after_index] if after_index < len(text) else ""
+    if marker[0].isalnum() and (before.isalnum() or before == "_"):
+        return False
+    if marker[-1].isalnum() and (after.isalnum() or after == "_"):
+        return False
+    return True
 
 
 def _restore_defensive_strings(original: Any, safe: Any) -> Any:

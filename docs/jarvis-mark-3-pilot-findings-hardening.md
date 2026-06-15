@@ -11,6 +11,12 @@ avoid those defensive words.
 The fix does not weaken safety. It makes the parser distinguish actionable
 dangerous intent from negative, defensive, or bounded context.
 
+PR #143 extends this hardening for the real Mission Loop endpoint after the API
+restart on main showed one residual overblock: the full defensive Pilot 0
+payload sent to `POST /mark-3/mission-loop/missions` could still return
+`intake implies permanently denied level 5 action`. The remaining issue was
+Mission Loop text classification, not an execution path.
+
 ## Parser Contract
 
 Mark 3 now uses a shared negative-intent parser for the affected control-plane
@@ -22,7 +28,11 @@ surfaces. It treats these as safe context when no actionable request is present:
 - limits such as `no credentials`, `without credentials`, `do not read .env`,
   `no network`, and `sin red`;
 - stop conditions such as `stop if credentials are requested`;
+- free-text stop-condition renderings such as `Any action requests credentials`
+  or `Any result claims fake capability`;
 - prohibited tools and out-of-scope lists;
+- `no_` scope prefixes such as `no_credentials`, `no_external_network`,
+  `no_money`, `no_email`, `no_production`, and `no_deploy`;
 - defensive compliance phrases such as `no fake revenue`,
   `sin inventar ingresos`, `do not claim results`, and `deny fake capability`.
 
@@ -34,8 +44,11 @@ The same parser still blocks real unsafe requests, including:
 - bypass, evasion, unauthorized access, phishing, impersonation, or theft;
 - fake revenue, fake costs, fake benchmarks, fake research results, fake
   capabilities, fake completion, or deceptive claims;
-- production, money, deploy, real email, identity, scheduler, provider, and
-  account actions unless they are explicitly gated by the existing risk model.
+- direct requests such as `deploy production now`, `send real email now`, and
+  `move money`;
+- broader production, money, deploy, real email, identity, scheduler, provider,
+  and account actions remain governed by the existing risk model unless the
+  request is one of the permanently denied categories above.
 
 ## Surfaces Hardened
 

@@ -107,6 +107,13 @@ Piezas relevantes ya documentadas:
   intención accionable vs límites, flags `false`, stop conditions y prohibited
   tools. No añade endpoints ni habilita red, providers, scheduler, email,
   dinero, deploy, subprocess, threads, installs, cuentas reales o credenciales.
+- Mark 3 Mission Loop Negative Intent Hardening de PR #143: cierra el caso
+  restante descubierto al reiniciar API despues de #142, donde
+  `POST /mark-3/mission-loop/missions` podia tratar stop conditions,
+  `prohibited_tools`, prefijos `no_`, `sin ...` y frases `without ...` como
+  intención Nivel 5. Mantiene bloqueos Nivel 5 para solicitudes reales de
+  `.env`, tokens, password storage, bypass, acceso no autorizado, fake claims,
+  deploy/email/money reales y deception.
 
 Límites actuales:
 
@@ -677,3 +684,19 @@ tokens, password storage, bypass, acceso no autorizado, fake revenue/costs,
 fake results, fake capabilities, producción, dinero, deploy, email real,
 cuentas reales o capacidades no conectadas siguen bloqueadas o gated según el
 modelo Mark 3.
+
+## Mark 3 Mission Loop Negative Intent Hardening
+
+PR #143 corrige el caso restante de Mission Loop real descubierto despues de
+#142: el payload defensivo completo de Pilot 0 enviado a
+`POST /mark-3/mission-loop/missions` podia devolver
+`intake implies permanently denied level 5 action` porque el clasificador leia
+listas defensivas renderizadas en texto libre como si fueran acciones.
+
+Mission Loop ahora distingue prefijos `no_`, frases `no hacer X`, `sin X`,
+`without X`, listas de `prohibited_tools`, constraints defensivas y stop
+conditions como `Any action requests ...` / `Any result claims ...`. Las
+peticiones reales de leer `.env`, usar tokens, guardar passwords, saltarse 2FA,
+acceder sin autorizacion, fingir revenue/result/capability, desplegar
+produccion ahora, enviar email real ahora o mover dinero siguen denegadas como
+Nivel 5.
