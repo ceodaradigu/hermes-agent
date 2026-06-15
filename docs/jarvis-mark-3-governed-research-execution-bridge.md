@@ -1,145 +1,158 @@
-# JARVIS Mark 3 Governed Research Execution Bridge
+# JARVIS Mark 3 Governed Research Execution Control Plane
 
-PR #136 queda recortada a un control-plane mínimo para preparar investigación
-sin ejecutarla.
+PR #136 creó el control-plane gobernado de research: normalización, policy,
+approval, capability contract, memoria de outcomes/fallos y hooks de learning,
+sin ejecutar research real.
 
-Flujo:
+PR #137 conecta el **Local Docs/Repo Research Adapter** para `docs/local_repo`.
+Es un adapter mínimo, local, read-only y bounded. No convierte JARVIS en otro
+Hermes: Hermes sigue siendo el motor de ejecución general; JARVIS gobierna,
+clasifica riesgo, pide aprobación, audita y solo materializa aquí una lectura
+local exacta cuando el control-plane la declara legal, segura, autorizada y
+técnicamente soportada.
+
+JARVIS no está enjaulado. GitHub, web, docs y repo local no son denegaciones
+permanentes por defecto: son capacidades gobernadas. Si una acción es legal,
+segura, autorizada, técnicamente soportada y tiene approval/capability real
+conectados, JARVIS debe poder preparar o ejecutar el paso autorizado. Las
+restricciones son gates de aprobación y setup, no prohibiciones permanentes.
+
+## Flujo
 
 ```text
 research request
-  -> normalización segura
-  -> policy
-  -> approval requirement
-  -> capability status
-  -> candidate_state
+-> normalize target
+-> policy decision
+-> approval requirement
+-> capability check
+-> execution candidate
+-> preview / awaiting_approval / setup_required / executable_candidate / blocked
+-> local candidate read only when source_type is docs/local_repo and scope is exact
+-> outcome/failure hooks
 ```
 
-## Alcance
+No hay ejecución web/GitHub en esta PR. No hay threads ni comandos. El adapter
+local no recorre directorios y no ejecuta herramientas.
 
-La capa nueva vive en `jarvis/mark_3_research_execution.py` y soporta cuatro
-sources:
+## Source Types
 
 - `github`
 - `web`
 - `docs`
 - `local_repo`
 
-Todas las capabilities están por defecto en:
+Aliases soportados:
 
-```text
-capability_not_connected_yet
-setup_required
-```
+- `source` -> `source_type`
+- `topic` -> `query`
+- `risk` -> `risk_level`
 
-Eso no es denegación permanente. Una petición legal, segura y autorizada puede
-convertirse en candidate ejecutable en el futuro cuando exista capability real,
-approval válido y canal de aprobación suficiente.
+`query` y `scope` quedan separados. Una query como `docs` no se convierte en
+scope de filesystem. `None`, `""` y `" "` se tratan como ausentes.
 
-## Lo Que No Hace
-
-- No ejecuta research real.
-- No lee archivos.
-- No escanea repo local.
-- No usa threads.
-- No llama GitHub, web, browser ni APIs externas.
-- No invoca adapters.
-- No crea stop endpoint.
-- No ejecuta por `research_id` rehidratando texto guardado.
-
-## Normalización
-
-`normalize_research_request(...)` separa:
+El fingerprint usa:
 
 - `source_type`
-- `query`
-- `topic`
-- `scope`
+- `normalized_query`
+- `normalized_scope`
 - `risk_level`
 - `goal`
 
-Aliases:
+Metadata interna como `repo_root` o canonical paths no entra en el risk text ni
+en el fingerprint de research.
 
-- `topic` es alias de `query`.
-- `source` es alias de `source_type`.
-- `risk` es alias de `risk_level`.
+## Capability Contract
 
-`None`, `""` y `" "` cuentan como ausentes. `query` no se copia desde `scope`
-y `scope` no se copia desde `query`. El fingerprint se calcula solo sobre los
-campos seguros normalizados y redactados. Campos internos como approval,
-capability status o ids no entran en el risk text.
+Cada source tiene un estado explícito:
+
+```text
+connected
+capability_not_connected_yet
+unsupported
+```
+
+Estado por defecto desde PR #137:
+
+```text
+github     = capability_not_connected_yet
+web        = capability_not_connected_yet
+docs       = connected
+local_repo = connected
+```
+
+`docs` y `local_repo` conectan únicamente el adapter local read-only. GitHub y
+web siguen devolviendo `setup_required` o `awaiting_approval` según policy y
+approval, sin llamadas externas.
+
+## Local Docs/Repo Research Adapter
+
+El adapter local acepta solo un `scope` exacto de archivo:
+
+- `source_type=docs` limita lectura a `docs/`.
+- `source_type=local_repo` limita lectura al repo local.
+- El scope debe ser un único path relativo.
+- No acepta multi-scope.
+- No acepta broad scans como `.`, `docs`, `repo root`, `*` o `all`.
+- Rechaza path traversal, paths absolutos y `~`.
+- Rechaza symlinks.
+- Rechaza `.env`, tokens, passwords, credentials, secrets, private keys y
+  nombres de archivo sensibles.
+- No lee fuera del scope permitido.
+- No usa web, GitHub real, providers, threads, comandos ni installs.
+- No hace commit, push, merge, deploy ni PR.
+
+El endpoint `/candidate` exige la request completa para una lectura local. Un
+`research_id` por sí solo no rehidrata el snapshot de preview como request
+ejecutable.
 
 ## Policy
 
-La policy devuelve:
-
-- `candidate_state`
-- `approval_required`
-- `required_approval_level`
-- `approval_valid`
-- `capability_status`
-- `blocked_reasons`
-- `can_become_executable_candidate`
-- `permanent_denial`
-
-GitHub y web requieren aprobación por red externa. Docs y local repo tampoco
-ejecutan en esta PR; devuelven `setup_required` porque la capability no está
-conectada.
-
-Secretos o credenciales (`.env`, `token`, `password`, `credential`, etc.),
-peticiones ilegales, inseguras o no autorizadas devuelven:
-
-```text
-candidate_state=blocked
-can_become_executable_candidate=false
-permanent_denial=true
-```
-
-Install, commit, push, merge, deploy, producción y dinero elevan el riesgo y
-requieren aprobación fuerte/doble/triple según corresponda. Cuando double o
-triple no tienen canal real, la respuesta queda en `setup_required` con
-`stronger_approval_channel_not_connected`.
-
-## Snapshots Y Candidate
-
-Preview guarda solo un snapshot seguro/redactado. Ese snapshot se marca como no
-rehidratable para ejecución:
-
-```text
-safe_to_revalidate_for_execution=false
-```
-
-`candidate` con solo `research_id` no recalcula policy desde el snapshot y
-devuelve `setup_required` con:
-
-```text
-full_request_required_for_safe_policy_recalculation
-redacted_snapshot_not_revalidatable
-execute_by_id_rehydration_disabled
-```
-
-Para recalcular seguridad, el caller debe enviar de nuevo el request completo
-en `request` o en campos directos. Incluso entonces esta PR no ejecuta adapters:
-solo recalcula policy y devuelve `setup_required` o `blocked`.
+- GitHub/web requieren approval por red externa y siguen sin capability real.
+- `docs` y `local_repo` pueden ser direct/simple según scope.
+- Scope de repo root, docs root o broad requiere approval/setup y no se lee.
+- `.env`, credentials, tokens, passwords, secrets, private keys y rutas
+  sensibles quedan bloqueados con `permanent_denial=true`.
+- Install, commit, push, merge, deploy, money y production quedan bloqueados o
+  requieren niveles altos según policy; esta PR no ejecuta ninguno.
+- Double/triple approval no se finge: si no hay canal real, devuelve
+  `setup_required` con `stronger_approval_channel_not_connected`.
 
 ## API
 
-Rutas añadidas:
+Rutas disponibles:
 
 - `GET /mark-3/research-execution/status`
 - `POST /mark-3/research-execution/preview`
 - `POST /mark-3/research-execution/candidate`
 - `GET /mark-3/research-execution/{research_id}`
 
-No existe endpoint stop para esta capa.
+No hay endpoint nuevo `/execute` para research. `/candidate` revalida policy,
+approval y capability. Para `docs/local_repo` con request completa y scope exacto
+permitido, realiza una lectura local segura y controlada. Para GitHub/web o
+requests incompletas devuelve estado gobernado sin ejecución silenciosa.
 
-## Integración Segura
+## Integración Mark 3
 
-Para requests legales bloqueadas solo por capability missing, la capa puede
-registrar:
+- Outcome Memory registra outcomes de `setup_required`/failure y de lecturas
+  locales exitosas sin persistir contenido.
+- Failure Memory registra `capability_not_connected_yet` cuando procede.
+- Learning Proposals crea proposal candidates revisables solo para setup real,
+  no para denegaciones permanentes por secretos, traversal o acceso inseguro.
+- Research Radar de PR #135 puede alimentar planes; si falta scope exacto local,
+  `/preview` y `/candidate` devuelven `exact_file_scope_required`.
 
-- outcome `setup_required`;
-- failure memory `adapter_not_connected`;
-- learning proposal candidate seguro para conectar capability gobernada.
+Hermes sigue siendo el motor. Esta PR no construye otro Hermes, otro runtime ni
+otro executor.
 
-No registra proposals ni memoria de integración para requests bloqueadas por
-policy.
+## Garantías
+
+- No ejecuta web/GitHub.
+- No crea threads.
+- No ejecuta comandos.
+- No instala dependencias.
+- No hace commit, push, merge, PR ni deploy.
+- No lee `.env`.
+- No recorre directorios.
+- No sigue symlinks.
+- No rehidrata snapshots redactados como requests ejecutables.
+- No añade execute-by-id sensible.

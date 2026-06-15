@@ -1,334 +1,607 @@
 from __future__ import annotations
 
-import builtins
+import inspect
 import json
+import re
 import socket
-import threading
+import subprocess
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip("fastapi")
 
-from jarvis.api.app import Mark3ResearchExecutionRequest, create_app
-from jarvis.mark_3_learning_proposals import LearningProposalEngine
-from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
-from jarvis.mark_3_research_execution import (
-    Mark3ResearchExecutionControlPlane,
-    normalize_research_request,
+from jarvis.api.app import (  # noqa: E402
+    Mark3ResearchExecutionCandidateRequest,
+    Mark3ResearchExecutionPreviewRequest,
+    Mark3ResearchRadarPlanRequest,
+    create_app,
 )
+from jarvis.mark_3_local_research_adapter import LocalResearchReadAdapter  # noqa: E402
+from jarvis.mark_3_research_execution import ResearchExecutionControlPlane  # noqa: E402
 
 
-def _service() -> Mark3ResearchExecutionControlPlane:
-    return Mark3ResearchExecutionControlPlane()
+def route(app, path, method):
+    return next(item for item in app.routes if item.path == path and method in item.methods)
 
 
-def _route(app, path: str, method: str):
-    for route in app.routes:
-        if route.path == path and method in route.methods:
-            return route.endpoint
-    raise AssertionError(f"route not found: {method} {path}")
+def make_repo(tmp_path: Path) -> Path:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "guide.md").write_text("Docs research fixture\nAllowed evidence.\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("Local repo research fixture\n", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("Non-doc local repo file\n", encoding="utf-8")
+    return tmp_path
 
 
-def test_preview_github_requires_external_approval() -> None:
-    result = _service().preview({"source_type": "github", "query": "agent runtime patterns"})
-
-    assert result["approval_required"] is True
-    assert result["required_approval_level"] == "simple"
-    assert result["approval_valid"] is False
-    assert result["capability_status"] == "capability_not_connected_yet"
-    assert result["candidate_state"] == "setup_required"
+def make_plane(tmp_path: Path | None = None, **kwargs):
+    if tmp_path is not None and "local_research_adapter" not in kwargs and "repo_root" not in kwargs:
+        kwargs["local_research_adapter"] = LocalResearchReadAdapter(repo_root=tmp_path)
+    return ResearchExecutionControlPlane(**kwargs)
 
 
-def test_preview_web_requires_external_approval() -> None:
-    result = _service().preview({"source_type": "web", "query": "safe research execution"})
-
-    assert result["approval_required"] is True
-    assert result["required_approval_level"] == "simple"
-    assert "external_network_requires_approval" in result["blocked_reasons"]
-    assert result["web_calls_performed"] is False
-
-
-def test_preview_docs_returns_setup_required() -> None:
-    result = _service().preview({"source_type": "docs", "query": "operator docs"})
-
-    assert result["candidate_state"] == "setup_required"
-    assert result["capability_status"] == "capability_not_connected_yet"
-    assert result["permanent_denial"] is False
+def create_valid_approval(plane, preview):
+    record = plane.approval_service.request(
+        action_type="research_execution",
+        context=preview["approval_context"],
+    )
+    plane.approval_service.decide(record.approval_id, "approved")
+    return record
 
 
-def test_preview_local_repo_returns_setup_required() -> None:
-    result = _service().preview({"source_type": "local_repo", "query": "mission loop contracts"})
+def test_preview_docs_exact_scope_is_candidate_without_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    preview = make_plane(repo).preview({
+        "source_type": "docs",
+        "goal": "improve_jarvis",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+    })
 
-    assert result["candidate_state"] == "setup_required"
-    assert result["capability_status"] == "capability_not_connected_yet"
-    assert result["local_scans_performed"] is False
-
-
-def test_topic_enters_query_as_alias() -> None:
-    normalized = normalize_research_request({"source_type": "docs", "topic": "policy bridge"})
-
-    assert normalized["query"] == "policy bridge"
-    assert normalized["topic"] == "policy bridge"
-
-
-def test_source_alias_sets_source_type() -> None:
-    normalized = normalize_research_request({"source": "web", "query": "governed research"})
-
-    assert normalized["source_type"] == "web"
-    assert normalized["safe_snapshot"]["source"] == "web"
+    assert preview["research_id"]
+    assert preview["source_type"] == "docs"
+    assert preview["normalized_scope"] == "docs/guide.md"
+    assert preview["execution_status"] == "executable_candidate"
+    assert preview["capability_status"] == "connected"
+    assert preview["file_reads_performed"] is False
+    assert preview["adapter_called"] is False
 
 
-def test_unsupported_source_is_blocked_not_rewritten_to_local_repo() -> None:
-    result = _service().preview({"source": "slack", "query": "safe research"})
+def test_candidate_docs_exact_scope_reads_one_allowed_file(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "goal": "improve_jarvis",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+    })
 
-    assert result["request_normalized"]["source_type"] == "slack"
-    assert result["candidate_state"] == "blocked"
-    assert "source_type_unsupported" in result["blocked_reasons"]
-    assert result["permanent_denial"] is True
-    assert result["can_become_executable_candidate"] is False
-
-
-def test_absent_source_defaults_to_local_repo() -> None:
-    result = _service().preview({"query": "safe local planning"})
-
-    assert result["request_normalized"]["source_type"] == "local_repo"
-    assert result["candidate_state"] == "setup_required"
-    assert result["permanent_denial"] is False
-
-
-def test_risk_alias_sets_risk_level() -> None:
-    normalized = normalize_research_request({"source_type": "docs", "query": "review", "risk": "high"})
-
-    assert normalized["risk_level"] == "high"
-    assert normalized["safe_snapshot"]["risk"] == "high"
+    assert result["execution_status"] == "completed"
+    assert result["candidate_state"] == "completed"
+    assert result["adapter_called"] is True
+    assert result["file_reads_performed"] is True
+    assert result["local_repo_scan_performed"] is False
+    assert result["local_read_result"]["path_reference"] == "docs/guide.md"
+    assert "Docs research fixture" in result["local_read_result"]["content"]
+    assert result["sources_found"] == 1
 
 
-def test_query_and_scope_are_not_mixed() -> None:
-    with_both = normalize_research_request({
+def test_candidate_local_repo_exact_scope_reads_one_allowed_file(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
         "source_type": "local_repo",
-        "query": "find policy seams",
-        "scope": "jarvis only",
-    })
-    scope_only = normalize_research_request({"source_type": "local_repo", "scope": "jarvis only"})
-
-    assert with_both["query"] == "find policy seams"
-    assert with_both["scope"] == "jarvis only"
-    assert scope_only["query"] == ""
-    assert scope_only["scope"] == "jarvis only"
-
-
-def test_query_env_blocks_permanently_without_raw_snapshot() -> None:
-    result = _service().preview({"source_type": "local_repo", "query": "inspect .env"})
-    payload = json.dumps(result, sort_keys=True)
-
-    assert result["permanent_denial"] is True
-    assert result["can_become_executable_candidate"] is False
-    assert result["safe_snapshot"]["query"] == "[redacted sensitive text]"
-    assert ".env" not in payload
-
-
-def test_query_token_blocks_permanently_without_raw_snapshot() -> None:
-    result = _service().preview({"source_type": "web", "query": "token=abc123"})
-    payload = json.dumps(result, sort_keys=True)
-
-    assert result["permanent_denial"] is True
-    assert result["can_become_executable_candidate"] is False
-    assert "secret_or_credential_request_blocked" in result["blocked_reasons"]
-    assert "abc123" not in payload
-
-
-def test_execute_with_only_research_id_does_not_revalidate_redacted_request() -> None:
-    service = _service()
-    preview = service.preview({"source_type": "web", "query": "token=abc123"})
-
-    result = service.execute({"research_id": preview["research_id"]})
-
-    assert result["policy_recalculated"] is False
-    assert result["candidate_state"] == "setup_required"
-    assert "redacted_snapshot_not_revalidatable" in result["blocked_reasons"]
-    assert "abc123" not in json.dumps(result, sort_keys=True)
-
-
-def test_execute_with_full_request_recalculates_policy() -> None:
-    service = _service()
-    preview = service.preview({"source_type": "web", "query": "token=abc123"})
-
-    result = service.execute({
-        "research_id": preview["research_id"],
-        "request": {"source_type": "github", "query": "safe agent benchmarks"},
+        "goal": "improve_hermes",
+        "scope": "README.md",
+        "query": "local contract",
     })
 
-    assert result["policy_recalculated"] is True
+    assert result["execution_status"] == "completed"
+    assert result["candidate_state"] == "completed"
+    assert result["local_read_result"]["path_reference"] == "README.md"
+    assert "Local repo research fixture" in result["local_read_result"]["content"]
+    assert result["command_execution_performed"] is False
+
+
+def test_candidate_uses_bounded_stream_read(monkeypatch, tmp_path):
+    repo = make_repo(tmp_path)
+    (repo / "README.md").write_text("0123456789abcdef", encoding="utf-8")
+
+    def fail_read_bytes(*args, **kwargs):
+        raise AssertionError("read_bytes would read the whole file before truncation")
+
+    monkeypatch.setattr(Path, "read_bytes", fail_read_bytes)
+    adapter = LocalResearchReadAdapter(repo_root=repo, max_bytes=8)
+    result = make_plane(local_research_adapter=adapter).candidate({
+        "source_type": "local_repo",
+        "scope": "README.md",
+        "query": "bounded read",
+    })
+
+    assert result["execution_status"] == "completed"
+    assert result["local_read_result"]["bytes_read"] == 8
+    assert result["local_read_result"]["truncated"] is True
+    assert result["local_read_result"]["content"] == "01234567"
+
+
+def test_docs_scope_cannot_escape_docs_root(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "scope": "README.md",
+        "query": "should stay under docs",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "file_not_found" in result["blocked_reasons"]
+    assert result["file_reads_performed"] is False
     assert result["permanent_denial"] is False
-    assert result["approval_required"] is True
-    assert result["capability_status"] == "capability_not_connected_yet"
 
 
-def test_blocked_request_does_not_create_adapter_proposal() -> None:
-    outcomes = OutcomeMemoryStore()
-    proposals = LearningProposalEngine()
-    service = Mark3ResearchExecutionControlPlane(outcome_memory=outcomes, learning_proposals=proposals)
+def test_candidate_rejects_symlink_before_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    target = repo / "docs" / "guide.md"
+    link = repo / "docs" / "guide-link.md"
+    try:
+        link.symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
 
-    result = service.preview({"source_type": "web", "query": "token=abc123"})
-
-    assert result["integration"]["adapter_proposal_created"] is False
-    assert proposals.list() == []
-    assert outcomes.list_outcomes() == []
-
-
-def test_capability_missing_legal_request_registers_setup_required() -> None:
-    outcomes = OutcomeMemoryStore()
-    proposals = LearningProposalEngine()
-    service = Mark3ResearchExecutionControlPlane(outcome_memory=outcomes, learning_proposals=proposals)
-
-    result = service.preview({"source_type": "docs", "query": "approval policy"})
-
-    assert result["integration"]["setup_required_outcome_registered"] is True
-    assert result["integration"]["failure_memory_registered"] is True
-    assert result["integration"]["adapter_proposal_created"] is True
-    assert outcomes.list_outcomes()[0]["result_status"] == "setup_required"
-    assert outcomes.list_failures()[0]["category"] == "adapter_not_connected"
-    assert proposals.list()[0]["status"] == "proposed"
-
-
-def test_can_become_executable_candidate_false_for_secret_blocked() -> None:
-    result = _service().preview({"source_type": "docs", "query": "password list"})
-
-    assert result["can_become_executable_candidate"] is False
-    assert result["permanent_denial"] is True
-
-
-def test_authorization_valid_false_blocks_even_with_authorized_default_true() -> None:
-    app = create_app(voice_adapter=object())
-
-    response = _route(app, "/mark-3/research-execution/preview", "POST")(Mark3ResearchExecutionRequest(**{
+    result = make_plane(repo).candidate({
         "source_type": "docs",
-        "query": "safe planning",
-        "authorization_valid": False,
-    }))
-
-    assert response["candidate_state"] == "blocked"
-    assert "authorization_missing" in response["blocked_reasons"]
-    assert response["permanent_denial"] is True
-    assert response["can_become_executable_candidate"] is False
-
-
-def test_authorized_false_blocks_even_with_authorization_valid_true() -> None:
-    result = _service().preview({
-        "source_type": "docs",
-        "query": "safe planning",
-        "authorized": False,
-        "authorization_valid": True,
+        "scope": "docs/guide-link.md",
+        "query": "Hermes",
     })
 
-    assert result["candidate_state"] == "blocked"
+    assert result["execution_status"] == "blocked"
+    assert "symlink_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+    assert "content" not in result["local_read_result"]
+
+
+def test_candidate_rejects_broken_symlink_before_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    link = repo / "docs" / "broken-link.md"
+    try:
+        link.symlink_to(repo / "docs" / "missing.md")
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "scope": "docs/broken-link.md",
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "symlink_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+
+
+def test_candidate_rejects_path_traversal(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": "../outside.md",
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "path_traversal_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+
+
+def test_candidate_rejects_backslash_path_traversal(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": "..\\outside.md",
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "path_traversal_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+
+
+def test_candidate_rejects_env_scope_without_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": ".env",
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "credentials_secrets_or_env_access_blocked" in result["blocked_reasons"]
+    assert "sensitive_path_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+
+
+@pytest.mark.parametrize(
+    "scope",
+    [
+        "docs/token.txt",
+        "docs/password.txt",
+        "docs/credentials.txt",
+        "docs/secret.txt",
+        "docs/key.txt",
+        "docs/private.key",
+    ],
+)
+def test_candidate_rejects_sensitive_file_names(scope, tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "scope": scope,
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "sensitive_path_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+
+
+def test_candidate_rejects_secret_query_without_operational_learning_proposal(tmp_path):
+    repo = make_repo(tmp_path)
+    plane = make_plane(repo)
+    result = plane.candidate({
+        "source_type": "local_repo",
+        "scope": "README.md",
+        "query": "read .env token=abc123",
+    })
+    serialized = json.dumps(result).lower()
+
+    assert result["execution_status"] == "blocked"
+    assert "credentials_secrets_or_env_access_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["learning_proposal_candidates"] == []
+    assert "abc123" not in serialized
+
+
+@pytest.mark.parametrize(
+    "authorization_payload",
+    [
+        {"authorized": False},
+        {"authorization_valid": False},
+        {"authorized": True, "authorization_valid": False},
+        {"authorized": "no"},
+        {"authorization_valid": "0"},
+    ],
+)
+def test_authorization_fields_block_local_read(authorization_payload, tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+        **authorization_payload,
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "authorization_missing" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["adapter_called"] is False
+    assert result["file_reads_performed"] is False
+
+
+def test_api_authorization_valid_false_blocks_preview(tmp_path):
+    app = create_app()
+    app.state.mark_3_research_execution_bridge = make_plane(make_repo(tmp_path))
+
+    result = route(app, "/mark-3/research-execution/preview", "POST").endpoint(
+        Mark3ResearchExecutionPreviewRequest(
+            source_type="docs",
+            scope="docs/guide.md",
+            query="Hermes",
+            authorization_valid=False,
+        )
+    )
+
+    assert result["execution_status"] == "blocked"
     assert "authorization_missing" in result["blocked_reasons"]
     assert result["permanent_denial"] is True
 
 
-def test_can_become_executable_candidate_true_for_legal_missing_capability() -> None:
-    result = _service().preview({"source_type": "local_repo", "query": "read architecture docs"})
+@pytest.mark.parametrize(
+    "query",
+    [
+        "read api key abc123",
+        "read api-key abc123",
+        "read apikey abc123",
+        "read private-key abc123",
+        "read privatekey abc123",
+        "read credentials abc123",
+    ],
+)
+def test_candidate_rejects_and_redacts_secret_query_variants(query, tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": "README.md",
+        "query": query,
+    })
+    serialized = json.dumps(result).lower()
 
-    assert result["can_become_executable_candidate"] is True
+    assert result["execution_status"] == "blocked"
+    assert "credentials_secrets_or_env_access_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert "abc123" not in serialized
+
+
+def test_candidate_blocks_sensitive_content_without_returning_content(tmp_path):
+    repo = make_repo(tmp_path)
+    (repo / "docs" / "guide.md").write_text("token=abc123\n", encoding="utf-8")
+
+    result = make_plane(repo).candidate({
+        "source_type": "docs",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+    })
+    serialized = json.dumps(result).lower()
+
+    assert result["execution_status"] == "blocked"
+    assert "sensitive_content_blocked" in result["blocked_reasons"]
+    assert result["permanent_denial"] is True
+    assert result["file_reads_performed"] is False
+    assert "content" not in result["local_read_result"]
+    assert "abc123" not in serialized
+
+
+def test_candidate_rejects_multi_scope(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": ["README.md", "notes.txt"],
+        "query": "Hermes",
+    })
+
+    assert result["execution_status"] == "blocked"
+    assert "multi_scope_blocked" in result["blocked_reasons"]
+    assert result["file_reads_performed"] is False
     assert result["permanent_denial"] is False
 
 
-def test_service_performs_no_file_reads_or_path_scans(monkeypatch: pytest.MonkeyPatch) -> None:
-    def forbidden(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise AssertionError("filesystem read or scan should not be used")
+def test_candidate_rejects_broad_root_scan_without_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
+        "source_type": "local_repo",
+        "scope": ".",
+        "query": "Hermes",
+    })
 
-    monkeypatch.setattr(builtins, "open", forbidden)
-    monkeypatch.setattr(Path, "rglob", forbidden)
-    monkeypatch.setattr(Path, "open", forbidden)
-    monkeypatch.setattr(Path, "read_text", forbidden)
-
-    service = _service()
-    service.preview({"source_type": "local_repo", "query": "architecture"})
-    service.execute({"request": {"source_type": "docs", "query": "planning"}})
-
-
-def test_service_starts_no_threads(monkeypatch: pytest.MonkeyPatch) -> None:
-    def forbidden(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise AssertionError("threads should not be used")
-
-    monkeypatch.setattr(threading, "Thread", forbidden)
-
-    result = _service().preview({"source_type": "web", "query": "safe docs"})
-
-    assert result["threads_started"] is False
+    assert result["approval_required"] is True
+    assert result["approval_level"] == "simple"
+    assert result["execution_status"] == "awaiting_approval"
+    assert "exact_file_scope_required" in result["missing_requirements"]
+    assert result["file_reads_performed"] is False
+    assert result["adapter_called"] is False
 
 
-def test_service_makes_no_github_or_web_calls(monkeypatch: pytest.MonkeyPatch) -> None:
-    def forbidden(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise AssertionError("network should not be used")
-
-    monkeypatch.setattr(socket, "create_connection", forbidden)
-    monkeypatch.setattr(socket, "socket", forbidden)
-
-    result = _service().preview({"source_type": "web", "query": "safe docs"})
-
-    assert result["web_calls_performed"] is False
-    assert result["github_calls_performed"] is False
-
-
-def test_no_research_execution_stop_endpoint() -> None:
-    app = create_app(voice_adapter=object())
-    paths = {route.path for route in app.routes}
-
-    assert "/mark-3/research-execution/execute" not in paths
-    assert "/mark-3/research-execution/stop" not in paths
-    assert not any(path.startswith("/mark-3/research-execution/") and path.endswith("/execute") for path in paths)
-    assert not any(path.startswith("/mark-3/research-execution/") and path.endswith("/stop") for path in paths)
-
-
-def test_api_status_works() -> None:
-    app = create_app(voice_adapter=object())
-
-    response = _route(app, "/mark-3/research-execution/status", "GET")()
-
-    assert response["real_research_execution_enabled"] is False
-
-
-def test_api_preview_works() -> None:
-    app = create_app(voice_adapter=object())
-
-    response = _route(app, "/mark-3/research-execution/preview", "POST")(Mark3ResearchExecutionRequest(**{
-        "source": "github",
-        "query": "safe research",
-    }))
-
-    assert response["approval_required"] is True
-    assert response["capability_status"] == "capability_not_connected_yet"
-
-
-def test_api_candidate_works_without_executing() -> None:
-    app = create_app(voice_adapter=object())
-
-    response = _route(app, "/mark-3/research-execution/candidate", "POST")(Mark3ResearchExecutionRequest(**{
-        "request": {"source_type": "docs", "query": "safe planning"},
-    }))
-
-    assert response["executed"] is False
-    assert response["adapters_called"] is False
-    assert response["candidate_state"] == "setup_required"
-
-
-def test_api_get_research_id_returns_safe_snapshot_only() -> None:
-    app = create_app(voice_adapter=object())
-    preview = _route(app, "/mark-3/research-execution/preview", "POST")(Mark3ResearchExecutionRequest(**{
+def test_candidate_rejects_broad_docs_scan_without_reading(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).candidate({
         "source_type": "docs",
-        "query": "safe planning",
-    }))
+        "scope": "docs",
+        "query": "Hermes",
+    })
 
-    response = _route(app, "/mark-3/research-execution/{research_id}", "GET")(preview["research_id"])
+    assert result["approval_required"] is True
+    assert result["execution_status"] == "awaiting_approval"
+    assert "exact_file_scope_required" in result["missing_requirements"]
+    assert result["file_reads_performed"] is False
 
-    assert response["raw_request_stored"] is False
-    assert response["can_execute_from_stored_snapshot"] is False
+
+def test_candidate_by_research_id_only_does_not_rehydrate_and_read(tmp_path):
+    repo = make_repo(tmp_path)
+    plane = make_plane(repo)
+    preview = plane.preview({
+        "source_type": "docs",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+    })
+    result = plane.candidate({"research_id": preview["research_id"]})
+
+    assert result["execution_status"] == "setup_required"
+    assert result["candidate_by_research_id_only"] is True
+    assert result["request_rehydrated_for_execution"] is False
+    assert "full_request_required_for_local_read" in result["missing_requirements"]
+    assert result["adapter_called"] is False
+    assert result["file_reads_performed"] is False
+    assert "local_read_result" not in result
 
 
-def test_status_lists_bridge_and_master_map_docs() -> None:
-    status = _service().status()
+def test_valid_approval_with_missing_github_capability_preserves_approval_valid_true():
+    plane = make_plane()
+    preview = plane.preview({"source_type": "github", "query": "agent frameworks"})
+    approval = create_valid_approval(plane, preview)
 
-    assert "docs/jarvis-mark-3-governed-research-execution-bridge.md" in status["documentation"]
-    assert "docs/JARVIS_MASTER_BUILD_MAP.md" in status["documentation"]
+    approved = plane.candidate({
+        "research_id": preview["research_id"],
+        "source_type": "github",
+        "query": "agent frameworks",
+        "approval_id": approval.approval_id,
+    })
+
+    assert approved["approval_valid"] is True
+    assert approved["execution_status"] == "setup_required"
+    assert approved["capability_status"] == "capability_not_connected_yet"
+    assert approved["adapter_called"] is False
+
+
+def test_query_is_not_interpreted_as_filesystem_scope():
+    preview = make_plane().preview({
+        "source_type": "local_repo",
+        "query": "docs",
+    })
+
+    assert preview["normalized_query"] == "docs"
+    assert preview["normalized_scope"] == ""
+    assert "exact_file_scope_required" in preview["missing_requirements"]
+
+
+def test_scope_and_query_remain_separate(tmp_path):
+    repo = make_repo(tmp_path)
+    preview = make_plane(repo).preview({
+        "source_type": "local_repo",
+        "scope": "README.md",
+        "query": "Hermes runtime",
+    })
+
+    assert preview["normalized_query"] == "Hermes runtime"
+    assert preview["normalized_scope"] == "README.md"
+    assert preview["fingerprint_fields"]["normalized_query"] == "Hermes runtime"
+    assert preview["fingerprint_fields"]["normalized_scope"] == "README.md"
+
+
+def test_internal_repo_paths_do_not_affect_risk_text(tmp_path):
+    repo = make_repo(tmp_path)
+    preview = make_plane(repo).preview({
+        "source_type": "docs",
+        "scope": "docs/guide.md",
+        "query": "Hermes",
+        "repo_root": "/home/diazd/.env",
+        "canonical_path": "/home/diazd/production/secrets",
+    })
+    serialized_risk = json.dumps({
+        "risk_level": preview["risk_level"],
+        "risk_signals": preview["risk_signals"],
+        "blocked_reasons": preview["blocked_reasons"],
+    })
+
+    assert preview["risk_level"] == "low"
+    assert preview["execution_status"] == "executable_candidate"
+    assert "/home/diazd" not in serialized_risk
+    assert "repo_root" not in serialized_risk
+    assert "canonical_path" not in serialized_risk
+
+
+def test_no_threads_commands_web_github_or_execute_endpoint(monkeypatch):
+    def fail(*args, **kwargs):
+        raise AssertionError("external side effect attempted")
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    monkeypatch.setattr(subprocess, "Popen", fail)
+    monkeypatch.setattr(socket, "create_connection", fail)
+    app = create_app()
+    routes = {item.path for item in app.routes}
+    plane_source = inspect.getsource(ResearchExecutionControlPlane)
+    adapter_source = inspect.getsource(LocalResearchReadAdapter)
+    github = route(app, "/mark-3/research-execution/preview", "POST").endpoint(
+        Mark3ResearchExecutionPreviewRequest(source_type="github", query="agents")
+    )
+    web = route(app, "/mark-3/research-execution/preview", "POST").endpoint(
+        Mark3ResearchExecutionPreviewRequest(source_type="web", query="agents")
+    )
+
+    assert "/mark-3/research-execution/execute" not in routes
+    assert "/execute" not in routes
+    assert github["github_called"] is False
+    assert web["web_called"] is False
+    assert "threading" not in plane_source
+    assert "threading" not in adapter_source
+    assert "subprocess" not in plane_source
+    assert "subprocess" not in adapter_source
+    assert "import requests" not in plane_source
+    assert re.search(r"(?<!_)requests\.", plane_source) is None
+    assert "urllib" not in plane_source
+
+
+def test_no_install_commit_push_merge_from_research_candidate(tmp_path):
+    repo = make_repo(tmp_path)
+    plane = make_plane(repo)
+    for query in ["pip install package", "git commit changes", "git push branch", "merge PR"]:
+        result = plane.candidate({
+            "source_type": "docs",
+            "scope": "docs/guide.md",
+            "query": query,
+        })
+        assert result["execution_status"] == "blocked"
+        assert "side_effectful_research_action_blocked" in result["blocked_reasons"]
+        assert result["installs_performed"] is False
+        assert result["commits_pushes_merges_performed"] is False
+
+
+def test_api_preview_candidate_and_get_work_for_local_docs(tmp_path):
+    app = create_app()
+    app.state.mark_3_research_execution_bridge = make_plane(make_repo(tmp_path))
+    preview = route(app, "/mark-3/research-execution/preview", "POST").endpoint(
+        Mark3ResearchExecutionPreviewRequest(source_type="docs", scope="docs/guide.md", query="Hermes")
+    )
+    result = route(app, "/mark-3/research-execution/candidate", "POST").endpoint(
+        Mark3ResearchExecutionCandidateRequest(source_type="docs", scope="docs/guide.md", query="Hermes")
+    )
+    fetched = route(app, "/mark-3/research-execution/{research_id}", "GET").endpoint(result["research_id"])
+
+    assert preview["execution_status"] == "executable_candidate"
+    assert preview["file_reads_performed"] is False
+    assert result["execution_status"] == "completed"
+    assert "Docs research fixture" in result["local_read_result"]["content"]
+    assert fetched["research_id"] == result["research_id"]
+
+
+def test_research_radar_plan_feeds_preview_but_not_local_read_without_scope():
+    app = create_app()
+    plan = route(app, "/mark-3/research-radar/plan", "POST").endpoint(
+        Mark3ResearchRadarPlanRequest(source="local_repo", goal="detect_risks", query="agent safety")
+    )
+    preview = route(app, "/mark-3/research-execution/preview", "POST").endpoint(
+        Mark3ResearchExecutionPreviewRequest(plan_id=plan["plan_id"])
+    )
+    candidate = route(app, "/mark-3/research-execution/candidate", "POST").endpoint(
+        Mark3ResearchExecutionCandidateRequest(plan_id=plan["plan_id"])
+    )
+
+    assert preview["source_type"] == "local_repo"
+    assert preview["normalized_query"] == "agent safety"
+    assert "exact_file_scope_required" in preview["missing_requirements"]
+    assert candidate["file_reads_performed"] is False
+
+
+def test_status_reports_local_adapter_connected_and_external_setup_gated():
+    status = make_plane().status()
+
+    assert status["control_plane_enforced"] is True
+    assert status["local_docs_repo_read_adapter_connected"] is True
+    assert status["file_reads_performed"] is False
+    assert status["local_file_reads_available_via_candidate"] is True
+    assert status["capabilities"]["docs"]["capability_status"] == "connected"
+    assert status["capabilities"]["local_repo"]["capability_status"] == "connected"
+    assert status["capabilities"]["github"]["capability_status"] == "capability_not_connected_yet"
+    assert status["capabilities"]["web"]["capability_status"] == "capability_not_connected_yet"
+    assert status["hermes_is_execution_engine"] is True
+    assert status["no_duplicate_hermes_runtime"] is True
+
+
+def test_double_or_triple_approval_channel_is_not_faked(tmp_path):
+    repo = make_repo(tmp_path)
+    result = make_plane(repo).preview({
+        "source_type": "docs",
+        "scope": "docs/guide.md",
+        "query": "high assurance architecture review",
+        "risk_level": "critical",
+    })
+
+    assert result["approval_level"] == "double"
+    assert result["execution_status"] == "setup_required"
+    assert "stronger_approval_channel_not_connected" in result["missing_requirements"]
+
+
+def test_docs_and_master_map_are_updated_for_local_research_adapter():
+    bridge = Path("docs/jarvis-mark-3-governed-research-execution-bridge.md").read_text(encoding="utf-8")
+    master = Path("docs/JARVIS_MASTER_BUILD_MAP.md").read_text(encoding="utf-8")
+    roadmap = Path("docs/jarvis-mark-3-master-planning-autonomous-learning-multiagent-roadmap.md").read_text(encoding="utf-8")
+    radar = Path("docs/jarvis-mark-3-autonomous-growth-learning-radar.md").read_text(encoding="utf-8")
+    handoff = Path("docs/jarvis-handoff-context.md").read_text(encoding="utf-8")
+
+    assert "PR #137" in bridge
+    assert "Local Docs/Repo Research Adapter" in bridge
+    assert "docs/local_repo" in bridge
+    assert "PR #137" in master
+    assert "Local Docs/Repo Research Adapter" in roadmap
+    assert "docs/local_repo" in radar
+    assert "PR #134, PR #135 y PR #136 están cerradas" in handoff

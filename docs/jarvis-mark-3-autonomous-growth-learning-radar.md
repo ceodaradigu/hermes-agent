@@ -116,19 +116,6 @@ Los endpoints que cambian memoria o estado revisable añaden eventos auditables.
 No hay endpoint nuevo que ejecute internet real, instale dependencias, haga
 commit, despliegue, mueva dinero o lea access material.
 
-PR #136 añade una capa separada de research execution prepare-only:
-
-- `GET /mark-3/research-execution/status`
-- `POST /mark-3/research-execution/preview`
-- `POST /mark-3/research-execution/candidate`
-- `GET /mark-3/research-execution/{research_id}`
-
-Estas rutas no sustituyen al radar ni ejecutan adapters. Solo normalizan el
-request, aplican policy, calculan approval/capability status y devuelven
-`candidate_state`. `candidate` no acepta execute-by-id sensible: con solo
-`research_id` devuelve `setup_required` y exige que el caller envíe de nuevo el
-request completo para recalcular policy.
-
 ## Integración Mark 3
 
 PR #133 crea el Autonomous Mission Loop y bounded execution candidates. PR #134
@@ -136,11 +123,18 @@ conecta un vertical slice real gobernado con Hermes para `read_file`. PR #135
 añade memoria de outcomes/fallos, proposals y research planning para que JARVIS
 aprenda y proponga mejoras sin duplicar el runtime.
 
-PR #136 conserva ese límite: prepara research execution sin ejecutar. Puede
-registrar outcomes/failures/proposals seguros para capability missing legal, y
-no registra proposals para requests bloqueadas por secretos, ilegalidad,
-inseguridad o falta de autorización.
-
 JARVIS decide y audita. Hermes ejecuta capacidades soportadas bajo contrato
 gobernado. La memoria no es permiso, una propuesta no es permiso y approval no
 es ejecución por sí solo.
+
+PR #136 añade el Governed Research Execution Control Plane encima de este radar.
+El radar sigue preparando candidatos; el control-plane reevalúa capability y
+approval. PR #137 conecta el adapter local read-only para `docs/local_repo`:
+con scope exacto de archivo permitido, `/candidate` puede realizar una lectura
+local segura y controlada. GitHub y web siguen devolviendo `setup_required` o
+`awaiting_approval` hasta que existan adapters gobernados reales.
+
+El adapter local no recorre directorios, no sigue symlinks, no lee `.env`, no
+acepta multi-scope, no ejecuta comandos, no usa web/GitHub real y no crea otro
+Hermes. Si falta scope exacto, approval o setup, devuelve estado gobernado claro
+como `exact_file_scope_required`, `awaiting_approval` o `setup_required`.

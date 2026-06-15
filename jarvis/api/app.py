@@ -159,7 +159,7 @@ from jarvis.mark_3_mission_loop import Mark3MissionLoop
 from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
 from jarvis.mark_3_learning_proposals import LearningProposalEngine
 from jarvis.mark_3_growth_radar import ResearchRadar
-from jarvis.mark_3_research_execution import Mark3ResearchExecutionControlPlane
+from jarvis.mark_3_research_execution import ResearchExecutionControlPlane
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
@@ -578,24 +578,25 @@ class Mark3ResearchRadarPlanRequest(BaseModel):
     evidence_required: Optional[List[str]] = None
 
 
-class Mark3ResearchExecutionRequest(BaseModel):
+class Mark3ResearchExecutionPreviewRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     research_id: Optional[str] = None
-    request: Optional[Dict[str, Any]] = None
     source_type: Optional[str] = None
     source: Optional[str] = None
-    query: Optional[str] = None
-    topic: Optional[str] = None
-    scope: Optional[str] = None
+    topic: Optional[Any] = None
+    goal: str = "improve_jarvis"
+    query: Optional[Any] = None
+    query_or_scope: Optional[Any] = None
+    scope: Optional[Any] = None
     risk_level: Optional[str] = None
     risk: Optional[str] = None
-    goal: Optional[str] = None
-    approval_valid: bool = False
-    approval_level: str = "direct"
+    approval_id: Optional[str] = None
     authorized: bool = True
-    authorization_valid: bool = True
-    stronger_approval_channel_connected: bool = False
+
+
+class Mark3ResearchExecutionCandidateRequest(Mark3ResearchExecutionPreviewRequest):
+    pass
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1658,9 +1659,11 @@ def create_app(
     app.state.mark_3_outcome_memory = OutcomeMemoryStore()
     app.state.mark_3_learning_proposals = LearningProposalEngine()
     app.state.mark_3_research_radar = ResearchRadar()
-    app.state.mark_3_research_execution = Mark3ResearchExecutionControlPlane(
+    app.state.mark_3_research_execution_bridge = ResearchExecutionControlPlane(
+        approval_service=app.state.approval_hardening,
         outcome_memory=app.state.mark_3_outcome_memory,
         learning_proposals=app.state.mark_3_learning_proposals,
+        research_radar=app.state.mark_3_research_radar,
     )
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
@@ -2139,6 +2142,7 @@ def create_app(
             "outcome_memory": app.state.mark_3_outcome_memory.status(),
             "learning_proposals": app.state.mark_3_learning_proposals.status(),
             "research_radar": app.state.mark_3_research_radar.status(),
+            "research_execution": app.state.mark_3_research_execution_bridge.status(),
             "hermes_runtime": app.state.mark_3_hermes_runtime_bridge.status(),
             "delicate_actions_require_approval": {
                 "install": "strong_or_higher",
@@ -2221,25 +2225,22 @@ def create_app(
 
     @app.get("/mark-3/research-execution/status")
     def mark_3_research_execution_status() -> dict:
-        return {
-            **app.state.mark_3_research_execution.status(),
-            "audit": app.state.mark_3_research_execution.audit(),
-        }
+        return app.state.mark_3_research_execution_bridge.status()
 
     @app.post("/mark-3/research-execution/preview")
-    def mark_3_research_execution_preview(payload: Mark3ResearchExecutionRequest) -> dict:
-        return app.state.mark_3_research_execution.preview(payload.model_dump(exclude_none=True))
+    def mark_3_research_execution_preview(payload: Mark3ResearchExecutionPreviewRequest) -> dict:
+        return app.state.mark_3_research_execution_bridge.preview(payload.model_dump())
 
     @app.post("/mark-3/research-execution/candidate")
-    def mark_3_research_execution_candidate(payload: Mark3ResearchExecutionRequest) -> dict:
-        return app.state.mark_3_research_execution.execute(payload.model_dump(exclude_none=True))
+    def mark_3_research_execution_candidate(payload: Mark3ResearchExecutionCandidateRequest) -> dict:
+        return app.state.mark_3_research_execution_bridge.candidate(payload.model_dump())
 
     @app.get("/mark-3/research-execution/{research_id}")
     def mark_3_research_execution_get(research_id: str) -> dict:
         try:
-            return app.state.mark_3_research_execution.get(research_id)
+            return app.state.mark_3_research_execution_bridge.get(research_id)
         except KeyError:
-            raise HTTPException(status_code=404, detail="research preview not found")
+            raise HTTPException(status_code=404, detail="research execution not found")
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

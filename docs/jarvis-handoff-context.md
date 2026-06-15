@@ -422,8 +422,28 @@ suficiente o necesidad técnica demostrada. Ver
 PR #133 implementa el primer Autonomous Mission Loop gobernado e in-memory:
 intake, clasificación 0-5, plan determinista, preview, approvals exactos por
 step, bounded execution candidates, outcomes/evidence, post-mortem y learning
-proposal preview. No ejecuta herramientas externas. PR #134 conectará el
-Governed Execution Engine; PR #135 añadirá persistencia de Outcome Memory.
+proposal preview. No ejecuta herramientas externas.
+
+PR #134, PR #135 y PR #136 están cerradas. PR #134 conectó el primer vertical
+slice gobernado con Hermes para lectura local `read_file`; PR #135 añadió
+Outcome Memory, Failure Memory, Learning Proposals y Research Radar; PR #136
+añadió el Governed Research Execution Control Plane. Este handoff antiguo queda
+actualizado: PR #137 es **Local Docs/Repo Research Adapter**, no Product/Revenue
+Factory.
+
+PR #137 conecta research local read-only para `docs/local_repo` desde el
+Research Control Plane. Acepta solo un scope exacto de archivo permitido,
+rechaza multi-scope, symlinks, path traversal, `.env`, tokens, passwords,
+credentials, secrets, keys y broad root scans sin approval/setup. No usa web,
+GitHub real, providers, threads, comandos, installs, commit/push/merge/PR ni
+deploy. No añade endpoint research `/execute`; `/candidate` exige request
+completa y no rehidrata snapshots redactados por `research_id`.
+
+Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
+permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
+permanente. Hermes sigue siendo el motor de ejecución; JARVIS gobierna,
+clasifica riesgo, decide, pide approval, audita y manda tareas bounded a Hermes
+cuando exista capacidad aplicable.
 
 ## 11. Cómo iniciar un hilo nuevo
 

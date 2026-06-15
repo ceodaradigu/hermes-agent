@@ -95,6 +95,9 @@ Piezas relevantes ya documentadas:
 - Memoria local explícita: proposals, snapshot, `save-local`, `load-local`, review, approve, activate, deactivate y limpieza.
 - Handoff workflow para continuar PRs en worktrees sin perder contexto.
 - Contratos documentales de Hermes inside JARVIS, deployment modes, mobile voice approval, distributed personal OS, developer workshop, RAG, continuous learning, Money Engine y Asset Factory.
+- Mark 3 Outcome Memory, Failure Memory, Learning Proposals y Research Radar de PR #135.
+- Governed Research Execution Control Plane de PR #136: JARVIS normaliza research requests, decide policy/approval, valida capability contract y prepara hooks de Outcome/Failure Memory y Learning Proposals.
+- Local Docs/Repo Research Adapter de PR #137: `docs/local_repo` tienen adapter local read-only conectado para un archivo exacto permitido. GitHub/web siguen en `capability_not_connected_yet`. No instala, no modifica, no hace commit/push/merge/deploy, no mueve dinero, no usa web/GitHub real, no crea threads, no ejecuta comandos, no sigue symlinks y no lee `.env`.
 
 Límites actuales:
 
@@ -559,9 +562,9 @@ usa micro-PR explosion. Ver
 PR #133 añade el Autonomous Mission Loop in-memory y genera bounded execution
 candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
-Research Control Plane Minimal, #137 Product/Revenue Factory, #138 Local
-Routine Scheduler + Personal/Family Ops, #139 Moonshot Lab +
-Research/Experiment Engine y #140 Mark 3 Release Candidate + Pilot.
+Governed Research Execution Control Plane, #137 Local Docs/Repo Research
+Adapter, #138 Local Routine Scheduler + Personal/Family Ops, #139 Moonshot Lab
+y Research/Experiment Engine y #140 Mark 3 Release Candidate + Pilot.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -580,10 +583,10 @@ riesgo, pide approval, audita y propone cambios a Hermes cuando necesita
 mejorar el motor. Ver
 `docs/jarvis-mark-3-autonomous-growth-learning-radar.md`.
 
-PR #136 añade el Mark 3 Governed Research Execution Bridge en modo control-plane
-mínimo. Normaliza requests de research, calcula policy, approval requirement,
-capability status y `candidate_state`, pero no ejecuta research real, no lee
-archivos, no escanea repos, no usa threads, no llama GitHub/web y no invoca
-adapters. Preview guarda solo snapshot seguro/redactado y `candidate` no
-rehidrata por `research_id`; requiere request completo para recalcular policy.
-Ver `docs/jarvis-mark-3-governed-research-execution-bridge.md`.
+PR #136 añade el Governed Research Execution Control Plane. PR #137 conecta el
+Local Docs/Repo Research Adapter: `docs/local_repo` pasan a `connected` solo
+para lectura local segura de un scope exacto de archivo. Broad root scans,
+multi-scope, symlinks, path traversal, `.env`, tokens, passwords, credentials,
+secrets y keys quedan rechazados por policy/adapter. No hay endpoint research
+`/execute`; `/candidate` exige request completa y no rehidrata snapshots por
+`research_id`.
