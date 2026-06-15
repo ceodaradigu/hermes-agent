@@ -159,6 +159,7 @@ from jarvis.mark_3_mission_loop import Mark3MissionLoop
 from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
 from jarvis.mark_3_learning_proposals import LearningProposalEngine
 from jarvis.mark_3_growth_radar import ResearchRadar
+from jarvis.mark_3_research_execution import Mark3ResearchExecutionControlPlane
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
@@ -575,6 +576,26 @@ class Mark3ResearchRadarPlanRequest(BaseModel):
     cost_estimate: Any = "unknown"
     stop_conditions: Optional[List[str]] = None
     evidence_required: Optional[List[str]] = None
+
+
+class Mark3ResearchExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    research_id: Optional[str] = None
+    request: Optional[Dict[str, Any]] = None
+    source_type: Optional[str] = None
+    source: Optional[str] = None
+    query: Optional[str] = None
+    topic: Optional[str] = None
+    scope: Optional[str] = None
+    risk_level: Optional[str] = None
+    risk: Optional[str] = None
+    goal: Optional[str] = None
+    approval_valid: bool = False
+    approval_level: str = "direct"
+    authorized: bool = True
+    authorization_valid: bool = True
+    stronger_approval_channel_connected: bool = False
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1637,6 +1658,10 @@ def create_app(
     app.state.mark_3_outcome_memory = OutcomeMemoryStore()
     app.state.mark_3_learning_proposals = LearningProposalEngine()
     app.state.mark_3_research_radar = ResearchRadar()
+    app.state.mark_3_research_execution = Mark3ResearchExecutionControlPlane(
+        outcome_memory=app.state.mark_3_outcome_memory,
+        learning_proposals=app.state.mark_3_learning_proposals,
+    )
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -2193,6 +2218,28 @@ def create_app(
             **app.state.mark_3_research_radar.status(),
             "audit": app.state.mark_3_research_radar.audit(),
         }
+
+    @app.get("/mark-3/research-execution/status")
+    def mark_3_research_execution_status() -> dict:
+        return {
+            **app.state.mark_3_research_execution.status(),
+            "audit": app.state.mark_3_research_execution.audit(),
+        }
+
+    @app.post("/mark-3/research-execution/preview")
+    def mark_3_research_execution_preview(payload: Mark3ResearchExecutionRequest) -> dict:
+        return app.state.mark_3_research_execution.preview(payload.model_dump(exclude_none=True))
+
+    @app.post("/mark-3/research-execution/candidate")
+    def mark_3_research_execution_candidate(payload: Mark3ResearchExecutionRequest) -> dict:
+        return app.state.mark_3_research_execution.execute(payload.model_dump(exclude_none=True))
+
+    @app.get("/mark-3/research-execution/{research_id}")
+    def mark_3_research_execution_get(research_id: str) -> dict:
+        try:
+            return app.state.mark_3_research_execution.get(research_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="research preview not found")
 
     @app.get("/mark-1/capabilities")
     def mark_1_capabilities() -> dict:

@@ -116,12 +116,30 @@ Los endpoints que cambian memoria o estado revisable añaden eventos auditables.
 No hay endpoint nuevo que ejecute internet real, instale dependencias, haga
 commit, despliegue, mueva dinero o lea access material.
 
+PR #136 añade una capa separada de research execution prepare-only:
+
+- `GET /mark-3/research-execution/status`
+- `POST /mark-3/research-execution/preview`
+- `POST /mark-3/research-execution/candidate`
+- `GET /mark-3/research-execution/{research_id}`
+
+Estas rutas no sustituyen al radar ni ejecutan adapters. Solo normalizan el
+request, aplican policy, calculan approval/capability status y devuelven
+`candidate_state`. `candidate` no acepta execute-by-id sensible: con solo
+`research_id` devuelve `setup_required` y exige que el caller envíe de nuevo el
+request completo para recalcular policy.
+
 ## Integración Mark 3
 
 PR #133 crea el Autonomous Mission Loop y bounded execution candidates. PR #134
 conecta un vertical slice real gobernado con Hermes para `read_file`. PR #135
 añade memoria de outcomes/fallos, proposals y research planning para que JARVIS
 aprenda y proponga mejoras sin duplicar el runtime.
+
+PR #136 conserva ese límite: prepara research execution sin ejecutar. Puede
+registrar outcomes/failures/proposals seguros para capability missing legal, y
+no registra proposals para requests bloqueadas por secretos, ilegalidad,
+inseguridad o falta de autorización.
 
 JARVIS decide y audita. Hermes ejecuta capacidades soportadas bajo contrato
 gobernado. La memoria no es permiso, una propuesta no es permiso y approval no
