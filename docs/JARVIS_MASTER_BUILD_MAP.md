@@ -100,6 +100,7 @@ Piezas relevantes ya documentadas:
 - Local Docs/Repo Research Adapter de PR #137: `docs/local_repo` tienen adapter local read-only conectado para un archivo exacto permitido. GitHub/web siguen en `capability_not_connected_yet`. No instala, no modifica, no hace commit/push/merge/deploy, no mueve dinero, no usa web/GitHub real, no crea threads, no ejecuta comandos, no sigue symlinks y no lee `.env`.
 - Mark 3 Product/Revenue Factory de PR #138: prepara candidates de oportunidad, blueprint, pricing, unit economics, experimentos y decisiones sin publicacion, deploy, Stripe live, checkout, dominios, email, dinero, credenciales ni fake revenue/costs.
 - Mark 3 Local Routine Scheduler + Personal/Family Ops de PR #139: prepara candidates para rutinas locales, personal/family ops autorizadas, authorized account assistance por official recovery, password manager checklist, 2FA checklist y health checks sin scheduler real, email, calendar, Gmail, contacts, account access, password storage, 2FA bypass, cookie/token/session use ni fake completion.
+- Mark 3 Moonshot Lab + Research/Experiment Engine de PR #140: prepara moonshot intake, hypothesis framing, research experiment plans, prototype candidates, evidence scoring, uncertainty labels, reproducibility checklist, stage gates, safety/legal review y kill/continue/iterate decisions sin ejecutar experimentos, red, GitHub/web real, providers, installs, procesos, publicación, deploy, dinero, `.env`, credenciales ni fake breakthrough/benchmark/result.
 
 Límites actuales:
 
@@ -566,7 +567,7 @@ candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
 Governed Research Execution Control Plane, #137 Local Docs/Repo Research
 Adapter, #138 Product/Revenue Factory, #139 Local Routine Scheduler +
-Personal/Family Ops y #140 Mark 3 Release Candidate + Pilot.
+Personal/Family Ops y #140 Moonshot Lab + Research/Experiment Engine.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -617,3 +618,15 @@ access, password storage, 2FA bypass, cookie/token/session use ni fake
 completion. Capacidades no conectadas devuelven `setup_required` o
 `capability_not_connected_yet`; bypass, hacking, robo, suplantacion y acceso no
 autorizado son Nivel 5.
+
+PR #140 añade Mark 3 Moonshot Lab + Research/Experiment Engine como
+control-plane prepare-only: moonshot intake, hypothesis framing, research
+experiment plan, prototype candidate, evidence scoring, uncertainty labels,
+reproducibility checklist, stage gates, approval requirements, experiment budget
+preview, stop conditions, safety/legal review, audit summary y next safe action.
+No ejecuta experimentos reales, no usa red/GitHub/web/providers reales, no
+instala dependencias, no crea procesos, no publica, no despliega, no mueve
+dinero, no lee `.env`, no usa credenciales y no finge breakthroughs,
+benchmarks, resultados, costes ni revenue. Producción, publicación, identidad,
+dinero, live deploy y credenciales son Nivel 4; ilegal, inseguro, no autorizado,
+bypass, daño, engaño o fake capability son Nivel 5.

@@ -163,6 +163,7 @@ from jarvis.mark_3_research_execution import ResearchExecutionControlPlane
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
 from jarvis.mark_3_product_revenue_factory import Mark3ProductRevenueFactory
 from jarvis.mark_3_local_routine_scheduler_personal_family_ops import Mark3RoutineOpsControlPlane
+from jarvis.mark_3_moonshot_lab_research_experiment_engine import Mark3MoonshotLabResearchExperimentEngine
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -775,6 +776,82 @@ class Mark3RoutineOpsRequest(BaseModel):
     completed: Optional[Any] = None
     execution_completed: Optional[Any] = None
     mark_complete: Optional[Any] = None
+
+
+class Mark3MoonshotLabRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    candidate_id: Optional[str] = None
+    moonshot_type: Optional[str] = None
+    moonshot: Optional[str] = None
+    research_area: Optional[str] = None
+    experiment_type: Optional[str] = None
+    experiment_name: Optional[str] = None
+    title: Optional[str] = None
+    objective: Optional[str] = None
+    goal: Optional[str] = None
+    problem: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    expected_value: Optional[str] = None
+    hypothesis: Optional[str] = None
+    research_hypothesis: Optional[str] = None
+    claim_to_test: Optional[str] = None
+    null_hypothesis: Optional[str] = None
+    assumptions: Optional[Any] = None
+    constraints: Optional[Any] = None
+    known_constraints: Optional[Any] = None
+    unknowns: Optional[Any] = None
+    scope: Optional[str] = None
+    budget_limit: Optional[Any] = None
+    max_budget: Optional[Any] = None
+    experiment_budget: Optional[Any] = None
+    currency: Optional[str] = None
+    cost_estimate: Optional[Any] = None
+    cost_estimate_explicitly_provided: bool = False
+    method: Optional[str] = None
+    protocol: Optional[str] = None
+    metrics: Optional[Any] = None
+    success_metrics: Optional[Any] = None
+    failure_criteria: Optional[Any] = None
+    falsification_criteria: Optional[Any] = None
+    evidence: Optional[Any] = None
+    evidence_required: Optional[Any] = None
+    evidence_state: str = "unknown"
+    evidence_score: Optional[Any] = None
+    evidence_score_explicitly_provided: bool = False
+    observed_metrics: Optional[Dict[str, Any]] = None
+    observed_metrics_explicitly_provided: bool = False
+    uncertainty_level: Optional[str] = None
+    reproducibility_checklist: Optional[Any] = None
+    stop_conditions: Optional[Any] = None
+    stop_conditions_met: Optional[Any] = None
+    prototype_name: Optional[str] = None
+    prototype_goal: Optional[str] = None
+    build_steps: Optional[Any] = None
+    steps: Optional[Any] = None
+    source_type: Optional[str] = None
+    source: Optional[str] = None
+    local_repo_requested: Optional[Any] = None
+    docs_requested: Optional[Any] = None
+    network_requested: Optional[Any] = None
+    web_requested: Optional[Any] = None
+    github_requested: Optional[Any] = None
+    provider_requested: Optional[Any] = None
+    ai_cli_requested: Optional[Any] = None
+    install_requested: Optional[Any] = None
+    install_dependencies: Optional[Any] = None
+    execute_experiment_requested: Optional[Any] = None
+    run_experiment_requested: Optional[Any] = None
+    private_metrics_requested: Optional[Any] = None
+    sensitive_data_requested: Optional[Any] = None
+    publish_requested: Optional[Any] = None
+    production_requested: Optional[Any] = None
+    deploy_requested: Optional[Any] = None
+    money_movement_requested: Optional[Any] = None
+    payment_requested: Optional[Any] = None
+    spend_requested: Optional[Any] = None
+    identity_requested: Optional[Any] = None
+    credentials_requested: Optional[Any] = None
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1845,6 +1922,7 @@ def create_app(
     )
     app.state.mark_3_product_revenue_factory = Mark3ProductRevenueFactory()
     app.state.mark_3_routine_ops = Mark3RoutineOpsControlPlane()
+    app.state.mark_3_moonshot_lab = Mark3MoonshotLabResearchExperimentEngine()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -2325,6 +2403,7 @@ def create_app(
             "research_execution": app.state.mark_3_research_execution_bridge.status(),
             "product_revenue_factory": app.state.mark_3_product_revenue_factory.status(),
             "routine_ops": app.state.mark_3_routine_ops.status(),
+            "moonshot_lab": app.state.mark_3_moonshot_lab.status(),
             "hermes_runtime": app.state.mark_3_hermes_runtime_bridge.status(),
             "delicate_actions_require_approval": {
                 "install": "strong_or_higher",
@@ -2391,6 +2470,36 @@ def create_app(
     @app.post("/mark-3/routine-ops/decision")
     def mark_3_routine_ops_decision(payload: Mark3RoutineOpsRequest) -> dict:
         return app.state.mark_3_routine_ops.decision(_routine_ops_values(payload))
+
+    @app.get("/mark-3/moonshot-lab/status")
+    def mark_3_moonshot_lab_status() -> dict:
+        return {
+            **app.state.mark_3_moonshot_lab.status(),
+            "audit": app.state.mark_3_moonshot_lab.audit(),
+        }
+
+    def _moonshot_lab_values(payload: Mark3MoonshotLabRequest) -> Dict[str, Any]:
+        return payload.model_dump(exclude_none=True, exclude_defaults=True)
+
+    @app.post("/mark-3/moonshot-lab/intake")
+    def mark_3_moonshot_lab_intake(payload: Mark3MoonshotLabRequest) -> dict:
+        return app.state.mark_3_moonshot_lab.intake(_moonshot_lab_values(payload))
+
+    @app.post("/mark-3/moonshot-lab/hypothesis")
+    def mark_3_moonshot_lab_hypothesis(payload: Mark3MoonshotLabRequest) -> dict:
+        return app.state.mark_3_moonshot_lab.hypothesis(_moonshot_lab_values(payload))
+
+    @app.post("/mark-3/moonshot-lab/experiment")
+    def mark_3_moonshot_lab_experiment(payload: Mark3MoonshotLabRequest) -> dict:
+        return app.state.mark_3_moonshot_lab.experiment(_moonshot_lab_values(payload))
+
+    @app.post("/mark-3/moonshot-lab/prototype")
+    def mark_3_moonshot_lab_prototype(payload: Mark3MoonshotLabRequest) -> dict:
+        return app.state.mark_3_moonshot_lab.prototype(_moonshot_lab_values(payload))
+
+    @app.post("/mark-3/moonshot-lab/decision")
+    def mark_3_moonshot_lab_decision(payload: Mark3MoonshotLabRequest) -> dict:
+        return app.state.mark_3_moonshot_lab.decision(_moonshot_lab_values(payload))
 
     @app.post("/mark-3/outcomes/record")
     def mark_3_outcomes_record(payload: Mark3OutcomeRecordRequest) -> dict:
