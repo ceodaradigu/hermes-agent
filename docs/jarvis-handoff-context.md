@@ -452,6 +452,19 @@ usa credenciales. Debe mantener `no_fake_revenue`, `no_fake_costs`,
 producción, dominios, dinero, publicación real o identidad de David quedan como
 Nivel 4 con strong approval y doble/triple confirmación.
 
+PR #139 es **Mark 3 Local Routine Scheduler + Personal/Family Ops**. Añade
+candidates prepare-only para rutinas locales supervisadas, tareas repetitivas
+low-risk, daily/weekly routine plans, personal ops, family ops autorizadas,
+authorized account assistance por official recovery, password manager checklist,
+2FA checklist, recordatorios sin scheduling real y health checks de
+repo/producto/budget sin ejecucion real. No crea scheduler real, cron jobs,
+background workers ni watchers; no envia emails, no lee Calendar/Gmail/contactos,
+no accede a cuentas reales, no guarda passwords, no salta 2FA, no usa cookies,
+tokens o session material y no finge completion. Si falta capability devuelve
+`setup_required` o `capability_not_connected_yet`; bypass, hacking, robo,
+suplantacion, password storage, 2FA bypass y cookie/token/session theft son
+Nivel 5.
+
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
 permanente. Hermes sigue siendo el motor de ejecución; JARVIS gobierna,
