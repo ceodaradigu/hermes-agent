@@ -210,8 +210,12 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
   feedback.
 - **PR #134** — Governed Execution Engine.
 - **PR #135** — Continuous Learning + Outcome Memory.
-- **PR #136** — Research Control Plane Minimal.
-- **PR #137** — Product/Revenue Factory.
+- **PR #136** — Governed Research Execution Control Plane: conecta Research
+  Radar con normalización, policy, approvals, capability contract y hooks de
+  memoria. No ejecuta research real todavía.
+- **PR #137** — Local Docs/Repo Research Adapter: conecta lectura local segura
+  para `docs/local_repo` con scope exacto, sin web/GitHub, sin threads, sin
+  comandos, sin secrets y sin crear otro Hermes.
 - **PR #138** — Local Routine Scheduler + Personal/Family Ops. Incluye
   Authorized Account Assistance mediante recuperación oficial, consentimiento,
   password manager, 2FA y prohibición de bypass.
@@ -238,13 +242,24 @@ falta adapter/capability real devuelve `setup_required` y
 `capability_not_connected_yet`; con capability conectada y approval válido puede
 pasar a candidato ejecutable sin duplicar Hermes.
 
-PR #136 recorta el siguiente paso a un control-plane mínimo para research
-execution. No crea multi-agent real todavía. Añade normalización segura, policy,
-approval requirement, capability status y `candidate_state` para requests de
-research. Todas las sources (`github`, `web`, `docs`, `local_repo`) quedan en
-`setup_required` por capability no conectada. Preview solo guarda snapshot
-redactado y `candidate` no rehidrata por `research_id`; exige request completo
-para recalcular policy y aun así no ejecuta adapters.
+PR #136 añade el Governed Research Execution Control Plane. JARVIS puede preparar
+research para crecer y mejorar Hermes, pero en esta PR no llama adapters ni
+ejecuta scans reales. Hermes/tools existentes siguen siendo el camino de
+ejecución futura; si una capability no está conectada, el control-plane no finge
+resultados y devuelve `setup_required` con `capability_not_connected_yet`.
+GitHub/web requieren approval por red externa. Docs/repo local mantienen `query`
+y `scope` separados, no leen archivos y no recorren el repo. Installs, file
+writes, commits, pushes, merges, deploys, producción, dinero y email quedan fuera
+de esta capa y requieren flows fuertes futuros si fueran legales, seguros y
+autorizados.
+
+PR #137 conecta el **Local Docs/Repo Research Adapter**. `docs/local_repo` pasan
+de `capability_not_connected_yet` a capability local `connected` solo para
+lectura de un archivo exacto permitido. El adapter rechaza multi-scope, symlinks,
+path traversal, `.env`, tokens, passwords, credentials, secrets, keys y broad
+root scans sin approval/setup. No usa red, GitHub real, providers, threads,
+comandos ni endpoints `/execute`; `/candidate` exige request completa y no
+rehidrata snapshots por `research_id`.
 
 ## Criterios De Éxito
 
@@ -289,13 +304,3 @@ PR #135 añade endpoints de memoria y research gobernado:
 Estas rutas no ejecutan internet, install, commit, deploy, dinero ni secrets.
 Preparan y auditan memoria/propuestas/candidatos para ejecución gobernada por
 Hermes cuando exista approval y capability.
-
-PR #136 añade rutas de research execution prepare-only:
-
-- `GET /mark-3/research-execution/status`
-- `POST /mark-3/research-execution/preview`
-- `POST /mark-3/research-execution/candidate`
-- `GET /mark-3/research-execution/{research_id}`
-
-No hay stop endpoint. `candidate` no lee archivos, no llama red, no usa threads,
-no invoca adapters y no convierte un snapshot redactado en request seguro.

@@ -145,11 +145,19 @@ _SENSITIVE_KEY_MARKERS: Iterable[str] = (
 )
 _SENSITIVE_TEXT_MARKERS: Iterable[str] = (
     ".env",
+    "api key",
+    "api-key",
     "api_key",
+    "apikey",
     "authorization:",
     "bearer ",
+    "credential",
+    "credentials",
     "password",
+    "private key",
+    "private-key",
     "private_key",
+    "privatekey",
     "secret",
     "token",
 )
