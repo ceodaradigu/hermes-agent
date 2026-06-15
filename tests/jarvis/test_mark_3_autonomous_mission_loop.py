@@ -490,11 +490,12 @@ def test_api_surface_and_no_dangerous_mission_loop_routes():
 
 def test_roadmap_matches_133_through_140_operating_sequence():
     titles = {item["pr_number"]: item["title"] for item in get_mark_3_macro_roadmap()["items"]}
+    assert "Mark 3 Master Planning" in titles[132]
     assert "Autonomous Mission Loop" in titles[133]
     assert "Governed Execution Engine" in titles[134]
     assert "Continuous Learning + Outcome Memory" in titles[135]
-    assert "Multi-Agent Orchestration" in titles[136]
-    assert "Product/Revenue Factory" in titles[137]
-    assert "Local Routine Scheduler + Personal/Family Ops" in titles[138]
+    assert "Governed Research Execution Control Plane" in titles[136]
+    assert "Local Docs/Repo Research Adapter" in titles[137]
+    assert "Product/Revenue Factory" in titles[138]
     assert "Moonshot Lab + Research/Experiment Engine" in titles[139]
     assert "Release Candidate + Pilot" in titles[140]

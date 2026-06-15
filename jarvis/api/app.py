@@ -161,6 +161,7 @@ from jarvis.mark_3_learning_proposals import LearningProposalEngine
 from jarvis.mark_3_growth_radar import ResearchRadar
 from jarvis.mark_3_research_execution import ResearchExecutionControlPlane
 from jarvis.mark_3_hermes_runtime_bridge import Mark3HermesRuntimeBridge
+from jarvis.mark_3_product_revenue_factory import Mark3ProductRevenueFactory
 from jarvis.codex_cli_adapter import CodexCliAdapter
 from jarvis.claude_code_adapter import ClaudeCodeAdapter
 from jarvis.claude_cowork_adapter import ClaudeCoworkAdapter
@@ -597,6 +598,109 @@ class Mark3ResearchExecutionPreviewRequest(BaseModel):
 
 class Mark3ResearchExecutionCandidateRequest(Mark3ResearchExecutionPreviewRequest):
     pass
+
+
+class Mark3ProductRevenueFactoryRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    candidate_id: Optional[str] = None
+    objective: str = ""
+    opportunity: Optional[str] = None
+    idea: Optional[str] = None
+    product_idea: Optional[str] = None
+    product_name: Optional[str] = None
+    niche: Optional[str] = None
+    market: Optional[str] = None
+    audience: Optional[str] = None
+    target_customer: Optional[str] = None
+    problem: Optional[str] = None
+    value_proposition: Optional[str] = None
+    differentiation: Optional[str] = None
+    expected_value: Optional[str] = None
+    confidence: str = "unknown"
+    scope: Optional[str] = None
+    budget_limit: Optional[Any] = None
+    max_budget: Optional[Any] = None
+    experiment_budget: Optional[Any] = None
+    assumptions: Optional[List[str]] = None
+    evidence_required: Optional[List[str]] = None
+    stop_conditions: Optional[List[str]] = None
+    mvp_scope: Optional[List[str]] = None
+    out_of_scope: Optional[List[str]] = None
+    risks: Optional[List[str]] = None
+    unknowns: Optional[List[str]] = None
+    offer_name: Optional[str] = None
+    headline: Optional[str] = None
+    promise: Optional[str] = None
+    call_to_action: Optional[str] = None
+    trust_requirements: Optional[List[str]] = None
+    pricing_hypothesis: Optional[str] = None
+    pricing_tiers: Optional[List[str]] = None
+    price_amount: Optional[Any] = None
+    monthly_price: Optional[Any] = None
+    currency: str = "unknown"
+    billing_interval: str = "unknown"
+    projected_revenue: Optional[Any] = None
+    revenue_projection: Optional[Any] = None
+    confirmed_revenue: Optional[Any] = None
+    confirmed_revenue_explicitly_provided: bool = False
+    gross_revenue: Optional[Any] = None
+    gross_revenue_explicitly_provided: bool = False
+    expenses: Optional[Any] = None
+    expenses_explicitly_provided: bool = False
+    net_revenue: Optional[Any] = None
+    net_revenue_explicitly_provided: bool = False
+    expected_customers: Optional[Any] = None
+    projected_customers: Optional[Any] = None
+    acquisition_spend: Optional[Any] = None
+    acquired_customers: Optional[Any] = None
+    monthly_revenue_per_customer: Optional[Any] = None
+    gross_margin_rate: Optional[Any] = None
+    monthly_churn_rate: Optional[Any] = None
+    revenue_model: Optional[str] = None
+    business_model: Optional[str] = None
+    monetization_path: Optional[str] = None
+    pricing_basis: Optional[str] = None
+    experiment_name: Optional[str] = None
+    hypothesis: Optional[str] = None
+    success_metrics: Optional[List[str]] = None
+    pricing_variants: Optional[List[str]] = None
+    metrics: Optional[List[str]] = None
+    baseline: Optional[Any] = None
+    baseline_explicitly_provided: bool = False
+    instrumentation: Optional[List[str]] = None
+    attribution_assumptions: Optional[List[str]] = None
+    observed_metrics: Optional[Dict[str, Any]] = None
+    observed_metrics_explicitly_provided: bool = False
+    evidence: Optional[List[str]] = None
+    evidence_explicitly_provided: bool = False
+    evidence_state: str = "unknown"
+    stop_conditions_met: bool = False
+    success_metrics_met: bool = False
+    opportunity_score: Optional[Any] = None
+    opportunity_score_explicitly_provided: bool = False
+    willingness_to_pay: Optional[Any] = None
+    willingness_to_pay_explicitly_provided: bool = False
+    validation_questions: Optional[List[str]] = None
+    checkout_requested: bool = False
+    stripe_live_requested: bool = False
+    payment_requested: bool = False
+    money_movement_requested: bool = False
+    spend_requested: bool = False
+    budget_spend_requested: bool = False
+    deploy_requested: bool = False
+    production_requested: bool = False
+    domain_requested: bool = False
+    publish_requested: bool = False
+    email_requested: bool = False
+    send_requested: bool = False
+    identity_requested: bool = False
+    web_requested: bool = False
+    github_requested: bool = False
+    provider_requested: bool = False
+    external_email_requested: bool = False
+    external_deploy_requested: bool = False
+    secrets_requested: bool = False
 
 
 class ApprovalExecutionDecisionPreviewRequest(BaseModel):
@@ -1665,6 +1769,7 @@ def create_app(
         learning_proposals=app.state.mark_3_learning_proposals,
         research_radar=app.state.mark_3_research_radar,
     )
+    app.state.mark_3_product_revenue_factory = Mark3ProductRevenueFactory()
     app.state.approval_execution_semantics = GlobalApprovalExecutionSemantics()
     app.state.monetization_engine = MonetizationEngine(app.state.approval_execution_semantics)
     app.state.adaptive_saas_builder = AdaptiveSaaSBuilder(app.state.approval_execution_semantics)
@@ -2143,6 +2248,7 @@ def create_app(
             "learning_proposals": app.state.mark_3_learning_proposals.status(),
             "research_radar": app.state.mark_3_research_radar.status(),
             "research_execution": app.state.mark_3_research_execution_bridge.status(),
+            "product_revenue_factory": app.state.mark_3_product_revenue_factory.status(),
             "hermes_runtime": app.state.mark_3_hermes_runtime_bridge.status(),
             "delicate_actions_require_approval": {
                 "install": "strong_or_higher",
@@ -2153,6 +2259,32 @@ def create_app(
                 "secrets": "blocked",
             },
         }
+
+    @app.get("/mark-3/product-revenue/status")
+    def mark_3_product_revenue_status() -> dict:
+        return {
+            **app.state.mark_3_product_revenue_factory.status(),
+            "audit": app.state.mark_3_product_revenue_factory.audit(),
+        }
+
+    def _product_revenue_values(payload: Mark3ProductRevenueFactoryRequest) -> Dict[str, Any]:
+        return payload.model_dump(exclude_none=True, exclude_defaults=True)
+
+    @app.post("/mark-3/product-revenue/opportunity")
+    def mark_3_product_revenue_opportunity(payload: Mark3ProductRevenueFactoryRequest) -> dict:
+        return app.state.mark_3_product_revenue_factory.opportunity(_product_revenue_values(payload))
+
+    @app.post("/mark-3/product-revenue/blueprint")
+    def mark_3_product_revenue_blueprint(payload: Mark3ProductRevenueFactoryRequest) -> dict:
+        return app.state.mark_3_product_revenue_factory.blueprint(_product_revenue_values(payload))
+
+    @app.post("/mark-3/product-revenue/experiment")
+    def mark_3_product_revenue_experiment(payload: Mark3ProductRevenueFactoryRequest) -> dict:
+        return app.state.mark_3_product_revenue_factory.experiment(_product_revenue_values(payload))
+
+    @app.post("/mark-3/product-revenue/decision")
+    def mark_3_product_revenue_decision(payload: Mark3ProductRevenueFactoryRequest) -> dict:
+        return app.state.mark_3_product_revenue_factory.decision(_product_revenue_values(payload))
 
     @app.post("/mark-3/outcomes/record")
     def mark_3_outcomes_record(payload: Mark3OutcomeRecordRequest) -> dict:

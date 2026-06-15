@@ -413,7 +413,7 @@ denegado. Wake phrase no es permiso y tono/contexto solo informan intención
 low-risk no sensible.
 
 El roadmap Mark 3 usa macro-PRs #132-#140 para Mission Loop, Continuous
-Learning, Multi-Agent Orchestration, Revenue Product Factory, Local Routine
+Learning, Multi-Agent Orchestration, Product/Revenue Factory, Local Routine
 Scheduler, authorized account recovery, Moonshot Lab y RC pilot. JARVIS
 permanece en el ordenador actual de David; no Mac mini ni VPS hasta revenue
 suficiente o necesidad técnica demostrada. Ver
@@ -438,6 +438,19 @@ credentials, secrets, keys y broad root scans sin approval/setup. No usa web,
 GitHub real, providers, threads, comandos, installs, commit/push/merge/PR ni
 deploy. No añade endpoint research `/execute`; `/candidate` exige request
 completa y no rehidrata snapshots redactados por `research_id`.
+
+PR #138 es **Mark 3 Product/Revenue Factory**. Añade candidates prepare-only
+para oportunidad, validación de nicho, blueprint, oferta/landing, pricing, unit
+economics, revenue model, experiment plan, measurement plan y decisión
+kill/continue. No publica, no despliega, no crea checkout, no llama Stripe, no
+usa web/GitHub real, no envía emails, no compra dominios, no mueve dinero y no
+usa credenciales. Debe mantener `no_fake_revenue`, `no_fake_costs`,
+`candidate_is_not_publication`, `candidate_is_not_payment`,
+`candidate_is_not_deploy` y `approval_is_not_execution`; siempre separa
+`projected_revenue`, `confirmed_revenue`, `gross_revenue`, `expenses` y
+`net_revenue`, usando `unknown` cuando falte evidencia. Stripe live,
+producción, dominios, dinero, publicación real o identidad de David quedan como
+Nivel 4 con strong approval y doble/triple confirmación.
 
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
