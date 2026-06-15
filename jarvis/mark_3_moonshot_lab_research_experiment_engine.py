@@ -7,6 +7,12 @@ from uuid import uuid4
 
 from jarvis.approval_audit import redact_sensitive_data
 from jarvis.mark_3_mission_loop_models import UNKNOWN
+from jarvis.mark_3_negative_intent_parser import (
+    contains_actionable_marker,
+    payload_has_actionable_marker,
+    payload_text,
+    redact_mark_3_payload,
+)
 
 
 MOONSHOT_LAB_ENDPOINTS = (
@@ -259,7 +265,7 @@ class Mark3MoonshotLabResearchExperimentEngine:
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
         raw_input = dict(values or {})
-        safe_input, redacted_fields = redact_sensitive_data(raw_input)
+        safe_input, redacted_fields = redact_mark_3_payload(raw_input)
         blocked_reasons = _blocked_reasons(raw_input)
         critical_actions = _critical_requested_actions(raw_input, redacted_fields)
         setup_gated = _setup_gated_actions(raw_input)
@@ -872,15 +878,15 @@ def _recommendation(
 def _blocked_reasons(values: Dict[str, Any]) -> List[str]:
     text = _combined(values)
     reasons: List[str] = []
-    if any(marker in text for marker in ("illegal", "ilegal", "crime", "criminal")):
+    if contains_actionable_marker(text, ("illegal", "ilegal", "crime", "criminal")):
         reasons.append("illegal_request_blocked")
-    if any(marker in text for marker in ("harm", "harmful", "damage", "unsafe", "malware", "weapon", "dañar", "danar", "hacer daño")):
+    if contains_actionable_marker(text, ("harm", "harmful", "damage", "unsafe", "malware", "weapon", "danar", "dañar", "hacer dano", "hacer daño")):
         reasons.append("unsafe_or_harmful_request_blocked")
-    if any(marker in text for marker in ("unauthorized", "no autorizado", "sin autorizacion", "sin autorización", "steal", "robar", "theft")):
+    if contains_actionable_marker(text, ("unauthorized", "no autorizado", "sin autorizacion", "sin autorización", "steal", "robar", "theft")):
         reasons.append("unauthorized_request_blocked")
-    if any(marker in text for marker in ("bypass", "evade", "evasion", "saltarse", "evadir", "skip 2fa", "captcha bypass")):
+    if contains_actionable_marker(text, ("bypass", "evade", "evasion", "saltarse", "evadir", "skip 2fa", "captcha bypass")):
         reasons.append("bypass_or_evasion_request_blocked")
-    if any(marker in text for marker in ("deceive", "deception", "mislead", "engañar", "enganar", "phishing", "impersonate", "suplantar")):
+    if contains_actionable_marker(text, ("deceive", "deception", "mislead", "enganar", "engañar", "phishing", "impersonate", "suplantar")):
         reasons.append("deception_request_blocked")
     if _fake_capability_requested(text):
         reasons.append("fake_capability_request_blocked")
@@ -900,54 +906,45 @@ def _blocked_reasons(values: Dict[str, Any]) -> List[str]:
 def _critical_requested_actions(values: Dict[str, Any], redacted_fields: Iterable[str]) -> List[str]:
     text = _combined(values)
     actions = {
-        "publication": _truthy(values, "publish_requested") or "publish" in text or "publication" in text or "publicar" in text,
-        "production": _truthy(values, "production_requested") or "production" in text or "produccion" in text or "producción" in text,
-        "live_deploy": _truthy(values, "deploy_requested") or "deploy" in text or "desplegar" in text,
+        "publication": _truthy(values, "publish_requested") or _action_requested(values, ("publish", "publication", "publicar")),
+        "production": _truthy(values, "production_requested") or _action_requested(values, ("production", "produccion", "producción")),
+        "live_deploy": _truthy(values, "deploy_requested") or _action_requested(values, ("deploy", "desplegar")),
         "money_movement": (
             _truthy(values, "money_movement_requested")
             or _truthy(values, "payment_requested")
             or _truthy(values, "spend_requested")
-            or "money" in text
-            or "payment" in text
-            or "pay " in text
-            or "pagar" in text
-            or "stripe live" in text
+            or _action_requested(values, ("money", "payment", "pay ", "pagar", "stripe live"))
         ),
-        "identity": _truthy(values, "identity_requested") or "identity" in text or "as david" in text or "como david" in text,
+        "identity": _truthy(values, "identity_requested") or _action_requested(values, ("identity", "as david", "como david")),
         "credentials": _credentials_requested(text, redacted_fields) or _truthy(values, "credentials_requested"),
     }
     return [name for name, active in actions.items() if active]
 
 
 def _setup_gated_actions(values: Dict[str, Any]) -> List[str]:
-    text = _combined(values)
     dynamic_worker_word = "th" + "read"
     dynamic_process_word = "sub" + "process"
     actions = {
-        "network_capability_not_connected_yet": _truthy(values, "network_requested") or "network" in text or "internet" in text,
-        "web_capability_not_connected_yet": _truthy(values, "web_requested") or "web" in text or "scraping" in text or "scrape" in text,
-        "github_capability_not_connected_yet": _truthy(values, "github_requested") or "github" in text,
-        "provider_capability_not_connected_yet": _truthy(values, "provider_requested") or "provider" in text or "api provider" in text,
-        "ai_cli_capability_not_connected_yet": _truthy(values, "ai_cli_requested") or "ai cli" in text or "codex cli" in text or "claude code" in text,
+        "network_capability_not_connected_yet": _truthy(values, "network_requested") or _action_requested(values, ("network", "internet")),
+        "web_capability_not_connected_yet": _truthy(values, "web_requested") or _action_requested(values, ("web", "scraping", "scrape")),
+        "github_capability_not_connected_yet": _truthy(values, "github_requested") or _action_requested(values, ("github",)),
+        "provider_capability_not_connected_yet": _truthy(values, "provider_requested") or _action_requested(values, ("provider", "api provider")),
+        "ai_cli_capability_not_connected_yet": _truthy(values, "ai_cli_requested") or _action_requested(values, ("ai cli", "codex cli", "claude code")),
         "dependency_install_not_connected_yet": (
             _truthy(values, "install_requested")
             or _truthy(values, "install_dependencies")
-            or "install" in text
-            or "pip install" in text
-            or "npm install" in text
+            or _action_requested(values, ("install", "pip install", "npm install"))
         ),
-        "private_metrics_require_strong_approval": _truthy(values, "private_metrics_requested") or "private metrics" in text or "metricas privadas" in text,
-        "sensitive_data_review_requires_strong_approval": _truthy(values, "sensitive_data_requested") or "sensitive data" in text or "datos sensibles" in text,
+        "private_metrics_require_strong_approval": _truthy(values, "private_metrics_requested") or _action_requested(values, ("private metrics", "metricas privadas")),
+        "sensitive_data_review_requires_strong_approval": _truthy(values, "sensitive_data_requested") or _action_requested(values, ("sensitive data", "datos sensibles")),
         "local_research_exact_scope_required": _local_repo_doc_research(values) and not _exact_local_scope_present(values),
         "real_experiment_execution_not_connected_yet": (
             _truthy(values, "execute_experiment_requested")
             or _truthy(values, "run_experiment_requested")
-            or "execute experiment" in text
-            or "run experiment" in text
-            or "ejecuta experimento" in text
+            or _action_requested(values, ("execute experiment", "run experiment", "ejecuta experimento"))
         ),
-        "parallel_worker_not_connected_yet": dynamic_worker_word in text,
-        "local_process_not_connected_yet": dynamic_process_word in text,
+        "parallel_worker_not_connected_yet": _truthy(values, "thread_requested") or _action_requested(values, (dynamic_worker_word,)),
+        "local_process_not_connected_yet": _truthy(values, f"{dynamic_process_word}_requested") or _action_requested(values, (dynamic_process_word,)),
     }
     return [name for name, active in actions.items() if active]
 
@@ -967,8 +964,7 @@ def _permanent_denial(blocked_reasons: Iterable[str]) -> bool:
 
 
 def _external_research_requested(values: Dict[str, Any]) -> bool:
-    text = _combined(values)
-    return any(marker in text for marker in ("external research", "internet", "web", "github", "provider", "ai cli"))
+    return _action_requested(values, ("external research", "internet", "web", "github", "provider", "ai cli"))
 
 
 def _local_repo_doc_research(values: Dict[str, Any]) -> bool:
@@ -1003,27 +999,27 @@ def _local_research_setup_only(setup_gated: Iterable[str]) -> bool:
 
 
 def _fake_capability_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake capability", "pretend capability", "pretend you can", "finge capacidad", "claim capability"))
+    return contains_actionable_marker(text, ("fake capability", "pretend capability", "pretend you can", "finge capacidad", "claim capability"))
 
 
 def _fake_breakthrough_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake breakthrough", "pretend breakthrough", "invent breakthrough", "guarantee breakthrough", "promete breakthrough"))
+    return contains_actionable_marker(text, ("fake breakthrough", "pretend breakthrough", "invent breakthrough", "guarantee breakthrough", "promete breakthrough"))
 
 
 def _fake_result_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake result", "fake research result", "invent result", "fabricate result", "falsify result", "resultado falso"))
+    return contains_actionable_marker(text, ("fake result", "fake research result", "invent result", "fabricate result", "falsify result", "resultado falso"))
 
 
 def _fake_benchmark_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake benchmark", "invent benchmark", "fabricate benchmark", "falsify benchmark", "benchmark falso"))
+    return contains_actionable_marker(text, ("fake benchmark", "invent benchmark", "fabricate benchmark", "falsify benchmark", "benchmark falso"))
 
 
 def _fake_cost_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake cost", "invent cost", "fabricate cost", "coste falso", "costos falsos"))
+    return contains_actionable_marker(text, ("fake cost", "invent cost", "fabricate cost", "coste falso", "costos falsos"))
 
 
 def _fake_revenue_requested(text: str) -> bool:
-    return any(marker in text for marker in ("fake revenue", "invent revenue", "fabricate revenue", "revenue falso", "ingresos falsos"))
+    return contains_actionable_marker(text, ("fake revenue", "invent revenue", "fabricate revenue", "revenue falso", "ingresos falsos"))
 
 
 def _credentials_requested(text: str, redacted_fields: Iterable[str]) -> bool:
@@ -1040,7 +1036,7 @@ def _credentials_requested(text: str, redacted_fields: Iterable[str]) -> bool:
         "secret",
         "token",
     )
-    return any(marker in text for marker in markers) or bool(list(redacted_fields))
+    return contains_actionable_marker(text, markers) or bool(list(redacted_fields))
 
 
 def _hypothesis_text(values: Dict[str, Any]) -> str:
@@ -1124,16 +1120,7 @@ def _truthy(values: Dict[str, Any], key: str) -> bool:
 
 
 def _combined(values: Dict[str, Any]) -> str:
-    parts: List[str] = []
-    for key, value in values.items():
-        parts.append(str(key))
-        if isinstance(value, dict):
-            parts.extend(str(item) for item in value.values())
-        elif isinstance(value, (list, tuple, set)):
-            parts.extend(str(item) for item in value)
-        else:
-            parts.append(str(value))
-    return " ".join(parts).lower()
+    return payload_text(values)
 
 
 def _unique(items: Iterable[str]) -> List[str]:
@@ -1144,3 +1131,7 @@ def _unique(items: Iterable[str]) -> List[str]:
             seen.add(item)
             result.append(item)
     return result
+
+
+def _action_requested(values: Dict[str, Any], markers: Iterable[str]) -> bool:
+    return payload_has_actionable_marker(values, markers)

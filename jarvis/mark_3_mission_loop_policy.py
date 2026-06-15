@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List
 
+from jarvis.mark_3_negative_intent_parser import contains_actionable_marker
 from jarvis.mark_3_mission_loop_models import MissionClassification, MissionIntake
 
 
@@ -170,8 +171,7 @@ def _classification_text_from_values(values: Dict[str, Any]) -> str:
 
 
 def _contains_any(text: str, markers: Iterable[str]) -> bool:
-    lowered = text.lower()
-    return any(marker in lowered for marker in markers)
+    return contains_actionable_marker(text, markers)
 
 
 def _combined(value: Any) -> str:

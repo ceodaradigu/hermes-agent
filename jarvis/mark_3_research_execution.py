@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
-from jarvis.approval_audit import redact_sensitive_data
 from jarvis.approval_hardening import (
     ApprovalHardeningService,
     ApprovalKind,
@@ -16,6 +15,11 @@ from jarvis.approval_hardening import (
 from jarvis.mark_3_learning_proposals import LearningProposalEngine
 from jarvis.mark_3_local_research_adapter import LOCAL_RESEARCH_SOURCE_TYPES, LocalResearchReadAdapter
 from jarvis.mark_3_mission_loop_models import UNKNOWN
+from jarvis.mark_3_negative_intent_parser import (
+    contains_actionable_marker,
+    payload_text,
+    redact_mark_3_payload,
+)
 from jarvis.mark_3_outcome_memory import OutcomeMemoryStore
 
 
@@ -635,7 +639,7 @@ class ResearchExecutionControlPlane:
 
 def normalize_research_request(values: Dict[str, Any]) -> NormalizedResearchRequest:
     raw = dict(values or {})
-    safe, redacted = redact_sensitive_data(raw)
+    safe, redacted = redact_mark_3_payload(raw)
     source_type = _source_type(safe)
     query = _query(safe)
     scope = _scope(safe)
@@ -761,7 +765,7 @@ def _risk_level(
         return declared
     if _secret_access_requested(user_text):
         return "critical"
-    if any(marker in user_text for marker in ("money", "payment", "stripe live", "deploy", "production")):
+    if _text_has_action(user_text, ("money", "payment", "stripe live", "deploy", "production")):
         return "critical"
     if _dangerous_action_requested(user_text):
         return "high"
@@ -777,9 +781,9 @@ def _required_approval_level(
     broad_scope: bool,
     user_text: str,
 ) -> str:
-    if any(marker in user_text for marker in ("money", "payment", "stripe live", "deploy", "production")):
+    if _text_has_action(user_text, ("money", "payment", "stripe live", "deploy", "production")):
         return "triple"
-    if any(marker in user_text for marker in ("install", "commit", "push", "merge")):
+    if _text_has_action(user_text, ("install", "commit", "push", "merge")):
         return "double"
     if risk_level == "critical":
         return "double"
@@ -897,19 +901,19 @@ def _user_supplied_text(values: Dict[str, Any]) -> str:
             "request",
         )
     }
-    return _combined(user_fields)
+    return payload_text(user_fields)
 
 
 def _illegal_requested(text: str) -> bool:
-    return any(marker in text for marker in _ILLEGAL_MARKERS)
+    return _text_has_action(text, _ILLEGAL_MARKERS)
 
 
 def _secret_access_requested(text: str) -> bool:
-    return any(marker in text for marker in _SECRET_MARKERS)
+    return _text_has_action(text, _SECRET_MARKERS)
 
 
 def _dangerous_action_requested(text: str) -> bool:
-    return any(marker in text for marker in _DANGEROUS_ACTION_MARKERS)
+    return _text_has_action(text, _DANGEROUS_ACTION_MARKERS)
 
 
 def _authorized(values: Dict[str, Any]) -> bool:
@@ -926,7 +930,7 @@ def _authorization_flag(value: Any) -> bool:
 
 
 def _no_auto_actions(text: str) -> List[str]:
-    return _unique(reason for marker, reason in _NO_AUTO_ACTIONS.items() if marker in text)
+    return _unique(reason for marker, reason in _NO_AUTO_ACTIONS.items() if contains_actionable_marker(text, (marker,)))
 
 
 def _risk_signals(
@@ -1042,15 +1046,15 @@ def _clean_text(value: Any) -> str:
 
 
 def _combined(value: Any) -> str:
-    if isinstance(value, dict):
-        return " ".join(_combined(item) for item in value.values()).lower()
-    if isinstance(value, (list, tuple, set)):
-        return " ".join(_combined(item) for item in value).lower()
-    return _clean_text(value).lower()
+    return payload_text(value)
 
 
 def _unique(values: Iterable[str]) -> List[str]:
     return list(dict.fromkeys(item for item in values if item))
+
+
+def _text_has_action(text: str, markers: Iterable[str]) -> bool:
+    return contains_actionable_marker(text, markers)
 
 
 _ILLEGAL_MARKERS = (

@@ -499,6 +499,16 @@ sin cuentas reales y sin credenciales. Despues de Mark 3 RC, el siguiente paso
 es ejecutar ese piloto local controlado, endurecer findings y empezar Mark 4
 solo si el piloto lo justifica; no crear micro-PR explosion.
 
+PR #142 endurece findings reales de Pilot 0 / Pilot 0B. Añade parsing central
+de intención negativa/defensiva para que Mission Loop, Product/Revenue,
+Routine Ops, Moonshot Lab y Research Execution no bloqueen por palabras
+sensibles cuando aparecen como `false`, límite, stop condition, prohibited tool
+o checklist defensivo. Mantiene bloqueos para secretos, `.env`, tokens,
+password storage, bypass, acceso no autorizado, fake revenue/costs/results,
+fake capability, producción, dinero, deploy, email real, cuentas reales,
+providers, installs, subprocess, threads y red no conectada. No añade endpoints
+de ejecución ni activa capacidades reales.
+
 Regla operativa vigente: JARVIS sigue con restrictions as approval gates, no
 permanent bans. Lo ilegal, inseguro, no autorizado o engañoso sí es denegación
 permanente. Hermes sigue siendo el motor de ejecución; JARVIS gobierna,

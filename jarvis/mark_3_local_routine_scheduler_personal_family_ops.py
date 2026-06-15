@@ -7,6 +7,12 @@ from uuid import uuid4
 
 from jarvis.approval_audit import redact_sensitive_data
 from jarvis.mark_3_mission_loop_models import UNKNOWN
+from jarvis.mark_3_negative_intent_parser import (
+    contains_actionable_marker,
+    payload_has_actionable_marker,
+    payload_text,
+    redact_mark_3_payload,
+)
 
 
 ROUTINE_OPS_ENDPOINTS = (
@@ -216,7 +222,7 @@ class Mark3RoutineOpsControlPlane:
         values: Dict[str, Any],
     ) -> Dict[str, Any]:
         raw_input = dict(values or {})
-        safe_input, redacted_fields = redact_sensitive_data(raw_input)
+        safe_input, redacted_fields = redact_mark_3_payload(raw_input)
         blocked_reasons = _blocked_reasons(raw_input, redacted_fields)
         missing_requirements = _missing_requirements(candidate_type, raw_input)
         setup_gated = _setup_gated_actions(raw_input)
@@ -635,26 +641,23 @@ def _blocked_reasons(values: Dict[str, Any], redacted_fields: Iterable[str]) -> 
     if redacted_fields:
         reasons.append("secret_or_credential_input_redacted")
     if _truthy(values, "store_password") or _truthy(values, "password_storage_requested") or any(
-        marker in text for marker in ("store password", "save password", "guardar contrasena")
+        contains_actionable_marker(text, (marker,)) for marker in ("store password", "save password", "guardar contrasena")
     ):
         reasons.append("password_storage_blocked")
     if _two_fa_bypass_requested(text):
         reasons.append("two_fa_bypass_blocked")
     if _cookie_token_session_requested(text) or any("cookie" in field or "token" in field for field in redacted_fields):
         reasons.append("cookie_token_or_session_material_blocked")
-    if any(marker in text for marker in ("hack account", "hackea", "unauthorized access", "acceso no autorizado", "steal account", "robar cuenta")):
+    if contains_actionable_marker(text, ("hack account", "hackea", "unauthorized access", "acceso no autorizado", "steal account", "robar cuenta")):
         reasons.append("illegal_or_unauthorized_access_request_blocked")
-    if any(marker in text for marker in ("impersonate", "suplantar", "phishing", "social engineer", "ingenieria social")):
+    if contains_actionable_marker(text, ("impersonate", "suplantar", "phishing", "social engineer", "ingenieria social")):
         reasons.append("impersonation_or_social_engineering_blocked")
     if ("authorized" in values and not _truthy(values, "authorized")) or (
         "authorization_valid" in values and not _truthy(values, "authorization_valid")
     ):
         reasons.append("illegal_or_unauthorized_access_request_blocked")
     if (
-        ".env" in text
-        or "api key" in text
-        or "private key" in text
-        or "recovery code" in text
+        contains_actionable_marker(text, (".env", "api key", "private key", "recovery code", "credential", "credentials", "secret", "token"))
         or any(_sensitive_field_marker(field) for field in redacted_fields)
     ):
         reasons.append("credentials_or_env_access_blocked")
@@ -664,50 +667,48 @@ def _blocked_reasons(values: Dict[str, Any], redacted_fields: Iterable[str]) -> 
 
 
 def _setup_gated_actions(values: Dict[str, Any]) -> List[str]:
-    text = _combined(values)
     checks = {
         "real_scheduler_not_supported_in_this_pr": (
             _truthy(values, "schedule_real_requested")
             or _truthy(values, "create_cron")
             or _truthy(values, "background_worker_requested")
             or _truthy(values, "watcher_requested")
-            or any(marker in text for marker in ("create cron", "cron job", "start worker", "background worker", "watcher", "system timer"))
+            or _action_requested(values, ("create cron", "cron job", "start worker", "background worker", "watcher", "system timer"))
         ),
         "email_capability_not_connected_yet": (
             _truthy(values, "email_requested")
             or _truthy(values, "send_email")
-            or any(marker in text for marker in ("send email", "send recovery email", "email real", "gmail send"))
+            or _action_requested(values, ("send email", "send recovery email", "email real", "gmail send"))
         ),
         "calendar_capability_not_connected_yet": (
             _truthy(values, "calendar_requested")
             or _truthy(values, "calendar_access_requested")
-            or any(marker in text for marker in ("calendar", "calendario"))
+            or _action_requested(values, ("calendar", "calendario"))
         ),
         "gmail_capability_not_connected_yet": (
             _truthy(values, "gmail_requested")
             or _truthy(values, "gmail_access_requested")
-            or "gmail" in text
+            or _action_requested(values, ("gmail",))
         ),
         "contacts_capability_not_connected_yet": (
             _truthy(values, "contacts_requested")
             or _truthy(values, "contacts_access_requested")
-            or "contacts" in text
-            or "contactos" in text
+            or _action_requested(values, ("contacts", "contactos"))
         ),
         "external_account_access_not_connected_yet": (
             _truthy(values, "account_access_requested")
             or _truthy(values, "login_requested")
-            or any(marker in text for marker in ("log in", "login", "connect account", "access account", "entrar en la cuenta"))
+            or _action_requested(values, ("log in", "login", "connect account", "access account", "entrar en la cuenta"))
         ),
         "real_account_recovery_action": (
             _truthy(values, "perform_recovery_requested")
             or _truthy(values, "reset_password_now")
-            or any(marker in text for marker in ("reset password now", "recover account now", "send recovery code", "change password for me"))
+            or _action_requested(values, ("reset password now", "recover account now", "send recovery code", "change password for me"))
         ),
         "money_or_production_requires_level_4": (
             _truthy(values, "money_requested")
             or _truthy(values, "production_requested")
-            or any(marker in text for marker in ("move money", "pay bill", "production", "deploy"))
+            or _action_requested(values, ("move money", "pay bill", "production", "deploy"))
         ),
     }
     return [name for name, active in checks.items() if active]
@@ -733,12 +734,11 @@ def _missing_requirements(candidate_type: str, values: Dict[str, Any]) -> List[s
 
 
 def _critical_requested(values: Dict[str, Any]) -> bool:
-    text = _combined(values)
     return bool(
         _truthy(values, "credentials_requested")
         or _truthy(values, "money_requested")
         or _truthy(values, "production_requested")
-        or any(marker in text for marker in ("credential", "credentials", "money", "production", "deploy", "payment", "password reset now"))
+        or _action_requested(values, ("credential", "credentials", "money", "production", "deploy", "payment", "password reset now"))
     )
 
 
@@ -892,9 +892,9 @@ def _consent_recorded(values: Dict[str, Any]) -> bool:
 
 
 def _two_fa_bypass_requested(text: str) -> bool:
-    return any(
-        marker in text
-        for marker in (
+    return contains_actionable_marker(
+        text,
+        (
             "bypass 2fa",
             "bypass mfa",
             "skip 2fa",
@@ -903,14 +903,14 @@ def _two_fa_bypass_requested(text: str) -> bool:
             "saltarse 2fa",
             "omitir 2fa",
             "evitar 2fa",
-        )
+        ),
     )
 
 
 def _cookie_token_session_requested(text: str) -> bool:
-    return any(
-        marker in text
-        for marker in (
+    return contains_actionable_marker(
+        text,
+        (
             "steal cookie",
             "steal token",
             "use cookie",
@@ -922,7 +922,7 @@ def _cookie_token_session_requested(text: str) -> bool:
             "robar token",
             "usar cookie",
             "usar cookies",
-        )
+        ),
     )
 
 
@@ -931,7 +931,7 @@ def _fake_completion_requested(values: Dict[str, Any], text: str) -> bool:
         _truthy(values, "completed")
         or _truthy(values, "execution_completed")
         or _truthy(values, "mark_complete")
-        or any(marker in text for marker in ("fake completion", "pretend completed", "mark as completed", "report as completed", "finge que esta completado"))
+        or contains_actionable_marker(text, ("fake completion", "pretend completed", "mark as completed", "report as completed", "finge que esta completado"))
     )
 
 
@@ -988,7 +988,7 @@ def _truthy(values: Dict[str, Any], key: str) -> bool:
 
 
 def _combined(values: Dict[str, Any]) -> str:
-    return " ".join(_flatten_text(values)).lower()
+    return payload_text(values)
 
 
 def _flatten_text(value: Any) -> List[str]:
@@ -1011,3 +1011,7 @@ def _text(value: Any) -> str:
 
 def _unique(items: Iterable[str]) -> List[str]:
     return list(dict.fromkeys(item for item in items if item))
+
+
+def _action_requested(values: Dict[str, Any], markers: Iterable[str]) -> bool:
+    return payload_has_actionable_marker(values, markers)

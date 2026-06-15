@@ -102,6 +102,11 @@ Piezas relevantes ya documentadas:
 - Mark 3 Local Routine Scheduler + Personal/Family Ops de PR #139: prepara candidates para rutinas locales, personal/family ops autorizadas, authorized account assistance por official recovery, password manager checklist, 2FA checklist y health checks sin scheduler real, email, calendar, Gmail, contacts, account access, password storage, 2FA bypass, cookie/token/session use ni fake completion.
 - Mark 3 Moonshot Lab + Research/Experiment Engine de PR #140: prepara moonshot intake, hypothesis framing, research experiment plans, prototype candidates, evidence scoring, uncertainty labels, reproducibility checklist, stage gates, safety/legal review y kill/continue/iterate decisions sin ejecutar experimentos, red, GitHub/web real, providers, installs, procesos, publicación, deploy, dinero, `.env`, credenciales ni fake breakthrough/benchmark/result.
 - Mark 3 Release Candidate + Pilot de PR #141: consolida status RC, capability/readiness matrices, dangerous-route audit, approval-path audit, E2E prepare-only/gated smoke, pilot plan, runbook, known limitations y next steps. Mark 3 queda listo como RC controlado, no como autonomia libre. El primer piloto queda preparado, no ejecutado.
+- Mark 3 Pilot Findings Hardening de PR #142: corrige overblocking de
+  payloads defensivos/negativos del piloto mediante parsing central de
+  intención accionable vs límites, flags `false`, stop conditions y prohibited
+  tools. No añade endpoints ni habilita red, providers, scheduler, email,
+  dinero, deploy, subprocess, threads, installs, cuentas reales o credenciales.
 
 Límites actuales:
 
@@ -658,3 +663,17 @@ sin red externa, sin email, sin cuentas reales y sin credenciales. La siguiente
 recomendación es ejecutar ese piloto local controlado, endurecer findings y
 abrir Mark 4 solo si el piloto lo justifica con evidencia; no micro-PR
 explosion.
+
+## Mark 3 Pilot Findings Hardening
+
+PR #142 corrige el bug funcional descubierto por Pilot 0: las superficies Mark
+3 no deben elevar a Nivel 5 o bloquear solo porque una palabra sensible aparece
+en una negación, límite, stop condition, prohibited-tool list, checklist
+defensivo o flag booleano explícito `false`.
+
+El hardening aplica a Mission Loop, Product/Revenue Factory, Routine Ops,
+Moonshot Lab y Research Execution. Solicitudes reales de secretos, `.env`,
+tokens, password storage, bypass, acceso no autorizado, fake revenue/costs,
+fake results, fake capabilities, producción, dinero, deploy, email real,
+cuentas reales o capacidades no conectadas siguen bloqueadas o gated según el
+modelo Mark 3.
