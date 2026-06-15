@@ -152,6 +152,15 @@ Revenue y costes solo cuentan con evidencia real. **No fake costs** y
 también. Un candidate no equivale a publicación,
 deploy, cobro o ingreso. Esas acciones pasan por sus gates de Nivel 3-4.
 
+PR #138 materializa esta factoría como control-plane prepare/candidate. Debe
+separar siempre `projected_revenue`, `confirmed_revenue`, `gross_revenue`,
+`expenses` y `net_revenue`; cuando falte evidencia devuelve `unknown`. Mantiene
+invariantes `candidate_is_not_publication`, `candidate_is_not_payment`,
+`candidate_is_not_deploy` y `approval_is_not_execution`. Stripe live,
+producción, dominios, dinero, publicación real, email real o identidad de David
+quedan como Nivel 4 con strong approval y doble/triple confirmación, pero esta
+PR no ejecuta ninguna de esas acciones.
+
 ## Routine Scheduler Y Supervised Autonomy
 
 Mark 3 planifica rutinas locales, tareas repetitivas, reports y health checks de
@@ -216,9 +225,10 @@ autorizadas pertenecen a Nivel 4 y pueden avanzar con controles válidos.
 - **PR #137** — Local Docs/Repo Research Adapter: conecta lectura local segura
   para `docs/local_repo` con scope exacto, sin web/GitHub, sin threads, sin
   comandos, sin secrets y sin crear otro Hermes.
-- **PR #138** — Local Routine Scheduler + Personal/Family Ops. Incluye
-  Authorized Account Assistance mediante recuperación oficial, consentimiento,
-  password manager, 2FA y prohibición de bypass.
+- **PR #138** — Product/Revenue Factory: oportunidad, validación de nicho,
+  blueprint, oferta/landing candidate, pricing, unit economics, revenue model,
+  experiment plan, measurement plan y decisión kill/continue, sin publicación,
+  deploy, Stripe live, checkout real, dominios, email, credenciales ni dinero.
 - **PR #139** — Moonshot Lab + Research/Experiment Engine.
 - **PR #140** — Mark 3 Release Candidate + Pilot.
 

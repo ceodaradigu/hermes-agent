@@ -563,8 +563,8 @@ PR #133 añade el Autonomous Mission Loop in-memory y genera bounded execution
 candidates sin ejecución externa. El orden operativo posterior es: PR #134
 Governed Execution Engine, #135 Continuous Learning + Outcome Memory, #136
 Governed Research Execution Control Plane, #137 Local Docs/Repo Research
-Adapter, #138 Local Routine Scheduler + Personal/Family Ops, #139 Moonshot Lab
-y Research/Experiment Engine y #140 Mark 3 Release Candidate + Pilot.
+Adapter, #138 Product/Revenue Factory, #139 Moonshot Lab y Research/Experiment
+Engine y #140 Mark 3 Release Candidate + Pilot.
 
 PR #134 conecta el primer vertical slice de ejecución real gobernada con
 Hermes: `Mark3MissionLoop candidate -> governed validation ->
@@ -590,3 +590,14 @@ multi-scope, symlinks, path traversal, `.env`, tokens, passwords, credentials,
 secrets y keys quedan rechazados por policy/adapter. No hay endpoint research
 `/execute`; `/candidate` exige request completa y no rehidrata snapshots por
 `research_id`.
+
+PR #138 añade Mark 3 Product/Revenue Factory como control-plane seguro:
+oportunidad, validación de nicho, blueprint, oferta/landing candidate, pricing,
+unit economics, revenue model, experiment plan, measurement plan y decisión
+kill/continue. No publica, no despliega, no crea checkout, no llama Stripe, no
+compra dominios, no envía emails, no usa web/GitHub real, no mueve dinero, no
+usa credenciales y no inventa revenue, costes ni métricas. Siempre separa
+`projected_revenue`, `confirmed_revenue`, `gross_revenue`, `expenses` y
+`net_revenue`; si falta evidencia devuelve `unknown`. Stripe live, producción,
+dominios, dinero, publicación real o identidad de David siguen como Nivel 4 con
+strong approval y doble/triple confirmación.
