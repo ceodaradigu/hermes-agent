@@ -562,6 +562,24 @@ no pide permisos de navegador, no graba, no mueve dinero, no despliega, no
 envía email, no toca credenciales y no duplica Hermes. Finance/ROI permanece
 `unknown` hasta que exista medición real: no fake metrics.
 
+PR #147 es **Approval Console Visual**. Enriquece el read model
+`GET /mark-3/dashboard/status` con una estructura de approvals visuales:
+`pending_count`, `critical_count`, `blocked_count`, `expired_count`,
+`preview_count`, flags explícitos de read-only y tarjetas preview normalizadas.
+Las tarjetas cubren lectura local exacta de docs/repo, escritura local
+bloqueada, búsqueda web/GitHub no conectada, producción/dinero/deploy/Stripe/
+email crítico y credenciales/secrets/tokens/cookies/session bypass como
+forbidden/blocked. Cada tarjeta muestra acción, razón, status, risk level,
+approval level, touches, costes `unknown`, scope, evidencia, expiry,
+rollback/stop plan, disabled reason y acción recomendada para el operador. La
+UI `/jarvis` renderiza resumen, badges, tarjetas, botones Aprobar/Rechazar/
+Modificar alcance/Pedir explicación deshabilitados, aviso preview-only,
+readback/confirmación fuerte, doble/triple confirmación, rollback/stop plan,
+auditoría y leyenda de riesgo. No añade POST/PUT/DELETE, no añade endpoints
+approve/reject/execute, no aprueba nada real, no llama a Hermes, no activa voz,
+micrófono, cámara, sensores, dinero, deploy, email ni credenciales. Mantiene:
+`JARVIS gobierna. Hermes ejecuta.`
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

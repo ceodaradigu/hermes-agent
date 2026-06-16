@@ -17,7 +17,7 @@ import {
   Workflow,
   ZapOff,
 } from "lucide-react";
-import { api, type JarvisDashboardModule, type JarvisDashboardStatus } from "@/lib/api";
+import { api, type JarvisApprovalCard, type JarvisDashboardModule, type JarvisDashboardStatus } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +64,164 @@ const fallbackStages = [
   "Monetización",
 ] as const;
 
+const approvalActionLabels = ["Aprobar", "Rechazar", "Modificar alcance", "Pedir explicación"] as const;
+
+const fallbackApprovalCards: JarvisApprovalCard[] = [
+  {
+    id: "preview-local-docs-repo-read",
+    title: "Lectura local exacta de docs/repo",
+    action: "Leer una ruta local exacta ya acotada.",
+    reason: "Lectura local bounded: bajo riesgo si el alcance es exacto y no muta estado.",
+    status: "preview",
+    risk_level: "low",
+    approval_level: "direct",
+    touches: ["filesystem", "local_docs"],
+    estimated_cost: UNKNOWN,
+    measured_cost: UNKNOWN,
+    rollback_plan: "No hay mutación; rollback no aplica.",
+    stop_plan: "Parar si la ruta no es exacta, local y dentro del scope aprobado.",
+    expires_at: UNKNOWN,
+    scope_summary: "Un archivo o ruta local de docs/repo en modo lectura.",
+    evidence_summary: "Fallback seguro: backend no disponible o campo ausente.",
+    disabled_reason: "Preview-only: approval execution is not wired in this PR.",
+    recommended_operator_action: "Verificar path exacto y mantenerlo read-only.",
+    requires_readback: false,
+    strong_confirmation_required: false,
+    double_confirmation_required: false,
+    triple_confirmation_required: false,
+    rollback_required: false,
+    stop_plan_required: true,
+    audit_required: true,
+    preview_only: true,
+    read_only: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  },
+  {
+    id: "preview-local-file-write",
+    title: "Escritura de archivo local",
+    action: "Crear o modificar un archivo local.",
+    reason: "Cambia estado local y requiere scope, diff y rollback antes de cualquier ejecución futura.",
+    status: "blocked",
+    risk_level: "medium",
+    approval_level: "simple",
+    touches: ["filesystem", "local_docs"],
+    estimated_cost: UNKNOWN,
+    measured_cost: UNKNOWN,
+    rollback_plan: "Exigir diff, backup o patch de reversión antes de una escritura futura.",
+    stop_plan: "Parar por path amplio, glob, diff ausente o cancelación humana.",
+    expires_at: UNKNOWN,
+    scope_summary: "Un path local explícito y un diff exacto; sin escrituras recursivas.",
+    evidence_summary: "La consola no tiene endpoint de escritura.",
+    disabled_reason: "Preview-only: approval execution is not wired in this PR.",
+    recommended_operator_action: "Pedir diff preview y aprobar solo un write bounded futuro.",
+    requires_readback: true,
+    strong_confirmation_required: false,
+    double_confirmation_required: false,
+    triple_confirmation_required: false,
+    rollback_required: true,
+    stop_plan_required: true,
+    audit_required: true,
+    preview_only: true,
+    read_only: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  },
+  {
+    id: "preview-external-web-github-search",
+    title: "Búsqueda externa web/GitHub",
+    action: "Consultar web o GitHub fuera del entorno local.",
+    reason: "Puede filtrar intención, consumir cuota o traer contenido no confiable.",
+    status: "blocked",
+    risk_level: "high",
+    approval_level: "strong",
+    touches: ["web", "github"],
+    estimated_cost: UNKNOWN,
+    measured_cost: UNKNOWN,
+    rollback_plan: "No llamar proveedores externos hasta aprobar query, proveedor y manejo de datos.",
+    stop_plan: "Parar ante secrets, repos privados, scopes de cuenta o intención ambigua.",
+    expires_at: UNKNOWN,
+    scope_summary: "Query/proveedor/fuentes específicos; sin acciones autenticadas.",
+    evidence_summary: "Web/GitHub no está conectado a esta consola.",
+    disabled_reason: "Preview-only: approval execution is not wired in this PR.",
+    recommended_operator_action: "Exigir approval fuerte antes de cualquier llamada externa futura.",
+    requires_readback: true,
+    strong_confirmation_required: true,
+    double_confirmation_required: false,
+    triple_confirmation_required: false,
+    rollback_required: true,
+    stop_plan_required: true,
+    audit_required: true,
+    preview_only: true,
+    read_only: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  },
+  {
+    id: "preview-production-money-deploy-email",
+    title: "Producción, dinero, deploy o email real",
+    action: "Deploy, Stripe/dinero o envío de email real.",
+    reason: "Tiene impacto externo o irreversible y requiere confirmación fuerte.",
+    status: "blocked",
+    risk_level: "critical",
+    approval_level: "triple",
+    touches: ["money", "deploy", "email", "web"],
+    estimated_cost: UNKNOWN,
+    measured_cost: UNKNOWN,
+    rollback_plan: "Exigir rollback verificado, owner, blast radius y stop condition.",
+    stop_plan: "Parar ante coste no verificado, credencial viva, smoke fallido o cancelación.",
+    expires_at: UNKNOWN,
+    scope_summary: "Cuenta, entorno, destinatario o importe nominal; sin scope amplio.",
+    evidence_summary: "Finance sigue unknown si no hay evidencia real.",
+    disabled_reason: "Preview-only: approval execution is not wired in this PR.",
+    recommended_operator_action: "Requerir readback, doble/triple confirmación, rollback, stop plan y auditoría.",
+    requires_readback: true,
+    strong_confirmation_required: true,
+    double_confirmation_required: true,
+    triple_confirmation_required: true,
+    rollback_required: true,
+    stop_plan_required: true,
+    audit_required: true,
+    preview_only: true,
+    read_only: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  },
+  {
+    id: "preview-forbidden-credentials-bypass",
+    title: "Credenciales, secrets, tokens o bypass",
+    action: "Leer secrets/tokens/cookies/sesiones o saltar autorización.",
+    reason: "Credenciales, bypass, deception y fake metrics son límites forbidden.",
+    status: "forbidden",
+    risk_level: "forbidden",
+    approval_level: "forbidden",
+    touches: ["credentials"],
+    estimated_cost: UNKNOWN,
+    measured_cost: UNKNOWN,
+    rollback_plan: "No se ejecuta; rediseñar como status/audit sin secretos.",
+    stop_plan: "Parar y rechazar si pide secrets, cookies, tokens, bypass o métricas falsas.",
+    expires_at: UNKNOWN,
+    scope_summary: "Scope forbidden; ningún acceso a credenciales o bypass.",
+    evidence_summary: "Safety boundary: no_credentials=true y no fake metrics.",
+    disabled_reason: "Preview-only: approval execution is not wired in this PR.",
+    recommended_operator_action: "Rechazar y pedir alternativa segura sin secretos.",
+    requires_readback: true,
+    strong_confirmation_required: true,
+    double_confirmation_required: true,
+    triple_confirmation_required: true,
+    rollback_required: false,
+    stop_plan_required: true,
+    audit_required: true,
+    preview_only: true,
+    read_only: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  },
+];
+
+const riskLegend = [
+  ["Nivel 0-1", "directo / bajo riesgo"],
+  ["Nivel 2", "local scoped / simple approval"],
+  ["Nivel 3", "externo o sensible / strong approval"],
+  ["Nivel 4", "producción, dinero, deploy, email, credenciales / double o triple confirmation"],
+  ["Nivel 5", "ilegal, inseguro, no autorizado, bypass, deception, fake metrics / forbidden"],
+] as const;
+
 function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
   return {
     system: {
@@ -98,11 +256,29 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
     })),
     approvals: {
       pending_count: UNKNOWN,
+      critical_count: UNKNOWN,
+      blocked_count: UNKNOWN,
+      expired_count: UNKNOWN,
+      preview_count: fallbackApprovalCards.length,
       action_buttons_enabled: false,
+      all_actions_read_only: true,
       wake_phrase_can_approve: false,
+      frontend_can_approve: false,
+      frontend_can_reject: false,
+      frontend_can_modify_scope: false,
       critical_actions_require_strong_approval: true,
-      cards_state: "empty/read-only",
+      cards: fallbackApprovalCards,
+      cards_state: "preview/read-only",
       preview_only: true,
+      readback_policy: {
+        wake_phrase_never_approves: true,
+        voice_approval_requires_auth_gate_and_audit: true,
+        critical_actions_require_readback: true,
+        critical_actions_require_strong_confirmation: true,
+        critical_actions_require_double_or_triple_confirmation: true,
+        critical_actions_require_rollback_and_stop_plan: true,
+        audit_required: true,
+      },
     },
     hermes_execution: {
       available: false,
@@ -149,10 +325,14 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       real_revenue_must_be_confirmed: true,
     },
     safety: {
+      frontend_can_execute: false,
+      frontend_can_approve: false,
+      no_duplicate_hermes_runtime: true,
       no_get_user_media: true,
       no_sensor_activation: true,
       no_frontend_tool_runner: true,
       no_frontend_hermes_execution: true,
+      no_post_put_delete_from_jarvis_page: true,
       no_money_movement: true,
       no_deploy: true,
       no_credentials: true,
@@ -195,6 +375,27 @@ function statusVariant(status: string): "outline" | "warning" | "destructive" | 
   return "outline";
 }
 
+function approvalStatusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
+  if (status === "approved") return "success";
+  if (status === "pending" || status === "preview") return "warning";
+  if (status === "blocked" || status === "forbidden" || status === "expired" || status === "rejected") return "destructive";
+  return "outline";
+}
+
+function riskVariant(risk: string): "outline" | "warning" | "destructive" | "success" {
+  if (risk === "low") return "success";
+  if (risk === "medium" || risk === "high") return "warning";
+  if (risk === "critical" || risk === "forbidden") return "destructive";
+  return "outline";
+}
+
+function approvalLevelVariant(level: string): "outline" | "warning" | "destructive" | "success" {
+  if (level === "direct") return "success";
+  if (level === "simple" || level === "strong") return "warning";
+  if (level === "double" || level === "triple" || level === "forbidden") return "destructive";
+  return "outline";
+}
+
 function readModules(modules: JarvisDashboardModule[] | undefined): JarvisDashboardModule[] {
   const byName = new Map((modules ?? []).map((item) => [item.name, item]));
   return requiredModules.map((name) => {
@@ -218,6 +419,99 @@ function StatusList({ items }: { items: readonly (readonly [string, string])[] }
         </div>
       ))}
     </dl>
+  );
+}
+
+function DisabledApprovalActions() {
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {approvalActionLabels.map((label) => (
+          <Button key={label} disabled aria-disabled="true" type="button" variant="outline">
+            {label}
+          </Button>
+        ))}
+      </div>
+      <p className="font-display text-xs text-warning">
+        Preview-only: approval execution is not wired in this PR. Estado preview-only/read-only.
+      </p>
+    </div>
+  );
+}
+
+function ApprovalCardView({ card }: { card: JarvisApprovalCard }) {
+  const confirmations = [
+    ["readback", card.requires_readback],
+    ["confirmación fuerte", card.strong_confirmation_required],
+    ["doble confirmación", card.double_confirmation_required],
+    ["triple confirmación", card.triple_confirmation_required],
+    ["rollback", card.rollback_required],
+    ["stop plan", card.stop_plan_required],
+    ["auditoría", card.audit_required],
+  ] as const;
+
+  return (
+    <article className="border border-border/70 bg-background/35 p-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="warning">preview/read-only</Badge>
+            <Badge variant={approvalStatusVariant(valueText(card.status))}>{valueText(card.status)}</Badge>
+            <Badge variant={riskVariant(valueText(card.risk_level))}>riesgo: {valueText(card.risk_level)}</Badge>
+            <Badge variant={approvalLevelVariant(valueText(card.approval_level))}>approval: {valueText(card.approval_level)}</Badge>
+          </div>
+          <h3 className="font-expanded text-base font-bold uppercase tracking-[0.08em]">{valueText(card.title)}</h3>
+        </div>
+        <span className="max-w-full break-all font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(card.id)}</span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1fr_0.95fr]">
+        <div className="space-y-3">
+          <StatusList
+            items={[
+              ["acción", valueText(card.action)],
+              ["razón", valueText(card.reason)],
+              ["scope", valueText(card.scope_summary)],
+              ["evidencia", valueText(card.evidence_summary)],
+              ["coste estimado", valueText(card.estimated_cost)],
+              ["coste medido", valueText(card.measured_cost)],
+              ["expira", valueText(card.expires_at)],
+            ]}
+          />
+          <div className="flex flex-wrap gap-2">
+            {(card.touches?.length ? card.touches : ["unknown"]).map((touch) => (
+              <Badge key={`${card.id}-${touch}`} variant={touch === "credentials" ? "destructive" : "outline"}>
+                {touch}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="border border-border/70 bg-background/30 p-3">
+            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">rollback</p>
+            <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(card.rollback_plan)}</p>
+          </div>
+          <div className="border border-border/70 bg-background/30 p-3">
+            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">stop plan</p>
+            <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(card.stop_plan)}</p>
+          </div>
+          <div className="border border-warning/40 bg-warning/10 p-3">
+            <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">disabled</p>
+            <p className="mt-1 font-mono-ui text-xs text-warning">{valueText(card.disabled_reason)}</p>
+            <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(card.recommended_operator_action)}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {confirmations.map(([label, enabled]) => (
+              <Badge key={`${card.id}-${label}`} variant={enabled ? "warning" : "outline"}>
+                {label}: {yesNo(enabled, "sí", "no")}
+              </Badge>
+            ))}
+          </div>
+          <DisabledApprovalActions />
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -256,6 +550,7 @@ export default function JarvisCommandCenterPage() {
   const contract = dashboard.jarvis_hermes_contract ?? {};
   const release = dashboard.release_candidate ?? {};
   const approvals = dashboard.approvals ?? {};
+  const approvalCards = approvals.cards?.length ? approvals.cards : fallbackApprovalCards;
   const hermes = dashboard.hermes_execution ?? {};
   const voiceWake = dashboard.voice_wake ?? {};
   const cameraVision = dashboard.camera_vision ?? {};
@@ -427,34 +722,84 @@ export default function JarvisCommandCenterPage() {
               <ShieldCheck className="h-5 w-5 text-warning" />
               <CardTitle>Consola de Aprobación</CardTitle>
             </div>
-            <CardDescription>Vista read-only; las tarjetas reales no tienen acciones en esta PR.</CardDescription>
+            <CardDescription>Decisiones, riesgos y requisitos de approval; la consola no aprueba ni ejecuta en esta PR.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="warning">preview/read-only</Badge>
-                <Badge variant="outline">pending: {valueText(approvals.pending_count)}</Badge>
+                <Badge variant={approvals.action_buttons_enabled ? "destructive" : "success"}>
+                  botones: {yesNo(approvals.action_buttons_enabled, "enabled", "disabled")}
+                </Badge>
+                <Badge variant={approvals.all_actions_read_only ? "success" : "destructive"}>
+                  read-only: {yesNo(approvals.all_actions_read_only)}
+                </Badge>
+                <Badge variant={approvals.frontend_can_approve ? "destructive" : "success"}>
+                  approve UI: {yesNo(approvals.frontend_can_approve, "allowed", "forbidden")}
+                </Badge>
               </div>
+              <p className="mt-3 font-display text-xs text-warning">
+                Preview-only: approval execution is not wired in this PR.
+              </p>
+            </article>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {[
+                ["pending", valueText(approvals.pending_count)],
+                ["critical", valueText(approvals.critical_count)],
+                ["blocked", valueText(approvals.blocked_count)],
+                ["expired", valueText(approvals.expired_count)],
+                ["preview", valueText(approvals.preview_count)],
+              ].map(([label, value]) => (
+                <div key={label} className="border border-border/70 bg-background/40 p-3">
+                  <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+                  <p className="mt-1 font-mono-ui text-lg text-foreground">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
               <StatusList
                 items={[
-                  ["acción", "sin approval real conectado"],
-                  ["riesgo", "unknown"],
-                  ["coste", UNKNOWN],
-                  ["afecta", "none"],
-                  ["rollback", "no aplica; no hay ejecución real"],
+                  ["frontend puede aprobar", yesNo(approvals.frontend_can_approve, "sí", "no")],
+                  ["frontend puede rechazar", yesNo(approvals.frontend_can_reject, "sí", "no")],
+                  ["frontend modifica alcance", yesNo(approvals.frontend_can_modify_scope, "sí", "no")],
+                  ["wake phrase aprueba", yesNo(approvals.wake_phrase_can_approve, "sí", "no")],
                 ]}
               />
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button disabled type="button" variant="outline">Aprobar · preview-only</Button>
-                <Button disabled type="button" variant="outline">Rechazar · preview-only</Button>
-                <Button disabled type="button" variant="outline">Modificar alcance · preview-only</Button>
-                <Button disabled type="button" variant="outline">Pedir explicación · preview-only</Button>
+              <div className="grid gap-2">
+                <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                <SafetyLine>La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada.</SafetyLine>
+                <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
+                <SafetyLine>Las acciones críticas requieren confirmación fuerte.</SafetyLine>
+              </div>
+            </div>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readback / confirmación fuerte</h3>
+              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
+                Las acciones críticas requieren readback, confirmación fuerte, doble/triple confirmación,
+                rollback/stop plan y auditoría. La UI muestra estos gates, pero no emite decisiones.
+              </p>
+            </article>
+
+            <div className="space-y-3">
+              {approvalCards.map((card) => (
+                <ApprovalCardView key={card.id} card={card} />
+              ))}
+            </div>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Leyenda de riesgo</h3>
+              <div className="mt-3 grid gap-2">
+                {riskLegend.map(([level, text]) => (
+                  <div key={level} className="flex items-start justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
+                    <span className="font-display text-xs uppercase tracking-[0.12em] text-warning">{level}</span>
+                    <span className="text-right font-mono-ui text-xs text-foreground">{text}</span>
+                  </div>
+                ))}
               </div>
             </article>
-            <div className="grid gap-2">
-              <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-              <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
-            </div>
           </CardContent>
         </Card>
 

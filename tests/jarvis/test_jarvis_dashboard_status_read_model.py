@@ -95,7 +95,11 @@ def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled(
 
     assert payload["approvals"]["pending_count"] == 0
     assert payload["approvals"]["action_buttons_enabled"] is False
+    assert payload["approvals"]["all_actions_read_only"] is True
     assert payload["approvals"]["wake_phrase_can_approve"] is False
+    assert payload["approvals"]["frontend_can_approve"] is False
+    assert payload["approvals"]["frontend_can_reject"] is False
+    assert payload["approvals"]["frontend_can_modify_scope"] is False
     assert payload["approvals"]["critical_actions_require_strong_approval"] is True
     assert payload["hermes_execution"]["frontend_direct_execution_allowed"] is False
     assert payload["voice_wake"]["wake_phrase_can_approve"] is False
@@ -103,6 +107,89 @@ def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled(
     assert payload["camera_vision"]["recording"] is False
     assert payload["camera_vision"]["storage"] is False
     assert payload["mobile"]["direct_hermes_call_allowed"] is False
+
+
+def test_mark_3_dashboard_status_contains_enriched_approval_summary_and_cards():
+    payload, _ = _payload()
+    approvals = payload["approvals"]
+    cards = approvals["cards"]
+
+    assert approvals["pending_count"] == 0
+    assert approvals["critical_count"] >= 1
+    assert approvals["blocked_count"] >= 1
+    assert approvals["expired_count"] == 0
+    assert approvals["preview_count"] == len(cards)
+    assert approvals["cards_state"] == "preview/read-only"
+    assert approvals["preview_only"] is True
+
+    required_fields = {
+        "id",
+        "title",
+        "action",
+        "reason",
+        "status",
+        "risk_level",
+        "approval_level",
+        "touches",
+        "estimated_cost",
+        "measured_cost",
+        "rollback_plan",
+        "stop_plan",
+        "expires_at",
+        "scope_summary",
+        "evidence_summary",
+        "disabled_reason",
+        "recommended_operator_action",
+    }
+    allowed_status = {"preview", "pending", "approved", "rejected", "expired", "blocked", "forbidden", "unknown"}
+    allowed_risk = {"low", "medium", "high", "critical", "forbidden", "unknown"}
+    allowed_approval = {"direct", "simple", "strong", "double", "triple", "forbidden", "unknown"}
+
+    assert len(cards) >= 5
+    for card in cards:
+        assert required_fields.issubset(card)
+        assert all(card[field] not in ("", None) for field in required_fields - {"touches"})
+        assert card["status"] in allowed_status
+        assert card["risk_level"] in allowed_risk
+        assert card["approval_level"] in allowed_approval
+        assert isinstance(card["touches"], list)
+        assert card["touches"]
+        assert card["estimated_cost"] == "unknown"
+        assert card["measured_cost"] == "unknown"
+        assert card["preview_only"] is True
+        assert card["read_only"] is True
+        assert "Preview-only" in card["disabled_reason"] or card["status"] in {"blocked", "forbidden"}
+
+
+def test_mark_3_dashboard_status_critical_approvals_require_strong_gates_and_plans():
+    payload, _ = _payload()
+    critical_cards = [card for card in payload["approvals"]["cards"] if card["risk_level"] == "critical"]
+
+    assert critical_cards
+    for card in critical_cards:
+        assert card["approval_level"] in {"strong", "double", "triple"}
+        assert card["requires_readback"] is True
+        assert card["strong_confirmation_required"] is True
+        assert card["double_confirmation_required"] is True or card["triple_confirmation_required"] is True
+        assert card["rollback_required"] is True
+        assert card["stop_plan_required"] is True
+        assert card["audit_required"] is True
+        assert card["rollback_plan"] != "unknown"
+        assert card["stop_plan"] != "unknown"
+
+
+def test_mark_3_dashboard_status_forbidden_credentials_card_is_blocked():
+    payload, _ = _payload()
+    cards = {card["id"]: card for card in payload["approvals"]["cards"]}
+    card = cards["preview-forbidden-credentials-bypass"]
+
+    assert card["status"] in {"forbidden", "blocked"}
+    assert card["risk_level"] == "forbidden"
+    assert card["approval_level"] == "forbidden"
+    assert "credentials" in card["touches"]
+    assert card["preview_only"] is True
+    assert card["read_only"] is True
+    assert card["stop_plan_required"] is True
 
 
 def test_mark_3_dashboard_status_keeps_finance_unknown_and_no_fake_metrics():
@@ -121,10 +208,14 @@ def test_mark_3_dashboard_status_declares_safety_boundaries():
     payload, _ = _payload()
     safety = payload["safety"]
 
+    assert safety["frontend_can_execute"] is False
+    assert safety["frontend_can_approve"] is False
+    assert safety["no_duplicate_hermes_runtime"] is True
     assert safety["no_get_user_media"] is True
     assert safety["no_sensor_activation"] is True
     assert safety["no_frontend_tool_runner"] is True
     assert safety["no_frontend_hermes_execution"] is True
+    assert safety["no_post_put_delete_from_jarvis_page"] is True
     assert safety["no_money_movement"] is True
     assert safety["no_deploy"] is True
     assert safety["no_credentials"] is True

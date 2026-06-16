@@ -797,45 +797,54 @@ Exit criteria:
 
 Objective:
 
-- Build a serious visual Approval Console for pending and preview approvals,
-  still read-only unless a later backend approval-action path exists.
+- Implemented: build a serious visual Approval Console for pending/preview
+  approvals while keeping the local dashboard read-only.
+- The console shows what an operator would approve, the risk, the scope,
+  missing gates and rollback/stop requirements, but it does not approve,
+  reject, modify scope, call Hermes or execute anything real.
 
 Scope:
 
-- Show exact action, risk level, affected scope, requester, channel, readback,
-  strong approval, double/triple confirmation, expiry, context fingerprint,
-  missing gates and rollback/stop plan.
-- Clearly distinguish preview approvals, pending approvals and executable
-  approvals.
-- Add disabled approve/reject controls with explicit "not connected" state.
+- `jarvis/dashboard_read_model.py` enriches `approvals` with summary counts,
+  read-only flags and normalized preview cards.
+- Preview cards cover exact local docs/repo read, local file write, external
+  web/GitHub search, production/deploy/money/Stripe/email and
+  credentials/secrets/tokens/session bypass.
+- Every card declares status, risk level, approval level, touched systems,
+  estimated/measured cost as `unknown`, scope, evidence, expiry, disabled
+  reason, recommended operator action, rollback plan and stop plan.
+- Critical actions require readback, strong confirmation, double/triple
+  confirmation, rollback/stop plan and audit.
+- The UI renders summary counts, risk/approval badges, touched surfaces,
+  rollback/stop information, disabled action controls and a risk legend.
 
-Probable files:
+Files:
 
-- `web/src/components/jarvis/ApprovalConsole.tsx`
-- `web/src/components/jarvis/ApprovalDetail.tsx`
-- `web/src/lib/jarvis-approvals.ts`
+- `jarvis/dashboard_read_model.py`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `web/src/lib/api.ts`
 
 Endpoints consumed:
 
-- `GET /mark-2/dashboard/approvals`
-- `GET /approvals/status`
-- `GET /approvals/policy`
-- `GET /approval-execution/status`
-- `POST /approval-execution/preview-decision`
-- `POST /approval-execution/preview-critical-warning`
-- `POST /mark-2/voice-approval/preview-flow`
+- `GET /mark-3/dashboard/status`
+- Internal status/audit reads used by that read model remain GET-only.
 
 New endpoints needed:
 
-- Later, not in this PR: scoped `POST /approvals/{id}/approve` and
-  `POST /approvals/{id}/reject` backed by `ApprovalGateway`, expiry, readback,
-  challenge and audit.
+- None in PR #147.
+- Later only: scoped approve/reject backend paths backed by `ApprovalGateway`,
+  expiry, readback, challenge and audit.
 
 Expected tests:
 
-- Rendering tests for normal, sensitive, strong, expired, blocked and unknown
-  approvals.
-- Backend absence-of-dangerous-routes test if new endpoints are added later.
+- Backend tests prove enriched approvals, disabled frontend approval flags,
+  critical gates, forbidden credential/bypass card, no approve/reject routes,
+  no active execution/sensors/money/email/deploy and finance/ROI still
+  `unknown` without evidence.
+- Static frontend tests prove `/jarvis` contains the Approval Console and
+  disabled controls, contains the wake phrase/strong confirmation warnings,
+  has no POST/PUT/DELETE wiring, no approve/reject/execute paths and no
+  browser sensor APIs.
 
 Must not do:
 
@@ -843,11 +852,15 @@ Must not do:
 - No approval without exact scope.
 - No wake phrase as approval.
 - No execution after approval.
+- No frontend approval execution.
+- No Hermes call from the browser.
 
 Exit criteria:
 
 - David can understand exactly what approval would mean and what gates are
   missing before anything can execute.
+- JARVIS governs; Hermes executes. This PR prepares the Approval Console UX
+  but still approves nothing real and does not duplicate Hermes.
 
 ### PR #148 - Hermes Execution Visibility Panel
 
@@ -1431,17 +1444,19 @@ Rules:
 
 ## 10. Recommended next PR
 
-Recommended next PR after this roadmap:
+Recommended next PR after PR #147:
 
 ```text
-PR #147 - Approval Console visual
+PR #148 - Hermes Execution Visibility Panel
 ```
 
 Why:
 
 - PR #145 gave David the visible cockpit without enabling dangerous actions.
 - PR #146 wires real read-only status into that cockpit without execution.
-- The next safe visual step is to improve the approval console display while
-  keeping approve/reject controls non-functional until a later governed backend
-  action path exists.
+- PR #147 improves the Approval Console visual with normalized preview cards,
+  disabled approval affordances and risk/readback/rollback visibility while
+  still approving nothing real.
+- The next safe visual step is to make Hermes execution visibility clearer
+  without giving the browser a direct tool runner or duplicate runtime.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

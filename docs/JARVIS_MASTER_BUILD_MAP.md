@@ -819,6 +819,54 @@ JARVIS gobierna.
 Hermes ejecuta.
 ```
 
-El siguiente trabajo recomendado es PR #147 - Approval Console visual,
-manteniendo controles approve/reject deshabilitados hasta que exista una ruta
-backend gobernada, auditada y explicitamente aprobada.
+El siguiente trabajo recomendado tras PR #146 era PR #147 - Approval Console
+visual, manteniendo controles approve/reject deshabilitados hasta que exista
+una ruta backend gobernada, auditada y explicitamente aprobada. Ese trabajo
+queda descrito abajo.
+
+## JARVIS Approval Console Visual
+
+PR #147 convierte la Consola de Aprobación del Visual Command Center en una
+pieza visual útil para el operador humano, sin convertirla en una superficie de
+ejecución.
+
+Incluye:
+
+- `GET /mark-3/dashboard/status` expone approvals enriquecidas dentro del read
+  model existente: summary counts, flags read-only y tarjetas preview
+  normalizadas.
+- Summary visible: pending, critical, blocked, expired y preview; todos los
+  botones de acción permanecen disabled.
+- Tarjetas preview para lectura local exacta docs/repo, escritura local,
+  web/GitHub externo, producción/dinero/deploy/Stripe/email real y
+  credenciales/secrets/tokens/cookies/session bypass.
+- Cada tarjeta declara acción, razón, status, risk level, approval level,
+  touches, coste estimado/medido `unknown`, scope, evidencia, expiry,
+  rollback plan, stop plan, disabled reason y acción recomendada.
+- La UI `/jarvis` muestra badges de riesgo y nivel de aprobación, touched
+  surfaces, rollback/stop plan, readback, confirmación fuerte, doble/triple
+  confirmación, auditoría, botones Aprobar/Rechazar/Modificar alcance/Pedir
+  explicación deshabilitados y leyenda de riesgo nivel 0-5.
+
+No implementa:
+
+- approve/reject real;
+- endpoint de approve/reject/execute;
+- POST/PUT/DELETE desde la página `/jarvis`;
+- llamada directa a Hermes desde el navegador;
+- tool runner frontend;
+- activación de voz, micrófono, cámara, sensores o grabación;
+- dinero, Stripe, deploy, email real, credenciales o producción;
+- métricas falsas de coste, revenue, ROI, resultados o capacidades;
+- runtime Hermes duplicado.
+
+La regla sigue fija:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
+El siguiente trabajo recomendado es PR #148 - Hermes Execution Visibility
+Panel, manteniendo el frontend como superficie de lectura y control visual,
+sin crear un ejecutor paralelo a Hermes.
