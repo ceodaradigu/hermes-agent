@@ -549,6 +549,19 @@ los controles quedan `preview`, `disabled`, `not connected`, `gated` o
 `unknown` según corresponda. Mantiene la regla operativa:
 `JARVIS gobierna. Hermes ejecuta.`
 
+PR #146 es **Visual Command Center Real Status Wiring**. Añade el read model
+agregado `GET /mark-3/dashboard/status` y conecta la ruta `/jarvis` a ese
+estado real de backend en modo read-only. El endpoint normaliza health,
+release-candidate status/readiness/capabilities, dangerous-route audit,
+approval-path audit, e2e smoke, pilot plan, Mission Loop, Hermes runtime,
+Research, Product Revenue, Routine Ops, Moonshot Lab, Voice/Wake,
+Camera/Vision, Mobile, approvals, finance, safety y timeline. La UI solo hace
+lectura GET y degrada a `offline`, `unknown`, `not_connected` o `disabled` si
+falta backend o evidencia. No añade ejecución, no aprueba, no activa sensores,
+no pide permisos de navegador, no graba, no mueve dinero, no despliega, no
+envía email, no toca credenciales y no duplica Hermes. Finance/ROI permanece
+`unknown` hasta que exista medición real: no fake metrics.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

@@ -7,6 +7,8 @@ from jarvis.api.app import create_app
 
 PAGE = Path("web/src/pages/JarvisCommandCenterPage.tsx")
 APP = Path("web/src/App.tsx")
+API = Path("web/src/lib/api.ts")
+VITE_CONFIG = Path("web/vite.config.ts")
 
 
 def _read(path: Path) -> str:
@@ -16,10 +18,12 @@ def _read(path: Path) -> str:
 def test_jarvis_dashboard_shell_file_and_local_route_exist():
     assert PAGE.exists()
     app_source = _read(APP)
+    vite_source = _read(VITE_CONFIG)
 
     assert "JarvisCommandCenterPage" in app_source
     assert '{ id: "jarvis", label: "JARVIS"' in app_source
     assert '"/jarvis": "jarvis"' in app_source
+    assert '"/mark-3": "http://127.0.0.1:9119"' in vite_source
 
 
 def test_jarvis_dashboard_shell_contains_required_read_only_content():
@@ -79,10 +83,17 @@ def test_jarvis_dashboard_shell_does_not_use_browser_sensor_apis_or_recording():
 
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     content = _read(PAGE)
+    api_source = _read(API)
+
+    assert "api.getJarvisDashboardStatus()" in content
+    assert '"/mark-3/dashboard/status"' in content
+    assert 'getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status")' in api_source
 
     for forbidden in (
-        "fetch(",
-        "api.",
+        "method:",
+        '"POST"',
+        '"PUT"',
+        '"DELETE"',
         "AIAgent",
         "HermesRuntimeAdapter",
         "/mark-3/hermes-runtime/execute-read",
