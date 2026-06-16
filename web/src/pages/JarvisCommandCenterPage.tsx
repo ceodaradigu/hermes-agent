@@ -24,6 +24,9 @@ import {
   type JarvisDashboardStatus,
   type JarvisHermesBlockedRoute,
   type JarvisHermesGovernedCapability,
+  type JarvisVoiceCore,
+  type JarvisVoiceCoreVisualState,
+  type JarvisWakeWordFlow,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,20 +35,289 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const DASHBOARD_READ_MODEL_ENDPOINT = "/mark-3/dashboard/status";
 const UNKNOWN = "unknown";
 
-const voiceStates = [
-  "offline",
-  "online",
-  "preview",
-  "listening_wake_word",
-  "listening_command",
-  "thinking",
-  "speaking",
-  "approval_required",
-  "hermes_executing",
-  "paused",
-  "blocked",
-  "kill_switch",
-] as const;
+const previewVoiceSubtitle = "David, estoy en modo preview. No estoy escuchando ni grabando audio.";
+
+const fallbackVoiceVisualStates: JarvisVoiceCoreVisualState[] = [
+  {
+    state: "offline",
+    label: "offline",
+    description: "Backend o núcleo de voz no conectado; sin sensores activos.",
+    risk: "none",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "not connected",
+  },
+  {
+    state: "online",
+    label: "online",
+    description: "Estado futuro conectado, no habilitado por esta shell.",
+    risk: "sensor_privacy",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "preview",
+    label: "preview",
+    description: "Estado visual/read-only sin micrófono, STT, TTS ni provider.",
+    risk: "none",
+    enabled: "preview",
+    sensor_required: false,
+    can_approve: false,
+    connection: "preview",
+  },
+  {
+    state: "dormant",
+    label: "dormido",
+    description: "JARVIS está dormido visualmente; no escucha ni graba.",
+    risk: "none",
+    enabled: "preview",
+    sensor_required: false,
+    can_approve: false,
+    connection: "preview",
+  },
+  {
+    state: "listening_wake_word",
+    label: "escuchando wake word",
+    description: "Estado futuro gateado; requeriría autorización de sensor.",
+    risk: "sensor_privacy",
+    enabled: false,
+    sensor_required: true,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "listening_command",
+    label: "escuchando orden",
+    description: "Ventana corta futura tras wake/push-to-talk; apagada aquí.",
+    risk: "sensor_privacy",
+    enabled: false,
+    sensor_required: true,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "thinking",
+    label: "pensando",
+    description: "Preview futuro de intención; sin provider externo.",
+    risk: "approval_gate",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "speaking",
+    label: "hablando",
+    description: "TTS futuro; ahora solo subtítulos preview.",
+    risk: "audio_output",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "not connected",
+  },
+  {
+    state: "approval_required",
+    label: "esperando aprobación",
+    description: "La aprobación futura aparece en Approval Console, no por voz.",
+    risk: "approval_gate",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "hermes_executing",
+    label: "Hermes ejecutando",
+    description: "Visibilidad futura después de approval válido.",
+    risk: "execution",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "paused",
+    label: "pausado",
+    description: "Pausa futura de flujo gobernado; no hay sesión de voz activa.",
+    risk: "stop_control",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "future gated",
+  },
+  {
+    state: "blocked",
+    label: "bloqueado",
+    description: "Flujos inseguros o no conectados permanecen bloqueados.",
+    risk: "blocked",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "preview",
+  },
+  {
+    state: "error",
+    label: "error",
+    description: "Error futuro visible; no se arranca runtime de voz.",
+    risk: "runtime_error",
+    enabled: false,
+    sensor_required: false,
+    can_approve: false,
+    connection: "not connected",
+  },
+  {
+    state: "kill_switch",
+    label: "kill switch",
+    description: "Relación visible con parada futura; hoy no hay audio real.",
+    risk: "stop_control",
+    enabled: "preview",
+    sensor_required: false,
+    can_approve: false,
+    connection: "preview",
+  },
+];
+
+const fallbackVoiceCore: JarvisVoiceCore = {
+  state: {
+    mode: "preview",
+    current_state: "preview",
+    microphone_enabled: false,
+    wake_word_enabled: false,
+    command_listening_enabled: false,
+    tts_enabled: false,
+    stt_enabled: false,
+    audio_recording: false,
+    raw_audio_stored: false,
+    external_provider_called: false,
+    voice_approval_enabled: false,
+    wake_phrase_can_approve: false,
+    wake_phrase_can_execute: false,
+  },
+  visual_states: fallbackVoiceVisualStates,
+  tts_state: {
+    status: "preview",
+    speaking: false,
+    last_utterance: previewVoiceSubtitle,
+    subtitles_enabled: true,
+    subtitles_source: "preview/read_model",
+    preview_subtitle: previewVoiceSubtitle,
+    audio_output_enabled: false,
+    provider: "none/not_connected",
+    external_call: false,
+  },
+  wake_word_policy: {
+    supported_phrases: ["Hola Jarvis", "Jarvis"],
+    wake_word_runtime: "disabled",
+    wake_phrase_is_permission: false,
+    wake_phrase_can_approve: false,
+    wake_phrase_can_execute: false,
+    requires_authenticated_channel_for_approval: true,
+    critical_actions_require_readback: true,
+    critical_actions_require_strong_confirmation: true,
+  },
+  privacy: {
+    no_microphone_activation: true,
+    no_audio_recording: true,
+    no_raw_audio_storage: true,
+    no_external_audio_provider: true,
+    no_background_listening_enabled: true,
+    no_voice_biometrics: true,
+    no_voice_approval_without_gate: true,
+  },
+  safety: {
+    no_auto_execute: true,
+    no_hermes_dispatch: true,
+    no_tool_call: true,
+    no_sensor_activation: true,
+    no_get_user_media: true,
+    no_media_recorder: true,
+    no_audio_context_capture: true,
+    kill_switch_visible: true,
+  },
+  relationship: {
+    voice_can_prepare_future_intention: true,
+    approval_console_handles_required_approval: true,
+    hermes_executes_only_after_valid_approval: true,
+    frontend_or_voice_can_call_hermes_directly: false,
+    jarvis_governs: true,
+    hermes_executes: true,
+  },
+  kill_switch: {
+    visible: true,
+    real_audio_to_stop: false,
+    future_must_cut_listening_tts_and_governed_execution: true,
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
+const fallbackWakeWordFlow: JarvisWakeWordFlow = {
+  state: {
+    mode: "preview",
+    wake_runtime_enabled: false,
+    microphone_hard_off: true,
+    wake_word_only_mode: false,
+    command_window_open: false,
+    push_to_talk_preview_enabled: true,
+    typed_wake_preview_enabled: true,
+    always_on_microphone_enabled: false,
+    background_listener_enabled: false,
+    stt_enabled: false,
+    audio_recording: false,
+    raw_audio_stored: false,
+    external_provider_called: false,
+  },
+  supported_phrases: ["Hola Jarvis", "Jarvis"],
+  stop_phrases: ["para", "cancela", "detente", "silencio", "cancelar misión", "apaga escucha"],
+  mode_explanations: {
+    mic_hard_off: "Mic hard-off: no escucha nada.",
+    wake_word_only: "Wake-word-only: futuro modo donde solo detectaría frase.",
+    command_listening: "Command listening: futura ventana corta después de wake.",
+    push_to_talk: "Push-to-talk: futuro modo manual.",
+    typed_preview: "Typed preview: modo actual seguro.",
+  },
+  wake_parse_preview: {
+    input_example: "Hola Jarvis, revisa el estado del proyecto",
+    detected_wake_phrase: "Hola Jarvis",
+    remaining_command_preview: "revisa el estado del proyecto",
+    would_open_command_window: true,
+    would_execute: false,
+    would_approve: false,
+    would_call_hermes: false,
+    would_record_audio: false,
+    would_call_provider: false,
+    status: "preview_only",
+  },
+  approval_policy: {
+    wake_phrase_is_permission: false,
+    wake_phrase_can_approve: false,
+    wake_phrase_can_execute: false,
+    voice_approval_requires_authenticated_channel: true,
+    sensitive_actions_require_readback: true,
+    critical_actions_require_double_or_triple_confirmation: true,
+    approval_events_must_be_audited: true,
+  },
+  safety: {
+    no_microphone_activation: true,
+    no_get_user_media: true,
+    no_media_recorder: true,
+    no_audio_context_capture: true,
+    no_background_listening: true,
+    no_raw_audio_storage: true,
+    no_external_stt: true,
+    no_external_tts: true,
+    no_hermes_dispatch: true,
+    no_tool_call: true,
+    no_auto_execute: true,
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
 
 const requiredModules = [
   "Mission Loop",
@@ -584,12 +856,17 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
         rollback_or_stop_plan_required_for_sensitive_actions: true,
       },
     },
+    voice_core: fallbackVoiceCore,
+    wake_word_flow: fallbackWakeWordFlow,
     voice_wake: {
       microphone_state: "disabled",
       wake_word_state: "unknown",
       wake_phrases: ["Hola Jarvis", "Jarvis"],
       wake_phrase_can_approve: false,
+      wake_phrase_can_execute: false,
       audio_recording: false,
+      raw_audio_stored: false,
+      external_provider_called: false,
     },
     camera_vision: {
       camera_state: "disabled",
@@ -864,7 +1141,27 @@ export default function JarvisCommandCenterPage() {
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const hermesCapabilities = readHermesCapabilities(hermes.governed_capabilities);
   const hermesBlockedRoutes = readHermesBlockedRoutes(hermes.blocked_routes);
-  const voiceWake = dashboard.voice_wake ?? {};
+  const voiceCore = dashboard.voice_core ?? fallbackVoiceCore;
+  const voiceCoreState = voiceCore.state ?? fallbackVoiceCore.state ?? {};
+  const voiceVisualStates = voiceCore.visual_states?.length ? voiceCore.visual_states : fallbackVoiceVisualStates;
+  const ttsState = voiceCore.tts_state ?? fallbackVoiceCore.tts_state ?? {};
+  const wakeWordPolicy = voiceCore.wake_word_policy ?? fallbackVoiceCore.wake_word_policy ?? {};
+  const voicePrivacy = voiceCore.privacy ?? fallbackVoiceCore.privacy ?? {};
+  const voiceSafety = voiceCore.safety ?? fallbackVoiceCore.safety ?? {};
+  const voiceRelationship = voiceCore.relationship ?? fallbackVoiceCore.relationship ?? {};
+  const voiceKillSwitch = voiceCore.kill_switch ?? fallbackVoiceCore.kill_switch ?? {};
+  const wakeWordFlow = dashboard.wake_word_flow ?? fallbackWakeWordFlow;
+  const wakeFlowState = wakeWordFlow.state ?? fallbackWakeWordFlow.state ?? {};
+  const wakeModeExplanations = wakeWordFlow.mode_explanations ?? fallbackWakeWordFlow.mode_explanations ?? {};
+  const wakeParsePreview = wakeWordFlow.wake_parse_preview ?? fallbackWakeWordFlow.wake_parse_preview ?? {};
+  const wakeApprovalPolicy = wakeWordFlow.approval_policy ?? fallbackWakeWordFlow.approval_policy ?? {};
+  const wakeFlowSafety = wakeWordFlow.safety ?? fallbackWakeWordFlow.safety ?? {};
+  const wakeSupportedPhrases = wakeWordFlow.supported_phrases?.length
+    ? wakeWordFlow.supported_phrases
+    : fallbackWakeWordFlow.supported_phrases ?? [];
+  const wakeStopPhrases = wakeWordFlow.stop_phrases?.length
+    ? wakeWordFlow.stop_phrases
+    : fallbackWakeWordFlow.stop_phrases ?? [];
   const cameraVision = dashboard.camera_vision ?? {};
   const mobile = dashboard.mobile ?? {};
   const finance = dashboard.finance ?? {};
@@ -970,6 +1267,95 @@ export default function JarvisCommandCenterPage() {
     ["duración", valueText(hermesRuntime.measured_duration)],
   ] as const;
 
+  const voiceCoreRows = [
+    ["mode", valueText(voiceCoreState.mode, "preview")],
+    ["estado actual", valueText(voiceCoreState.current_state, "preview")],
+    ["micrófono", yesNo(voiceCoreState.microphone_enabled, "enabled", "disabled")],
+    ["wake word", yesNo(voiceCoreState.wake_word_enabled, "enabled", "disabled")],
+    ["escucha orden", yesNo(voiceCoreState.command_listening_enabled, "enabled", "disabled")],
+    ["TTS", yesNo(voiceCoreState.tts_enabled, "enabled", "disabled")],
+    ["STT", yesNo(voiceCoreState.stt_enabled, "enabled", "disabled")],
+    ["grabación", yesNo(voiceCoreState.audio_recording, "true", "false")],
+    ["audio bruto almacenado", yesNo(voiceCoreState.raw_audio_stored, "true", "false")],
+    ["provider externo llamado", yesNo(voiceCoreState.external_provider_called, "true", "false")],
+    ["voice approval", yesNo(voiceCoreState.voice_approval_enabled, "enabled", "disabled")],
+  ] as const;
+
+  const ttsRows = [
+    ["status", valueText(ttsState.status, "preview")],
+    ["speaking", yesNo(ttsState.speaking, "true", "false")],
+    ["last utterance", valueText(ttsState.last_utterance, previewVoiceSubtitle)],
+    ["subtitles", yesNo(ttsState.subtitles_enabled, "enabled", "disabled")],
+    ["subtitles source", valueText(ttsState.subtitles_source, "preview/read_model")],
+    ["audio output", yesNo(ttsState.audio_output_enabled, "enabled", "disabled")],
+    ["provider", valueText(ttsState.provider, "none/not_connected")],
+    ["external call", yesNo(ttsState.external_call, "true", "false")],
+  ] as const;
+
+  const wakePolicyRows = [
+    ["frases futuras", wakeWordPolicy.supported_phrases?.join(", ") || "Hola Jarvis, Jarvis"],
+    ["runtime wake word", valueText(wakeWordPolicy.wake_word_runtime, "disabled")],
+    ["wake phrase es permiso", yesNo(wakeWordPolicy.wake_phrase_is_permission, "true", "false")],
+    ["wake phrase aprueba", yesNo(wakeWordPolicy.wake_phrase_can_approve, "true", "false")],
+    ["wake phrase ejecuta", yesNo(wakeWordPolicy.wake_phrase_can_execute, "true", "false")],
+    ["approval autenticado", yesNo(wakeWordPolicy.requires_authenticated_channel_for_approval, "required", "false")],
+    ["readback crítico", yesNo(wakeWordPolicy.critical_actions_require_readback, "required", "false")],
+    ["confirmación fuerte", yesNo(wakeWordPolicy.critical_actions_require_strong_confirmation, "required", "false")],
+  ] as const;
+
+  const voicePrivacyRows = [
+    ["micrófono: disabled", yesNo(voicePrivacy.no_microphone_activation, "true", "false")],
+    ["grabación: false", yesNo(voicePrivacy.no_audio_recording, "true", "false")],
+    ["audio bruto almacenado: false", yesNo(voicePrivacy.no_raw_audio_storage, "true", "false")],
+    ["proveedor externo", voicePrivacy.no_external_audio_provider ? "none/not_connected" : UNKNOWN],
+    ["background listening", voicePrivacy.no_background_listening_enabled ? "disabled" : UNKNOWN],
+    ["voice biometrics", voicePrivacy.no_voice_biometrics ? "disabled" : UNKNOWN],
+    ["voice approval", voicePrivacy.no_voice_approval_without_gate ? "disabled/future gated" : UNKNOWN],
+  ] as const;
+
+  const voiceRelationshipRows = [
+    ["prepara intención futura", yesNo(voiceRelationship.voice_can_prepare_future_intention, "true", "false")],
+    ["Approval Console", yesNo(voiceRelationship.approval_console_handles_required_approval, "required", "false")],
+    ["Hermes tras approval", yesNo(voiceRelationship.hermes_executes_only_after_valid_approval, "true", "false")],
+    ["voz/frontend llama Hermes", yesNo(voiceRelationship.frontend_or_voice_can_call_hermes_directly, "allowed", "false")],
+  ] as const;
+
+  const wakeFlowStateRows = [
+    ["mode", valueText(wakeFlowState.mode, "preview")],
+    ["micrófono hard-off", yesNo(wakeFlowState.microphone_hard_off, "true", "false")],
+    ["wake runtime", yesNo(wakeFlowState.wake_runtime_enabled, "enabled", "disabled")],
+    ["command window", yesNo(wakeFlowState.command_window_open, "open", "closed")],
+    ["push-to-talk preview", yesNo(wakeFlowState.push_to_talk_preview_enabled, "enabled", "disabled")],
+    ["typed wake preview", yesNo(wakeFlowState.typed_wake_preview_enabled, "enabled", "disabled")],
+    ["always-on microphone", yesNo(wakeFlowState.always_on_microphone_enabled, "enabled", "disabled")],
+    ["background listener", yesNo(wakeFlowState.background_listener_enabled, "enabled", "disabled")],
+  ] as const;
+
+  const wakeParseRows = [
+    ["wake phrase detectada", valueText(wakeParsePreview.detected_wake_phrase, "Hola Jarvis")],
+    ["comando restante", valueText(wakeParsePreview.remaining_command_preview, "revisa el estado del proyecto")],
+    ["abriría ventana de comando", yesNo(wakeParsePreview.would_open_command_window, "sí, en futuro", "no")],
+    ["ejecutaría", yesNo(wakeParsePreview.would_execute, "sí", "no")],
+    ["aprobaría", yesNo(wakeParsePreview.would_approve, "sí", "no")],
+    ["llamaría Hermes", yesNo(wakeParsePreview.would_call_hermes, "sí", "no")],
+    ["grabaria audio", yesNo(wakeParsePreview.would_record_audio, "sí", "no")],
+    ["llamaría provider", yesNo(wakeParsePreview.would_call_provider, "sí", "no")],
+    ["status", valueText(wakeParsePreview.status, "preview_only")],
+  ] as const;
+
+  const wakeApprovalRows = [
+    ["wake phrase es permiso", yesNo(wakeApprovalPolicy.wake_phrase_is_permission, "true", "false")],
+    ["wake phrase aprueba", yesNo(wakeApprovalPolicy.wake_phrase_can_approve, "true", "false")],
+    ["wake phrase ejecuta", yesNo(wakeApprovalPolicy.wake_phrase_can_execute, "true", "false")],
+    ["canal autenticado", yesNo(wakeApprovalPolicy.voice_approval_requires_authenticated_channel, "required", "false")],
+    ["readback sensible", yesNo(wakeApprovalPolicy.sensitive_actions_require_readback, "required", "false")],
+    [
+      "doble/triple crítica",
+      yesNo(wakeApprovalPolicy.critical_actions_require_double_or_triple_confirmation, "required", "false"),
+    ],
+    ["audit events", yesNo(wakeApprovalPolicy.approval_events_must_be_audited, "required", "false")],
+  ] as const;
+
   return (
     <div className="flex flex-col gap-6">
       <section className="border border-border bg-card/70 p-5">
@@ -1033,41 +1419,254 @@ export default function JarvisCommandCenterPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-warning" />
-              <CardTitle>Núcleo / Voice Core visual</CardTitle>
+              <CardTitle>Núcleo de Voz JARVIS</CardTitle>
             </div>
-            <CardDescription>Estado seguro actual leído desde el read model; fallback a unknown/offline.</CardDescription>
+            <CardDescription>Voice Core visual + TTS state preview. Sin escucha, sin grabación y sin provider externo.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-[260px_1fr]">
-            <div className="relative flex min-h-[260px] items-center justify-center border border-border/70 bg-background/40">
-              <div className="absolute inset-6 border border-warning/20" />
-              <div className="absolute inset-12 border border-emerald-400/20" />
-              <div className="flex h-32 w-32 items-center justify-center border border-warning/80 bg-warning/10">
-                <MicOff className="h-11 w-11 text-warning" />
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+              <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden border border-warning/40 bg-background/40">
+                <div className="absolute h-56 w-56 rounded-full border border-warning/15 animate-pulse" />
+                <div className="absolute h-44 w-44 rounded-full border border-success/20" />
+                <div className="absolute h-32 w-32 rounded-full border border-warning/35 animate-pulse" />
+                <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_42px_rgba(255,189,56,0.18)]">
+                  <MicOff className="h-10 w-10 text-warning" />
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 border border-border/70 bg-background/70 px-3 py-2">
+                  <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">estado actual</p>
+                  <p className="mt-1 font-mono-ui text-sm text-warning">
+                    {valueText(voiceCoreState.current_state, "preview")} / {valueText(voiceCoreState.mode, "preview")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <StatusList items={voiceCoreRows} />
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">Subtítulos preview</Badge>
+                    <Badge variant="success">sin TTS real</Badge>
+                    <Badge variant="success">sin STT real</Badge>
+                    <Badge variant="success">sin provider externo</Badge>
+                  </div>
+                  <p className="mt-3 font-mono-ui text-sm text-foreground">
+                    {valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}
+                  </p>
+                  <p className="mt-2 font-display text-xs text-warning">
+                    Subtítulos preview - sin TTS real, sin STT real, sin provider externo.
+                  </p>
+                </article>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {voiceStates.map((state) => (
-                  <Badge key={state} variant={state === voiceWake.wake_word_state ? "warning" : "outline"}>
-                    {state}
-                  </Badge>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
+                <Badge variant="warning">preview / disabled / future gated / not connected</Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {voiceVisualStates.map((item) => (
+                  <div key={item.state} className="min-h-32 border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
+                        <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
+                      </div>
+                      <Badge variant={item.enabled === "preview" ? "warning" : item.enabled ? "success" : "outline"}>
+                        {valueText(item.enabled)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant="outline">{valueText(item.connection, "preview")}</Badge>
+                      <Badge variant={item.sensor_required ? "destructive" : "success"}>
+                        sensor: {yesNo(item.sensor_required, "required", "false")}
+                      </Badge>
+                      <Badge variant={item.can_approve ? "destructive" : "success"}>
+                        approve: {yesNo(item.can_approve, "true", "false")}
+                      </Badge>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="border border-border/70 p-3">
-                  <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">micrófono real</p>
-                  <p className="mt-1 font-mono-ui text-sm">{valueText(voiceWake.microphone_state)}</p>
+            </article>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">TTS State</h3>
+                <div className="mt-3">
+                  <StatusList items={ttsRows} />
                 </div>
-                <div className="border border-border/70 p-3">
-                  <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">wake word real</p>
-                  <p className="mt-1 font-mono-ui text-sm">{valueText(voiceWake.wake_word_state)}</p>
+              </article>
+
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Política wake word</h3>
+                <div className="mt-3">
+                  <StatusList items={wakePolicyRows} />
                 </div>
-                <div className="border border-border/70 p-3">
-                  <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">wake phrases</p>
-                  <p className="mt-1 font-mono-ui text-sm">{voiceWake.wake_phrases?.join(", ") || "Hola Jarvis, Jarvis"}</p>
+                <div className="mt-3 grid gap-2">
+                  <SafetyLine>Frases soportadas futuras: Hola Jarvis, Jarvis.</SafetyLine>
+                  <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                  <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
+                  <SafetyLine>Las acciones críticas requieren readback y confirmación fuerte.</SafetyLine>
+                </div>
+              </article>
+            </div>
+
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">
+                  Wake Word Local Safe Flow
+                </h3>
+                <Badge variant="warning">typed preview / read-only</Badge>
+              </div>
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+                <div className="space-y-4">
+                  <StatusList items={wakeFlowStateRows} />
+                  <div className="border border-border/70 bg-background/35 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Frases soportadas</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {wakeSupportedPhrases.map((phrase) => (
+                        <Badge key={phrase} variant="outline">
+                          {phrase}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="border border-border/70 bg-background/35 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Stop phrases</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {wakeStopPhrases.map((phrase) => (
+                        <Badge key={phrase} variant="outline">
+                          {phrase}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {[
+                      ["Mic hard-off", valueText(wakeModeExplanations.mic_hard_off, "Mic hard-off: no escucha nada.")],
+                      [
+                        "Wake-word-only",
+                        valueText(
+                          wakeModeExplanations.wake_word_only,
+                          "Wake-word-only: futuro modo donde solo detectaría frase.",
+                        ),
+                      ],
+                      [
+                        "Command listening",
+                        valueText(
+                          wakeModeExplanations.command_listening,
+                          "Command listening: futura ventana corta después de wake.",
+                        ),
+                      ],
+                      ["Push-to-talk", valueText(wakeModeExplanations.push_to_talk, "Push-to-talk: futuro modo manual.")],
+                      ["Typed preview", valueText(wakeModeExplanations.typed_preview, "Typed preview: modo actual seguro.")],
+                    ].map(([label, text]) => (
+                      <div key={label} className="border border-border/70 bg-background/35 p-3">
+                        <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">{label}</p>
+                        <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">David</p>
+                      <p className="mt-2 font-mono-ui text-sm text-foreground">
+                        {valueText(wakeParsePreview.input_example, "Hola Jarvis, revisa el estado del proyecto")}
+                      </p>
+                    </div>
+                    <div className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS preview</p>
+                      <div className="mt-2">
+                        <StatusList items={wakeParseRows} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Policy visible</p>
+                      <div className="mt-3 grid gap-2">
+                        <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                        <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
+                        <SafetyLine>La wake phrase solo puede abrir una ventana de comando futura.</SafetyLine>
+                        <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
+                        <SafetyLine>Las acciones críticas requieren doble o triple confirmación.</SafetyLine>
+                      </div>
+                    </div>
+                    <div className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Approval policy</p>
+                      <div className="mt-3">
+                        <StatusList items={wakeApprovalRows} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-success/40 bg-background/35 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Safety banner</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={wakeFlowSafety.no_microphone_activation ? "success" : "destructive"}>no micrófono</Badge>
+                      <Badge variant={wakeFlowSafety.no_raw_audio_storage ? "success" : "destructive"}>no grabación</Badge>
+                      <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no STT</Badge>
+                      <Badge variant={wakeFlowSafety.no_external_tts ? "success" : "destructive"}>no TTS real</Badge>
+                      <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no provider externo</Badge>
+                      <Badge variant={wakeFlowSafety.no_background_listening ? "success" : "destructive"}>
+                        no background listener
+                      </Badge>
+                      <Badge variant={wakeFlowSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
+                      <Badge variant={wakeFlowSafety.no_auto_execute ? "success" : "destructive"}>no auto execute</Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+            </article>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad voz</h3>
+                <div className="mt-3">
+                  <StatusList items={voicePrivacyRows} />
+                </div>
+                <div className="mt-3 grid gap-2">
+                  <SafetyLine>micrófono: disabled</SafetyLine>
+                  <SafetyLine>grabación: false</SafetyLine>
+                  <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
+                </div>
+              </article>
+
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes</h3>
+                <div className="mt-3">
+                  <StatusList items={voiceRelationshipRows} />
+                </div>
+                <div className="mt-3 grid gap-2">
+                  <SafetyLine>La voz puede preparar una intención futura.</SafetyLine>
+                  <SafetyLine>Si requiere aprobación, aparecerá en Approval Console.</SafetyLine>
+                  <SafetyLine>Hermes solo ejecuta después de approval válido.</SafetyLine>
+                  <SafetyLine>Frontend/voice no llama Hermes directamente.</SafetyLine>
+                </div>
+              </article>
+
+              <article className="border border-destructive/40 bg-destructive/10 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch voz</h3>
+                <div className="mt-3 grid gap-2">
+                  <Badge variant={voiceSafety.kill_switch_visible ? "success" : "destructive"}>
+                    kill switch visible: {yesNo(voiceSafety.kill_switch_visible)}
+                  </Badge>
+                  <Badge variant={voiceKillSwitch.real_audio_to_stop ? "destructive" : "success"}>
+                    audio real que parar: {yesNo(voiceKillSwitch.real_audio_to_stop, "true", "false")}
+                  </Badge>
+                </div>
+                <p className="mt-3 font-mono-ui text-xs text-destructive/80">
+                  En esta PR no hay audio real que parar. Una integración futura deberá cortar escucha, TTS y ejecución gobernada.
+                </p>
+              </article>
             </div>
           </CardContent>
         </Card>

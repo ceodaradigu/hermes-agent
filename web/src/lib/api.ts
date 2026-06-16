@@ -390,6 +390,129 @@ export interface JarvisMissionControl {
   read_only?: boolean;
 }
 
+export interface JarvisVoiceCoreVisualState {
+  state: string;
+  label: string;
+  description: string;
+  risk: string;
+  enabled: boolean | "preview" | string;
+  sensor_required: boolean;
+  can_approve: boolean;
+  connection?: string;
+}
+
+export interface JarvisVoiceCore {
+  state?: {
+    mode?: string;
+    current_state?: string;
+    microphone_enabled?: boolean;
+    wake_word_enabled?: boolean;
+    command_listening_enabled?: boolean;
+    tts_enabled?: boolean;
+    stt_enabled?: boolean;
+    audio_recording?: boolean;
+    raw_audio_stored?: boolean;
+    external_provider_called?: boolean;
+    voice_approval_enabled?: boolean;
+    wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
+  };
+  visual_states?: JarvisVoiceCoreVisualState[];
+  tts_state?: {
+    status?: "disabled" | "preview" | "not_connected" | "unknown" | string;
+    speaking?: boolean;
+    last_utterance?: string;
+    subtitles_enabled?: boolean;
+    subtitles_source?: string;
+    preview_subtitle?: string;
+    audio_output_enabled?: boolean;
+    provider?: string;
+    external_call?: boolean;
+  };
+  wake_word_policy?: {
+    supported_phrases?: string[];
+    wake_word_runtime?: string;
+    wake_phrase_is_permission?: boolean;
+    wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
+    requires_authenticated_channel_for_approval?: boolean;
+    critical_actions_require_readback?: boolean;
+    critical_actions_require_strong_confirmation?: boolean;
+  };
+  privacy?: Record<string, boolean>;
+  safety?: Record<string, boolean>;
+  relationship?: {
+    voice_can_prepare_future_intention?: boolean;
+    approval_console_handles_required_approval?: boolean;
+    hermes_executes_only_after_valid_approval?: boolean;
+    frontend_or_voice_can_call_hermes_directly?: boolean;
+    jarvis_governs?: boolean;
+    hermes_executes?: boolean;
+  };
+  kill_switch?: {
+    visible?: boolean;
+    real_audio_to_stop?: boolean;
+    future_must_cut_listening_tts_and_governed_execution?: boolean;
+  };
+  source_endpoints?: string[];
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisWakeWordFlow {
+  state?: {
+    mode?: string;
+    wake_runtime_enabled?: boolean;
+    microphone_hard_off?: boolean;
+    wake_word_only_mode?: boolean;
+    command_window_open?: boolean;
+    push_to_talk_preview_enabled?: boolean;
+    typed_wake_preview_enabled?: boolean;
+    always_on_microphone_enabled?: boolean;
+    background_listener_enabled?: boolean;
+    stt_enabled?: boolean;
+    audio_recording?: boolean;
+    raw_audio_stored?: boolean;
+    external_provider_called?: boolean;
+  };
+  supported_phrases?: string[];
+  stop_phrases?: string[];
+  mode_explanations?: {
+    mic_hard_off?: string;
+    wake_word_only?: string;
+    command_listening?: string;
+    push_to_talk?: string;
+    typed_preview?: string;
+  };
+  wake_parse_preview?: {
+    input_example?: string;
+    detected_wake_phrase?: string;
+    remaining_command_preview?: string;
+    would_open_command_window?: boolean;
+    would_execute?: boolean;
+    would_approve?: boolean;
+    would_call_hermes?: boolean;
+    would_record_audio?: boolean;
+    would_call_provider?: boolean;
+    status?: string;
+  };
+  approval_policy?: {
+    wake_phrase_is_permission?: boolean;
+    wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
+    voice_approval_requires_authenticated_channel?: boolean;
+    sensitive_actions_require_readback?: boolean;
+    critical_actions_require_double_or_triple_confirmation?: boolean;
+    approval_events_must_be_audited?: boolean;
+  };
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  source_endpoints?: string[];
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -437,12 +560,18 @@ export interface JarvisDashboardStatus {
     readback_policy?: Record<string, boolean>;
   };
   hermes_execution?: JarvisHermesExecution;
+  voice_core?: JarvisVoiceCore;
+  wake_word_flow?: JarvisWakeWordFlow;
   voice_wake?: {
     microphone_state?: string;
     wake_word_state?: string;
     wake_phrases?: string[];
     wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
     audio_recording?: boolean;
+    raw_audio_stored?: boolean;
+    external_provider_called?: boolean;
+    source_endpoints?: string[];
   };
   camera_vision?: {
     camera_state?: string;

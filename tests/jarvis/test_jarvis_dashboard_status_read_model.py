@@ -134,10 +134,173 @@ def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled(
     assert payload["approvals"]["critical_actions_require_strong_approval"] is True
     assert payload["hermes_execution"]["frontend_direct_execution_allowed"] is False
     assert payload["voice_wake"]["wake_phrase_can_approve"] is False
+    assert payload["voice_wake"]["wake_phrase_can_execute"] is False
     assert payload["voice_wake"]["audio_recording"] is False
+    assert payload["voice_wake"]["raw_audio_stored"] is False
+    assert payload["voice_wake"]["external_provider_called"] is False
     assert payload["camera_vision"]["recording"] is False
     assert payload["camera_vision"]["storage"] is False
     assert payload["mobile"]["direct_hermes_call_allowed"] is False
+
+
+def test_mark_3_dashboard_status_contains_voice_core_visual_tts_state_contract():
+    payload, _ = _payload()
+    voice_core = payload["voice_core"]
+    state = voice_core["state"]
+    visual_states = voice_core["visual_states"]
+    tts_state = voice_core["tts_state"]
+    wake_policy = voice_core["wake_word_policy"]
+    privacy = voice_core["privacy"]
+    safety = voice_core["safety"]
+
+    assert state["mode"] == "preview"
+    assert state["current_state"] in {"preview", "dormant"}
+    assert state["microphone_enabled"] is False
+    assert state["wake_word_enabled"] is False
+    assert state["command_listening_enabled"] is False
+    assert state["tts_enabled"] is False
+    assert state["stt_enabled"] is False
+    assert state["audio_recording"] is False
+    assert state["raw_audio_stored"] is False
+    assert state["external_provider_called"] is False
+    assert state["voice_approval_enabled"] is False
+    assert state["wake_phrase_can_approve"] is False
+    assert state["wake_phrase_can_execute"] is False
+
+    expected_states = [
+        "offline",
+        "online",
+        "preview",
+        "dormant",
+        "listening_wake_word",
+        "listening_command",
+        "thinking",
+        "speaking",
+        "approval_required",
+        "hermes_executing",
+        "paused",
+        "blocked",
+        "error",
+        "kill_switch",
+    ]
+    assert [item["state"] for item in visual_states] == expected_states
+    for visual_state in visual_states:
+        assert visual_state["label"]
+        assert visual_state["description"]
+        assert visual_state["risk"]
+        assert visual_state["enabled"] in {False, "preview"}
+        assert isinstance(visual_state["sensor_required"], bool)
+        assert visual_state["can_approve"] is False
+
+    assert tts_state["status"] in {"disabled", "preview", "not_connected", "unknown"}
+    assert tts_state["speaking"] is False
+    assert "preview" in tts_state["last_utterance"]
+    assert tts_state["subtitles_enabled"] is True
+    assert tts_state["subtitles_source"] == "preview/read_model"
+    assert tts_state["audio_output_enabled"] is False
+    assert tts_state["provider"] in {"none", "not_connected", "none/not_connected"}
+    assert tts_state["external_call"] is False
+
+    assert wake_policy["supported_phrases"] == ["Hola Jarvis", "Jarvis"]
+    assert wake_policy["wake_word_runtime"] in {"disabled", "not_connected", "preview", "disabled/not_connected"}
+    assert wake_policy["wake_phrase_is_permission"] is False
+    assert wake_policy["wake_phrase_can_approve"] is False
+    assert wake_policy["wake_phrase_can_execute"] is False
+    assert wake_policy["requires_authenticated_channel_for_approval"] is True
+    assert wake_policy["critical_actions_require_readback"] is True
+    assert wake_policy["critical_actions_require_strong_confirmation"] is True
+
+    for key in (
+        "no_microphone_activation",
+        "no_audio_recording",
+        "no_raw_audio_storage",
+        "no_external_audio_provider",
+        "no_background_listening_enabled",
+        "no_voice_biometrics",
+        "no_voice_approval_without_gate",
+    ):
+        assert privacy[key] is True
+
+    for key in (
+        "no_auto_execute",
+        "no_hermes_dispatch",
+        "no_tool_call",
+        "no_sensor_activation",
+        "no_get_user_media",
+        "no_media_recorder",
+        "no_audio_context_capture",
+        "kill_switch_visible",
+    ):
+        assert safety[key] is True
+
+
+def test_mark_3_dashboard_status_contains_wake_word_local_safe_flow_contract():
+    payload, _ = _payload()
+    flow = payload["wake_word_flow"]
+    state = flow["state"]
+    parse_preview = flow["wake_parse_preview"]
+    approval_policy = flow["approval_policy"]
+    safety = flow["safety"]
+
+    assert state["mode"] == "preview"
+    assert state["wake_runtime_enabled"] is False
+    assert state["microphone_hard_off"] is True
+    assert state["wake_word_only_mode"] is False
+    assert state["command_window_open"] is False
+    assert state["push_to_talk_preview_enabled"] is True
+    assert state["typed_wake_preview_enabled"] is True
+    assert state["always_on_microphone_enabled"] is False
+    assert state["background_listener_enabled"] is False
+    assert state["stt_enabled"] is False
+    assert state["audio_recording"] is False
+    assert state["raw_audio_stored"] is False
+    assert state["external_provider_called"] is False
+
+    assert "Hola Jarvis" in flow["supported_phrases"]
+    assert "Jarvis" in flow["supported_phrases"]
+    assert flow["stop_phrases"]
+    for phrase in ("para", "cancela", "detente", "silencio", "cancelar misión", "apaga escucha"):
+        assert phrase in flow["stop_phrases"]
+
+    assert flow["mode_explanations"]["mic_hard_off"]
+    assert flow["mode_explanations"]["wake_word_only"]
+    assert flow["mode_explanations"]["command_listening"]
+    assert flow["mode_explanations"]["push_to_talk"]
+    assert flow["mode_explanations"]["typed_preview"]
+
+    assert parse_preview["input_example"] == "Hola Jarvis, revisa el estado del proyecto"
+    assert parse_preview["detected_wake_phrase"] == "Hola Jarvis"
+    assert parse_preview["remaining_command_preview"] == "revisa el estado del proyecto"
+    assert parse_preview["would_open_command_window"] is True
+    assert parse_preview["would_execute"] is False
+    assert parse_preview["would_approve"] is False
+    assert parse_preview["would_call_hermes"] is False
+    assert parse_preview["would_record_audio"] is False
+    assert parse_preview["would_call_provider"] is False
+    assert parse_preview["status"] == "preview_only"
+
+    assert approval_policy["wake_phrase_is_permission"] is False
+    assert approval_policy["wake_phrase_can_approve"] is False
+    assert approval_policy["wake_phrase_can_execute"] is False
+    assert approval_policy["voice_approval_requires_authenticated_channel"] is True
+    assert approval_policy["sensitive_actions_require_readback"] is True
+    assert approval_policy["critical_actions_require_double_or_triple_confirmation"] is True
+    assert approval_policy["approval_events_must_be_audited"] is True
+
+    for key in (
+        "no_microphone_activation",
+        "no_get_user_media",
+        "no_media_recorder",
+        "no_audio_context_capture",
+        "no_background_listening",
+        "no_raw_audio_storage",
+        "no_external_stt",
+        "no_external_tts",
+        "no_hermes_dispatch",
+        "no_tool_call",
+        "no_auto_execute",
+    ):
+        assert safety[key] is True
 
 
 def test_mark_3_dashboard_status_contains_mission_control_preview_contract():
@@ -445,11 +608,20 @@ def test_mark_3_dashboard_status_adds_no_dangerous_action_routes():
         ("/mark-3/dashboard/email", "POST"),
         ("/mark-3/dashboard/credentials", "POST"),
         ("/mark-3/dashboard/sensors", "POST"),
+        ("/mark-3/dashboard/voice/start", "POST"),
+        ("/mark-3/dashboard/voice/record", "POST"),
+        ("/mark-3/dashboard/tts", "POST"),
+        ("/mark-3/dashboard/stt", "POST"),
         ("/mark-3/dashboard/mission-control", "POST"),
         ("/mark-3/mission-control/submit", "POST"),
         ("/mark-3/mission-control/execute", "POST"),
         ("/jarvis/mission-control/submit", "POST"),
         ("/jarvis/mission-control/execute", "POST"),
+        ("/voice-core/start", "POST"),
+        ("/voice-core/record", "POST"),
+        ("/wake-word/start", "POST"),
+        ("/microphone/start", "POST"),
+        ("/audio/record", "POST"),
     ):
         assert forbidden not in routes
 
@@ -461,6 +633,8 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
         for route in app.routes
     }
     source_endpoints = set(payload["release_candidate"]["source_endpoints"])
+    source_endpoints.update(payload["voice_core"]["source_endpoints"])
+    source_endpoints.update(payload["wake_word_flow"]["source_endpoints"])
     source_endpoints.update(payload["voice_wake"]["source_endpoints"])
     source_endpoints.update(payload["mobile"]["source_endpoints"])
     source_endpoints.add(payload["approvals"]["source_endpoint"])
@@ -511,8 +685,24 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Conversation preview read" for item in events)
     assert any(item["event"] == "No command execution performed" for item in events)
     assert any(item["event"] == "Hermes dispatch disabled from Mission Control" for item in events)
+    assert any(item["event"] == "Voice Core visual state read" for item in events)
+    assert any(item["event"] == "Voice/TTS state preview generated" for item in events)
+    assert any(item["event"] == "Microphone disabled" for item in events)
+    assert any(item["event"] == "Wake word runtime not active" for item in events)
+    assert any(item["event"] == "No audio recording performed" for item in events)
+    assert any(item["event"] == "Wake word flow preview read" for item in events)
+    assert any(item["event"] == "Microphone hard-off confirmed" for item in events)
+    assert any(item["event"] == "Typed wake preview available" for item in events)
+    assert any(item["event"] == "Wake phrase cannot approve" for item in events)
+    assert any(item["event"] == "Wake phrase cannot execute" for item in events)
+    assert any(item["event"] == "No background listener started" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
     assert not any("executed" in item["event"].lower() for item in events)
-    assert not any("started" in item["event"].lower() for item in events)
     assert not any("completed" in item["event"].lower() for item in events)
+    assert not any("microphone started" in item["event"].lower() for item in events)
+    assert not any(item["event"].lower() == "background listener started" for item in events)
+    assert not any("wake word detected" in item["event"].lower() for item in events)
+    assert not any("audio recorded" in item["event"].lower() for item in events)
+    assert not any("tts played" in item["event"].lower() for item in events)
+    assert not any("spoken conversation" in item["event"].lower() for item in events)

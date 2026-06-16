@@ -964,3 +964,95 @@ PR #149 prepara conversación real futura, pero mantiene la separación:
 JARVIS gobierna.
 Hermes ejecuta.
 ```
+
+## JARVIS Voice Interaction Layer
+
+PR #150 mejora la capa de interacción de voz de `/jarvis` y el read model
+`GET /mark-3/dashboard/status` sin implementar voz real. Agrupa:
+
+- Voice Core Visual;
+- TTS State Preview;
+- Wake Word Local Safe Flow.
+
+Incluye:
+
+- `voice_core.state` con `mode=preview`, `current_state=preview|dormant`,
+  `microphone_enabled=false`, `wake_word_enabled=false`,
+  `command_listening_enabled=false`, `tts_enabled=false`, `stt_enabled=false`,
+  `audio_recording=false`, `raw_audio_stored=false`,
+  `external_provider_called=false`, `voice_approval_enabled=false`,
+  `wake_phrase_can_approve=false` y `wake_phrase_can_execute=false`.
+- `visual_states` para offline, online, preview, dormant,
+  listening_wake_word, listening_command, thinking, speaking,
+  approval_required, hermes_executing, paused, blocked, error y kill_switch,
+  con label, description, risk, enabled preview/false, sensor_required y
+  `can_approve=false`.
+- `tts_state` con subtítulos preview desde `preview/read_model`, speaking false,
+  audio output false, provider `none/not_connected` y external call false.
+- `wake_word_policy` con frases futuras `Hola Jarvis` y `Jarvis`; la wake
+  phrase no es permiso, no aprueba y no ejecuta; approval futuro requiere canal
+  autenticado, readback y confirmación fuerte para acciones críticas.
+- `privacy` y `safety`: no microphone activation, no audio recording, no raw
+  audio storage, no external audio provider, no background listening, no voice
+  biometrics, no voice approval without gate, no auto execute, no Hermes
+  dispatch, no tool call, no sensor activation, no browser media capture APIs
+  and kill switch visible.
+- Timeline read-only: Voice Core visual state read, Voice/TTS state preview
+  generated, Microphone disabled, Wake word runtime not active y No audio
+  recording performed.
+- `/jarvis` muestra `Núcleo de Voz JARVIS`, núcleo central con anillos CSS,
+  estados visuales, subtítulos preview:
+  `David, estoy en modo preview. No estoy escuchando ni grabando audio.`,
+  política wake word, privacidad de voz, relación con Approval Console/Hermes y
+  Kill Switch de voz.
+- `wake_word_flow.state` con `mode=preview`,
+  `wake_runtime_enabled=false`, `microphone_hard_off=true`,
+  `wake_word_only_mode=false`, `command_window_open=false`,
+  `push_to_talk_preview_enabled=true`, `typed_wake_preview_enabled=true`,
+  `always_on_microphone_enabled=false`, `background_listener_enabled=false`,
+  `stt_enabled=false`, `audio_recording=false`, `raw_audio_stored=false` y
+  `external_provider_called=false`.
+- `wake_word_flow.supported_phrases`: `Hola Jarvis`, `Jarvis`.
+- `wake_word_flow.stop_phrases`: `para`, `cancela`, `detente`, `silencio`,
+  `cancelar misión`, `apaga escucha`.
+- `wake_word_flow.mode_explanations` diferencia mic hard-off, wake-word-only,
+  command listening, push-to-talk y typed preview.
+- `wake_word_flow.wake_parse_preview` modela
+  `Hola Jarvis, revisa el estado del proyecto`: detecta `Hola Jarvis`, deja
+  `revisa el estado del proyecto` como comando restante, abriría una ventana
+  futura, pero no ejecuta, no aprueba, no llama Hermes, no graba audio y no
+  llama providers.
+- `wake_word_flow.approval_policy`: wake phrase no es permiso, no aprueba, no
+  ejecuta; approval por voz requiere canal autenticado, readback y auditoría;
+  acciones críticas requieren doble/triple confirmación.
+- `wake_word_flow.safety`: no microphone activation, no browser media capture,
+  no background listening, no raw audio storage, no external STT/TTS, no Hermes
+  dispatch, no tool call y no auto execute.
+- Timeline read-only adicional: Wake word flow preview read, Microphone
+  hard-off confirmed, Typed wake preview available, Wake phrase cannot approve,
+  Wake phrase cannot execute y No background listener started.
+- `/jarvis` muestra `Wake Word Local Safe Flow` con estado actual, frases
+  soportadas, stop phrases, diferencia de modos, preview de parsing, policy
+  visible y safety banner.
+
+No implementa:
+
+- voz real;
+- activación de micrófono;
+- wake word real;
+- listener wake word real;
+- escucha de comandos;
+- STT real;
+- TTS real;
+- salida de audio;
+- grabación o almacenamiento de audio bruto;
+- background listening;
+- voice biometrics;
+- provider externo;
+- aprobación por voz;
+- endpoint nuevo;
+- llamada directa a Hermes desde frontend o voz.
+
+PR #150 prepara una futura wake word local segura, pero solo como presencia
+visual/read-only y contrato de seguridad. La wake phrase nunca aprueba ni
+ejecuta, y solo podría abrir una ventana de comando futura bajo gates explícitos.
