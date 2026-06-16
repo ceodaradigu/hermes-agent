@@ -148,6 +148,13 @@ def build_mark_3_dashboard_status(
     kill_switch_state = "active" if kill_switch_active is True else "inactive" if kill_switch_active is False else "not_wired"
     running_sessions = _int(hermes_runtime.get("running_sessions"), default=None)
     session_count = _int(hermes_runtime.get("session_count"), default=None)
+    hermes_execution = _hermes_execution_projection(
+        hermes_runtime=hermes_runtime,
+        research_execution=research_execution,
+        running_sessions=running_sessions,
+        session_count=session_count,
+    )
+    hermes_timeline = _hermes_timeline_events(hermes_execution)
 
     payload = {
         "system": {
@@ -164,7 +171,9 @@ def build_mark_3_dashboard_status(
             "jarvis_role": "governs/risk/approval/audit/control",
             "hermes_role": "execution_engine",
             "no_duplicate_hermes_runtime": True,
+            "frontend_direct_execution_allowed": False,
             "frontend_can_execute": False,
+            "frontend_can_call_hermes_execute": False,
             "source_endpoint": "/mark-3/release-candidate/status",
         },
         "release_candidate": {
@@ -287,17 +296,7 @@ def build_mark_3_dashboard_status(
             "source_endpoint": "/approvals/status",
             "raw_status": _status_summary(approvals_status),
         },
-        "hermes_execution": {
-            "available": bool(hermes_runtime.get("available", False)),
-            "active_execution": bool(running_sessions and running_sessions > 0) if running_sessions is not None else UNKNOWN,
-            "last_execution": UNKNOWN,
-            "frontend_direct_execution_allowed": False,
-            "running_sessions": running_sessions if running_sessions is not None else UNKNOWN,
-            "session_count": session_count if session_count is not None else UNKNOWN,
-            "supported_tool": hermes_runtime.get("supported_tool", UNKNOWN),
-            "notes": "Only governed exact local read_file exists behind mission candidate, approval, scope fingerprint, and operator authorization; the dashboard cannot trigger it.",
-            "source_endpoint": "/mark-3/hermes-runtime/status",
-        },
+        "hermes_execution": hermes_execution,
         "voice_wake": {
             "microphone_state": "disabled" if voice_runtime.get("microphone_active") is False else UNKNOWN,
             "wake_word_state": "preview" if wake_listener.get("real_wake_listener_available") else "not_connected",
@@ -353,18 +352,27 @@ def build_mark_3_dashboard_status(
         "safety": {
             "frontend_can_execute": False,
             "frontend_can_approve": False,
+            "no_frontend_execute": True,
             "no_duplicate_hermes_runtime": True,
             "no_get_user_media": True,
             "no_sensor_activation": True,
             "no_frontend_tool_runner": True,
+            "no_direct_hermes_call_from_mobile": True,
+            "no_direct_hermes_call_from_voice": True,
+            "no_direct_hermes_call_from_camera": True,
             "no_frontend_hermes_execution": True,
             "no_post_put_delete_from_jarvis_page": True,
+            "approval_required_before_execution": True,
+            "wake_phrase_is_not_permission": True,
+            "audit_required": True,
+            "rollback_or_stop_plan_required_for_sensitive_actions": True,
             "no_money_movement": True,
             "no_deploy": True,
             "no_credentials": True,
             "no_email_send": True,
         },
         "timeline": timeline
+        + hermes_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -449,6 +457,227 @@ def _module(name: str, status: str, source: str, risk: str, notes: str) -> Dict[
         "risk": risk,
         "notes": notes,
     }
+
+
+def _hermes_execution_projection(
+    *,
+    hermes_runtime: Dict[str, Any],
+    research_execution: Dict[str, Any],
+    running_sessions: int | None,
+    session_count: int | None,
+) -> Dict[str, Any]:
+    runtime_available = _known_bool(hermes_runtime.get("available"))
+    connected = runtime_available if runtime_available in {True, False} else UNKNOWN
+    active_execution: bool | str = bool(running_sessions and running_sessions > 0) if running_sessions is not None else UNKNOWN
+
+    contract = {
+        "jarvis_role": "governs/risk/approval/audit/control",
+        "hermes_role": "execution_engine",
+        "no_duplicate_hermes_runtime": True,
+        "frontend_direct_execution_allowed": False,
+        "frontend_can_execute": False,
+        "frontend_can_call_hermes_execute": False,
+    }
+    runtime_status = {
+        "available": runtime_available,
+        "connected": connected,
+        "active_execution": active_execution,
+        "execution_mode": "read_only_visibility",
+        "last_execution": UNKNOWN,
+        "last_result": UNKNOWN,
+        "last_error": UNKNOWN,
+        "last_rollback": UNKNOWN,
+        "last_stop_plan": UNKNOWN,
+        "measured_duration": UNKNOWN,
+        "measured_cost": UNKNOWN,
+        "running_sessions": running_sessions if running_sessions is not None else UNKNOWN,
+        "session_count": session_count if session_count is not None else UNKNOWN,
+        "supported_tool": hermes_runtime.get("supported_tool", UNKNOWN),
+        "supported_action_type": hermes_runtime.get("supported_action_type", UNKNOWN),
+        "supported_capability": hermes_runtime.get("supported_capability", UNKNOWN),
+        "source_endpoint": "/mark-3/hermes-runtime/status",
+    }
+    governed_capabilities = [
+        _hermes_capability(
+            "local governed read",
+            "gated" if runtime_available is True else "not_connected" if runtime_available is False else UNKNOWN,
+            True,
+            "direct",
+            "Hermes can only be represented as a bounded local read candidate after JARVIS scope, risk and audit gates.",
+        ),
+        _hermes_capability(
+            "local docs read",
+            "ready" if research_execution.get("local_docs_repo_read_adapter_connected") else "not_connected",
+            True,
+            "direct",
+            "Local docs/repo visibility is exact-path and read-only; broad scans and secrets remain blocked.",
+        ),
+        _hermes_capability(
+            "repo/docs research adapter",
+            "ready" if research_execution.get("local_docs_repo_read_adapter_connected") else "not_connected",
+            True,
+            "level_2_local_read",
+            "Research control plane can prepare exact local docs/repo reads; GitHub/web providers are not connected here.",
+        ),
+        _hermes_capability(
+            "mission-gated execution candidate",
+            "gated",
+            True,
+            "risk_scaled",
+            "A mission candidate is eligibility only; it is not execution and cannot be launched by the dashboard.",
+        ),
+        _hermes_capability(
+            "approval-gated execution",
+            "gated",
+            True,
+            "risk_scaled_strong_when_sensitive",
+            "A valid approval is required before any future Hermes execution path; approval alone is not execution.",
+        ),
+        _hermes_capability(
+            "external tools",
+            "not_connected",
+            True,
+            "strong",
+            "Browser, network, GitHub, provider and authenticated external tools are not connected to this panel.",
+        ),
+        _hermes_capability(
+            "deploy/email/money/credentials",
+            "forbidden",
+            True,
+            "level_4_or_forbidden",
+            "Frontend access is forbidden; production, money and email require future governed backend gates, while secrets remain blocked.",
+        ),
+    ]
+    return {
+        **runtime_status,
+        "available": runtime_status["available"],
+        "connected": runtime_status["connected"],
+        "active_execution": runtime_status["active_execution"],
+        "last_execution": runtime_status["last_execution"],
+        "last_result": runtime_status["last_result"],
+        "last_error": runtime_status["last_error"],
+        "measured_duration": runtime_status["measured_duration"],
+        "measured_cost": runtime_status["measured_cost"],
+        "frontend_direct_execution_allowed": False,
+        "frontend_can_execute": False,
+        "frontend_can_call_hermes_execute": False,
+        "running_sessions": runtime_status["running_sessions"],
+        "session_count": runtime_status["session_count"],
+        "supported_tool": runtime_status["supported_tool"],
+        "notes": (
+            "Read-only visibility only: Hermes remains the execution engine behind JARVIS gates; "
+            "the dashboard cannot call an execution route, run tools, approve, stop a real session, or duplicate Hermes."
+        ),
+        "contract": contract,
+        "runtime_status": runtime_status,
+        "governed_capabilities": governed_capabilities,
+        "blocked_routes": [
+            _blocked_route("/execute", "frontend execution route", "No generic execution route is available to the frontend."),
+            _blocked_route("approve/reject", "approval mutation", "Approval decisions are displayed as disabled preview controls only."),
+            _blocked_route("tool runner", "frontend tool runner", "The browser is not a tool runner and has no registry or tool invocation path."),
+            _blocked_route("deploy", "production deploy", "Deploy remains blocked from this panel and requires future governed backend gates."),
+            _blocked_route("money", "payments or spend", "Money movement, Stripe live and checkout remain blocked."),
+            _blocked_route("email", "real email send", "The dashboard cannot send email or contact external recipients."),
+            _blocked_route("credentials", "secrets and access material", "Credentials, tokens, cookies, sessions and bypass requests stay forbidden."),
+            _blocked_route("sensor activation", "browser or device sensors", "The dashboard cannot activate microphone, camera, recording or sensor permissions."),
+            _blocked_route("camera/mic", "camera or microphone runtime", "Voice and camera surfaces are status-only here."),
+            _blocked_route(
+                "network external unless gated future",
+                "external network",
+                "External network access is not connected to this panel and must be gated in future backend work.",
+            ),
+        ],
+        "safety": {
+            "no_frontend_execute": True,
+            "no_frontend_tool_runner": True,
+            "no_direct_hermes_call_from_mobile": True,
+            "no_direct_hermes_call_from_voice": True,
+            "no_direct_hermes_call_from_camera": True,
+            "approval_required_before_execution": True,
+            "wake_phrase_is_not_permission": True,
+            "audit_required": True,
+            "rollback_or_stop_plan_required_for_sensitive_actions": True,
+        },
+        "source_endpoint": "/mark-3/hermes-runtime/status",
+    }
+
+
+def _hermes_capability(
+    name: str,
+    status: str,
+    approval_required: bool,
+    approval_level: str,
+    notes: str,
+) -> Dict[str, Any]:
+    allowed = {"ready", "gated", "prepare-only", "disabled", "not_connected", "forbidden", "unknown"}
+    return {
+        "name": name,
+        "status": status if status in allowed else UNKNOWN,
+        "approval_required": approval_required,
+        "approval_level": approval_level,
+        "can_execute_from_frontend": False,
+        "notes": notes,
+    }
+
+
+def _blocked_route(route_or_action: str, action: str, notes: str) -> Dict[str, Any]:
+    return {
+        "route_or_action": route_or_action,
+        "action": action,
+        "blocked": True,
+        "can_execute_from_frontend": False,
+        "notes": notes,
+    }
+
+
+def _hermes_timeline_events(hermes_execution: Dict[str, Any]) -> List[Dict[str, Any]]:
+    active_execution = hermes_execution["runtime_status"]["active_execution"]
+    if active_execution is False:
+        active_event = {
+            "event": "No active Hermes execution",
+            "source": "/mark-3/hermes-runtime/status",
+            "status": "ok",
+            "read_only": True,
+        }
+    elif active_execution is True:
+        active_event = {
+            "event": "Active Hermes execution reported by status read",
+            "source": "/mark-3/hermes-runtime/status",
+            "status": "read_only_observation",
+            "read_only": True,
+        }
+    else:
+        active_event = {
+            "event": "Hermes active execution state unknown",
+            "source": "/mark-3/hermes-runtime/status",
+            "status": UNKNOWN,
+            "read_only": True,
+        }
+    return [
+        {
+            "event": "Hermes execution visibility read",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+        active_event,
+        {
+            "event": "Frontend direct execution disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+        {
+            "event": "Approval gates required before Hermes execution",
+            "source": "/approvals/status",
+            "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _known_bool(value: Any) -> bool | str:
+    return value if isinstance(value, bool) else UNKNOWN
 
 
 def _pending_approval_count(app_state: Any) -> int | str:

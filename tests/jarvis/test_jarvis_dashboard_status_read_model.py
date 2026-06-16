@@ -52,10 +52,41 @@ def test_mark_3_dashboard_status_declares_jarvis_hermes_contract():
 
     assert payload["jarvis_hermes_contract"]["jarvis_role"] == "governs/risk/approval/audit/control"
     assert payload["jarvis_hermes_contract"]["hermes_role"] == "execution_engine"
+    assert payload["jarvis_hermes_contract"]["frontend_direct_execution_allowed"] is False
     assert payload["jarvis_hermes_contract"]["frontend_can_execute"] is False
+    assert payload["jarvis_hermes_contract"]["frontend_can_call_hermes_execute"] is False
     assert payload["jarvis_hermes_contract"]["no_duplicate_hermes_runtime"] is True
     assert payload["release_candidate"]["not_ready_for_free_autonomy"] is True
     assert payload["release_candidate"]["restrictions_are_approval_gates_not_permanent_bans"] is True
+
+
+def test_mark_3_dashboard_status_enriches_hermes_execution_contract_and_runtime_visibility():
+    payload, _ = _payload()
+    hermes = payload["hermes_execution"]
+    contract = hermes["contract"]
+    runtime = hermes["runtime_status"]
+
+    assert contract["jarvis_role"] == "governs/risk/approval/audit/control"
+    assert contract["hermes_role"] == "execution_engine"
+    assert contract["no_duplicate_hermes_runtime"] is True
+    assert contract["frontend_direct_execution_allowed"] is False
+    assert contract["frontend_can_execute"] is False
+    assert contract["frontend_can_call_hermes_execute"] is False
+
+    assert hermes["frontend_direct_execution_allowed"] is False
+    assert hermes["frontend_can_execute"] is False
+    assert hermes["frontend_can_call_hermes_execute"] is False
+    assert runtime["available"] in {True, False, "unknown"}
+    assert runtime["connected"] in {True, False, "unknown"}
+    assert runtime["active_execution"] in {False, "unknown"}
+    assert runtime["execution_mode"] == "read_only_visibility"
+    assert runtime["last_execution"] == "unknown"
+    assert runtime["last_result"] == "unknown"
+    assert runtime["last_error"] == "unknown"
+    assert runtime["last_rollback"] == "unknown"
+    assert runtime["last_stop_plan"] == "unknown"
+    assert runtime["measured_duration"] == "unknown"
+    assert runtime["measured_cost"] == "unknown"
 
 
 def test_mark_3_dashboard_status_contains_required_modules_and_sources():
@@ -107,6 +138,53 @@ def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled(
     assert payload["camera_vision"]["recording"] is False
     assert payload["camera_vision"]["storage"] is False
     assert payload["mobile"]["direct_hermes_call_allowed"] is False
+
+
+def test_mark_3_dashboard_status_hermes_capabilities_are_governed_and_not_frontend_executable():
+    payload, _ = _payload()
+    capabilities = payload["hermes_execution"]["governed_capabilities"]
+    names = {item["name"] for item in capabilities}
+
+    assert "local governed read" in names
+    assert "local docs read" in names
+    assert "repo/docs research adapter" in names
+    assert "external tools" in names
+    assert "deploy/email/money/credentials" in names
+
+    allowed_statuses = {"ready", "gated", "prepare-only", "disabled", "not_connected", "forbidden", "unknown"}
+    for capability in capabilities:
+        assert capability["status"] in allowed_statuses
+        assert isinstance(capability["approval_required"], bool)
+        assert capability["approval_level"]
+        assert capability["can_execute_from_frontend"] is False
+        assert capability["notes"]
+
+
+def test_mark_3_dashboard_status_hermes_blocked_routes_are_explicit():
+    payload, _ = _payload()
+    blocked = payload["hermes_execution"]["blocked_routes"]
+    serialized = " ".join(
+        f"{item['route_or_action']} {item['action']} {item['notes']}".lower()
+        for item in blocked
+    )
+
+    for required in (
+        "/execute",
+        "approve/reject",
+        "tool runner",
+        "deploy",
+        "money",
+        "email",
+        "credentials",
+        "sensor activation",
+        "camera/mic",
+        "network external unless gated future",
+    ):
+        assert required in serialized
+
+    for item in blocked:
+        assert item["blocked"] is True
+        assert item["can_execute_from_frontend"] is False
 
 
 def test_mark_3_dashboard_status_contains_enriched_approval_summary_and_cards():
@@ -207,19 +285,34 @@ def test_mark_3_dashboard_status_keeps_finance_unknown_and_no_fake_metrics():
 def test_mark_3_dashboard_status_declares_safety_boundaries():
     payload, _ = _payload()
     safety = payload["safety"]
+    hermes_safety = payload["hermes_execution"]["safety"]
 
     assert safety["frontend_can_execute"] is False
     assert safety["frontend_can_approve"] is False
+    assert safety["no_frontend_execute"] is True
     assert safety["no_duplicate_hermes_runtime"] is True
     assert safety["no_get_user_media"] is True
     assert safety["no_sensor_activation"] is True
     assert safety["no_frontend_tool_runner"] is True
+    assert safety["no_direct_hermes_call_from_mobile"] is True
+    assert safety["no_direct_hermes_call_from_voice"] is True
+    assert safety["no_direct_hermes_call_from_camera"] is True
     assert safety["no_frontend_hermes_execution"] is True
     assert safety["no_post_put_delete_from_jarvis_page"] is True
+    assert safety["approval_required_before_execution"] is True
+    assert safety["wake_phrase_is_not_permission"] is True
+    assert safety["audit_required"] is True
+    assert safety["rollback_or_stop_plan_required_for_sensitive_actions"] is True
     assert safety["no_money_movement"] is True
     assert safety["no_deploy"] is True
     assert safety["no_credentials"] is True
     assert safety["no_email_send"] is True
+
+    assert hermes_safety["approval_required_before_execution"] is True
+    assert hermes_safety["audit_required"] is True
+    assert hermes_safety["rollback_or_stop_plan_required_for_sensitive_actions"] is True
+    assert hermes_safety["no_frontend_execute"] is True
+    assert hermes_safety["no_frontend_tool_runner"] is True
 
 
 def test_mark_3_dashboard_status_adds_no_dangerous_action_routes():
@@ -240,6 +333,15 @@ def test_mark_3_dashboard_status_adds_no_dangerous_action_routes():
         ("/mark-3/dashboard/execute", "POST"),
         ("/mark-3/dashboard/approve", "POST"),
         ("/mark-3/dashboard/reject", "POST"),
+        ("/execute", "POST"),
+        ("/hermes/execute", "POST"),
+        ("/mark-3/hermes/execute", "POST"),
+        ("/mark-3/dashboard/tool-runner", "POST"),
+        ("/mark-3/dashboard/deploy", "POST"),
+        ("/mark-3/dashboard/money", "POST"),
+        ("/mark-3/dashboard/email", "POST"),
+        ("/mark-3/dashboard/credentials", "POST"),
+        ("/mark-3/dashboard/sensors", "POST"),
     ):
         assert forbidden not in routes
 
@@ -293,6 +395,12 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "release candidate status read" for item in events)
     assert any(item["event"] == "readiness read" for item in events)
     assert any(item["event"] == "dangerous route audit read" for item in events)
+    assert any(item["event"] == "Hermes execution visibility read" for item in events)
+    assert any(item["event"] == "No active Hermes execution" for item in events)
+    assert any(item["event"] == "Frontend direct execution disabled" for item in events)
+    assert any(item["event"] == "Approval gates required before Hermes execution" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
     assert not any("executed" in item["event"].lower() for item in events)
+    assert not any("started" in item["event"].lower() for item in events)
+    assert not any("completed" in item["event"].lower() for item in events)

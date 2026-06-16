@@ -252,6 +252,79 @@ export interface JarvisApprovalCard {
   source_endpoint?: string;
 }
 
+export interface JarvisHermesContract {
+  jarvis_role?: string;
+  hermes_role?: string;
+  no_duplicate_hermes_runtime?: boolean;
+  frontend_direct_execution_allowed?: boolean;
+  frontend_can_execute?: boolean;
+  frontend_can_call_hermes_execute?: boolean;
+}
+
+export interface JarvisHermesRuntimeStatus {
+  available?: boolean | string;
+  connected?: boolean | string;
+  active_execution?: boolean | string;
+  execution_mode?: string;
+  last_execution?: string;
+  last_result?: string;
+  last_error?: string;
+  last_rollback?: string;
+  last_stop_plan?: string;
+  measured_duration?: string;
+  measured_cost?: string;
+  running_sessions?: number | string;
+  session_count?: number | string;
+  supported_tool?: string;
+  supported_action_type?: string;
+  supported_capability?: string;
+  source_endpoint?: string;
+}
+
+export interface JarvisHermesGovernedCapability {
+  name: string;
+  status: "ready" | "gated" | "prepare-only" | "disabled" | "not_connected" | "forbidden" | "unknown" | string;
+  approval_required: boolean;
+  approval_level: string;
+  can_execute_from_frontend: boolean;
+  notes: string;
+}
+
+export interface JarvisHermesBlockedRoute {
+  route_or_action: string;
+  action: string;
+  blocked: boolean;
+  can_execute_from_frontend: boolean;
+  notes: string;
+}
+
+export interface JarvisHermesExecution {
+  available?: boolean | string;
+  connected?: boolean | string;
+  active_execution?: boolean | string;
+  execution_mode?: string;
+  last_execution?: string;
+  last_result?: string;
+  last_error?: string;
+  last_rollback?: string;
+  last_stop_plan?: string;
+  measured_duration?: string;
+  measured_cost?: string;
+  frontend_direct_execution_allowed?: boolean;
+  frontend_can_execute?: boolean;
+  frontend_can_call_hermes_execute?: boolean;
+  running_sessions?: number | string;
+  session_count?: number | string;
+  supported_tool?: string;
+  notes?: string;
+  contract?: JarvisHermesContract;
+  runtime_status?: JarvisHermesRuntimeStatus;
+  governed_capabilities?: JarvisHermesGovernedCapability[];
+  blocked_routes?: JarvisHermesBlockedRoute[];
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -266,7 +339,9 @@ export interface JarvisDashboardStatus {
     jarvis_role?: string;
     hermes_role?: string;
     no_duplicate_hermes_runtime?: boolean;
+    frontend_direct_execution_allowed?: boolean;
     frontend_can_execute?: boolean;
+    frontend_can_call_hermes_execute?: boolean;
   };
   release_candidate?: {
     status?: string;
@@ -295,16 +370,7 @@ export interface JarvisDashboardStatus {
     preview_only?: boolean;
     readback_policy?: Record<string, boolean>;
   };
-  hermes_execution?: {
-    available?: boolean;
-    active_execution?: boolean | string;
-    last_execution?: string;
-    frontend_direct_execution_allowed?: boolean;
-    running_sessions?: number | string;
-    session_count?: number | string;
-    supported_tool?: string;
-    notes?: string;
-  };
+  hermes_execution?: JarvisHermesExecution;
   voice_wake?: {
     microphone_state?: string;
     wake_word_state?: string;
