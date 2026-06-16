@@ -192,6 +192,66 @@ export interface JarvisDashboardTimelineEvent {
   read_only?: boolean;
 }
 
+export type JarvisApprovalStatus =
+  | "preview"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "blocked"
+  | "forbidden"
+  | "unknown"
+  | string;
+
+export type JarvisRiskLevel =
+  | "low"
+  | "medium"
+  | "high"
+  | "critical"
+  | "forbidden"
+  | "unknown"
+  | string;
+
+export type JarvisApprovalLevel =
+  | "direct"
+  | "simple"
+  | "strong"
+  | "double"
+  | "triple"
+  | "forbidden"
+  | "unknown"
+  | string;
+
+export interface JarvisApprovalCard {
+  id: string;
+  title: string;
+  action: string;
+  reason: string;
+  status: JarvisApprovalStatus;
+  risk_level: JarvisRiskLevel;
+  approval_level: JarvisApprovalLevel;
+  touches: string[];
+  estimated_cost: string;
+  measured_cost: string;
+  rollback_plan: string;
+  stop_plan: string;
+  expires_at: string;
+  scope_summary: string;
+  evidence_summary: string;
+  disabled_reason: string;
+  recommended_operator_action: string;
+  requires_readback?: boolean;
+  strong_confirmation_required?: boolean;
+  double_confirmation_required?: boolean;
+  triple_confirmation_required?: boolean;
+  rollback_required?: boolean;
+  stop_plan_required?: boolean;
+  audit_required?: boolean;
+  preview_only?: boolean;
+  read_only?: boolean;
+  source_endpoint?: string;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -219,11 +279,21 @@ export interface JarvisDashboardStatus {
   modules?: JarvisDashboardModule[];
   approvals?: {
     pending_count?: number | string;
+    critical_count?: number | string;
+    blocked_count?: number | string;
+    expired_count?: number | string;
+    preview_count?: number | string;
     action_buttons_enabled?: boolean;
+    all_actions_read_only?: boolean;
     wake_phrase_can_approve?: boolean;
+    frontend_can_approve?: boolean;
+    frontend_can_reject?: boolean;
+    frontend_can_modify_scope?: boolean;
     critical_actions_require_strong_approval?: boolean;
+    cards?: JarvisApprovalCard[];
     cards_state?: string;
     preview_only?: boolean;
+    readback_policy?: Record<string, boolean>;
   };
   hermes_execution?: {
     available?: boolean;

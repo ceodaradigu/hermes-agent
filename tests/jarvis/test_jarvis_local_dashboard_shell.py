@@ -43,9 +43,16 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "La cámara no graba por defecto",
         "Mobile es una interfaz, no un runtime",
         "La wake phrase nunca aprueba acciones",
+        "La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada",
         "Las acciones sensibles requieren aprobación humana",
+        "Las acciones críticas requieren confirmación fuerte",
         "Hermes ejecuta solo bajo gates válidos",
         "No hay ejecución real que detener desde esta shell",
+        "Preview-only: approval execution is not wired in this PR",
+        "Leyenda de riesgo",
+        "Nivel 0-1",
+        "Nivel 5",
+        "Readback / confirmación fuerte",
     ):
         assert text in content
 
@@ -94,6 +101,9 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
         '"POST"',
         '"PUT"',
         '"DELETE"',
+        '"/approve"',
+        '"/reject"',
+        '"/execute"',
         "AIAgent",
         "HermesRuntimeAdapter",
         "/mark-3/hermes-runtime/execute-read",
@@ -113,6 +123,7 @@ def test_approval_controls_are_preview_only_and_not_functional():
         "Modificar alcance",
         "Pedir explicación",
         "preview-only",
+        'aria-disabled="true"',
     ):
         assert label in content
 
