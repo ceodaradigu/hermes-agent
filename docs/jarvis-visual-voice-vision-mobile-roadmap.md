@@ -1342,6 +1342,63 @@ Exit criteria:
   unknowns preserved where evidence is absent, and no real money, Stripe,
   deploy, publishing, email, credentials, sensors or Hermes execution path.
 
+### PR #153 - Visual Command Center Pilot
+
+Objective:
+
+- Close a serious local pilot/hardening layer for the full Visual Command
+  Center cockpit at `/jarvis`.
+- Validate that the dashboard loads, reads `GET /mark-3/dashboard/status`,
+  keeps all expected panels visible and degrades honestly to `unknown`,
+  `disabled`, `not_connected`, `preview` or `future_gated`.
+- Keep the cockpit read-only: JARVIS governs, Hermes executes.
+
+Scope:
+
+- Enrich `jarvis/dashboard_read_model.py` with
+  `visual_command_center_pilot`.
+- Add state for route `/jarvis`, endpoint `/mark-3/dashboard/status`, backend
+  read-model connection and disabled flags for frontend execution, real
+  approvals, direct Hermes execution, real voice, real camera, mobile runtime,
+  money, deploy, email and credentials.
+- Add required panel checklist for Header, Voice Core, Wake Word Local Safe
+  Flow, Mission Control, Approval Console, Hermes Execution, Agent / Module
+  Radar, Camera / Vision, Mobile Companion, Finance / ROI, Product Builder
+  Adaptativo, Frontend Pilot / Hardening, Live Timeline / Audit and Kill
+  Switch.
+- Add read-only checks for no POST/PUT/DELETE, no execute route, no frontend
+  Hermes call, no tool runner, no sensor activation, no getUserMedia, no
+  MediaRecorder, no AudioContext capture, no camera capture, no mobile
+  runtime, no money movement, no Stripe live, no deploy, no email send, no
+  credentials and no fake metrics.
+- Add operator pilot steps, empty findings, known limitations, safety flags and
+  read-only timeline events.
+- Upgrade `/jarvis` with a `Visual Command Center Pilot` panel showing route,
+  endpoint, mode, panel checklist, security checklist, known limitations,
+  operator steps, critical button state and clear read-only copy.
+- Add `docs/jarvis-visual-command-center-pilot.md`.
+
+Must not do:
+
+- No real approvals.
+- No real mission submit.
+- No Hermes execution.
+- No direct frontend Hermes call.
+- no frontend Hermes call.
+- No voice real or wake listener real.
+- No camera real, browser media capture or sensors.
+- No mobile runtime.
+- No money, Stripe live, checkout, deploy, email or credentials.
+- No fake metrics.
+- No dependency hardening or `npm audit fix`.
+- No claim that David manually tested the pilot without evidence.
+
+Exit criteria:
+
+- David has a local runbook and a complete read-only cockpit pilot surface.
+- The backend and frontend both prove that the dashboard looks at status but
+  does not touch execution, sensors, money, deploy, email or credentials.
+
 ### PR #154 - Future real Finance/ROI and Product Builder activation
 
 Note: PR #152 implements the read-only/preview Finance/ROI and Adaptive Product
@@ -1407,19 +1464,19 @@ Exit criteria:
 - David sees honest finance and product-builder state, with every value labeled
   measured, estimated or unknown.
 
-### PR #155 - Frontend pilot and hardening
+### Future follow-up - Browser/a11y hardening after PR #153
 
 Objective:
 
-- Run a controlled local frontend pilot and harden findings before activating
-  any real sensors or execution actions.
+- Harden findings discovered while manually validating the PR #153 Visual
+  Command Center Pilot before activating any real sensors or execution actions.
 
 Scope:
 
 - E2E test the dashboard with the local API.
 - Add accessibility, responsive and error-state hardening.
 - Add visual regression/browser screenshots if the repo accepts that pattern.
-- Document pilot findings.
+- Document real pilot findings without claiming manual validation in advance.
 - Verify no UI path calls dangerous endpoints.
 
 Probable files:

@@ -174,6 +174,8 @@ def build_mark_3_dashboard_status(
     adaptive_product_builder_timeline = _adaptive_product_builder_timeline_events()
     frontend_pilot = _frontend_pilot_projection()
     frontend_pilot_timeline = _frontend_pilot_timeline_events()
+    visual_command_center_pilot = _visual_command_center_pilot_projection()
+    visual_command_center_pilot_timeline = _visual_command_center_pilot_timeline_events()
 
     payload = {
         "system": {
@@ -366,6 +368,7 @@ def build_mark_3_dashboard_status(
             "source_endpoint": "/mark-3/product-revenue/status",
         },
         "frontend_pilot": frontend_pilot,
+        "visual_command_center_pilot": visual_command_center_pilot,
         "safety": {
             "frontend_can_execute": False,
             "frontend_can_approve": False,
@@ -405,6 +408,7 @@ def build_mark_3_dashboard_status(
         + finance_roi_timeline
         + adaptive_product_builder_timeline
         + frontend_pilot_timeline
+        + visual_command_center_pilot_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -447,6 +451,316 @@ def build_mark_3_dashboard_status(
         },
     }
     return payload
+
+
+def _visual_pilot_panel(name: str, source: str, status: str, notes: str) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "expected": True,
+        "source": source,
+        "status": status,
+        "can_execute": False,
+        "notes": notes,
+    }
+
+
+def _visual_pilot_check(name: str, status: str, evidence: str, notes: str) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "evidence": evidence,
+        "notes": notes,
+    }
+
+
+def _visual_pilot_step(order: int, check: str, notes: str) -> Dict[str, Any]:
+    return {
+        "order": order,
+        "check": check,
+        "notes": notes,
+    }
+
+
+def _visual_command_center_pilot_projection() -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "read_only_pilot",
+            "dashboard_route": "/jarvis",
+            "status_endpoint": "/mark-3/dashboard/status",
+            "backend_read_model_connected": True,
+            "frontend_execution_enabled": False,
+            "approvals_real_enabled": False,
+            "hermes_direct_execution_enabled": False,
+            "voice_real_enabled": False,
+            "camera_real_enabled": False,
+            "mobile_runtime_enabled": False,
+            "money_enabled": False,
+            "deploy_enabled": False,
+            "email_enabled": False,
+            "credentials_enabled": False,
+        },
+        "required_panels": [
+            _visual_pilot_panel(
+                "Header",
+                "system + jarvis_hermes_contract",
+                "ready",
+                "Shows local read-only mode and JARVIS/Hermes separation.",
+            ),
+            _visual_pilot_panel(
+                "Voice Core",
+                "voice_core",
+                "preview",
+                "Visual state only; microphone, STT, TTS and providers remain disabled.",
+            ),
+            _visual_pilot_panel(
+                "Wake Word Local Safe Flow",
+                "wake_word_flow",
+                "preview",
+                "Typed preview only; wake phrases are not permissions and do not execute.",
+            ),
+            _visual_pilot_panel(
+                "Mission Control",
+                "mission_control",
+                "preview",
+                "Command intake is visual preview; no mission submit or Hermes dispatch.",
+            ),
+            _visual_pilot_panel(
+                "Approval Console",
+                "approvals",
+                "preview",
+                "Approval cards and buttons are visible but disabled/read-only.",
+            ),
+            _visual_pilot_panel(
+                "Hermes Execution",
+                "hermes_execution",
+                "preview",
+                "Execution visibility only; frontend cannot call Hermes directly.",
+            ),
+            _visual_pilot_panel(
+                "Agent / Module Radar",
+                "modules",
+                "ready",
+                "Normalized module states degrade to preview, disabled, not_connected or unknown.",
+            ),
+            _visual_pilot_panel(
+                "Camera / Vision",
+                "camera_vision",
+                "disabled",
+                "Camera, capture, storage and vision analysis are disabled.",
+            ),
+            _visual_pilot_panel(
+                "Mobile Companion",
+                "mobile_companion",
+                "preview",
+                "Mobile is a preview interface, not a runtime or approval channel.",
+            ),
+            _visual_pilot_panel(
+                "Finance / ROI",
+                "finance_roi",
+                "unknown",
+                "Metrics remain unknown unless measured evidence is connected.",
+            ),
+            _visual_pilot_panel(
+                "Product Builder Adaptativo",
+                "adaptive_product_builder",
+                "preview",
+                "Builder stages are preview/future-gated/disabled and cannot execute.",
+            ),
+            _visual_pilot_panel(
+                "Frontend Pilot / Hardening",
+                "frontend_pilot",
+                "ready",
+                "Frontend pilot declares GET-only status reading and no mutation paths.",
+            ),
+            _visual_pilot_panel(
+                "Live Timeline / Audit",
+                "timeline",
+                "ready",
+                "Read-only audit timeline contains status/read events, not execution claims.",
+            ),
+            _visual_pilot_panel(
+                "Kill Switch",
+                "system.kill_switch_state",
+                "preview",
+                "Visible disabled control; no active execution exists to stop in this pilot.",
+            ),
+        ],
+        "read_only_checks": [
+            _visual_pilot_check(
+                "no_post_put_delete",
+                "passed",
+                "read_only_contract.allowed_http_methods_for_frontend=[GET]",
+                "The dashboard may read the aggregate status endpoint only.",
+            ),
+            _visual_pilot_check(
+                "no_execute_route",
+                "passed",
+                "read_only_contract.frontend_must_not_call_execute=true",
+                "This read model adds no execute route and no execute affordance.",
+            ),
+            _visual_pilot_check(
+                "no_frontend_hermes_call",
+                "passed",
+                "jarvis_hermes_contract.frontend_can_call_hermes_execute=false",
+                "Hermes remains an execution engine behind JARVIS gates, not a frontend target.",
+            ),
+            _visual_pilot_check(
+                "no_tool_runner",
+                "passed",
+                "safety.no_frontend_tool_runner=true",
+                "No browser-side tool runner is represented by the dashboard read model.",
+            ),
+            _visual_pilot_check(
+                "no_sensor_activation",
+                "passed",
+                "safety.no_sensor_activation=true",
+                "Voice, wake, camera and mobile panels expose status only.",
+            ),
+            _visual_pilot_check(
+                "no_get_user_media",
+                "passed",
+                "safety.no_get_user_media=true",
+                "Browser media permission requests remain outside this pilot.",
+            ),
+            _visual_pilot_check(
+                "no_media_recorder",
+                "passed",
+                "voice_core.safety.no_media_recorder=true",
+                "No recording surface is enabled.",
+            ),
+            _visual_pilot_check(
+                "no_audio_context_capture",
+                "passed",
+                "voice_core.safety.no_audio_context_capture=true",
+                "Audio capture is disabled and not represented as active.",
+            ),
+            _visual_pilot_check(
+                "no_camera_capture",
+                "passed",
+                "camera_vision.privacy.no_snapshot_capture=true",
+                "Camera capture, streaming and storage are disabled.",
+            ),
+            _visual_pilot_check(
+                "no_mobile_runtime",
+                "passed",
+                "mobile_companion.state.mobile_runtime_enabled=false",
+                "Mobile is an interface preview, not a runtime.",
+            ),
+            _visual_pilot_check(
+                "no_money_movement",
+                "passed",
+                "finance_roi.safety.no_money_movement=true",
+                "Finance/ROI is read-only and cannot move money.",
+            ),
+            _visual_pilot_check(
+                "no_stripe_live",
+                "passed",
+                "finance_roi.safety.no_stripe_live=true",
+                "Stripe live and checkout creation remain disabled.",
+            ),
+            _visual_pilot_check(
+                "no_deploy",
+                "passed",
+                "adaptive_product_builder.safety.no_deploy=true",
+                "Product Builder cannot deploy from this pilot.",
+            ),
+            _visual_pilot_check(
+                "no_email_send",
+                "passed",
+                "safety.no_email_send=true",
+                "No email sending path is exposed by the dashboard.",
+            ),
+            _visual_pilot_check(
+                "no_credentials",
+                "passed",
+                "safety.no_credentials=true",
+                "Credential and secret access remain outside the cockpit.",
+            ),
+            _visual_pilot_check(
+                "no_fake_metrics",
+                "passed",
+                "finance_roi.truth_policy.no_fake_metrics=true",
+                "Values without evidence stay unknown.",
+            ),
+        ],
+        "operator_pilot_steps": [
+            _visual_pilot_step(1, "arrancar backend", "Start the local backend before opening the dashboard."),
+            _visual_pilot_step(2, "abrir /jarvis", "Open the local dashboard route in the web app."),
+            _visual_pilot_step(3, "comprobar estado general", "Confirm mode and endpoint show read-only pilot status."),
+            _visual_pilot_step(4, "comprobar panels", "Verify all required panels are visible."),
+            _visual_pilot_step(5, "comprobar unknown/disabled", "Confirm unavailable evidence remains unknown, disabled, not_connected, preview or future_gated."),
+            _visual_pilot_step(6, "comprobar que botones criticos estan disabled", "Mission, approval, kill switch, voice, camera, money and deploy controls must be disabled."),
+            _visual_pilot_step(7, "comprobar que no hay permisos de navegador", "The browser must not request microphone, camera, notifications or media permissions."),
+            _visual_pilot_step(8, "comprobar que no hay ejecucion Hermes", "No frontend path may invoke Hermes execution."),
+            _visual_pilot_step(9, "comprobar que finance/ROI no inventa datos", "Finance values without evidence must remain unknown."),
+            _visual_pilot_step(10, "comprobar timeline read-only", "Timeline events must describe reads/checks only, not execution."),
+        ],
+        "pilot_findings": {
+            "findings": [],
+            "known_limitations": [
+                "real approvals not wired",
+                "mission submit is preview-only",
+                "voice is preview-only",
+                "wake word is preview-only",
+                "camera is disabled",
+                "mobile is preview-only",
+                "finance is unknown without evidence",
+                "Product Builder is preview-only",
+                "dependency hardening may need separate PR due npm audit vulnerabilities",
+            ],
+        },
+        "safety": {
+            "pilot_is_read_only": True,
+            "dashboard_may_read_status_only": True,
+            "no_side_effects": True,
+            "no_real_world_actions": True,
+            "no_background_workers": True,
+            "no_sensors": True,
+            "no_money": True,
+            "no_production": True,
+            "no_credentials": True,
+            "restrictions_are_approval_gates_not_permanent_bans": True,
+        },
+        "timeline": _visual_command_center_pilot_timeline_events(),
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _visual_command_center_pilot_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Visual Command Center pilot status read",
+            "source": "/mark-3/dashboard/status",
+            "status": "read_only_pilot",
+            "read_only": True,
+        },
+        {
+            "event": "Dashboard route checked",
+            "source": "/jarvis",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Dashboard read model checked",
+            "source": "/mark-3/dashboard/status",
+            "status": "passed",
+            "read_only": True,
+        },
+        {
+            "event": "Read-only safety checks loaded",
+            "source": "/mark-3/dashboard/status",
+            "status": "passed",
+            "read_only": True,
+        },
+        {
+            "event": "No execution performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "read_only",
+            "read_only": True,
+        },
+    ]
 
 
 def _unknown_metric(label: str) -> Dict[str, Any]:

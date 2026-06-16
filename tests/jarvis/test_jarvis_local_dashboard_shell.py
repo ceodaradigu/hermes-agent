@@ -359,6 +359,67 @@ def test_jarvis_dashboard_shell_contains_product_finance_pilot_hardening_contrac
         assert text in content
 
 
+def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Visual Command Center Pilot",
+        "/jarvis",
+        "/mark-3/dashboard/status",
+        "read-only pilot",
+        "El dashboard mira, no toca",
+        "No se ejecuta Hermes desde el frontend",
+        "No se activan sensores",
+        "No hay approvals reales en esta fase",
+        "No hay métricas falsas",
+        "Los valores sin evidencia se muestran como unknown",
+        "Dependency hardening queda para una PR separada",
+        "Checklist de panels",
+        "Checklist de seguridad",
+        "Estado de botones críticos",
+        "Pasos para el operador",
+        "Limitaciones conocidas",
+        "Header",
+        "Voice Core",
+        "Wake Word Local Safe Flow",
+        "Mission Control",
+        "Approval Console",
+        "Hermes Execution",
+        "Agent / Module Radar",
+        "Camera / Vision",
+        "Mobile Companion",
+        "Finance / ROI",
+        "Product Builder Adaptativo",
+        "Frontend Pilot / Hardening",
+        "Live Timeline / Audit",
+        "Kill Switch",
+        "no_post_put_delete",
+        "no_execute_route",
+        "no_get_user_media",
+        "no_money_movement",
+        "no_fake_metrics",
+        "unknown",
+    ):
+        assert text in content
+
+    for forbidden in (
+        'method: "POST"',
+        'method: "PUT"',
+        'method: "DELETE"',
+        '"/execute"',
+        "/execute",
+        "getUserMedia(",
+        ".getUserMedia(",
+        "MediaRecorder",
+        "checkout.sessions.create",
+        "createCheckout",
+        "paymentIntent",
+        "moveMoney",
+        "transfer.create",
+    ):
+        assert forbidden not in content
+
+
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     content = _read(PAGE)
     api_source = _read(API)
