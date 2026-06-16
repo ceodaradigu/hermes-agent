@@ -303,6 +303,191 @@ def test_mark_3_dashboard_status_contains_wake_word_local_safe_flow_contract():
         assert safety[key] is True
 
 
+def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract():
+    payload, _ = _payload()
+    camera_vision = payload["camera_vision"]
+    state = camera_vision["state"]
+    privacy = camera_vision["privacy"]
+    scope_policy = camera_vision["scope_policy"]
+    timeline_events = [item["event"] for item in camera_vision["timeline"]]
+
+    assert camera_vision["preview_only"] is True
+    assert camera_vision["read_only"] is True
+    assert state["mode"] == "preview"
+    assert state["camera_enabled"] is False
+    assert state["camera_permission_requested"] is False
+    assert state["preview_enabled"] is False
+    assert state["recording"] is False
+    assert state["streaming"] is False
+    assert state["snapshot_capture_enabled"] is False
+    assert state["vision_analysis_enabled"] is False
+    assert state["image_storage_enabled"] is False
+    assert state["video_storage_enabled"] is False
+    assert state["external_vision_provider_called"] is False
+    assert state["local_vision_model_connected"] in {False, "unknown"}
+    assert state["background_camera_access"] is False
+
+    assert camera_vision["camera_state"] == "disabled"
+    assert camera_vision["preview_state"] == "disabled"
+    assert camera_vision["recording"] is False
+    assert camera_vision["streaming"] is False
+    assert camera_vision["snapshot"] == "disabled"
+    assert camera_vision["vision_analysis"] == "disabled"
+    assert camera_vision["storage"] is False
+    assert camera_vision["provider"] == "none/not_connected"
+
+    for key in (
+        "no_camera_activation",
+        "no_get_user_media",
+        "no_media_stream",
+        "no_recording",
+        "no_snapshot_capture",
+        "no_image_storage",
+        "no_video_storage",
+        "no_external_provider",
+        "explicit_operator_permission_required",
+        "visual_indicator_required_when_camera_active",
+        "audit_required_for_future_vision",
+    ):
+        assert privacy[key] is True
+
+    expected_states = [
+        "camera_off",
+        "camera_available_future",
+        "preview_disabled",
+        "permission_required",
+        "analyzing_future",
+        "recording_disabled",
+        "storage_disabled",
+        "blocked",
+        "kill_switch",
+    ]
+    assert [item["state"] for item in camera_vision["states"]] == expected_states
+    for visual_state in camera_vision["states"]:
+        assert visual_state["label"]
+        assert visual_state["description"]
+        assert visual_state["enabled"] in {False, "preview", "future_gated"}
+        assert visual_state["risk"]
+        assert visual_state["can_execute"] is False
+
+    assert scope_policy["allowed_scope"] == "none/unknown"
+    assert scope_policy["future_scope_requires_explicit_operator_permission"] is True
+    assert scope_policy["future_analysis_must_state_what_it_can_see"] is True
+    assert scope_policy["future_analysis_must_not_infer_sensitive_identity"] is True
+    assert scope_policy["future_analysis_must_not_store_without_permission"] is True
+
+    for event in (
+        "Camera/Vision privacy status read",
+        "Camera disabled",
+        "Recording disabled",
+        "Vision analysis disabled",
+        "No image or video captured",
+        "No external vision provider called",
+    ):
+        assert event in timeline_events
+
+    serialized = " ".join(timeline_events).lower()
+    for forbidden in (
+        "camera started",
+        "camera enabled",
+        "image captured and stored",
+        "video recorded",
+        "stream started",
+        "external vision analysis completed",
+    ):
+        assert forbidden not in serialized
+
+
+def test_mark_3_dashboard_status_contains_mobile_companion_pwa_preview_contract():
+    payload, _ = _payload()
+    mobile = payload["mobile_companion"]
+    state = mobile["state"]
+    safety = mobile["safety"]
+    pwa_policy = mobile["pwa_policy"]
+    timeline_events = [item["event"] for item in mobile["timeline"]]
+
+    assert mobile["preview_only"] is True
+    assert mobile["read_only"] is True
+    assert state["mode"] == "preview"
+    assert state["pwa_baseline"] == "preview"
+    assert state["mobile_runtime_enabled"] is False
+    assert state["mobile_can_execute"] is False
+    assert state["mobile_can_call_hermes_directly"] is False
+    assert state["mobile_can_approve_real_actions"] is False
+    assert state["mobile_can_reject_real_actions"] is False
+    assert state["mobile_can_modify_scope_real"] is False
+    assert state["mobile_notifications_enabled"] is False
+    assert state["remote_kill_switch_enabled"] is False
+    assert state["remote_camera_enabled"] is False
+    assert state["remote_microphone_enabled"] is False
+    assert state["external_network_required"] in {False, "unknown"}
+
+    expected_views = [
+        "status",
+        "approvals_preview",
+        "mission_preview",
+        "hermes_visibility",
+        "voice_status",
+        "camera_status",
+        "finance_summary",
+        "kill_switch_preview",
+    ]
+    assert [item["id"] for item in mobile["mobile_views"]] == expected_views
+    for view in mobile["mobile_views"]:
+        assert view["name"]
+        assert view["status"] in {"preview", "future_gated", "disabled", "unknown"}
+        assert view["can_execute"] is False
+        assert view["can_call_hermes"] is False
+        assert view["notes"]
+
+    for key in (
+        "mobile_is_interface_not_runtime",
+        "no_direct_hermes_call",
+        "no_mobile_execute",
+        "no_mobile_sensor_activation",
+        "no_mobile_camera_activation",
+        "no_mobile_microphone_activation",
+        "no_real_mobile_approval_in_this_pr",
+        "approval_requires_backend_gate",
+        "critical_approval_requires_strong_confirmation",
+        "remote_kill_switch_future_gated",
+    ):
+        assert safety[key] is True
+
+    assert pwa_policy["installable_pwa"] == "preview"
+    assert pwa_policy["offline_cache_enabled"] is False
+    assert pwa_policy["push_notifications_enabled"] is False
+    assert pwa_policy["service_worker_enabled"] is False
+    assert pwa_policy["no_background_sync"] is True
+    assert pwa_policy["no_credentials_storage"] is True
+    assert pwa_policy["no_token_storage"] is True
+
+    assert payload["mobile"]["direct_hermes_call_allowed"] is False
+    assert payload["mobile"]["approval_actions_enabled"] is False
+    assert payload["mobile"]["permissions"]["can_execute"] is False
+    assert payload["mobile"]["permissions"]["can_approve"] is False
+
+    for event in (
+        "Mobile Companion preview read",
+        "Mobile is interface, not runtime",
+        "Mobile direct Hermes call disabled",
+        "Real mobile approvals disabled",
+        "Remote kill switch future gated",
+    ):
+        assert event in timeline_events
+
+    serialized = " ".join(timeline_events).lower()
+    for forbidden in (
+        "mobile runtime started",
+        "mobile executed",
+        "mobile approval approved",
+        "mobile approval rejected",
+        "remote kill switch activated",
+        "push notification sent",
+    ):
+        assert forbidden not in serialized
+
+
 def test_mark_3_dashboard_status_contains_mission_control_preview_contract():
     payload, _ = _payload()
     mission_control = payload["mission_control"]
@@ -636,6 +821,8 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
     source_endpoints.update(payload["voice_core"]["source_endpoints"])
     source_endpoints.update(payload["wake_word_flow"]["source_endpoints"])
     source_endpoints.update(payload["voice_wake"]["source_endpoints"])
+    source_endpoints.update(payload["camera_vision"]["source_endpoints"])
+    source_endpoints.update(payload["mobile_companion"]["source_endpoints"])
     source_endpoints.update(payload["mobile"]["source_endpoints"])
     source_endpoints.add(payload["approvals"]["source_endpoint"])
     source_endpoints.add(payload["camera_vision"]["source_endpoint"])
@@ -696,6 +883,17 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Wake phrase cannot approve" for item in events)
     assert any(item["event"] == "Wake phrase cannot execute" for item in events)
     assert any(item["event"] == "No background listener started" for item in events)
+    assert any(item["event"] == "Camera/Vision privacy status read" for item in events)
+    assert any(item["event"] == "Camera disabled" for item in events)
+    assert any(item["event"] == "Recording disabled" for item in events)
+    assert any(item["event"] == "Vision analysis disabled" for item in events)
+    assert any(item["event"] == "No image or video captured" for item in events)
+    assert any(item["event"] == "No external vision provider called" for item in events)
+    assert any(item["event"] == "Mobile Companion preview read" for item in events)
+    assert any(item["event"] == "Mobile is interface, not runtime" for item in events)
+    assert any(item["event"] == "Mobile direct Hermes call disabled" for item in events)
+    assert any(item["event"] == "Real mobile approvals disabled" for item in events)
+    assert any(item["event"] == "Remote kill switch future gated" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
     assert not any("executed" in item["event"].lower() for item in events)
@@ -706,3 +904,10 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert not any("audio recorded" in item["event"].lower() for item in events)
     assert not any("tts played" in item["event"].lower() for item in events)
     assert not any("spoken conversation" in item["event"].lower() for item in events)
+    assert not any("camera started" in item["event"].lower() for item in events)
+    assert not any("stream started" in item["event"].lower() for item in events)
+    assert not any("image stored" in item["event"].lower() for item in events)
+    assert not any("video recorded" in item["event"].lower() for item in events)
+    assert not any("mobile runtime started" in item["event"].lower() for item in events)
+    assert not any("mobile approval approved" in item["event"].lower() for item in events)
+    assert not any("mobile approval rejected" in item["event"].lower() for item in events)

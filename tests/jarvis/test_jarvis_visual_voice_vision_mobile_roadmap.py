@@ -24,6 +24,11 @@ def test_visual_voice_vision_mobile_roadmap_exists_and_covers_required_contracts
         "kill switch",
         "no duplicate hermes",
         "unknown/no fake metrics",
+        "pr #151 - vision + mobile companion layer",
+        "camera / vision privacy panel",
+        "mobile companion / pwa baseline preview",
+        "no service worker",
+        "no token storage",
     ):
         assert text in serialized
 

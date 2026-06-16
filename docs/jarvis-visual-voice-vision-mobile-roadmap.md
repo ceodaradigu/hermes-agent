@@ -1145,180 +1145,105 @@ Exit criteria:
   window, while wake phrase still cannot approve, execute, call Hermes, record
   audio or call providers.
 
-### PR #151 - Wake word runtime setup and opt-in gates
+### PR #151 - Vision + Mobile Companion Layer
 
 Objective:
 
-- Future work only: design explicit opt-in gates for a real local wake runtime
-  after PR #150's visual/read-only safe flow is validated.
+- Add visibility and future structure for camera/vision and mobile companion
+  without activating sensors, capture, runtime, approvals or execution.
+- Group two safe read-only surfaces:
+  Camera / Vision Privacy Panel and Mobile Companion / PWA baseline preview.
 
 Scope:
 
-- Convert the PR #150 read-only wake flow contract into a possible runtime
-  setup path only after explicit operator approval.
-- Keep push-to-talk/simulated transcript controls as non-default opt-in work.
-- Preserve clear state difference between mic hard-off, wake-word-only and
-  listening-command.
-- Add a future implementation plan for local wake engine and STT adapter if
-  David approves a later runtime PR.
+- Enrich `GET /mark-3/dashboard/status` with `camera_vision`:
+  `mode=preview`, camera enabled false, permission requested false, preview
+  disabled, recording false, streaming false, snapshot capture disabled, vision
+  analysis disabled, image/video storage disabled, external provider not called,
+  local vision model unknown unless evidence exists and background camera access
+  false.
+- Add `camera_vision.privacy` and `scope_policy`: no camera activation, no
+  browser media capture, no stream, no recording, no snapshot, no image/video
+  storage, no external provider, explicit operator permission required, visible
+  indicator required for any future camera activity and audit required for
+  future vision.
+- Add camera visual states for camera off, future availability, preview
+  disabled, permission required, analysis future, recording disabled, storage
+  disabled, blocked and kill switch; every state has label, description, risk,
+  enabled false/preview/future-gated and `can_execute=false`.
+- Add `mobile_companion`:
+  `mode=preview`, PWA baseline preview, mobile runtime disabled, mobile cannot
+  execute, cannot call Hermes directly, cannot approve/reject/modify real
+  actions, notifications disabled, remote kill switch disabled/future-gated,
+  mobile camera/microphone disabled and no external network requirement.
+- Add future mobile views for status, approvals preview, mission preview,
+  Hermes visibility, voice status, camera status, finance summary and kill
+  switch preview. Every mobile view is preview/future-gated/disabled/unknown,
+  `can_execute=false`, `can_call_hermes=false`.
+- Add `pwa_policy`: installable PWA preview only, offline cache disabled, push
+  notifications disabled, service worker disabled unless a safe one already
+  exists, no background sync, no credential storage and no token storage.
+- Upgrade `/jarvis` with two visible panels:
+  `Cámara / Visión` and `Mobile Companion`.
 
 Probable files:
 
-- `web/src/components/jarvis/WakeWordPanel.tsx`
-- `web/src/lib/jarvis-wake.ts`
-- optional docs/runbook update for local wake runtime
+- `jarvis/dashboard_read_model.py`
+- `web/src/lib/api.ts`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `tests/jarvis/test_jarvis_dashboard_status_read_model.py`
+- `tests/jarvis/test_jarvis_local_dashboard_shell.py`
+- `docs/jarvis-visual-voice-vision-mobile-roadmap.md`
+- `docs/jarvis-handoff-context.md`
+- `docs/JARVIS_MASTER_BUILD_MAP.md`
 
 Endpoints consumed:
 
-- `GET /voice-runtime/status`
-- `GET /voice-runtime/policy`
-- `POST /voice-runtime/preview-wake-parse`
-- `POST /voice-runtime/preview-session`
-- `POST /voice-runtime/preview-command`
-- `POST /voice-runtime/preview-stop`
-- `GET /mark-2/wake-listener/status`
-- `POST /mark-2/wake-listener/preview-transcript`
+- `GET /mark-3/dashboard/status`
+- Existing read-only sources inside that read model:
+  `GET /camera-control/status`, `GET /mobile/companion/status` and
+  `GET /mobile/companion/permissions`.
 
 New endpoints needed:
 
-- Later only, behind explicit setup: `POST /voice/runtime/start-microphone` is
-  not recommended until threat model, local provider choice and visual
-  indicator are implemented.
+- None.
 
 Expected tests:
 
-- Wake parse tests for `Hola Jarvis`, `Jarvis`, low confidence and command
-  extraction.
-- UI tests proving wake phrase never toggles approval.
+- Backend read-model tests proving camera/vision and mobile companion sections
+  exist and all real sensor/runtime/action flags stay false.
+- Static `/jarvis` tests proving the required safety text is visible and no
+  sensor API, service worker, push, background sync, POST/PUT/DELETE,
+  `/execute`, approval mutation or Hermes direct call is added.
+- Roadmap docs tests proving PR #151 is documented as Vision + Mobile Companion
+  Layer.
 
 Must not do:
 
-- No always-on mic.
-- No background listening by default.
-- No wake phrase approval.
-- No external STT by default.
-
-Exit criteria:
-
-- David can safely test the wake UX with typed/push-to-talk input and see why it
-  cannot execute or approve by itself.
-
-### PR #152 - Camera/Vision Privacy Panel
-
-Objective:
-
-- Add the camera/vision privacy surface before any real camera or vision
-  runtime work.
-
-Scope:
-
-- Show camera state: off, available, preview requested, analyzing requested,
-  recording disabled, recording active only when future permission exists.
-- Show explicit privacy policy, stop phrase `no mires`, no recording by
-  default, no streaming by default, no retention by default, no external upload.
-- Add disabled controls for future preview/analyze/record with clear approval
-  requirements.
-- Optionally build browser permission UI skeleton without calling
-  `getUserMedia` yet.
-
-Probable files:
-
-- `web/src/components/jarvis/CameraPrivacyPanel.tsx`
-- `web/src/components/jarvis/VisionScopePanel.tsx`
-- `web/src/lib/jarvis-vision.ts`
-
-Endpoints consumed:
-
-- `GET /camera-control/status`
-- `GET /camera-control/policy`
-- `POST /camera-control/preview-session`
-- `POST /camera-control/preview-stop`
-- `GET /ambient-vision/status`
-- `GET /ambient-vision/privacy-policy`
-- `POST /ambient-vision/session-preview`
-- `GET /ambient-vision/stop-control`
-
-New endpoints needed:
-
-- Later only: a local camera runtime endpoint must require explicit opt-in,
-  visible indicator, no retention, stop and audit before using real frames.
-
-Expected tests:
-
-- UI tests for off/available/preview/analyzing/recording-disabled states.
-- Backend tests if any new preview fields are added.
-
-Must not do:
-
-- No real camera activation.
+- No camera activation.
+- No browser media capture.
+- No snapshot capture.
 - No recording.
 - No streaming.
-- No image storage.
-- No face/person analysis by default.
-- No external vision upload.
+- No image or video storage.
+- No vision analysis real.
+- No external vision provider.
+- No local vision model connection unless evidence exists.
+- No mobile runtime.
+- No mobile execution.
+- No direct mobile/camera/voice/frontend call to Hermes.
+- No real mobile approvals.
+- No service worker, push notification, background sync, offline cache,
+  credentials storage or token storage.
+- No sensors.
+- No deploy, money, email, credentials or external network.
 
 Exit criteria:
 
-- David can always tell whether camera/vision is off, available, previewing,
-  analyzing or blocked, and the UI cannot silently start capture.
-
-### PR #153 - Mobile Companion / PWA baseline
-
-Objective:
-
-- Add a minimal mobile-safe JARVIS companion surface, preferably as responsive
-  PWA pages in existing `web/` before considering native apps.
-
-Scope:
-
-- Responsive mobile route with status, pending approvals, mission state,
-  mic/camera indicators, alerts placeholder and kill switch placeholder.
-- Use reduced Mobile Command Center snapshot.
-- Support text intent preview from mobile.
-- Prepare approve/reject UI as disabled until trusted-device approval path
-  exists.
-
-Probable files:
-
-- `web/src/pages/JarvisMobilePage.tsx`
-- `web/src/components/jarvis/mobile/*`
-- `web/public/manifest.webmanifest` only if PWA is explicitly accepted and no
-  dependency is needed.
-
-Endpoints consumed:
-
-- `GET /mobile/companion/status`
-- `GET /mobile/companion/permissions`
-- `GET /mobile/command-center`
-- `POST /mobile/intent/preview`
-- `GET /devices/runtime/status`
-- `GET /devices/registry`
-- `POST /devices/pairing/preview`
-- `POST /devices/approval-channel/preview`
-
-New endpoints needed:
-
-- Later: authenticated pairing, revoke, trusted device and approval decision
-  endpoints.
-
-Expected tests:
-
-- Responsive/browser verification on mobile viewport.
-- UI tests proving mobile cannot approve, reject or execute when backend says
-  disabled.
-
-Must not do:
-
-- No native app.
-- No push.
-- No background sync.
-- No mobile secrets.
-- No mobile direct filesystem/Hermes.
-
-Exit criteria:
-
-- David can open a mobile-sized JARVIS companion view locally and inspect state
-  without creating a new runtime or approval bypass.
+- David can see camera/vision privacy status and mobile companion/PWA baseline
+  preview in `/jarvis`, with truthful disabled/future-gated states and no real
+  sensor activation, capture, storage, mobile runtime, approval bypass or
+  Hermes direct path.
 
 ### PR #154 - Finance/ROI and Product Builder panels
 
@@ -1564,7 +1489,7 @@ Rules:
 Recommended next PR after PR #150:
 
 ```text
-PR #151 - Safe local wake word preparation
+PR #151 - Vision + Mobile Companion Layer
 ```
 
 Why:
@@ -1581,7 +1506,7 @@ Why:
 - PR #150 gives Voice Core visual presence, TTS state preview and Wake Word
   Local Safe Flow without microphone, wake runtime, STT, TTS, recording, raw
   storage, background listener or providers.
-- The next safe step is a real local wake runtime setup path only after explicit
-  opt-in gates, still with hard sensor controls and no approval or execution by
-  wake phrase.
+- The next safe step is visibility for camera/vision privacy and mobile/PWA
+  companion state without activating camera, capture, sensors, service worker,
+  push, mobile runtime, mobile approvals or direct Hermes calls.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

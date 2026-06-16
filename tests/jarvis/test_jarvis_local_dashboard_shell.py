@@ -83,6 +83,14 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "Nivel 0-1",
         "Nivel 5",
         "Readback / confirmación fuerte",
+        "Cámara / Visión",
+        "No se captura imagen ni vídeo en esta PR",
+        "No se usa getUserMedia",
+        "No hay proveedor externo de visión",
+        "La visión futura requerirá permiso explícito y auditoría",
+        "Mobile no ejecuta acciones",
+        "Approvals reales desde móvil quedan future-gated",
+        "No se guardan credenciales ni tokens",
     ):
         assert text in content
 
@@ -178,8 +186,12 @@ def test_jarvis_dashboard_shell_does_not_use_browser_sensor_apis_or_recording():
     content = _read(PAGE)
 
     for forbidden in (
-        "getUserMedia",
+        "navigator.mediaDevices",
+        ".getUserMedia(",
+        "getUserMedia(",
+        "await getUserMedia",
         "mediaDevices",
+        "MediaStream",
         "MediaRecorder",
         "AudioContext",
         "webkitAudioContext",
@@ -192,8 +204,106 @@ def test_jarvis_dashboard_shell_does_not_use_browser_sensor_apis_or_recording():
         "recordAudio",
         "listenForWakeWord",
         "wakeWordListener",
+        "captureImage",
+        "captureFrame",
+        "takeSnapshot",
+        "saveSnapshot",
+        "startCamera",
+        "stopCamera",
+        "streamCamera",
+        "analyzeVision",
+        "analyzeImage",
+        "navigator.serviceWorker",
+        "serviceWorker.register",
+        "ServiceWorkerRegistration",
+        "PushManager",
+        "Notification.requestPermission",
+        "sync.register",
+        "periodicSync",
+        "BackgroundSync",
     ):
         assert forbidden not in content
+
+    assert "No se usa getUserMedia." in content
+
+
+def test_jarvis_dashboard_shell_contains_camera_vision_privacy_panel_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Cámara / Visión",
+        "preview-only",
+        "La cámara no graba por defecto.",
+        "La visión solo se activa con permiso explícito.",
+        "Estado actual",
+        "permiso solicitado",
+        "recording",
+        "streaming",
+        "snapshot",
+        "vision analysis",
+        "provider externo",
+        "Privacidad",
+        "no camera activation",
+        "no getUserMedia",
+        "no recording",
+        "no snapshot",
+        "no image/video storage",
+        "explicit operator permission required",
+        "visual indicator required",
+        "audit required",
+        "cámara apagada",
+        "permiso requerido",
+        "preview futuro",
+        "análisis futuro",
+        "grabación desactivada",
+        "almacenamiento desactivado",
+        "kill switch",
+        "No se captura imagen ni vídeo en esta PR.",
+        "No se usa getUserMedia.",
+        "No hay proveedor externo de visión.",
+        "La visión futura requerirá permiso explícito y auditoría.",
+    ):
+        assert text in content
+
+
+def test_jarvis_dashboard_shell_contains_mobile_companion_preview_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Mobile Companion",
+        "preview-only",
+        "Mobile es una interfaz, no un runtime.",
+        "Mobile no llama a Hermes directamente.",
+        "PWA baseline",
+        "mobile runtime",
+        "approvals reales desde móvil",
+        "remote kill switch",
+        "mobile camera",
+        "mobile microphone",
+        "notifications",
+        "offline cache",
+        "service worker",
+        "push",
+        "background sync",
+        "Estado",
+        "Approvals preview",
+        "Mission preview",
+        "Hermes visibility",
+        "Voice status",
+        "Camera status",
+        "Finance summary",
+        "Kill switch preview",
+        "no execute",
+        "no Hermes direct",
+        "no mobile execute",
+        "no direct Hermes call",
+        "no mobile sensor activation",
+        "no real mobile approvals in this PR",
+        "approval requires backend gate",
+        "critical approval requires strong confirmation",
+        "No se guardan credenciales ni tokens.",
+    ):
+        assert text in content
 
 
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
@@ -250,7 +360,9 @@ def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
         "startListening",
         "startRecording",
         "listenForWakeWord",
-        "getUserMedia",
+        "navigator.mediaDevices",
+        ".getUserMedia(",
+        "getUserMedia(",
     ):
         assert forbidden not in content
 

@@ -672,6 +672,62 @@ phrases, parsing preview, policy visible y safety banner: no micrófono, no
 grabación, no STT, no TTS real, no provider externo, no background listener, no
 Hermes dispatch y no auto execute.
 
+PR #151 es **Vision + Mobile Companion Layer**. Agrupa Camera / Vision Privacy
+Panel y Mobile Companion / PWA baseline preview dentro de `/jarvis` y
+`GET /mark-3/dashboard/status`, sin activar cámara real, visión real, sensores,
+runtime móvil, approvals reales desde móvil ni ejecución.
+
+Incluye `camera_vision` con `mode=preview`, `camera_enabled=false`,
+`camera_permission_requested=false`, `preview_enabled=false`, `recording=false`,
+`streaming=false`, `snapshot_capture_enabled=false`,
+`vision_analysis_enabled=false`, `image_storage_enabled=false`,
+`video_storage_enabled=false`, `external_vision_provider_called=false`,
+`local_vision_model_connected=unknown` si no hay evidencia y
+`background_camera_access=false`. Su privacidad declara no camera activation, no
+browser media capture, no media stream, no recording, no snapshot capture, no
+image/video storage, no external provider, explicit operator permission
+required, visual indicator required when camera active y audit required for
+future vision. Los estados visuales cubren camera off, camera available future,
+preview disabled, permission required, analyzing future, recording disabled,
+storage disabled, blocked y kill switch; todos tienen `can_execute=false`.
+
+Incluye `mobile_companion` con `mode=preview`, `pwa_baseline=preview`,
+`mobile_runtime_enabled=false`, `mobile_can_execute=false`,
+`mobile_can_call_hermes_directly=false`,
+`mobile_can_approve_real_actions=false`,
+`mobile_can_reject_real_actions=false`,
+`mobile_can_modify_scope_real=false`, `mobile_notifications_enabled=false`,
+`remote_kill_switch_enabled=false`, `remote_camera_enabled=false`,
+`remote_microphone_enabled=false` y `external_network_required=false`. Las
+vistas futuras son status, approvals preview, mission preview, Hermes
+visibility, voice status, camera status, finance summary y kill switch preview;
+todas mantienen `can_execute=false` y `can_call_hermes=false`.
+
+`mobile_companion.safety` declara mobile is interface not runtime, no direct
+Hermes call, no mobile execute, no mobile sensor/camera/microphone activation,
+no real mobile approval in this PR, approval requires backend gate, critical
+approval requires strong confirmation y remote kill switch future gated.
+`pwa_policy` deja installable PWA en preview, offline cache false, push false,
+service worker false, no background sync, no credentials storage y no token
+storage.
+
+La UI `/jarvis` muestra `Cámara / Visión` y `Mobile Companion` como
+`preview-only`. Los textos obligatorios quedan visibles: `La cámara no graba
+por defecto.`, `No se captura imagen ni vídeo en esta PR.`, `No se usa
+getUserMedia.`, `No hay proveedor externo de visión.`, `La visión futura
+requerirá permiso explícito y auditoría.`, `Mobile es una interfaz, no un
+runtime.`, `Mobile no llama a Hermes directamente.`, `Mobile no ejecuta
+acciones.`, `Approvals reales desde móvil quedan future-gated.` y `No se
+guardan credenciales ni tokens.`
+
+PR #151 no implementa cámara real, browser media capture, snapshot, grabación,
+streaming, image/video storage, visión/análisis visual real, provider externo
+de visión, mobile runtime, mobile execution, mobile real approvals/rejections,
+direct mobile/camera/frontend call to Hermes, service worker, push, background
+sync, offline cache, credential storage, token storage, sensores, micrófono,
+dinero, deploy, email, credenciales o red externa. Mantiene:
+`JARVIS gobierna. Hermes ejecuta.`
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
