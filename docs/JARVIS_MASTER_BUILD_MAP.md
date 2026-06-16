@@ -700,3 +700,45 @@ peticiones reales de leer `.env`, usar tokens, guardar passwords, saltarse 2FA,
 acceder sin autorizacion, fingir revenue/result/capability, desplegar
 produccion ahora, enviar email real ahora o mover dinero siguen denegadas como
 Nivel 5.
+
+## Visual Voice Vision Mobile Roadmap Audit
+
+PR #144 no abre una nueva fase maestra ni implementa frontend. Documenta el
+roadmap tecnico para convertir las foundations existentes en una experiencia
+local-first real de JARVIS sin duplicar Hermes.
+
+Documento principal:
+
+- `docs/jarvis-visual-voice-vision-mobile-roadmap.md`
+
+Alcance cubierto:
+
+- Dashboard / Visual Command Center.
+- Operator Console.
+- Approval Console visual.
+- Hermes Execution Panel.
+- Mission Control y conversacion.
+- Voice Core visual.
+- Wake word local seguro.
+- Camera/vision privacy panel.
+- Mobile Companion/PWA.
+- Finance/ROI con `measured`, `estimated` y `unknown`.
+- Product Builder Adaptativo.
+- Frontend pilot y hardening.
+
+Reglas fijadas:
+
+- `JARVIS gobierna. Hermes ejecuta.`
+- No duplicate Hermes.
+- No frontend directo a Hermes.
+- No wake word como approval.
+- No microfono/camara/grabacion por defecto.
+- No fake metrics, no fake revenue, no fake costs y `unknown` cuando falte
+  evidencia.
+- No Mac mini/VPS hasta revenue o necesidad tecnica real.
+
+Siguiente PR recomendado:
+
+- **PR #145 - JARVIS Local Dashboard Shell**, una primera pantalla read-only
+  dentro de `web/`, sin nuevos runtimes, sin dependencias nuevas, sin sensores
+  reales, sin dinero, sin deploy y sin approvals ejecutables.

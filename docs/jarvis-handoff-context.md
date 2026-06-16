@@ -526,6 +526,18 @@ permanente. Hermes sigue siendo el motor de ejecución; JARVIS gobierna,
 clasifica riesgo, decide, pide approval, audita y manda tareas bounded a Hermes
 cuando exista capacidad aplicable.
 
+PR #144 es **JARVIS Visual Voice Vision Mobile Roadmap Audit**. Crea
+`docs/jarvis-visual-voice-vision-mobile-roadmap.md` como auditoria tecnica y
+roadmap por macro-PRs para construir la experiencia real de JARVIS: Command
+Center visual, Approval Console, Hermes Execution Panel, Mission Control,
+Voice Core, wake word local seguro, conversacion, camera/vision privacy panel,
+Mobile Companion/PWA, finance/ROI, Product Builder Adaptativo y hardening.
+No implementa frontend, no activa microfono/camara, no instala dependencias, no
+crea runtime, no duplica Hermes, no usa red externa, no despliega y no mueve
+dinero. El siguiente PR recomendado es **PR #145 - JARVIS Local Dashboard
+Shell**: primera pantalla local read-only dentro de `web/`, usando endpoints
+existentes y manteniendo `JARVIS gobierna. Hermes ejecuta.`
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
