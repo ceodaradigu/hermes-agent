@@ -306,6 +306,59 @@ def test_jarvis_dashboard_shell_contains_mobile_companion_preview_contract():
         assert text in content
 
 
+def test_jarvis_dashboard_shell_contains_product_finance_pilot_hardening_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Finance / ROI",
+        "No fake metrics.",
+        "Si no hay evidencia, mostrar unknown.",
+        "Revenue confirmado requiere evidencia.",
+        "ROI queda unknown sin revenue y costes reales.",
+        "No se mueve dinero desde este panel.",
+        "Stripe live requiere aprobación fuerte.",
+        "coste real",
+        "coste estimado",
+        "revenue confirmado",
+        "revenue proyectado",
+        "gross revenue",
+        "expenses",
+        "net revenue",
+        "budget",
+        "Product Builder Adaptativo",
+        "No es un Template Builder.",
+        "Si dos productos parecen clones, el builder ha fallado.",
+        "Deploy real requiere aprobación fuerte.",
+        "Stripe/checkout real requiere aprobación fuerte.",
+        "Revenue real requiere confirmación.",
+        "Idea",
+        "Validación",
+        "Blueprint",
+        "Código",
+        "Landing",
+        "Deploy candidate",
+        "Monetización",
+        "Medición",
+        "preview / future-gated / disabled",
+        "Pilot read-only",
+        "Frontend Pilot / Hardening",
+        "El dashboard mira, no toca.",
+        "No POST/PUT/DELETE.",
+        "No execute.",
+        "No sensores.",
+        "Dependency hardening queda para una PR separada.",
+        "/jarvis",
+        "/mark-3/dashboard/status",
+        "finance_roi_visible",
+        "product_builder_visible",
+        "no_frontend_execute",
+        "no_sensor_activation",
+        "npm audit vulnerabilities observed",
+        "full pytest required before merge",
+    ):
+        assert text in content
+
+
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     content = _read(PAGE)
     api_source = _read(API)
@@ -315,9 +368,6 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     assert 'getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status")' in api_source
 
     for forbidden in (
-        "POST",
-        "PUT",
-        "DELETE",
         "method:",
         '"POST"',
         '"PUT"',
@@ -333,6 +383,22 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
         "/mark-3/hermes-runtime/sessions",
         "/tasks",
         "/missions",
+    ):
+        assert forbidden not in content
+
+    for forbidden in (
+        'method: "POST"',
+        'method: "PUT"',
+        'method: "DELETE"',
+        "createCheckout",
+        "checkout.sessions.create",
+        "paymentIntent",
+        "invoice.create",
+        "moveMoney",
+        "transfer.create",
+        "fakeRevenue",
+        "fakeCost",
+        "fakeRoi",
     ):
         assert forbidden not in content
 

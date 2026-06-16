@@ -29,6 +29,14 @@ def test_visual_voice_vision_mobile_roadmap_exists_and_covers_required_contracts
         "mobile companion / pwa baseline preview",
         "no service worker",
         "no token storage",
+        "pr #152 - product finance pilot hardening",
+        "finance / roi panel realista",
+        "product builder adaptativo",
+        "frontend pilot / hardening",
+        "no fake revenue",
+        "no fake costs",
+        "no fake roi",
+        "dependency hardening queda para una pr separada",
     ):
         assert text in serialized
 

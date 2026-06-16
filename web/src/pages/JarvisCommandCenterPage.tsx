@@ -20,10 +20,13 @@ import {
 import {
   api,
   type JarvisApprovalCard,
+  type JarvisAdaptiveProductStage,
   type JarvisCameraVision,
   type JarvisCameraVisionVisualState,
   type JarvisDashboardModule,
   type JarvisDashboardStatus,
+  type JarvisFinanceMetric,
+  type JarvisFrontendPilotReadinessCheck,
   type JarvisHermesBlockedRoute,
   type JarvisHermesGovernedCapability,
   type JarvisMobileCompanion,
@@ -558,6 +561,322 @@ const fallbackMobileCompanion: JarvisMobileCompanion = {
   read_only: true,
 };
 
+function unknownMetric(label: string): JarvisFinanceMetric {
+  return {
+    value: UNKNOWN,
+    label,
+    source: "not_measured",
+    evidence_state: "missing",
+    confidence: UNKNOWN,
+    last_updated: UNKNOWN,
+  };
+}
+
+const fallbackFinanceRoi: NonNullable<JarvisDashboardStatus["finance_roi"]> = {
+  truth_policy: {
+    no_fake_metrics: true,
+    unknown_when_no_evidence: true,
+    measured_requires_source: true,
+    estimated_requires_label: true,
+    confirmed_revenue_requires_evidence: true,
+    projected_revenue_must_be_labelled: true,
+    roi_unknown_without_revenue_and_cost: true,
+  },
+  metrics: {
+    actual_cost: unknownMetric("Coste real"),
+    estimated_cost: unknownMetric("Coste estimado"),
+    confirmed_revenue: unknownMetric("Revenue confirmado"),
+    projected_revenue: unknownMetric("Revenue proyectado"),
+    gross_revenue: unknownMetric("Gross revenue"),
+    expenses: unknownMetric("Expenses"),
+    net_revenue: unknownMetric("Net revenue"),
+    roi: unknownMetric("ROI"),
+    token_cost: unknownMetric("Token cost"),
+    api_cost: unknownMetric("API cost"),
+    infra_cost: unknownMetric("Infra cost"),
+    manual_input_cost: unknownMetric("Manual input cost"),
+    revenue_source: unknownMetric("Revenue source"),
+  },
+  budget: {
+    budget_configured: false,
+    remaining_budget: UNKNOWN,
+    monthly_limit: UNKNOWN,
+    alert_threshold: UNKNOWN,
+    hard_stop_enabled: false,
+    notes: "Budget no configurado; mostrar unknown hasta tener evidencia.",
+  },
+  safety: {
+    no_money_movement: true,
+    no_stripe_live: true,
+    no_checkout_creation: true,
+    no_invoice_creation: true,
+    no_payment_collection: true,
+    no_fake_revenue: true,
+    no_fake_costs: true,
+    no_fake_roi: true,
+    approval_required_for_money: true,
+    strong_approval_required_for_live_payments: true,
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
+const fallbackBuilderStages: JarvisAdaptiveProductStage[] = [
+  {
+    name: "Idea",
+    status: "preview",
+    can_execute: false,
+    requires_approval: false,
+    approval_level: "none",
+    evidence_required: "reason_to_exist",
+    notes: "La idea necesita una razón real para existir.",
+  },
+  {
+    name: "Validación",
+    status: "preview",
+    can_execute: false,
+    requires_approval: false,
+    approval_level: "none",
+    evidence_required: "validation_signal",
+    notes: "Validación preview; sin investigación externa.",
+  },
+  {
+    name: "Blueprint",
+    status: "preview",
+    can_execute: false,
+    requires_approval: false,
+    approval_level: "none",
+    evidence_required: "success_metric_and_scope",
+    notes: "Blueprint visual; sin generar código.",
+  },
+  {
+    name: "Código",
+    status: "future_gated",
+    can_execute: false,
+    requires_approval: true,
+    approval_level: "strong",
+    evidence_required: "approved_scope_and_diff_plan",
+    notes: "Código futuro requiere scope, diff y aprobación.",
+  },
+  {
+    name: "Landing",
+    status: "future_gated",
+    can_execute: false,
+    requires_approval: true,
+    approval_level: "strong",
+    evidence_required: "approved_copy_offer_and_publish_gate",
+    notes: "Landing futura no se publica desde este panel.",
+  },
+  {
+    name: "Deploy candidate",
+    status: "disabled",
+    can_execute: false,
+    requires_approval: true,
+    approval_level: "strong",
+    evidence_required: "rollback_stop_plan_owner_and_build_evidence",
+    notes: "Deploy candidate deshabilitado.",
+  },
+  {
+    name: "Monetización",
+    status: "disabled",
+    can_execute: false,
+    requires_approval: true,
+    approval_level: "strong",
+    evidence_required: "pricing_logic_revenue_confirmation_and_payment_gate",
+    notes: "Stripe, checkout y cobro real deshabilitados.",
+  },
+  {
+    name: "Medición",
+    status: "future_gated",
+    can_execute: false,
+    requires_approval: true,
+    approval_level: "simple",
+    evidence_required: "measured_source_before_metric",
+    notes: "Métricas con evidencia; si no hay evidencia, unknown.",
+  },
+];
+
+const fallbackAdaptiveProductBuilder: NonNullable<JarvisDashboardStatus["adaptive_product_builder"]> = {
+  state: {
+    mode: "preview",
+    builder_enabled: "preview/read_only",
+    product_generation_enabled: false,
+    code_generation_enabled: false,
+    deploy_enabled: false,
+    stripe_enabled: false,
+    landing_publish_enabled: false,
+    external_research_enabled: false,
+    hermes_dispatch_enabled: false,
+  },
+  stages: fallbackBuilderStages,
+  differentiation_policy: {
+    no_template_clone: true,
+    adaptive_builder_not_template_builder: true,
+    each_product_needs_reason_to_exist: true,
+    each_product_needs_success_metric: true,
+    each_product_needs_monetization_logic: true,
+    cloned_products_are_failure: true,
+  },
+  monetization_policy: {
+    pricing_preview_only: true,
+    stripe_live_requires_strong_approval: true,
+    checkout_requires_strong_approval: true,
+    real_revenue_requires_confirmation: true,
+    projected_revenue_label_required: true,
+    no_fake_revenue: true,
+  },
+  safety: {
+    no_deploy: true,
+    no_publish: true,
+    no_domain_change: true,
+    no_email_send: true,
+    no_money_movement: true,
+    no_credentials: true,
+    no_external_network: true,
+    no_hermes_dispatch: true,
+    approval_gates_required_for_real_actions: true,
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
+const fallbackFrontendChecks: JarvisFrontendPilotReadinessCheck[] = [
+  {
+    name: "dashboard_route_exists",
+    status: "preview",
+    evidence: "/jarvis",
+    notes: "Ruta local esperada por la shell.",
+  },
+  {
+    name: "read_model_connected",
+    status: "passed",
+    evidence: DASHBOARD_READ_MODEL_ENDPOINT,
+    notes: "Solo lectura GET al read model.",
+  },
+  {
+    name: "approval_console_visible",
+    status: "passed",
+    evidence: "approvals",
+    notes: "Controles de approval deshabilitados.",
+  },
+  {
+    name: "hermes_execution_visible",
+    status: "passed",
+    evidence: "hermes_execution",
+    notes: "Hermes visible sin ejecución directa.",
+  },
+  {
+    name: "mission_control_visible",
+    status: "passed",
+    evidence: "mission_control",
+    notes: "Mission Control preview-only.",
+  },
+  {
+    name: "voice_core_visible",
+    status: "passed",
+    evidence: "voice_core",
+    notes: "Voz visual sin micrófono.",
+  },
+  {
+    name: "wake_flow_visible",
+    status: "passed",
+    evidence: "wake_word_flow",
+    notes: "Wake flow typed preview.",
+  },
+  {
+    name: "camera_vision_visible",
+    status: "passed",
+    evidence: "camera_vision",
+    notes: "Cámara/visión deshabilitada.",
+  },
+  {
+    name: "mobile_companion_visible",
+    status: "passed",
+    evidence: "mobile_companion",
+    notes: "Mobile es interfaz, no runtime.",
+  },
+  {
+    name: "finance_roi_visible",
+    status: "passed",
+    evidence: "finance_roi",
+    notes: "Métricas unknown sin evidencia.",
+  },
+  {
+    name: "product_builder_visible",
+    status: "passed",
+    evidence: "adaptive_product_builder",
+    notes: "Builder adaptativo preview.",
+  },
+  {
+    name: "kill_switch_visible",
+    status: "passed",
+    evidence: "Kill Switch",
+    notes: "Visible, sin ejecución real que detener.",
+  },
+  {
+    name: "no_fake_metrics",
+    status: "passed",
+    evidence: "truth_policy.no_fake_metrics",
+    notes: "No se inventan métricas.",
+  },
+  {
+    name: "no_frontend_execute",
+    status: "passed",
+    evidence: "frontend_can_execute=false",
+    notes: "El frontend no ejecuta.",
+  },
+  {
+    name: "no_sensor_activation",
+    status: "passed",
+    evidence: "frontend_can_activate_sensors=false",
+    notes: "No se activan sensores.",
+  },
+  {
+    name: "no_post_put_delete",
+    status: "passed",
+    evidence: "allowed_http_methods_for_frontend=[GET]",
+    notes: "El dashboard mira, no toca.",
+  },
+];
+
+const fallbackFrontendPilot: NonNullable<JarvisDashboardStatus["frontend_pilot"]> = {
+  state: {
+    mode: "read_only_pilot",
+    dashboard_route: "/jarvis",
+    backend_status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    frontend_can_execute: false,
+    frontend_can_approve: false,
+    frontend_can_activate_sensors: false,
+    frontend_can_move_money: false,
+    frontend_can_deploy: false,
+    frontend_can_send_email: false,
+  },
+  readiness_checks: fallbackFrontendChecks,
+  hardening_notes: {
+    npm_audit_vulnerabilities_observed: UNKNOWN,
+    npm_audit_fix_not_run: true,
+    dependency_hardening_requires_separate_pr: true,
+    no_lockfile_changes_expected: true,
+    frontend_build_required_before_merge: true,
+    full_pytest_required_before_merge: true,
+  },
+  pilot_limitations: [
+    "no real approvals",
+    "no real mission submit",
+    "no real Hermes execution",
+    "no real voice",
+    "no real camera",
+    "no real mobile runtime",
+    "no real finance/revenue measurement",
+    "no deploy/money/email/credentials",
+  ],
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
 const requiredModules = [
   "Mission Loop",
   "Research",
@@ -572,15 +891,7 @@ const requiredModules = [
   "Hermes",
 ] as const;
 
-const fallbackStages = [
-  "Idea",
-  "Validación",
-  "Blueprint",
-  "Código",
-  "Landing",
-  "Deploy candidate",
-  "Monetización",
-] as const;
+const fallbackStageNames = fallbackBuilderStages.map((stage) => stage.name);
 
 const approvalActionLabels = ["Aprobar", "Rechazar", "Modificar alcance", "Pedir explicación"] as const;
 
@@ -1116,20 +1427,26 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       approval_actions_enabled: false,
       source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
     },
+    finance_roi: fallbackFinanceRoi,
     finance: {
       actual_cost: UNKNOWN,
       estimated_cost: UNKNOWN,
       confirmed_revenue: UNKNOWN,
       projected_revenue: UNKNOWN,
+      gross_revenue: UNKNOWN,
+      expenses: UNKNOWN,
+      net_revenue: UNKNOWN,
       roi: UNKNOWN,
       no_fake_metrics: true,
     },
+    adaptive_product_builder: fallbackAdaptiveProductBuilder,
     product_builder: {
-      stages: [...fallbackStages],
+      stages: [...fallbackStageNames],
       deploy_requires_strong_approval: true,
       stripe_checkout_requires_strong_approval: true,
       real_revenue_must_be_confirmed: true,
     },
+    frontend_pilot: fallbackFrontendPilot,
     safety: {
       frontend_can_execute: false,
       frontend_can_approve: false,
@@ -1184,7 +1501,7 @@ function yesNo(value: unknown, yes = "true", no = "false", fallback = UNKNOWN): 
 function statusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
   if (status === "ready") return "success";
   if (status === "disabled" || status === "not_connected" || status === "forbidden") return "destructive";
-  if (status === "gated" || status === "prepare-only" || status === "preview") return "warning";
+  if (status === "gated" || status === "future_gated" || status === "prepare-only" || status === "preview") return "warning";
   return "outline";
 }
 
@@ -1409,10 +1726,30 @@ export default function JarvisCommandCenterPage() {
     : fallbackMobileViews;
   const mobileSafety = mobileCompanion.safety ?? fallbackMobileCompanion.safety ?? {};
   const pwaPolicy = mobileCompanion.pwa_policy ?? fallbackMobileCompanion.pwa_policy ?? {};
-  const finance = dashboard.finance ?? {};
-  const productBuilder = dashboard.product_builder ?? {};
+  const financeRoi = dashboard.finance_roi ?? fallbackFinanceRoi;
+  const financeMetrics = financeRoi.metrics ?? fallbackFinanceRoi.metrics ?? {};
+  const financeBudget = financeRoi.budget ?? fallbackFinanceRoi.budget ?? {};
+  const financeSafety = financeRoi.safety ?? fallbackFinanceRoi.safety ?? {};
+  const adaptiveProductBuilder = dashboard.adaptive_product_builder ?? fallbackAdaptiveProductBuilder;
+  const productBuilderState = adaptiveProductBuilder.state ?? fallbackAdaptiveProductBuilder.state ?? {};
+  const productBuilderStages = adaptiveProductBuilder.stages?.length
+    ? adaptiveProductBuilder.stages
+    : fallbackBuilderStages;
+  const productDifferentiation =
+    adaptiveProductBuilder.differentiation_policy ?? fallbackAdaptiveProductBuilder.differentiation_policy ?? {};
+  const productMonetization =
+    adaptiveProductBuilder.monetization_policy ?? fallbackAdaptiveProductBuilder.monetization_policy ?? {};
+  const productBuilderSafety = adaptiveProductBuilder.safety ?? fallbackAdaptiveProductBuilder.safety ?? {};
+  const frontendPilot = dashboard.frontend_pilot ?? fallbackFrontendPilot;
+  const frontendPilotState = frontendPilot.state ?? fallbackFrontendPilot.state ?? {};
+  const frontendReadinessChecks = frontendPilot.readiness_checks?.length
+    ? frontendPilot.readiness_checks
+    : fallbackFrontendChecks;
+  const frontendHardening = frontendPilot.hardening_notes ?? fallbackFrontendPilot.hardening_notes ?? {};
+  const frontendLimitations = frontendPilot.pilot_limitations?.length
+    ? frontendPilot.pilot_limitations
+    : fallbackFrontendPilot.pilot_limitations ?? [];
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
-  const stages = productBuilder.stages?.length ? productBuilder.stages : [...fallbackStages];
   const missionControl = dashboard.mission_control ?? fallbackMissionControl;
   const missionState = missionControl.state ?? fallbackMissionControl.state ?? {};
   const missionSupportedInputs = missionControl.supported_inputs ?? fallbackMissionControl.supported_inputs ?? {};
@@ -1560,12 +1897,66 @@ export default function JarvisCommandCenterPage() {
     ["remote kill switch future gated", yesNo(mobileSafety.remote_kill_switch_future_gated, "true", "false")],
   ] as const;
 
+  const financeMetricValue = (metric?: JarvisFinanceMetric) => valueText(metric?.value);
   const financeRows = [
-    ["coste real", valueText(finance.actual_cost)],
-    ["coste estimado", valueText(finance.estimated_cost)],
-    ["revenue confirmado", valueText(finance.confirmed_revenue)],
-    ["revenue proyectado", valueText(finance.projected_revenue)],
-    ["ROI", valueText(finance.roi)],
+    ["coste real", financeMetricValue(financeMetrics.actual_cost)],
+    ["coste estimado", financeMetricValue(financeMetrics.estimated_cost)],
+    ["revenue confirmado", financeMetricValue(financeMetrics.confirmed_revenue)],
+    ["revenue proyectado", financeMetricValue(financeMetrics.projected_revenue)],
+    ["gross revenue", financeMetricValue(financeMetrics.gross_revenue)],
+    ["expenses", financeMetricValue(financeMetrics.expenses)],
+    ["net revenue", financeMetricValue(financeMetrics.net_revenue)],
+    ["ROI", financeMetricValue(financeMetrics.roi)],
+    ["token cost", financeMetricValue(financeMetrics.token_cost)],
+    ["API cost", financeMetricValue(financeMetrics.api_cost)],
+    ["infra cost", financeMetricValue(financeMetrics.infra_cost)],
+    ["manual input cost", financeMetricValue(financeMetrics.manual_input_cost)],
+    ["revenue source", financeMetricValue(financeMetrics.revenue_source)],
+  ] as const;
+
+  const financeBudgetRows = [
+    ["budget", financeBudget.budget_configured === false ? "not configured" : valueText(financeBudget.budget_configured)],
+    ["remaining budget", valueText(financeBudget.remaining_budget)],
+    ["monthly limit", valueText(financeBudget.monthly_limit)],
+    ["alert threshold", valueText(financeBudget.alert_threshold)],
+    ["hard stop", yesNo(financeBudget.hard_stop_enabled, "enabled", "false")],
+    ["notes", valueText(financeBudget.notes)],
+  ] as const;
+
+  const productBuilderStateRows = [
+    ["mode", valueText(productBuilderState.mode, "preview")],
+    ["builder", valueText(productBuilderState.builder_enabled, "preview/read_only")],
+    ["product generation", yesNo(productBuilderState.product_generation_enabled, "enabled", "false")],
+    ["code generation", yesNo(productBuilderState.code_generation_enabled, "enabled", "false")],
+    ["deploy", yesNo(productBuilderState.deploy_enabled, "enabled", "false")],
+    ["stripe", yesNo(productBuilderState.stripe_enabled, "enabled", "false")],
+    ["landing publish", yesNo(productBuilderState.landing_publish_enabled, "enabled", "false")],
+    ["external research", yesNo(productBuilderState.external_research_enabled, "enabled", "false")],
+    ["Hermes dispatch", yesNo(productBuilderState.hermes_dispatch_enabled, "enabled", "false")],
+  ] as const;
+
+  const frontendPilotRows = [
+    ["mode", valueText(frontendPilotState.mode, "read_only_pilot")],
+    ["route", valueText(frontendPilotState.dashboard_route, "/jarvis")],
+    ["endpoint", valueText(frontendPilotState.backend_status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
+    ["execute", yesNo(frontendPilotState.frontend_can_execute, "true", "false")],
+    ["approve", yesNo(frontendPilotState.frontend_can_approve, "true", "false")],
+    ["sensors", yesNo(frontendPilotState.frontend_can_activate_sensors, "true", "false")],
+    ["money", yesNo(frontendPilotState.frontend_can_move_money, "true", "false")],
+    ["deploy", yesNo(frontendPilotState.frontend_can_deploy, "true", "false")],
+    ["email", yesNo(frontendPilotState.frontend_can_send_email, "true", "false")],
+  ] as const;
+
+  const frontendHardeningRows = [
+    ["npm audit vulnerabilities observed", valueText(frontendHardening.npm_audit_vulnerabilities_observed)],
+    ["npm audit fix not run", yesNo(frontendHardening.npm_audit_fix_not_run, "true", "false")],
+    [
+      "dependency hardening separate PR",
+      yesNo(frontendHardening.dependency_hardening_requires_separate_pr, "true", "false"),
+    ],
+    ["no lockfile changes expected", yesNo(frontendHardening.no_lockfile_changes_expected, "true", "false")],
+    ["frontend build required before merge", yesNo(frontendHardening.frontend_build_required_before_merge, "true", "false")],
+    ["full pytest required before merge", yesNo(frontendHardening.full_pytest_required_before_merge, "true", "false")],
   ] as const;
 
   const hermesCurrentRows = [
@@ -2506,14 +2897,47 @@ export default function JarvisCommandCenterPage() {
             <CardDescription>Métricas financieras solo con evidencia.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <StatusList items={financeRows} />
-            <SafetyLine>No fake metrics.</SafetyLine>
-            <SafetyLine>Si no hay evidencia, mostrar unknown.</SafetyLine>
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">read-only</Badge>
+                <Badge variant={financeSafety.no_money_movement ? "success" : "destructive"}>
+                  dinero: {financeSafety.no_money_movement ? "bloqueado" : "allowed"}
+                </Badge>
+                <Badge variant={financeSafety.no_stripe_live ? "success" : "destructive"}>
+                  Stripe live: {financeSafety.no_stripe_live ? "bloqueado" : "allowed"}
+                </Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">No fake metrics.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">Si no hay evidencia, mostrar unknown.</p>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Métricas</h3>
+              <div className="mt-3">
+                <StatusList items={financeRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Budget</h3>
+              <div className="mt-3">
+                <StatusList items={financeBudgetRows} />
+              </div>
+            </article>
+
+            <div className="grid gap-2">
+              <SafetyLine>No fake metrics.</SafetyLine>
+              <SafetyLine>Si no hay evidencia, mostrar unknown.</SafetyLine>
+              <SafetyLine>Revenue confirmado requiere evidencia.</SafetyLine>
+              <SafetyLine>ROI queda unknown sin revenue y costes reales.</SafetyLine>
+              <SafetyLine>No se mueve dinero desde este panel.</SafetyLine>
+              <SafetyLine>Stripe live requiere aprobación fuerte.</SafetyLine>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -2522,23 +2946,217 @@ export default function JarvisCommandCenterPage() {
             </div>
             <CardDescription>Flujo visual de producto; sin deploy, Stripe ni revenue real.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-7">
-              {stages.map((step) => (
-                <div key={step} className="border border-border/70 bg-background/35 p-3 text-center">
-                  <p className="font-display text-xs uppercase tracking-[0.1em]">{step}</p>
-                  <Badge variant="outline" className="mt-2">preview</Badge>
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">preview/read-only</Badge>
+                <Badge variant={productBuilderState.product_generation_enabled ? "destructive" : "success"}>
+                  product generation: {yesNo(productBuilderState.product_generation_enabled, "enabled", "false")}
+                </Badge>
+                <Badge variant={productBuilderState.deploy_enabled ? "destructive" : "success"}>
+                  deploy: {yesNo(productBuilderState.deploy_enabled, "enabled", "false")}
+                </Badge>
+                <Badge variant={productBuilderState.stripe_enabled ? "destructive" : "success"}>
+                  Stripe: {yesNo(productBuilderState.stripe_enabled, "enabled", "false")}
+                </Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">No es un Template Builder.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">
+                Si dos productos parecen clones, el builder ha fallado.
+              </p>
+            </article>
+
+            <div className="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado</h3>
+                <div className="mt-3">
+                  <StatusList items={productBuilderStateRows} />
                 </div>
-              ))}
+              </article>
+
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Diferenciación</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant={productDifferentiation.no_template_clone ? "success" : "destructive"}>
+                    no template clone
+                  </Badge>
+                  <Badge variant={productDifferentiation.adaptive_builder_not_template_builder ? "success" : "destructive"}>
+                    adaptive builder
+                  </Badge>
+                  <Badge variant={productDifferentiation.each_product_needs_reason_to_exist ? "success" : "destructive"}>
+                    razón de existir
+                  </Badge>
+                  <Badge variant={productDifferentiation.each_product_needs_success_metric ? "success" : "destructive"}>
+                    success metric
+                  </Badge>
+                  <Badge variant={productDifferentiation.each_product_needs_monetization_logic ? "success" : "destructive"}>
+                    monetización
+                  </Badge>
+                  <Badge variant={productDifferentiation.cloned_products_are_failure ? "success" : "destructive"}>
+                    clones son fallo
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  <SafetyLine>No es un Template Builder.</SafetyLine>
+                  <SafetyLine>Si dos productos parecen clones, el builder ha fallado.</SafetyLine>
+                  <SafetyLine>Cada producto necesita razón de existir, métrica y monetización.</SafetyLine>
+                </div>
+              </article>
             </div>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Stages</h3>
+                <Badge variant="warning">preview / future-gated / disabled</Badge>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {productBuilderStages.map((stage) => {
+                  const stageStatus = valueText(stage.status).replace("_", "-");
+                  return (
+                    <div key={stage.name} className="min-h-36 border border-border/70 bg-background/35 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="font-display text-xs uppercase tracking-[0.1em]">{stage.name}</p>
+                        <Badge variant={statusVariant(valueText(stage.status))}>{stageStatus}</Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge variant={stage.can_execute ? "destructive" : "success"}>
+                          execute: {yesNo(stage.can_execute, "true", "false")}
+                        </Badge>
+                        <Badge variant={stage.requires_approval ? "warning" : "outline"}>
+                          approval: {valueText(stage.approval_level)}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                        evidencia: {valueText(stage.evidence_required)}
+                      </p>
+                      <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(stage.notes)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Monetización</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant={productMonetization.pricing_preview_only ? "success" : "destructive"}>pricing preview</Badge>
+                  <Badge variant={productMonetization.stripe_live_requires_strong_approval ? "warning" : "destructive"}>
+                    Stripe strong approval
+                  </Badge>
+                  <Badge variant={productMonetization.checkout_requires_strong_approval ? "warning" : "destructive"}>
+                    checkout strong approval
+                  </Badge>
+                  <Badge variant={productMonetization.real_revenue_requires_confirmation ? "warning" : "destructive"}>
+                    revenue confirmation
+                  </Badge>
+                  <Badge variant={productMonetization.no_fake_revenue ? "success" : "destructive"}>no fake revenue</Badge>
+                </div>
+              </article>
+
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant={productBuilderSafety.no_deploy ? "success" : "destructive"}>no deploy</Badge>
+                  <Badge variant={productBuilderSafety.no_publish ? "success" : "destructive"}>no publish</Badge>
+                  <Badge variant={productBuilderSafety.no_money_movement ? "success" : "destructive"}>no money</Badge>
+                  <Badge variant={productBuilderSafety.no_external_network ? "success" : "destructive"}>no external network</Badge>
+                  <Badge variant={productBuilderSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
+                </div>
+              </article>
+            </div>
+
             <div className="grid gap-2 lg:grid-cols-3">
-              <SafetyLine>Deploy real requiere approval fuerte.</SafetyLine>
-              <SafetyLine>Stripe/checkout real requiere approval fuerte.</SafetyLine>
-              <SafetyLine>Revenue real no se inventa.</SafetyLine>
+              <SafetyLine>Deploy real requiere aprobación fuerte.</SafetyLine>
+              <SafetyLine>Stripe/checkout real requiere aprobación fuerte.</SafetyLine>
+              <SafetyLine>Revenue real requiere confirmación.</SafetyLine>
             </div>
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Cpu className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>Frontend Pilot / Hardening</CardTitle>
+            </div>
+            <CardDescription>Pilot read-only para `/jarvis`; El dashboard mira, no toca.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">Pilot read-only</Badge>
+                <Badge variant={frontendPilotState.frontend_can_execute ? "destructive" : "success"}>No execute.</Badge>
+                <Badge variant={frontendPilotState.frontend_can_activate_sensors ? "destructive" : "success"}>No sensores.</Badge>
+                <Badge variant={frontendPilotState.frontend_can_move_money ? "destructive" : "success"}>no money</Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">El dashboard mira, no toca.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">No POST/PUT/DELETE.</p>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint</h3>
+              <div className="mt-3">
+                <StatusList items={frontendPilotRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readiness checks</h3>
+                <Badge variant="warning">visible modules + safety</Badge>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {frontendReadinessChecks.map((check) => (
+                  <div key={check.name} className="border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
+                      <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>
+                        {valueText(check.status)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
+                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hardening notes</h3>
+              <div className="mt-3">
+                <StatusList items={frontendHardeningRows} />
+              </div>
+              <p className="mt-3 font-mono-ui text-xs text-warning">
+                Dependency hardening queda para una PR separada.
+              </p>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot limitations</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {frontendLimitations.map((limitation) => (
+                  <Badge key={limitation} variant="outline">
+                    {limitation}
+                  </Badge>
+                ))}
+              </div>
+            </article>
+
+            <div className="grid gap-2">
+              <SafetyLine>Pilot read-only</SafetyLine>
+              <SafetyLine>El dashboard mira, no toca.</SafetyLine>
+              <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
+              <SafetyLine>No execute.</SafetyLine>
+              <SafetyLine>No sensores.</SafetyLine>
+              <SafetyLine>No fake metrics.</SafetyLine>
+              <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

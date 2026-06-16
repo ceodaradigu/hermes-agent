@@ -168,6 +168,12 @@ def build_mark_3_dashboard_status(
         mobile_permissions=mobile_permissions,
     )
     mobile_companion_timeline = _mobile_companion_timeline_events()
+    finance_roi = _finance_roi_projection()
+    finance_roi_timeline = _finance_roi_timeline_events()
+    adaptive_product_builder = _adaptive_product_builder_projection()
+    adaptive_product_builder_timeline = _adaptive_product_builder_timeline_events()
+    frontend_pilot = _frontend_pilot_projection()
+    frontend_pilot_timeline = _frontend_pilot_timeline_events()
 
     payload = {
         "system": {
@@ -338,30 +344,28 @@ def build_mark_3_dashboard_status(
                 "can_approve": False,
             },
         },
+        "finance_roi": finance_roi,
         "finance": {
-            "actual_cost": UNKNOWN,
-            "estimated_cost": UNKNOWN,
-            "confirmed_revenue": UNKNOWN,
-            "projected_revenue": UNKNOWN,
-            "roi": UNKNOWN,
+            "actual_cost": finance_roi["metrics"]["actual_cost"]["value"],
+            "estimated_cost": finance_roi["metrics"]["estimated_cost"]["value"],
+            "confirmed_revenue": finance_roi["metrics"]["confirmed_revenue"]["value"],
+            "projected_revenue": finance_roi["metrics"]["projected_revenue"]["value"],
+            "gross_revenue": finance_roi["metrics"]["gross_revenue"]["value"],
+            "expenses": finance_roi["metrics"]["expenses"]["value"],
+            "net_revenue": finance_roi["metrics"]["net_revenue"]["value"],
+            "roi": finance_roi["metrics"]["roi"]["value"],
             "no_fake_metrics": True,
             "source": "No measurement evidence connected to this read model.",
         },
+        "adaptive_product_builder": adaptive_product_builder,
         "product_builder": {
-            "stages": [
-                "Idea",
-                "Validaci\u00f3n",
-                "Blueprint",
-                "C\u00f3digo",
-                "Landing",
-                "Deploy candidate",
-                "Monetizaci\u00f3n",
-            ],
+            "stages": [stage["name"] for stage in adaptive_product_builder["stages"]],
             "deploy_requires_strong_approval": True,
             "stripe_checkout_requires_strong_approval": True,
             "real_revenue_must_be_confirmed": True,
             "source_endpoint": "/mark-3/product-revenue/status",
         },
+        "frontend_pilot": frontend_pilot,
         "safety": {
             "frontend_can_execute": False,
             "frontend_can_approve": False,
@@ -398,6 +402,9 @@ def build_mark_3_dashboard_status(
         + wake_word_flow_timeline
         + camera_vision_timeline
         + mobile_companion_timeline
+        + finance_roi_timeline
+        + adaptive_product_builder_timeline
+        + frontend_pilot_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -440,6 +447,453 @@ def build_mark_3_dashboard_status(
         },
     }
     return payload
+
+
+def _unknown_metric(label: str) -> Dict[str, Any]:
+    return {
+        "value": UNKNOWN,
+        "label": label,
+        "source": "not_measured",
+        "evidence_state": "missing",
+        "confidence": UNKNOWN,
+        "last_updated": UNKNOWN,
+    }
+
+
+def _finance_roi_projection() -> Dict[str, Any]:
+    metric_labels = {
+        "actual_cost": "Coste real",
+        "estimated_cost": "Coste estimado",
+        "confirmed_revenue": "Revenue confirmado",
+        "projected_revenue": "Revenue proyectado",
+        "gross_revenue": "Gross revenue",
+        "expenses": "Expenses",
+        "net_revenue": "Net revenue",
+        "roi": "ROI",
+        "token_cost": "Token cost",
+        "api_cost": "API cost",
+        "infra_cost": "Infra cost",
+        "manual_input_cost": "Manual input cost",
+        "revenue_source": "Revenue source",
+    }
+    return {
+        "truth_policy": {
+            "no_fake_metrics": True,
+            "unknown_when_no_evidence": True,
+            "measured_requires_source": True,
+            "estimated_requires_label": True,
+            "confirmed_revenue_requires_evidence": True,
+            "projected_revenue_must_be_labelled": True,
+            "roi_unknown_without_revenue_and_cost": True,
+        },
+        "metrics": {key: _unknown_metric(label) for key, label in metric_labels.items()},
+        "budget": {
+            "budget_configured": False,
+            "remaining_budget": UNKNOWN,
+            "monthly_limit": UNKNOWN,
+            "alert_threshold": UNKNOWN,
+            "hard_stop_enabled": False,
+            "notes": "Budget is not configured in this read model; values stay unknown until measured evidence exists.",
+        },
+        "safety": {
+            "no_money_movement": True,
+            "no_stripe_live": True,
+            "no_checkout_creation": True,
+            "no_invoice_creation": True,
+            "no_payment_collection": True,
+            "no_fake_revenue": True,
+            "no_fake_costs": True,
+            "no_fake_roi": True,
+            "approval_required_for_money": True,
+            "strong_approval_required_for_live_payments": True,
+        },
+        "timeline": _finance_roi_timeline_events(),
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _finance_roi_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Finance/ROI panel read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Metrics defaulted to unknown without evidence",
+            "source": "/mark-3/dashboard/status",
+            "status": "missing_evidence",
+            "read_only": True,
+        },
+        {
+            "event": "No money movement performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "No Stripe live action performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "No fake ROI generated",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _adaptive_product_builder_projection() -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "preview",
+            "builder_enabled": "preview/read_only",
+            "product_generation_enabled": False,
+            "code_generation_enabled": False,
+            "deploy_enabled": False,
+            "stripe_enabled": False,
+            "landing_publish_enabled": False,
+            "external_research_enabled": False,
+            "hermes_dispatch_enabled": False,
+        },
+        "stages": [
+            _product_builder_stage(
+                "Idea",
+                "preview",
+                False,
+                "none",
+                "reason_to_exist",
+                "Idea stays as a read-only preview and must justify why the product should exist.",
+            ),
+            _product_builder_stage(
+                "Validación",
+                "preview",
+                False,
+                "none",
+                "validation_signal",
+                "Validation is only a placeholder; no external research or customer outreach is performed.",
+            ),
+            _product_builder_stage(
+                "Blueprint",
+                "preview",
+                False,
+                "none",
+                "success_metric_and_scope",
+                "Blueprint remains a preview of required evidence, not code generation.",
+            ),
+            _product_builder_stage(
+                "Código",
+                "future_gated",
+                True,
+                "strong",
+                "approved_scope_and_diff_plan",
+                "Future code generation requires explicit approval, scope and review.",
+            ),
+            _product_builder_stage(
+                "Landing",
+                "future_gated",
+                True,
+                "strong",
+                "approved_copy_offer_and_publish_gate",
+                "Landing work is not published and cannot create a public page from this panel.",
+            ),
+            _product_builder_stage(
+                "Deploy candidate",
+                "disabled",
+                True,
+                "strong",
+                "rollback_stop_plan_owner_and_build_evidence",
+                "Deploy candidates are not executed in this PR.",
+            ),
+            _product_builder_stage(
+                "Monetización",
+                "disabled",
+                True,
+                "strong",
+                "pricing_logic_revenue_confirmation_and_payment_gate",
+                "Stripe, checkout and real revenue collection remain disabled.",
+            ),
+            _product_builder_stage(
+                "Medición",
+                "future_gated",
+                True,
+                "simple",
+                "measured_source_before_metric",
+                "Metrics must come from evidence; unknown is shown when evidence is absent.",
+            ),
+        ],
+        "differentiation_policy": {
+            "no_template_clone": True,
+            "adaptive_builder_not_template_builder": True,
+            "each_product_needs_reason_to_exist": True,
+            "each_product_needs_success_metric": True,
+            "each_product_needs_monetization_logic": True,
+            "cloned_products_are_failure": True,
+        },
+        "monetization_policy": {
+            "pricing_preview_only": True,
+            "stripe_live_requires_strong_approval": True,
+            "checkout_requires_strong_approval": True,
+            "real_revenue_requires_confirmation": True,
+            "projected_revenue_label_required": True,
+            "no_fake_revenue": True,
+        },
+        "safety": {
+            "no_deploy": True,
+            "no_publish": True,
+            "no_domain_change": True,
+            "no_email_send": True,
+            "no_money_movement": True,
+            "no_credentials": True,
+            "no_external_network": True,
+            "no_hermes_dispatch": True,
+            "approval_gates_required_for_real_actions": True,
+        },
+        "timeline": _adaptive_product_builder_timeline_events(),
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _product_builder_stage(
+    name: str,
+    status: str,
+    requires_approval: bool,
+    approval_level: str,
+    evidence_required: str,
+    notes: str,
+) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "can_execute": False,
+        "requires_approval": requires_approval,
+        "approval_level": approval_level,
+        "evidence_required": evidence_required,
+        "notes": notes,
+    }
+
+
+def _adaptive_product_builder_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Product Builder panel read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Product stages loaded as preview",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "No product generated",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "No deploy candidate executed",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "No monetization action performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+    ]
+
+
+def _frontend_pilot_projection() -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "read_only_pilot",
+            "dashboard_route": "/jarvis",
+            "backend_status_endpoint": "/mark-3/dashboard/status",
+            "frontend_can_execute": False,
+            "frontend_can_approve": False,
+            "frontend_can_activate_sensors": False,
+            "frontend_can_move_money": False,
+            "frontend_can_deploy": False,
+            "frontend_can_send_email": False,
+        },
+        "readiness_checks": [
+            _frontend_readiness_check(
+                "dashboard_route_exists",
+                "preview",
+                "frontend route expected at /jarvis",
+                "Static frontend tests verify this shell route.",
+            ),
+            _frontend_readiness_check(
+                "read_model_connected",
+                "passed",
+                "GET /mark-3/dashboard/status",
+                "The dashboard read model is exposed as a GET route.",
+            ),
+            _frontend_readiness_check(
+                "approval_console_visible",
+                "passed",
+                "approvals projection present",
+                "Approval controls are disabled preview affordances.",
+            ),
+            _frontend_readiness_check(
+                "hermes_execution_visible",
+                "passed",
+                "hermes_execution projection present",
+                "Hermes is visible only as a governed execution engine behind JARVIS gates.",
+            ),
+            _frontend_readiness_check(
+                "mission_control_visible",
+                "passed",
+                "mission_control projection present",
+                "Mission Control remains preview-only with no Hermes dispatch.",
+            ),
+            _frontend_readiness_check(
+                "voice_core_visible",
+                "passed",
+                "voice_core projection present",
+                "Voice core is visual preview only.",
+            ),
+            _frontend_readiness_check(
+                "wake_flow_visible",
+                "passed",
+                "wake_word_flow projection present",
+                "Wake word flow is typed preview only.",
+            ),
+            _frontend_readiness_check(
+                "camera_vision_visible",
+                "passed",
+                "camera_vision projection present",
+                "Camera and vision stay disabled.",
+            ),
+            _frontend_readiness_check(
+                "mobile_companion_visible",
+                "passed",
+                "mobile_companion projection present",
+                "Mobile is an interface, not a runtime.",
+            ),
+            _frontend_readiness_check(
+                "finance_roi_visible",
+                "passed",
+                "finance_roi projection present",
+                "Finance metrics default to unknown without evidence.",
+            ),
+            _frontend_readiness_check(
+                "product_builder_visible",
+                "passed",
+                "adaptive_product_builder projection present",
+                "Product Builder is adaptive preview, not product generation.",
+            ),
+            _frontend_readiness_check(
+                "kill_switch_visible",
+                "passed",
+                "system.kill_switch_state is exposed",
+                "Kill Switch remains visible while no execution is available to stop.",
+            ),
+            _frontend_readiness_check(
+                "no_fake_metrics",
+                "passed",
+                "finance_roi.truth_policy.no_fake_metrics=true",
+                "Unknown is required when evidence is missing.",
+            ),
+            _frontend_readiness_check(
+                "no_frontend_execute",
+                "passed",
+                "frontend_can_execute=false",
+                "Frontend is a read-only pilot surface.",
+            ),
+            _frontend_readiness_check(
+                "no_sensor_activation",
+                "passed",
+                "frontend_can_activate_sensors=false",
+                "No microphone, camera or browser permission path is exposed.",
+            ),
+            _frontend_readiness_check(
+                "no_post_put_delete",
+                "passed",
+                "allowed_http_methods_for_frontend=[GET]",
+                "The /jarvis dashboard consumes only the read model.",
+            ),
+        ],
+        "hardening_notes": {
+            "npm_audit_vulnerabilities_observed": UNKNOWN,
+            "npm_audit_fix_not_run": True,
+            "dependency_hardening_requires_separate_pr": True,
+            "no_lockfile_changes_expected": True,
+            "frontend_build_required_before_merge": True,
+            "full_pytest_required_before_merge": True,
+        },
+        "pilot_limitations": [
+            "no real approvals",
+            "no real mission submit",
+            "no real Hermes execution",
+            "no real voice",
+            "no real camera",
+            "no real mobile runtime",
+            "no real finance/revenue measurement",
+            "no deploy/money/email/credentials",
+        ],
+        "timeline": _frontend_pilot_timeline_events(),
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _frontend_readiness_check(name: str, status: str, evidence: str, notes: str) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "evidence": evidence,
+        "notes": notes,
+    }
+
+
+def _frontend_pilot_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Frontend pilot status read",
+            "source": "/mark-3/dashboard/status",
+            "status": "read_only_pilot",
+            "read_only": True,
+        },
+        {
+            "event": "Dashboard route expected at /jarvis",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Read model expected at /mark-3/dashboard/status",
+            "source": "/mark-3/dashboard/status",
+            "status": "passed",
+            "read_only": True,
+        },
+        {
+            "event": "Pilot remains read-only",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+        {
+            "event": "Dependency hardening deferred to separate PR if needed",
+            "source": "/mark-3/dashboard/status",
+            "status": "deferred",
+            "read_only": True,
+        },
+    ]
 
 
 def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, Any]:
