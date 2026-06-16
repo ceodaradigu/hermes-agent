@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   BadgeCheck,
@@ -16,9 +17,13 @@ import {
   Workflow,
   ZapOff,
 } from "lucide-react";
+import { api, type JarvisDashboardModule, type JarvisDashboardStatus } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const DASHBOARD_READ_MODEL_ENDPOINT = "/mark-3/dashboard/status";
+const UNKNOWN = "unknown";
 
 const voiceStates = [
   "offline",
@@ -35,71 +40,21 @@ const voiceStates = [
   "kill_switch",
 ] as const;
 
-const missionFields = [
-  ["intención detectada", "unknown"],
-  ["plan", "unknown"],
-  ["riesgo", "unknown"],
-  ["permisos necesarios", "none/unknown"],
-  ["estado", "ready for future wiring"],
+const requiredModules = [
+  "Mission Loop",
+  "Research",
+  "Product Revenue",
+  "Routine Ops",
+  "Moonshot Lab",
+  "Voice",
+  "Wake Listener",
+  "Camera/Vision",
+  "Mobile Companion",
+  "Memory/Learning",
+  "Hermes",
 ] as const;
 
-const approvalCards = [
-  {
-    accion: "Demo preview: preparar resumen de estado local",
-    riesgo: "bajo / demo",
-    coste: "unknown",
-    afecta: "datos demo locales",
-    rollback: "no aplica; no hay ejecución real",
-  },
-  {
-    accion: "Demo preview: candidato de deploy",
-    riesgo: "alto / strong approval futuro",
-    coste: "unknown",
-    afecta: "producción futura no conectada",
-    rollback: "requerido antes de cualquier deploy real",
-  },
-] as const;
-
-const modules = [
-  ["Mission Loop", "preview"],
-  ["Research", "prepare-only"],
-  ["Product Revenue", "prepare-only"],
-  ["Routine Ops", "prepare-only"],
-  ["Moonshot Lab", "prepare-only"],
-  ["Voice", "preview"],
-  ["Wake Listener", "disabled"],
-  ["Camera/Vision", "disabled"],
-  ["Mobile Companion", "preview"],
-  ["Memory/Learning", "prepare-only"],
-  ["Hermes", "gated"],
-] as const;
-
-const privacyRows = [
-  ["cámara", "off"],
-  ["preview", "disabled"],
-  ["recording", "off"],
-  ["vision analysis", "disabled"],
-  ["storage", "off"],
-  ["scope", "none"],
-] as const;
-
-const mobileRows = [
-  ["mobile companion", "preview"],
-  ["approvals desde móvil", "future gated"],
-  ["estado remoto", "unknown"],
-  ["kill switch remoto", "future gated"],
-  ["Hermes directo desde móvil", "forbidden"],
-] as const;
-
-const financeRows = [
-  ["coste real", "unknown"],
-  ["coste estimado", "unknown"],
-  ["revenue confirmado", "unknown"],
-  ["revenue proyectado", "unknown"],
-  ["ROI", "unknown"],
-] as const;
-
-const productFlow = [
+const fallbackStages = [
   "Idea",
   "Validación",
   "Blueprint",
@@ -109,23 +64,157 @@ const productFlow = [
   "Monetización",
 ] as const;
 
-const timelineEvents = [
-  "Dashboard shell loaded",
-  "Runtime actions disabled",
-  "Sensors disabled",
-  "Hermes execution not active",
-  "Metrics unknown until measured",
-] as const;
+function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
+  return {
+    system: {
+      api_status: reason === "loading" ? UNKNOWN : "offline",
+      local_first: true,
+      mode: "read_only_dashboard",
+      free_autonomy_enabled: false,
+      preview_first: true,
+      kill_switch_state: "not_wired",
+      generated_at: UNKNOWN,
+    },
+    jarvis_hermes_contract: {
+      jarvis_role: "governs/risk/approval/audit/control",
+      hermes_role: "execution_engine",
+      no_duplicate_hermes_runtime: true,
+      frontend_can_execute: false,
+    },
+    release_candidate: {
+      status: UNKNOWN,
+      readiness: {},
+      not_ready_for_free_autonomy: true,
+      restrictions_are_approval_gates_not_permanent_bans: true,
+      pilot_readiness: UNKNOWN,
+      pilot_executed: false,
+    },
+    modules: requiredModules.map((name) => ({
+      name,
+      status: name === "Camera/Vision" || name === "Wake Listener" ? "disabled" : "unknown",
+      source: DASHBOARD_READ_MODEL_ENDPOINT,
+      risk: UNKNOWN,
+      notes: "Fallback seguro: backend offline o campo no conectado.",
+    })),
+    approvals: {
+      pending_count: UNKNOWN,
+      action_buttons_enabled: false,
+      wake_phrase_can_approve: false,
+      critical_actions_require_strong_approval: true,
+      cards_state: "empty/read-only",
+      preview_only: true,
+    },
+    hermes_execution: {
+      available: false,
+      active_execution: UNKNOWN,
+      last_execution: UNKNOWN,
+      frontend_direct_execution_allowed: false,
+      running_sessions: UNKNOWN,
+      session_count: UNKNOWN,
+      supported_tool: UNKNOWN,
+      notes: "Fallback seguro: no se permite ejecución directa desde frontend.",
+    },
+    voice_wake: {
+      microphone_state: "disabled",
+      wake_word_state: "unknown",
+      wake_phrases: ["Hola Jarvis", "Jarvis"],
+      wake_phrase_can_approve: false,
+      audio_recording: false,
+    },
+    camera_vision: {
+      camera_state: "disabled",
+      preview_state: "disabled",
+      recording: false,
+      vision_analysis: "disabled",
+      storage: false,
+    },
+    mobile: {
+      companion_state: "not_connected",
+      direct_hermes_call_allowed: false,
+      remote_kill_switch_state: "future_gated",
+      approval_actions_enabled: false,
+    },
+    finance: {
+      actual_cost: UNKNOWN,
+      estimated_cost: UNKNOWN,
+      confirmed_revenue: UNKNOWN,
+      projected_revenue: UNKNOWN,
+      roi: UNKNOWN,
+      no_fake_metrics: true,
+    },
+    product_builder: {
+      stages: [...fallbackStages],
+      deploy_requires_strong_approval: true,
+      stripe_checkout_requires_strong_approval: true,
+      real_revenue_must_be_confirmed: true,
+    },
+    safety: {
+      no_get_user_media: true,
+      no_sensor_activation: true,
+      no_frontend_tool_runner: true,
+      no_frontend_hermes_execution: true,
+      no_money_movement: true,
+      no_deploy: true,
+      no_credentials: true,
+      no_email_send: true,
+    },
+    timeline: [
+      {
+        event: reason === "loading" ? "dashboard read model loading" : "dashboard read model unavailable",
+        source: DASHBOARD_READ_MODEL_ENDPOINT,
+        status: reason,
+        read_only: true,
+      },
+    ],
+    read_only_contract: {
+      aggregated_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+      allowed_http_methods_for_frontend: ["GET"],
+      internal_sources_are_read_only_status_or_audit: true,
+      frontend_must_not_call_execute: true,
+      frontend_must_not_request_sensor_permissions: true,
+    },
+  };
+}
 
-const headerBadges = ["Estado: local", "Modo: preview-first", "Sin autonomía libre"] as const;
+function valueText(value: unknown, fallback = UNKNOWN): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return fallback;
+}
+
+function yesNo(value: unknown, yes = "true", no = "false", fallback = UNKNOWN): string {
+  if (typeof value === "boolean") return value ? yes : no;
+  return fallback;
+}
+
+function statusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
+  if (status === "ready") return "success";
+  if (status === "disabled" || status === "not_connected") return "destructive";
+  if (status === "gated" || status === "prepare-only" || status === "preview") return "warning";
+  return "outline";
+}
+
+function readModules(modules: JarvisDashboardModule[] | undefined): JarvisDashboardModule[] {
+  const byName = new Map((modules ?? []).map((item) => [item.name, item]));
+  return requiredModules.map((name) => {
+    return byName.get(name) ?? {
+      name,
+      status: UNKNOWN,
+      source: DASHBOARD_READ_MODEL_ENDPOINT,
+      risk: UNKNOWN,
+      notes: "Campo ausente; mostrado como unknown.",
+    };
+  });
+}
 
 function StatusList({ items }: { items: readonly (readonly [string, string])[] }) {
   return (
     <dl className="grid gap-2">
       {items.map(([label, value]) => (
-        <div key={label} className="flex items-center justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
+        <div key={`${label}-${value}`} className="flex items-center justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
           <dt className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
-          <dd className="font-mono-ui text-xs text-foreground">{value}</dd>
+          <dd className="max-w-[65%] break-words text-right font-mono-ui text-xs text-foreground">{value}</dd>
         </div>
       ))}
     </dl>
@@ -141,17 +230,87 @@ function SafetyLine({ children }: { children: React.ReactNode }) {
 }
 
 export default function JarvisCommandCenterPage() {
+  const [dashboard, setDashboard] = useState<JarvisDashboardStatus>(() => fallbackDashboard("loading"));
+  const [connectionState, setConnectionState] = useState<"loading" | "online" | "offline">("loading");
+
+  useEffect(() => {
+    let active = true;
+    api.getJarvisDashboardStatus()
+      .then((payload) => {
+        if (!active) return;
+        setDashboard(payload);
+        setConnectionState("online");
+      })
+      .catch(() => {
+        if (!active) return;
+        setDashboard(fallbackDashboard("offline"));
+        setConnectionState("offline");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const modules = useMemo(() => readModules(dashboard.modules), [dashboard.modules]);
+  const system = dashboard.system ?? {};
+  const contract = dashboard.jarvis_hermes_contract ?? {};
+  const release = dashboard.release_candidate ?? {};
+  const approvals = dashboard.approvals ?? {};
+  const hermes = dashboard.hermes_execution ?? {};
+  const voiceWake = dashboard.voice_wake ?? {};
+  const cameraVision = dashboard.camera_vision ?? {};
+  const mobile = dashboard.mobile ?? {};
+  const finance = dashboard.finance ?? {};
+  const productBuilder = dashboard.product_builder ?? {};
+  const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
+  const stages = productBuilder.stages?.length ? productBuilder.stages : [...fallbackStages];
+  const readiness = release.readiness ?? {};
+
+  const missionFields = [
+    ["intención detectada", UNKNOWN],
+    ["plan", valueText(readiness.mission_loop)],
+    ["riesgo", "risk_scaled/unknown"],
+    ["permisos necesarios", "none/unknown"],
+    ["estado", valueText(release.status)],
+  ] as const;
+
+  const privacyRows = [
+    ["cámara", valueText(cameraVision.camera_state)],
+    ["preview", valueText(cameraVision.preview_state)],
+    ["recording", yesNo(cameraVision.recording, "on", "off")],
+    ["vision analysis", valueText(cameraVision.vision_analysis)],
+    ["storage", yesNo(cameraVision.storage, "on", "off")],
+    ["scope", "none"],
+  ] as const;
+
+  const mobileRows = [
+    ["mobile companion", valueText(mobile.companion_state)],
+    ["approvals desde móvil", yesNo(mobile.approval_actions_enabled, "enabled", "future gated")],
+    ["estado remoto", UNKNOWN],
+    ["kill switch remoto", valueText(mobile.remote_kill_switch_state)],
+    ["Hermes directo desde móvil", yesNo(mobile.direct_hermes_call_allowed, "allowed", "forbidden")],
+  ] as const;
+
+  const financeRows = [
+    ["coste real", valueText(finance.actual_cost)],
+    ["coste estimado", valueText(finance.estimated_cost)],
+    ["revenue confirmado", valueText(finance.confirmed_revenue)],
+    ["revenue proyectado", valueText(finance.projected_revenue)],
+    ["ROI", valueText(finance.roi)],
+  ] as const;
+
   return (
     <div className="flex flex-col gap-6">
       <section className="border border-border bg-card/70 p-5">
         <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {headerBadges.map((badge) => (
-                <Badge key={badge} variant={badge === "Sin autonomía libre" ? "warning" : "outline"}>
-                  {badge}
-                </Badge>
-              ))}
+              <Badge variant={connectionState === "online" ? "success" : connectionState === "offline" ? "destructive" : "outline"}>
+                API: {valueText(system.api_status)}
+              </Badge>
+              <Badge variant="outline">Modo: {valueText(system.mode)}</Badge>
+              <Badge variant="warning">Sin autonomía libre</Badge>
+              <Badge variant="outline">Read model: {DASHBOARD_READ_MODEL_ENDPOINT}</Badge>
             </div>
             <div className="space-y-2">
               <h1 className="font-expanded text-3xl font-bold uppercase tracking-[0.08em] blend-lighter md:text-5xl">
@@ -164,11 +323,11 @@ export default function JarvisCommandCenterPage() {
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">autonomía</p>
-                <p className="mt-1 font-mono-ui text-sm">Sin autonomía libre</p>
+                <p className="mt-1 font-mono-ui text-sm">{yesNo(system.free_autonomy_enabled, "libre", "Sin autonomía libre")}</p>
               </div>
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">runtime</p>
-                <p className="mt-1 font-mono-ui text-sm">read-only shell</p>
+                <p className="mt-1 font-mono-ui text-sm">{yesNo(contract.frontend_can_execute, "frontend ejecuta", "read-only shell")}</p>
               </div>
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">sensores</p>
@@ -184,7 +343,7 @@ export default function JarvisCommandCenterPage() {
                 <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">
                   Kill Switch
                 </h2>
-                <p className="font-mono-ui text-xs text-destructive/80">not wired in this PR</p>
+                <p className="font-mono-ui text-xs text-destructive/80">{valueText(system.kill_switch_state, "not_wired")}</p>
               </div>
             </div>
             <Button disabled type="button" variant="destructive" className="mt-4 w-full">
@@ -204,7 +363,7 @@ export default function JarvisCommandCenterPage() {
               <Activity className="h-5 w-5 text-warning" />
               <CardTitle>Núcleo / Voice Core visual</CardTitle>
             </div>
-            <CardDescription>Estado seguro actual: preview local.</CardDescription>
+            <CardDescription>Estado seguro actual leído desde el read model; fallback a unknown/offline.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-[260px_1fr]">
             <div className="relative flex min-h-[260px] items-center justify-center border border-border/70 bg-background/40">
@@ -217,7 +376,7 @@ export default function JarvisCommandCenterPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {voiceStates.map((state) => (
-                  <Badge key={state} variant={state === "preview" ? "warning" : "outline"}>
+                  <Badge key={state} variant={state === voiceWake.wake_word_state ? "warning" : "outline"}>
                     {state}
                   </Badge>
                 ))}
@@ -225,15 +384,15 @@ export default function JarvisCommandCenterPage() {
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="border border-border/70 p-3">
                   <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">micrófono real</p>
-                  <p className="mt-1 font-mono-ui text-sm">no activo</p>
+                  <p className="mt-1 font-mono-ui text-sm">{valueText(voiceWake.microphone_state)}</p>
                 </div>
                 <div className="border border-border/70 p-3">
                   <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">wake word real</p>
-                  <p className="mt-1 font-mono-ui text-sm">no activo</p>
+                  <p className="mt-1 font-mono-ui text-sm">{valueText(voiceWake.wake_word_state)}</p>
                 </div>
                 <div className="border border-border/70 p-3">
-                  <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">subtítulos</p>
-                  <p className="mt-1 font-mono-ui text-sm">placeholder/local</p>
+                  <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">wake phrases</p>
+                  <p className="mt-1 font-mono-ui text-sm">{voiceWake.wake_phrases?.join(", ") || "Hola Jarvis, Jarvis"}</p>
                 </div>
               </div>
               <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
@@ -247,13 +406,13 @@ export default function JarvisCommandCenterPage() {
               <Workflow className="h-5 w-5 text-success" />
               <CardTitle>Mission Control</CardTitle>
             </div>
-            <CardDescription>Panel visual para futuras misiones; no crea misiones reales todavía.</CardDescription>
+            <CardDescription>Panel visual para futuras misiones; no crea misiones reales desde frontend.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <textarea
               disabled
               className="min-h-28 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
-              value="Entrada preview deshabilitada. No hay planner ni ejecución conectados en PR #145."
+              value={`Entrada preview deshabilitada. Estado RC: ${valueText(release.status)}.`}
               readOnly
             />
             <StatusList items={missionFields} />
@@ -268,32 +427,30 @@ export default function JarvisCommandCenterPage() {
               <ShieldCheck className="h-5 w-5 text-warning" />
               <CardTitle>Consola de Aprobación</CardTitle>
             </div>
-            <CardDescription>Tarjetas demo/preview; no datos reales, no approvals reales.</CardDescription>
+            <CardDescription>Vista read-only; las tarjetas reales no tienen acciones en esta PR.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {approvalCards.map((card) => (
-              <article key={card.accion} className="border border-border/70 bg-background/35 p-4">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <Badge variant="warning">demo/preview</Badge>
-                  <Badge variant="outline">preview-only</Badge>
-                </div>
-                <StatusList
-                  items={[
-                    ["acción", card.accion],
-                    ["riesgo", card.riesgo],
-                    ["coste", card.coste],
-                    ["afecta", card.afecta],
-                    ["rollback", card.rollback],
-                  ]}
-                />
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <Button disabled type="button" variant="outline">Aprobar · preview-only</Button>
-                  <Button disabled type="button" variant="outline">Rechazar · preview-only</Button>
-                  <Button disabled type="button" variant="outline">Modificar alcance · preview-only</Button>
-                  <Button disabled type="button" variant="outline">Pedir explicación · preview-only</Button>
-                </div>
-              </article>
-            ))}
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <Badge variant="warning">preview/read-only</Badge>
+                <Badge variant="outline">pending: {valueText(approvals.pending_count)}</Badge>
+              </div>
+              <StatusList
+                items={[
+                  ["acción", "sin approval real conectado"],
+                  ["riesgo", "unknown"],
+                  ["coste", UNKNOWN],
+                  ["afecta", "none"],
+                  ["rollback", "no aplica; no hay ejecución real"],
+                ]}
+              />
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <Button disabled type="button" variant="outline">Aprobar · preview-only</Button>
+                <Button disabled type="button" variant="outline">Rechazar · preview-only</Button>
+                <Button disabled type="button" variant="outline">Modificar alcance · preview-only</Button>
+                <Button disabled type="button" variant="outline">Pedir explicación · preview-only</Button>
+              </div>
+            </article>
             <div className="grid gap-2">
               <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
               <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
@@ -307,25 +464,26 @@ export default function JarvisCommandCenterPage() {
               <TerminalSquare className="h-5 w-5 text-muted-foreground" />
               <CardTitle>Hermes Execution / Ejecución Hermes</CardTitle>
             </div>
-            <CardDescription>Visibilidad del ejecutor interno; sin ejecución activa.</CardDescription>
+            <CardDescription>Visibilidad del ejecutor interno; sin ejecución desde frontend.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS</p>
-                <p className="mt-1 font-mono-ui text-sm">no ejecuta</p>
+                <p className="mt-1 font-mono-ui text-sm">{valueText(contract.jarvis_role)}</p>
               </div>
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Hermes</p>
-                <p className="mt-1 font-mono-ui text-sm">es el ejecutor</p>
+                <p className="mt-1 font-mono-ui text-sm">{valueText(contract.hermes_role, "execution_engine")}</p>
               </div>
             </div>
             <StatusList
               items={[
-                ["ejecución activa", "none"],
-                ["última ejecución", "unknown"],
-                ["coste", "unknown"],
-                ["rollback", "unknown"],
+                ["disponible", yesNo(hermes.available)],
+                ["ejecución activa", valueText(hermes.active_execution)],
+                ["última ejecución", valueText(hermes.last_execution)],
+                ["frontend directo", yesNo(hermes.frontend_direct_execution_allowed, "allowed", "forbidden")],
+                ["sesiones", valueText(hermes.running_sessions)],
               ]}
             />
             <SafetyLine>Hermes ejecuta solo bajo gates válidos.</SafetyLine>
@@ -339,16 +497,19 @@ export default function JarvisCommandCenterPage() {
             <Radar className="h-5 w-5 text-success" />
             <CardTitle>Agent / Module Radar</CardTitle>
           </div>
-          <CardDescription>Estados declarativos; no inventan conexión real.</CardDescription>
+          <CardDescription>Estados normalizados desde el read model; campos ausentes se muestran como unknown.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {modules.map(([name, state]) => (
-              <div key={name} className="flex items-center justify-between gap-3 border border-border/70 bg-background/35 px-3 py-3">
-                <span className="font-display text-sm">{name}</span>
-                <Badge variant={state === "disabled" ? "destructive" : state === "gated" ? "warning" : "outline"}>
-                  {state}
-                </Badge>
+            {modules.map((module) => (
+              <div key={module.name} className="flex min-h-24 flex-col justify-between gap-3 border border-border/70 bg-background/35 px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-display text-sm">{module.name}</span>
+                  <Badge variant={statusVariant(valueText(module.status))}>
+                    {valueText(module.status)}
+                  </Badge>
+                </div>
+                <p className="line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(module.notes)}</p>
               </div>
             ))}
           </div>
@@ -413,7 +574,7 @@ export default function JarvisCommandCenterPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2 md:grid-cols-7">
-              {productFlow.map((step) => (
+              {stages.map((step) => (
                 <div key={step} className="border border-border/70 bg-background/35 p-3 text-center">
                   <p className="font-display text-xs uppercase tracking-[0.1em]">{step}</p>
                   <Badge variant="outline" className="mt-2">preview</Badge>
@@ -434,14 +595,16 @@ export default function JarvisCommandCenterPage() {
               <Cpu className="h-5 w-5 text-muted-foreground" />
               <CardTitle>Live Timeline / Audit Preview</CardTitle>
             </div>
-            <CardDescription>Eventos locales/static de carga de la shell.</CardDescription>
+            <CardDescription>Eventos reales de lectura del backend; no eventos de ejecución.</CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="space-y-3">
-              {timelineEvents.map((event) => (
-                <li key={event} className="grid grid-cols-[20px_1fr] gap-3">
+              {timeline.map((event) => (
+                <li key={`${event.source}-${event.event}`} className="grid grid-cols-[20px_1fr] gap-3">
                   <Square className="mt-0.5 h-3 w-3 text-warning" />
-                  <span className="font-mono-ui text-xs text-foreground">{event}</span>
+                  <span className="font-mono-ui text-xs text-foreground">
+                    {valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}
+                  </span>
                 </li>
               ))}
             </ol>

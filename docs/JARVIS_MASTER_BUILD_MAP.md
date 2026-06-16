@@ -780,3 +780,45 @@ Hermes ejecuta.
 El siguiente trabajo recomendado es PR #146 - Backend wiring read model, si se
 quiere conectar esta shell a endpoints read-only/preview existentes sin abrir
 acciones de ejecución.
+
+## JARVIS Visual Command Center Real Status Wiring
+
+PR #146 conecta la ruta local `/jarvis` a estado real de backend mediante el
+read model agregado `GET /mark-3/dashboard/status`.
+
+Incluye:
+
+- Read model normalizado para System, contrato JARVIS/Hermes, Release
+  Candidate, módulos, approvals, Hermes Execution, Voice/Wake, Camera/Vision,
+  Mobile, Finance/ROI, Product Builder, safety y timeline.
+- Lectura de fuentes existentes seguras: `/health`, Mark 3 release-candidate
+  status/readiness/capabilities/audits/e2e-smoke/pilot-plan, Mission Loop,
+  Hermes runtime status, Research, Product Revenue, Routine Ops, Moonshot Lab,
+  Voice/Wake, Camera Control, Mobile Companion, outcomes y learning proposals.
+- Frontend `/jarvis` con un único cliente read-only hacia
+  `GET /mark-3/dashboard/status`.
+- Fallback seguro: backend offline o campos ausentes se muestran como
+  `offline`, `unknown`, `not_connected` o `disabled`.
+
+No implementa:
+
+- ejecución desde frontend;
+- approve/reject real;
+- llamada directa del navegador a Hermes;
+- tool runner frontend;
+- getUserMedia, microfono, camara, grabacion o permisos de navegador;
+- WebSocket;
+- dinero, Stripe, deploy, email, credenciales o produccion;
+- metricas falsas de coste, revenue, ROI, resultados o capacidades;
+- runtime Hermes duplicado.
+
+La regla sigue fija:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
+El siguiente trabajo recomendado es PR #147 - Approval Console visual,
+manteniendo controles approve/reject deshabilitados hasta que exista una ruta
+backend gobernada, auditada y explicitamente aprobada.

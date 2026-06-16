@@ -20,7 +20,7 @@ cd web/
 npm run dev
 ```
 
-The Vite dev server proxies `/api` requests to `http://127.0.0.1:9119` (the FastAPI backend).
+The Vite dev server proxies `/api` and `/mark-3` requests to `http://127.0.0.1:9119` (the FastAPI backend).
 
 ## Build
 

@@ -704,46 +704,77 @@ Objective:
 
 - Connect the dashboard shell to existing read-only/preview endpoints.
 
+Status in this PR:
+
+- Implemented `GET /mark-3/dashboard/status` as the normalized read model for
+  the local `/jarvis` dashboard.
+- The endpoint aggregates safe local status/readiness/audit sources including
+  `/health`, Mark 3 release-candidate status/readiness/capabilities,
+  dangerous-route audit, approval-path audit, e2e smoke, pilot plan,
+  mission-loop status, Hermes runtime status, voice/wake status,
+  camera-control status and mobile companion status.
+- The frontend now reads that single endpoint with a conservative fallback to
+  `offline`, `unknown`, `not_connected` or `disabled` when the backend or a
+  field is unavailable.
+- The dashboard remains read-only: no POST/PUT/DELETE from `/jarvis`, no
+  approvals, no Hermes execution, no tool runner, no sensor permission request,
+  no microphone, no camera, no recording, no WebSocket and no fake metrics.
+- JARVIS/Hermes separation remains explicit: JARVIS governs risk, approval,
+  audit and control; Hermes remains the execution engine and is not duplicated.
+
 Scope:
 
 - Add a typed frontend API client for JARVIS surfaces.
-- Poll read-only endpoints with conservative error states.
-- Normalize endpoint payloads into one UI view model.
+- Read the aggregated dashboard status endpoint with conservative error states.
+- Normalize endpoint payloads into one UI view model/read model.
 - Surface `unknown`, `prepare_only`, `disabled`, `blocked`, `approval_required`
   and `safe_to_render` truthfully.
 
 Probable files:
 
-- `web/src/lib/jarvis-api.ts`
-- `web/src/lib/jarvis-view-model.ts`
-- `web/src/hooks/useJarvisStatus.ts`
-- `web/src/components/jarvis/*`
+- `jarvis/dashboard_read_model.py`
+- `jarvis/api/app.py`
+- `web/src/lib/api.ts`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `tests/jarvis/test_jarvis_dashboard_status_read_model.py`
 
 Endpoints consumed:
 
-- `GET /command-center`
-- `GET /operator/console/snapshot`
-- `GET /mark-2/dashboard/overview`
+- `GET /mark-3/dashboard/status`
+- `GET /health`
 - `GET /mark-3/release-candidate/status`
-- `GET /mark-3/mission-loop/status`
-- `GET /mark-3/hermes-runtime/status`
-- `GET /voice/runtime/status`
+- `GET /mark-3/release-candidate/readiness`
+- `GET /mark-3/release-candidate/capabilities`
+- `GET /mark-3/release-candidate/dangerous-route-audit`
+- `GET /mark-3/release-candidate/approval-path-audit`
+- `GET /mark-3/release-candidate/e2e-smoke`
+- `GET /mark-3/release-candidate/pilot-plan`
 - `GET /voice-runtime/status`
+- `GET /mark-2/wake-listener/status`
 - `GET /camera-control/status`
-- `GET /ambient-vision/status`
 - `GET /mobile/companion/status`
-- `GET /devices/runtime/status`
+- `GET /mobile/companion/permissions`
+- `GET /mark-3/hermes-runtime/status`
+- `GET /mark-3/mission-loop/status`
+- `GET /mark-3/research-execution/status`
+- `GET /mark-3/product-revenue/status`
+- `GET /mark-3/routine-ops/status`
+- `GET /mark-3/moonshot-lab/status`
+- `GET /mark-3/outcomes`
+- `GET /mark-3/learning/proposals`
 
 New endpoints needed:
 
-- Optional later aggregator: `GET /jarvis/command-center/snapshot`.
-- Do not add it unless endpoint fan-out becomes fragile.
+- `GET /mark-3/dashboard/status`.
+- No action endpoint, execute endpoint or approval mutation endpoint was added.
 
 Expected tests:
 
 - API client mapping tests.
 - Frontend build.
 - Backend tests proving consumed endpoints still return safe payloads.
+- Static tests proving `/jarvis` does not call execute paths, browser sensor
+  APIs, getUserMedia, POST/PUT/DELETE, or functional approval controls.
 
 Must not do:
 
@@ -751,11 +782,16 @@ Must not do:
 - No UI approve/reject.
 - No WebSocket yet.
 - No direct Hermes call from the browser.
+- No microphone/camera activation or recording.
+- No fake cost, revenue, ROI, results or capability claims.
 
 Exit criteria:
 
 - Dashboard reflects real backend posture and degrades to `unknown` instead of
   inventing data.
+- The dashboard can look, but cannot touch: no execution, no approval, no
+  sensors, no money, no deploy, no email, no credentials and no duplicate
+  Hermes runtime.
 
 ### PR #147 - Approval Console visual
 
@@ -1398,12 +1434,14 @@ Rules:
 Recommended next PR after this roadmap:
 
 ```text
-PR #145 - JARVIS Local Dashboard Shell
+PR #147 - Approval Console visual
 ```
 
 Why:
 
-- It gives David the visible cockpit without enabling dangerous actions.
-- It uses existing `web/` and existing local dependencies.
-- It proves the information architecture before wiring live controls.
+- PR #145 gave David the visible cockpit without enabling dangerous actions.
+- PR #146 wires real read-only status into that cockpit without execution.
+- The next safe visual step is to improve the approval console display while
+  keeping approve/reject controls non-functional until a later governed backend
+  action path exists.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

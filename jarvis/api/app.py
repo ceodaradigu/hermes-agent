@@ -50,6 +50,7 @@ from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
+from jarvis.dashboard_read_model import build_mark_3_dashboard_status
 from jarvis.desktop_runtime import DesktopRuntime
 from jarvis.continuous_learning.foundation import (
     ApprovalWorkflowPreview,
@@ -2296,6 +2297,14 @@ def create_app(
     @app.get("/mark-3/release-candidate/next-steps")
     def mark_3_release_candidate_next_steps() -> dict:
         return Mark3NextSteps().to_dict()
+
+    @app.get("/mark-3/dashboard/status")
+    def mark_3_dashboard_status() -> dict:
+        return build_mark_3_dashboard_status(
+            app_state=app.state,
+            route_paths=(route.path for route in app.routes),
+            generated_at=_now_iso(),
+        )
 
     @app.get("/mark-3/planning/status")
     def mark_3_planning_status() -> dict:

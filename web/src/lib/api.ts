@@ -21,6 +21,7 @@ async function getSessionToken(): Promise<string> {
 }
 
 export const api = {
+  getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status"),
   getStatus: () => fetchJSON<StatusResponse>("/api/status"),
   getSessions: (limit = 20, offset = 0) =>
     fetchJSON<PaginatedSessions>(`/api/sessions?limit=${limit}&offset=${offset}`),
@@ -174,6 +175,109 @@ export interface PlatformStatus {
   error_message?: string;
   state: string;
   updated_at: string;
+}
+
+export interface JarvisDashboardModule {
+  name: string;
+  status: "ready" | "preview" | "prepare-only" | "gated" | "disabled" | "not_connected" | "unknown" | string;
+  source: string;
+  risk: string;
+  notes: string;
+}
+
+export interface JarvisDashboardTimelineEvent {
+  event: string;
+  source: string;
+  status: string;
+  read_only?: boolean;
+}
+
+export interface JarvisDashboardStatus {
+  system?: {
+    api_status?: string;
+    local_first?: boolean;
+    mode?: string;
+    free_autonomy_enabled?: boolean;
+    preview_first?: boolean;
+    kill_switch_state?: string;
+    generated_at?: string;
+  };
+  jarvis_hermes_contract?: {
+    jarvis_role?: string;
+    hermes_role?: string;
+    no_duplicate_hermes_runtime?: boolean;
+    frontend_can_execute?: boolean;
+  };
+  release_candidate?: {
+    status?: string;
+    readiness?: Record<string, string>;
+    not_ready_for_free_autonomy?: boolean;
+    restrictions_are_approval_gates_not_permanent_bans?: boolean;
+    pilot_readiness?: string;
+    pilot_executed?: boolean;
+  };
+  modules?: JarvisDashboardModule[];
+  approvals?: {
+    pending_count?: number | string;
+    action_buttons_enabled?: boolean;
+    wake_phrase_can_approve?: boolean;
+    critical_actions_require_strong_approval?: boolean;
+    cards_state?: string;
+    preview_only?: boolean;
+  };
+  hermes_execution?: {
+    available?: boolean;
+    active_execution?: boolean | string;
+    last_execution?: string;
+    frontend_direct_execution_allowed?: boolean;
+    running_sessions?: number | string;
+    session_count?: number | string;
+    supported_tool?: string;
+    notes?: string;
+  };
+  voice_wake?: {
+    microphone_state?: string;
+    wake_word_state?: string;
+    wake_phrases?: string[];
+    wake_phrase_can_approve?: boolean;
+    audio_recording?: boolean;
+  };
+  camera_vision?: {
+    camera_state?: string;
+    preview_state?: string;
+    recording?: boolean;
+    vision_analysis?: string;
+    storage?: boolean;
+  };
+  mobile?: {
+    companion_state?: string;
+    direct_hermes_call_allowed?: boolean;
+    remote_kill_switch_state?: string;
+    approval_actions_enabled?: boolean;
+  };
+  finance?: {
+    actual_cost?: string;
+    estimated_cost?: string;
+    confirmed_revenue?: string;
+    projected_revenue?: string;
+    roi?: string;
+    no_fake_metrics?: boolean;
+  };
+  product_builder?: {
+    stages?: string[];
+    deploy_requires_strong_approval?: boolean;
+    stripe_checkout_requires_strong_approval?: boolean;
+    real_revenue_must_be_confirmed?: boolean;
+  };
+  safety?: Record<string, boolean>;
+  timeline?: JarvisDashboardTimelineEvent[];
+  read_only_contract?: {
+    aggregated_endpoint?: string;
+    allowed_http_methods_for_frontend?: string[];
+    internal_sources_are_read_only_status_or_audit?: boolean;
+    frontend_must_not_call_execute?: boolean;
+    frontend_must_not_request_sensor_permissions?: boolean;
+  };
 }
 
 export interface StatusResponse {
