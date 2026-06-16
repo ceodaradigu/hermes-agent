@@ -31,6 +31,7 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
 
     for text in (
         "Centro de Mando JARVIS",
+        "Núcleo de Voz JARVIS",
         "Control de Misión",
         "preview-only",
         "En esta fase no se ejecuta nada",
@@ -89,6 +90,8 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "offline",
         "online",
         "preview",
+        "dormant",
+        "dormido",
         "listening_wake_word",
         "listening_command",
         "thinking",
@@ -97,9 +100,78 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "hermes_executing",
         "paused",
         "blocked",
+        "error",
         "kill_switch",
     ):
         assert state in content
+
+
+def test_jarvis_dashboard_shell_contains_voice_core_tts_preview_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Núcleo de Voz JARVIS",
+        "No estoy escuchando ni grabando audio",
+        "Subtítulos preview",
+        "Subtítulos preview - sin TTS real, sin STT real, sin provider externo.",
+        "Política wake word",
+        "Frases soportadas futuras: Hola Jarvis, Jarvis.",
+        "La wake phrase nunca aprueba acciones",
+        "La wake phrase no ejecuta acciones",
+        "Las acciones críticas requieren readback y confirmación fuerte",
+        "Privacidad voz",
+        "micrófono: disabled",
+        "grabación: false",
+        "audio bruto almacenado: false",
+        "proveedor externo",
+        "background listening",
+        "voice approval",
+        "La voz puede preparar una intención futura",
+        "Si requiere aprobación, aparecerá en Approval Console",
+        "Frontend/voice no llama Hermes directamente",
+        "Kill Switch voz",
+        "En esta PR no hay audio real que parar",
+        "Una integración futura deberá cortar escucha, TTS y ejecución gobernada",
+    ):
+        assert text in content
+
+
+def test_jarvis_dashboard_shell_contains_wake_word_local_safe_flow_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Wake Word Local Safe Flow",
+        "micrófono hard-off",
+        "Hola Jarvis",
+        "Jarvis",
+        "Stop phrases",
+        "Mic hard-off",
+        "Wake-word-only",
+        "Command listening",
+        "Push-to-talk",
+        "Typed preview",
+        "Hola Jarvis, revisa el estado del proyecto",
+        "wake phrase detectada",
+        "comando restante",
+        "abriría ventana de comando",
+        "ejecutaría",
+        "aprobaría",
+        "llamaría Hermes",
+        "La wake phrase nunca aprueba acciones",
+        "La wake phrase no ejecuta acciones",
+        "La wake phrase solo puede abrir una ventana de comando futura",
+        "La aprobación por voz requiere canal autenticado, readback y auditoría",
+        "Las acciones críticas requieren doble o triple confirmación",
+        "no micrófono",
+        "no grabación",
+        "no STT",
+        "no TTS real",
+        "no provider externo",
+        "no background listener",
+        "no Hermes dispatch",
+        "no auto execute",
+    ):
+        assert text in content
 
 
 def test_jarvis_dashboard_shell_does_not_use_browser_sensor_apis_or_recording():
@@ -113,6 +185,13 @@ def test_jarvis_dashboard_shell_does_not_use_browser_sensor_apis_or_recording():
         "webkitAudioContext",
         "navigator.permissions",
         "recordedChunks",
+        "startListening",
+        "stopListening",
+        "startRecording",
+        "stopRecording",
+        "recordAudio",
+        "listenForWakeWord",
+        "wakeWordListener",
     ):
         assert forbidden not in content
 
@@ -168,6 +247,9 @@ def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
         "createMission",
         "runMission",
         "dispatchHermes",
+        "startListening",
+        "startRecording",
+        "listenForWakeWord",
         "getUserMedia",
     ):
         assert forbidden not in content

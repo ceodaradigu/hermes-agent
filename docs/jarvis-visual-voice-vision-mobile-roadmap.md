@@ -1010,74 +1010,154 @@ Exit criteria:
   safe operator-review step, while the system remains preview/read-only and
   Hermes remains separate behind JARVIS gates.
 
-### PR #150 - Voice Core visual and TTS wiring
+### PR #150 - Voice Interaction Layer
 
 Objective:
 
-- Add the central animated Voice Core visual and wire it to safe voice state,
-  TTS status and subtitles without activating microphone.
+- Deliver the macro voice interaction layer for `/jarvis`: Voice Core Visual,
+  TTS State Preview and Wake Word Local Safe Flow, all through a safe read-only
+  dashboard contract without activating microphone, wake word, STT, TTS,
+  recording, providers or Hermes execution.
 
 Scope:
 
-- Build a non-human central core animation.
-- Map voice states: dormant, wake-word listening, command listening, thinking,
-  speaking, approval required, Hermes executing, paused, blocked and error.
-- Show live subtitles from text transcript previews.
-- Show TTS provider status and generated-audio status when `save_audio=true`
-  is explicitly used through backend.
-- Prepare Web Audio analyser integration later, but do not require it now.
+- Enrich `GET /mark-3/dashboard/status` with `voice_core`.
+- Expose `voice_core.state` with `mode=preview`, `current_state=preview` or
+  `dormant`, and all runtime capabilities disabled:
+  `microphone_enabled=false`, `wake_word_enabled=false`,
+  `command_listening_enabled=false`, `tts_enabled=false`, `stt_enabled=false`,
+  `audio_recording=false`, `raw_audio_stored=false`,
+  `external_provider_called=false`, `voice_approval_enabled=false`,
+  `wake_phrase_can_approve=false` and `wake_phrase_can_execute=false`.
+- Expose `visual_states` for offline, online, preview, dormant,
+  listening_wake_word, listening_command, thinking, speaking,
+  approval_required, hermes_executing, paused, blocked, error and kill_switch.
+  Each state declares label, description, risk, enabled preview/false,
+  sensor requirement and `can_approve=false`.
+- Expose `tts_state` as preview/disabled visibility only: speaking false,
+  preview subtitles enabled from `preview/read_model`, audio output disabled,
+  provider `none/not_connected` and no external call.
+- Expose `wake_word_policy` with future phrases `Hola Jarvis` and `Jarvis`,
+  wake runtime disabled/not connected/preview, wake phrase not permission,
+  cannot approve, cannot execute, authenticated approval channel required for
+  future approval, and critical actions requiring readback plus strong
+  confirmation.
+- Expose privacy and safety contracts: no microphone activation, no audio
+  recording, no raw audio storage, no external audio provider, no background
+  listening, no voice biometrics, no voice approval without gate, no auto
+  execute, no Hermes dispatch, no tool call, no sensor activation, no browser
+  media capture APIs and visible kill switch.
+- Add timeline events: Voice Core visual state read, Voice/TTS state preview
+  generated, Microphone disabled, Wake word runtime not active and No audio
+  recording performed.
+- Update `/jarvis` Voice Core to show a serious central voice nucleus, visual
+  states, preview subtitles, wake policy, privacy, Approval Console/Hermes
+  relationship and Kill Switch semantics.
+- Enrich `GET /mark-3/dashboard/status` with `wake_word_flow`.
+- Expose `wake_word_flow.state` with `mode=preview`,
+  `wake_runtime_enabled=false`, `microphone_hard_off=true`,
+  `wake_word_only_mode=false`, `command_window_open=false`,
+  `push_to_talk_preview_enabled=true`, `typed_wake_preview_enabled=true`,
+  `always_on_microphone_enabled=false`, `background_listener_enabled=false`,
+  `stt_enabled=false`, `audio_recording=false`, `raw_audio_stored=false` and
+  `external_provider_called=false`.
+- Expose supported wake phrases `Hola Jarvis` and `Jarvis`, plus future safe
+  stop phrases such as `para`, `cancela`, `detente`, `silencio`,
+  `cancelar misión` and `apaga escucha`.
+- Explain mode differences: mic hard-off, future wake-word-only, future command
+  listening, future push-to-talk and current typed preview.
+- Expose typed `wake_parse_preview` for
+  `Hola Jarvis, revisa el estado del proyecto`: detected wake phrase
+  `Hola Jarvis`, remaining command preview `revisa el estado del proyecto`,
+  would open a command window in the future, but would not execute, approve,
+  call Hermes, record audio or call providers.
+- Expose wake approval policy: wake phrase is not permission, cannot approve,
+  cannot execute, voice approval requires authenticated channel, sensitive
+  actions require readback, critical actions require double/triple confirmation
+  and approval events must be audited.
+- Expose wake flow safety: no microphone activation, no browser media capture,
+  no background listening, no raw audio storage, no external STT/TTS, no Hermes
+  dispatch, no tool call and no auto execute.
+- Add timeline events: Wake word flow preview read, Microphone hard-off
+  confirmed, Typed wake preview available, Wake phrase cannot approve, Wake
+  phrase cannot execute and No background listener started.
+- Update `/jarvis` with `Wake Word Local Safe Flow`, current state, supported
+  phrases, stop phrases, mode explanations, typed parsing preview, policy and
+  safety banner.
 
 Probable files:
 
-- `web/src/components/jarvis/VoiceCore.tsx`
-- `web/src/components/jarvis/VoiceStatusPanel.tsx`
-- `web/src/lib/jarvis-voice.ts`
+- `jarvis/dashboard_read_model.py`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `web/src/lib/api.ts`
 
 Endpoints consumed:
 
-- `GET /voice/status`
-- `POST /voice/tts`
-- `GET /voice/runtime/status`
-- `POST /voice/runtime/control`
-- `POST /voice/runtime/transcript`
-- `GET /voice/companion/status`
-- `GET /voice/companion/control-policy`
-- `POST /voice/companion/preview`
+- `/jarvis` consumes only `GET /mark-3/dashboard/status`.
+- The read model internally reads safe status sources only:
+  `GET /voice-runtime/status` and `GET /mark-2/wake-listener/status`.
 
 New endpoints needed:
 
-- Optional later: `GET /voice/runtime/events` for live subtitles/state.
+- None in PR #150.
 
 Expected tests:
 
-- Component state mapping tests.
-- TTS request tests proving `save_audio=false` by default.
-- Browser verification for animation and responsive layout.
+- Backend read model tests proving `voice_core` exists and all microphone,
+  wake word, TTS, STT, recording, raw storage, provider, approval and execution
+  flags remain disabled.
+- Backend read model tests proving `wake_word_flow` exists, wake runtime and
+  background listener are disabled, mic hard-off is true, supported/stop
+  phrases are exposed, typed parsing would not execute/approve/call Hermes and
+  all wake flow safety flags remain true.
+- Frontend/static shell tests proving `/jarvis` contains the Voice Core visual,
+  preview subtitles, Wake Word Local Safe Flow, wake phrase warnings, privacy
+  rows and no browser sensor APIs, no submit handlers and no mutating frontend
+  calls.
+- Roadmap docs tests proving the visual/voice/vision/mobile contract remains
+  explicit and safe.
 
 Must not do:
 
 - No microphone.
+- No wake word runtime.
+- No wake word listener.
+- No command listening.
+- No STT.
+- No TTS.
+- No audio output.
+- No voice approval.
 - No raw audio storage.
+- No background listening.
+- No browser media capture.
 - No external audio service unless configured and approved.
 - No voice-only critical approval.
+- No direct Hermes call from voice or frontend.
 
 Exit criteria:
 
 - JARVIS visibly communicates whether it is asleep, listening, thinking,
-  speaking, waiting for approval, executing through Hermes, paused or blocked.
+  speaking, waiting for approval, executing through Hermes, paused, blocked or
+  under kill switch as visual states, while the current state remains safe
+  preview/dormant and no real audio is captured, stored, played or sent.
+- PR #150 includes the local wake word safe flow as typed preview/read-only:
+  JARVIS can show how `Hola Jarvis` or `Jarvis` would open a future command
+  window, while wake phrase still cannot approve, execute, call Hermes, record
+  audio or call providers.
 
-### PR #151 - Wake word local safe flow
+### PR #151 - Wake word runtime setup and opt-in gates
 
 Objective:
 
-- Add a safe local wake-word UX flow without enabling always-on microphone by
-  default.
+- Future work only: design explicit opt-in gates for a real local wake runtime
+  after PR #150's visual/read-only safe flow is validated.
 
 Scope:
 
-- Expose wake-word policy, supported phrases and stop phrases.
-- Add push-to-talk/simulated transcript controls.
-- Show clear state difference between mic hard-off, wake-word-only and
+- Convert the PR #150 read-only wake flow contract into a possible runtime
+  setup path only after explicit operator approval.
+- Keep push-to-talk/simulated transcript controls as non-default opt-in work.
+- Preserve clear state difference between mic hard-off, wake-word-only and
   listening-command.
 - Add a future implementation plan for local wake engine and STT adapter if
   David approves a later runtime PR.
@@ -1481,10 +1561,10 @@ Rules:
 
 ## 10. Recommended next PR
 
-Recommended next PR after PR #148:
+Recommended next PR after PR #150:
 
 ```text
-PR #149 - Mission Control and conversation panel
+PR #151 - Safe local wake word preparation
 ```
 
 Why:
@@ -1496,7 +1576,12 @@ Why:
   still approving nothing real.
 - PR #148 makes Hermes execution visibility clearer without giving the browser
   a direct tool runner, stop control, execute route or duplicate runtime.
-- The next safe visual step is Mission Control conversation/proposal UX: turn
-  operator input into intent, risk, requirements and candidate state without
-  auto-execution.
+- PR #149 added Mission Control Conversation Preview without creating missions,
+  approvals, providers, memory writes or Hermes dispatch.
+- PR #150 gives Voice Core visual presence, TTS state preview and Wake Word
+  Local Safe Flow without microphone, wake runtime, STT, TTS, recording, raw
+  storage, background listener or providers.
+- The next safe step is a real local wake runtime setup path only after explicit
+  opt-in gates, still with hard sensor controls and no approval or execution by
+  wake phrase.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

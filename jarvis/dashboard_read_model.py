@@ -157,6 +157,10 @@ def build_mark_3_dashboard_status(
     hermes_timeline = _hermes_timeline_events(hermes_execution)
     mission_control = _mission_control_projection()
     mission_control_timeline = _mission_control_timeline_events()
+    voice_core = _voice_core_projection(voice_runtime=voice_runtime, wake_listener=wake_listener)
+    voice_core_timeline = _voice_core_timeline_events()
+    wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
+    wake_word_flow_timeline = _wake_word_flow_timeline_events()
 
     payload = {
         "system": {
@@ -300,12 +304,17 @@ def build_mark_3_dashboard_status(
         },
         "mission_control": mission_control,
         "hermes_execution": hermes_execution,
+        "voice_core": voice_core,
+        "wake_word_flow": wake_word_flow,
         "voice_wake": {
-            "microphone_state": "disabled" if voice_runtime.get("microphone_active") is False else UNKNOWN,
-            "wake_word_state": "preview" if wake_listener.get("real_wake_listener_available") else "not_connected",
-            "wake_phrases": _list(wake_listener.get("supported_wake_phrases")) or ["Hola Jarvis", "Jarvis"],
+            "microphone_state": "disabled" if voice_core["state"]["microphone_enabled"] is False else UNKNOWN,
+            "wake_word_state": voice_core["state"]["current_state"],
+            "wake_phrases": voice_core["wake_word_policy"]["supported_phrases"],
             "wake_phrase_can_approve": False,
+            "wake_phrase_can_execute": False,
             "audio_recording": False,
+            "raw_audio_stored": False,
+            "external_provider_called": False,
             "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
         },
         "camera_vision": {
@@ -384,6 +393,8 @@ def build_mark_3_dashboard_status(
         "timeline": timeline
         + hermes_timeline
         + mission_control_timeline
+        + voice_core_timeline
+        + wake_word_flow_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -426,6 +437,386 @@ def build_mark_3_dashboard_status(
         },
     }
     return payload
+
+
+def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, Any]:
+    supported_phrases = _list(wake_listener.get("supported_wake_phrases")) or ["Hola Jarvis", "Jarvis"]
+    stop_phrases = _merge_unique(
+        _list(wake_listener.get("stop_phrases")),
+        ["para", "cancela", "detente", "silencio", "cancelar misión", "apaga escucha"],
+    )
+    return {
+        "state": {
+            "mode": "preview",
+            "wake_runtime_enabled": False,
+            "microphone_hard_off": True,
+            "wake_word_only_mode": False,
+            "command_window_open": False,
+            "push_to_talk_preview_enabled": True,
+            "typed_wake_preview_enabled": True,
+            "always_on_microphone_enabled": False,
+            "background_listener_enabled": False,
+            "stt_enabled": False,
+            "audio_recording": False,
+            "raw_audio_stored": False,
+            "external_provider_called": False,
+        },
+        "supported_phrases": supported_phrases,
+        "stop_phrases": stop_phrases,
+        "mode_explanations": {
+            "mic_hard_off": "Micrófono completamente apagado; JARVIS no escucha nada.",
+            "wake_word_only": "Futuro modo que detectaría solo la wake phrase, sin procesar una orden completa.",
+            "command_listening": "Futura ventana corta de comando después de un wake válido y explícitamente gateado.",
+            "push_to_talk": "Futuro modo manual iniciado por el operador, no por always-on listening.",
+            "typed_preview": "Modo actual seguro: preview escrito sin audio real, micrófono, STT, TTS ni provider.",
+        },
+        "wake_parse_preview": {
+            "input_example": "Hola Jarvis, revisa el estado del proyecto",
+            "detected_wake_phrase": "Hola Jarvis",
+            "remaining_command_preview": "revisa el estado del proyecto",
+            "would_open_command_window": True,
+            "would_execute": False,
+            "would_approve": False,
+            "would_call_hermes": False,
+            "would_record_audio": False,
+            "would_call_provider": False,
+            "status": "preview_only",
+        },
+        "approval_policy": {
+            "wake_phrase_is_permission": False,
+            "wake_phrase_can_approve": False,
+            "wake_phrase_can_execute": False,
+            "voice_approval_requires_authenticated_channel": True,
+            "sensitive_actions_require_readback": True,
+            "critical_actions_require_double_or_triple_confirmation": True,
+            "approval_events_must_be_audited": True,
+        },
+        "safety": {
+            "no_microphone_activation": True,
+            "no_get_user_media": True,
+            "no_media_recorder": True,
+            "no_audio_context_capture": True,
+            "no_background_listening": True,
+            "no_raw_audio_storage": True,
+            "no_external_stt": True,
+            "no_external_tts": True,
+            "no_hermes_dispatch": True,
+            "no_tool_call": True,
+            "no_auto_execute": True,
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _wake_word_flow_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Wake word flow preview read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Microphone hard-off confirmed",
+            "source": "/voice-runtime/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Typed wake preview available",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Wake phrase cannot approve",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "Wake phrase cannot execute",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+        {
+            "event": "No background listener started",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+    ]
+
+
+def _voice_core_projection(*, voice_runtime: Dict[str, Any], wake_listener: Dict[str, Any]) -> Dict[str, Any]:
+    supported_phrases = _list(wake_listener.get("supported_wake_phrases")) or _list(
+        voice_runtime.get("wake_phrases")
+    ) or ["Hola Jarvis", "Jarvis"]
+    current_state = "preview" if voice_runtime.get("voice_runtime_available") else "dormant"
+    preview_subtitle = "David, estoy en modo preview. No estoy escuchando ni grabando audio."
+
+    return {
+        "state": {
+            "mode": "preview",
+            "current_state": current_state,
+            "microphone_enabled": False,
+            "wake_word_enabled": False,
+            "command_listening_enabled": False,
+            "tts_enabled": False,
+            "stt_enabled": False,
+            "audio_recording": False,
+            "raw_audio_stored": False,
+            "external_provider_called": False,
+            "voice_approval_enabled": False,
+            "wake_phrase_can_approve": False,
+            "wake_phrase_can_execute": False,
+        },
+        "visual_states": [
+            _voice_visual_state(
+                "offline",
+                "Offline",
+                "JARVIS voice surface unavailable or backend offline; no sensors are active.",
+                "none",
+                False,
+                False,
+                "not_connected",
+            ),
+            _voice_visual_state(
+                "online",
+                "Online",
+                "Future connected voice core state; not enabled by this read model.",
+                "sensor_privacy",
+                False,
+                False,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "preview",
+                "Preview",
+                "Visual/read-model state only; no microphone, STT, TTS or provider call.",
+                "none",
+                "preview",
+                False,
+                "preview",
+            ),
+            _voice_visual_state(
+                "dormant",
+                "Dormido",
+                "Safe dormant presentation; voice remains off and audio is not captured.",
+                "none",
+                "preview",
+                False,
+                "preview",
+            ),
+            _voice_visual_state(
+                "listening_wake_word",
+                "Escuchando wake word",
+                "Future gated wake-word listening; would require explicit sensor approval.",
+                "sensor_privacy",
+                False,
+                True,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "listening_command",
+                "Escuchando orden",
+                "Future gated short command window; disabled in this PR.",
+                "sensor_privacy",
+                False,
+                True,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "thinking",
+                "Pensando",
+                "Future intent processing indicator; no provider or Hermes dispatch here.",
+                "approval_gate",
+                False,
+                False,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "speaking",
+                "Hablando",
+                "Future TTS output indicator; subtitles are preview-only and audio output is off.",
+                "audio_output",
+                False,
+                False,
+                "not_connected",
+            ),
+            _voice_visual_state(
+                "approval_required",
+                "Esperando aprobación",
+                "Future approval handoff state; voice cannot approve actions.",
+                "approval_gate",
+                False,
+                False,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "hermes_executing",
+                "Hermes ejecutando",
+                "Future read-only execution visibility after valid JARVIS approval gates.",
+                "execution",
+                False,
+                False,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "paused",
+                "Pausado",
+                "Future paused governed flow; no active voice session exists in this PR.",
+                "stop_control",
+                False,
+                False,
+                "future_gated",
+            ),
+            _voice_visual_state(
+                "blocked",
+                "Bloqueado",
+                "Unsafe or unavailable voice flows stay blocked.",
+                "blocked",
+                False,
+                False,
+                "preview",
+            ),
+            _voice_visual_state(
+                "error",
+                "Error",
+                "Future runtime error display; no voice runtime is started here.",
+                "runtime_error",
+                False,
+                False,
+                "not_connected",
+            ),
+            _voice_visual_state(
+                "kill_switch",
+                "Kill Switch",
+                "Visible stop control relationship; there is no real audio to stop in this PR.",
+                "stop_control",
+                "preview",
+                False,
+                "preview",
+            ),
+        ],
+        "tts_state": {
+            "status": "preview",
+            "speaking": False,
+            "last_utterance": preview_subtitle,
+            "subtitles_enabled": True,
+            "subtitles_source": "preview/read_model",
+            "preview_subtitle": preview_subtitle,
+            "audio_output_enabled": False,
+            "provider": "none/not_connected",
+            "external_call": False,
+        },
+        "wake_word_policy": {
+            "supported_phrases": supported_phrases,
+            "wake_word_runtime": "disabled",
+            "wake_phrase_is_permission": False,
+            "wake_phrase_can_approve": False,
+            "wake_phrase_can_execute": False,
+            "requires_authenticated_channel_for_approval": True,
+            "critical_actions_require_readback": True,
+            "critical_actions_require_strong_confirmation": True,
+        },
+        "privacy": {
+            "no_microphone_activation": True,
+            "no_audio_recording": True,
+            "no_raw_audio_storage": True,
+            "no_external_audio_provider": True,
+            "no_background_listening_enabled": True,
+            "no_voice_biometrics": True,
+            "no_voice_approval_without_gate": True,
+        },
+        "safety": {
+            "no_auto_execute": True,
+            "no_hermes_dispatch": True,
+            "no_tool_call": True,
+            "no_sensor_activation": True,
+            "no_get_user_media": True,
+            "no_media_recorder": True,
+            "no_audio_context_capture": True,
+            "kill_switch_visible": True,
+        },
+        "relationship": {
+            "voice_can_prepare_future_intention": True,
+            "approval_console_handles_required_approval": True,
+            "hermes_executes_only_after_valid_approval": True,
+            "frontend_or_voice_can_call_hermes_directly": False,
+            "jarvis_governs": True,
+            "hermes_executes": True,
+        },
+        "kill_switch": {
+            "visible": True,
+            "real_audio_to_stop": False,
+            "future_must_cut_listening_tts_and_governed_execution": True,
+        },
+        "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _voice_visual_state(
+    state: str,
+    label: str,
+    description: str,
+    risk: str,
+    enabled: bool | str,
+    sensor_required: bool,
+    connection: str,
+) -> Dict[str, Any]:
+    return {
+        "state": state,
+        "label": label,
+        "description": description,
+        "risk": risk,
+        "enabled": enabled,
+        "sensor_required": sensor_required,
+        "can_approve": False,
+        "connection": connection,
+    }
+
+
+def _voice_core_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Voice Core visual state read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Voice/TTS state preview generated",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Microphone disabled",
+            "source": "/voice-runtime/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Wake word runtime not active",
+            "source": "/mark-2/wake-listener/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "No audio recording performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+    ]
 
 
 def _mission_control_projection() -> Dict[str, Any]:
@@ -1058,6 +1449,15 @@ def _int(value: Any, *, default: int | None) -> int | None:
 
 def _list(value: Any) -> List[Any]:
     return list(value) if isinstance(value, (list, tuple)) else []
+
+
+def _merge_unique(*items: List[Any]) -> List[Any]:
+    merged: List[Any] = []
+    for group in items:
+        for item in group:
+            if item not in merged:
+                merged.append(item)
+    return merged
 
 
 def _status_summary(source: Dict[str, Any]) -> Dict[str, Any]:
