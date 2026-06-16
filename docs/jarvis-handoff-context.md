@@ -788,6 +788,40 @@ aprobación, audita, controla y muestra estado; Hermes sigue siendo solo motor
 de ejecución detrás de gates válidos. Frontend, móvil, voz y cámara no llaman a
 Hermes directamente.
 
+PR #153 es **Visual Command Center Pilot**. Cierra un piloto local serio del
+cockpit `/jarvis` sin convertirlo en operativo real. Añade
+`visual_command_center_pilot` a `GET /mark-3/dashboard/status` con
+`mode=read_only_pilot`, `dashboard_route=/jarvis`,
+`status_endpoint=/mark-3/dashboard/status`, read-model backend conectado y
+flags en false para frontend execution, approvals reales, Hermes direct
+execution, voz real, cámara real, mobile runtime, money, deploy, email y
+credentials.
+
+El read model enumera los paneles requeridos: Header, Voice Core, Wake Word
+Local Safe Flow, Mission Control, Approval Console, Hermes Execution, Agent /
+Module Radar, Camera / Vision, Mobile Companion, Finance / ROI, Product Builder
+Adaptativo, Frontend Pilot / Hardening, Live Timeline / Audit y Kill Switch.
+Cada panel declara `expected=true`, source, status, `can_execute=false` y notas.
+Los checks read-only cubren no POST/PUT/DELETE, no execute route, no frontend
+Hermes call, no tool runner, no sensor activation, no getUserMedia, no
+MediaRecorder, no AudioContext capture, no camera capture, no mobile runtime,
+no money movement, no Stripe live, no deploy, no email send, no credentials y
+no fake metrics.
+
+La UI `/jarvis` muestra un panel `Visual Command Center Pilot` con ruta,
+endpoint, modo, checklist de panels, checklist de seguridad, limitaciones
+conocidas, pasos para David, estado de botones críticos y los textos: `El
+dashboard mira, no toca.`, `No se ejecuta Hermes desde el frontend.`, `No se
+activan sensores.`, `No hay approvals reales en esta fase.`, `No hay métricas
+falsas.`, `Los valores sin evidencia se muestran como unknown.` y `Dependency
+hardening queda para una PR separada.` El runbook está en
+`docs/jarvis-visual-command-center-pilot.md`.
+
+PR #153 no activa approvals reales, submit real de misión, ejecución Hermes,
+voz real, wake listener real, cámara real, mobile runtime, dinero, Stripe,
+checkout, deploy, email, credenciales, dependency hardening ni fake metrics. No
+afirma que David haya probado manualmente el piloto.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

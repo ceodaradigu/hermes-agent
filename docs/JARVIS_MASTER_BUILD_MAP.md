@@ -1308,6 +1308,97 @@ JARVIS gobierna.
 Hermes ejecuta.
 ```
 
+## JARVIS Visual Command Center Pilot
+
+PR #153 cierra un piloto/hardening local del cockpit `/jarvis` como Visual
+Command Center read-only. No activa acciones reales; valida que el dashboard
+completo carga, lee `GET /mark-3/dashboard/status`, mantiene todos los paneles
+esperados y degrada honestamente valores sin evidencia a `unknown`, `disabled`,
+`not_connected`, `preview` o `future_gated`.
+
+Backend:
+
+- `jarvis/dashboard_read_model.py` expone
+  `visual_command_center_pilot.state.mode=read_only_pilot`.
+- `dashboard_route=/jarvis`.
+- `status_endpoint=/mark-3/dashboard/status`.
+- `backend_read_model_connected=true`.
+- `frontend_execution_enabled=false`.
+- `approvals_real_enabled=false`.
+- `hermes_direct_execution_enabled=false`.
+- `voice_real_enabled=false`.
+- `camera_real_enabled=false`.
+- `mobile_runtime_enabled=false`.
+- `money_enabled=false`.
+- `deploy_enabled=false`.
+- `email_enabled=false`.
+- `credentials_enabled=false`.
+
+Required panels:
+
+- Header.
+- Voice Core.
+- Wake Word Local Safe Flow.
+- Mission Control.
+- Approval Console.
+- Hermes Execution.
+- Agent / Module Radar.
+- Camera / Vision.
+- Mobile Companion.
+- Finance / ROI.
+- Product Builder Adaptativo.
+- Frontend Pilot / Hardening.
+- Live Timeline / Audit.
+- Kill Switch.
+
+Cada panel declara `expected=true`, source, status, `can_execute=false` y notas.
+Los read-only checks cubren no POST/PUT/DELETE, no execute route, no frontend
+Hermes call, no tool runner, no sensor activation, no getUserMedia, no
+MediaRecorder, no AudioContext capture, no camera capture, no mobile runtime,
+no money movement, no Stripe live, no deploy, no email send, no credentials y
+no fake metrics.
+
+Frontend:
+
+- `/jarvis` muestra el panel `Visual Command Center Pilot`.
+- Muestra `/jarvis`, `/mark-3/dashboard/status` y `read-only pilot`.
+- Muestra checklist de panels, checklist de seguridad, limitaciones conocidas,
+  pasos para el operador y estado de botones críticos.
+- Copia visible: `El dashboard mira, no toca.`, `No se ejecuta Hermes desde el
+  frontend.`, `No se activan sensores.`, `No hay approvals reales en esta
+  fase.`, `No hay métricas falsas.`, `Los valores sin evidencia se muestran
+  como unknown.` y `Dependency hardening queda para una PR separada.`
+
+Docs:
+
+- `docs/jarvis-visual-command-center-pilot.md` documenta que valida el piloto,
+  que no valida, como arrancar backend, como abrir `/jarvis`, checklist manual,
+  checklist de seguridad, criterios de exito/fallo, findings que requieren PR y
+  fuera de alcance.
+
+PR #153 no implementa:
+
+- approvals reales;
+- submit real de misión;
+- ejecución Hermes;
+- voz real;
+- wake listener real;
+- cámara real;
+- mobile runtime;
+- dinero, Stripe, checkout;
+- deploy;
+- email;
+- credenciales;
+- dependency hardening;
+- fake metrics.
+
+PR #153 conserva la separación:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
 PR #151 conserva la separación:
 
 ```text

@@ -33,6 +33,9 @@ import {
   type JarvisMobileCompanionView,
   type JarvisVoiceCore,
   type JarvisVoiceCoreVisualState,
+  type JarvisVisualCommandCenterPilotCheck,
+  type JarvisVisualCommandCenterPilotPanel,
+  type JarvisVisualCommandCenterPilotStep,
   type JarvisWakeWordFlow,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -877,6 +880,284 @@ const fallbackFrontendPilot: NonNullable<JarvisDashboardStatus["frontend_pilot"]
   read_only: true,
 };
 
+const fallbackVisualPilotPanels: JarvisVisualCommandCenterPilotPanel[] = [
+  {
+    name: "Header",
+    expected: true,
+    source: "system + jarvis_hermes_contract",
+    status: "ready",
+    can_execute: false,
+    notes: "Muestra modo local read-only y separación JARVIS/Hermes.",
+  },
+  {
+    name: "Voice Core",
+    expected: true,
+    source: "voice_core",
+    status: "preview",
+    can_execute: false,
+    notes: "Visual only; micrófono, STT, TTS y providers deshabilitados.",
+  },
+  {
+    name: "Wake Word Local Safe Flow",
+    expected: true,
+    source: "wake_word_flow",
+    status: "preview",
+    can_execute: false,
+    notes: "Typed preview; wake phrase no aprueba ni ejecuta.",
+  },
+  {
+    name: "Mission Control",
+    expected: true,
+    source: "mission_control",
+    status: "preview",
+    can_execute: false,
+    notes: "Sin mission submit real ni Hermes dispatch.",
+  },
+  {
+    name: "Approval Console",
+    expected: true,
+    source: "approvals",
+    status: "preview",
+    can_execute: false,
+    notes: "Botones visibles pero disabled/read-only.",
+  },
+  {
+    name: "Hermes Execution",
+    expected: true,
+    source: "hermes_execution",
+    status: "preview",
+    can_execute: false,
+    notes: "Visibilidad read-only; frontend no llama a Hermes.",
+  },
+  {
+    name: "Agent / Module Radar",
+    expected: true,
+    source: "modules",
+    status: "ready",
+    can_execute: false,
+    notes: "Estados normalizados con degradación honesta.",
+  },
+  {
+    name: "Camera / Vision",
+    expected: true,
+    source: "camera_vision",
+    status: "disabled",
+    can_execute: false,
+    notes: "Cámara, captura, storage y visión real están deshabilitados.",
+  },
+  {
+    name: "Mobile Companion",
+    expected: true,
+    source: "mobile_companion",
+    status: "preview",
+    can_execute: false,
+    notes: "Mobile es interfaz preview, no runtime.",
+  },
+  {
+    name: "Finance / ROI",
+    expected: true,
+    source: "finance_roi",
+    status: UNKNOWN,
+    can_execute: false,
+    notes: "Métricas sin evidencia se quedan en unknown.",
+  },
+  {
+    name: "Product Builder Adaptativo",
+    expected: true,
+    source: "adaptive_product_builder",
+    status: "preview",
+    can_execute: false,
+    notes: "Stages preview/future-gated/disabled sin ejecución.",
+  },
+  {
+    name: "Frontend Pilot / Hardening",
+    expected: true,
+    source: "frontend_pilot",
+    status: "ready",
+    can_execute: false,
+    notes: "GET-only al read model y sin rutas mutantes desde el dashboard.",
+  },
+  {
+    name: "Live Timeline / Audit",
+    expected: true,
+    source: "timeline",
+    status: "ready",
+    can_execute: false,
+    notes: "Eventos de lectura/checks; no ejecución.",
+  },
+  {
+    name: "Kill Switch",
+    expected: true,
+    source: "system.kill_switch_state",
+    status: "preview",
+    can_execute: false,
+    notes: "Visible y disabled; no hay ejecución real que detener.",
+  },
+];
+
+const fallbackVisualPilotChecks: JarvisVisualCommandCenterPilotCheck[] = [
+  {
+    name: "no_post_put_delete",
+    status: "passed",
+    evidence: "allowed_http_methods_for_frontend=[GET]",
+    notes: "El dashboard puede leer status, no mutar estado.",
+  },
+  {
+    name: "no_execute_route",
+    status: "passed",
+    evidence: "frontend_must_not_call_execute=true",
+    notes: "No se expone ruta de ejecución desde /jarvis.",
+  },
+  {
+    name: "no_frontend_hermes_call",
+    status: "passed",
+    evidence: "frontend_can_call_hermes_execute=false",
+    notes: "No se ejecuta Hermes desde el frontend.",
+  },
+  {
+    name: "no_tool_runner",
+    status: "passed",
+    evidence: "no_frontend_tool_runner=true",
+    notes: "No hay runner de herramientas en navegador.",
+  },
+  {
+    name: "no_sensor_activation",
+    status: "passed",
+    evidence: "no_sensor_activation=true",
+    notes: "No se activan sensores.",
+  },
+  {
+    name: "no_get_user_media",
+    status: "passed",
+    evidence: "no_get_user_media=true",
+    notes: "No se piden permisos de navegador para media.",
+  },
+  {
+    name: "no_media_recorder",
+    status: "passed",
+    evidence: "voice_core.safety.no_media_recorder=true",
+    notes: "No se graba audio.",
+  },
+  {
+    name: "no_audio_context_capture",
+    status: "passed",
+    evidence: "voice_core.safety.no_audio_context_capture=true",
+    notes: "No hay captura por audio context.",
+  },
+  {
+    name: "no_camera_capture",
+    status: "passed",
+    evidence: "camera_vision.privacy.no_snapshot_capture=true",
+    notes: "No se captura imagen ni vídeo.",
+  },
+  {
+    name: "no_mobile_runtime",
+    status: "passed",
+    evidence: "mobile_runtime_enabled=false",
+    notes: "Mobile Companion es preview-only.",
+  },
+  {
+    name: "no_money_movement",
+    status: "passed",
+    evidence: "finance_roi.safety.no_money_movement=true",
+    notes: "No se mueve dinero.",
+  },
+  {
+    name: "no_stripe_live",
+    status: "passed",
+    evidence: "finance_roi.safety.no_stripe_live=true",
+    notes: "No hay Stripe live ni checkout.",
+  },
+  {
+    name: "no_deploy",
+    status: "passed",
+    evidence: "adaptive_product_builder.safety.no_deploy=true",
+    notes: "No hay deploy.",
+  },
+  {
+    name: "no_email_send",
+    status: "passed",
+    evidence: "safety.no_email_send=true",
+    notes: "No se envía email.",
+  },
+  {
+    name: "no_credentials",
+    status: "passed",
+    evidence: "safety.no_credentials=true",
+    notes: "No se leen ni guardan credenciales.",
+  },
+  {
+    name: "no_fake_metrics",
+    status: "passed",
+    evidence: "finance_roi.truth_policy.no_fake_metrics=true",
+    notes: "No hay métricas falsas; sin evidencia queda unknown.",
+  },
+];
+
+const fallbackOperatorPilotSteps: JarvisVisualCommandCenterPilotStep[] = [
+  { order: 1, check: "arrancar backend", notes: "Arrancar el backend local antes de abrir la UI." },
+  { order: 2, check: "abrir /jarvis", notes: "Abrir la ruta local del cockpit." },
+  { order: 3, check: "comprobar estado general", notes: "Verificar modo, endpoint y estado read-only." },
+  { order: 4, check: "comprobar panels", notes: "Confirmar que todos los paneles esperados están visibles." },
+  { order: 5, check: "comprobar unknown/disabled", notes: "Validar degradación a unknown, disabled, not_connected, preview o future_gated." },
+  { order: 6, check: "comprobar que botones críticos están disabled", notes: "Mission, approvals, kill switch, sensores, dinero y deploy deben estar disabled." },
+  { order: 7, check: "comprobar que no hay permisos de navegador", notes: "No debe aparecer prompt de micrófono, cámara, notificaciones o media." },
+  { order: 8, check: "comprobar que no hay ejecución Hermes", notes: "No hay llamada directa a Hermes desde el frontend." },
+  { order: 9, check: "comprobar que finance/ROI no inventa datos", notes: "Valores sin evidencia se muestran como unknown." },
+  { order: 10, check: "comprobar timeline read-only", notes: "Timeline solo muestra lecturas/checks, no acciones ejecutadas." },
+];
+
+const fallbackVisualCommandCenterPilot: NonNullable<JarvisDashboardStatus["visual_command_center_pilot"]> = {
+  state: {
+    mode: "read_only_pilot",
+    dashboard_route: "/jarvis",
+    status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    backend_read_model_connected: true,
+    frontend_execution_enabled: false,
+    approvals_real_enabled: false,
+    hermes_direct_execution_enabled: false,
+    voice_real_enabled: false,
+    camera_real_enabled: false,
+    mobile_runtime_enabled: false,
+    money_enabled: false,
+    deploy_enabled: false,
+    email_enabled: false,
+    credentials_enabled: false,
+  },
+  required_panels: fallbackVisualPilotPanels,
+  read_only_checks: fallbackVisualPilotChecks,
+  operator_pilot_steps: fallbackOperatorPilotSteps,
+  pilot_findings: {
+    findings: [],
+    known_limitations: [
+      "real approvals not wired",
+      "mission submit is preview-only",
+      "voice is preview-only",
+      "wake word is preview-only",
+      "camera is disabled",
+      "mobile is preview-only",
+      "finance is unknown without evidence",
+      "Product Builder is preview-only",
+      "dependency hardening may need separate PR due npm audit vulnerabilities",
+    ],
+  },
+  safety: {
+    pilot_is_read_only: true,
+    dashboard_may_read_status_only: true,
+    no_side_effects: true,
+    no_real_world_actions: true,
+    no_background_workers: true,
+    no_sensors: true,
+    no_money: true,
+    no_production: true,
+    no_credentials: true,
+    restrictions_are_approval_gates_not_permanent_bans: true,
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
 const requiredModules = [
   "Mission Loop",
   "Research",
@@ -1291,6 +1572,26 @@ const missionSafetyLabels = [
   ["Wake phrase is not permission", "wake_phrase_is_not_permission"],
 ] as const;
 
+function fallbackVisualPilot(reason: "loading" | "offline" | "error"): NonNullable<JarvisDashboardStatus["visual_command_center_pilot"]> {
+  return {
+    ...fallbackVisualCommandCenterPilot,
+    state: {
+      ...fallbackVisualCommandCenterPilot.state,
+      backend_read_model_connected: false,
+    },
+    required_panels: fallbackVisualPilotPanels.map((panel) => ({
+      ...panel,
+      status: panel.status === "disabled" ? "disabled" : UNKNOWN,
+      notes: `Fallback ${reason}: ${panel.notes}`,
+    })),
+    read_only_checks: fallbackVisualPilotChecks.map((check) => ({
+      ...check,
+      status: check.name === "no_post_put_delete" ? "passed" : "preview",
+      evidence: reason === "loading" ? "frontend fallback loading" : "backend unavailable; static dashboard guardrail",
+    })),
+  };
+}
+
 function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
   return {
     system: {
@@ -1447,6 +1748,7 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       real_revenue_must_be_confirmed: true,
     },
     frontend_pilot: fallbackFrontendPilot,
+    visual_command_center_pilot: fallbackVisualPilot(reason),
     safety: {
       frontend_can_execute: false,
       frontend_can_approve: false,
@@ -1749,6 +2051,22 @@ export default function JarvisCommandCenterPage() {
   const frontendLimitations = frontendPilot.pilot_limitations?.length
     ? frontendPilot.pilot_limitations
     : fallbackFrontendPilot.pilot_limitations ?? [];
+  const visualPilot = dashboard.visual_command_center_pilot ?? fallbackVisualCommandCenterPilot;
+  const visualPilotState = visualPilot.state ?? fallbackVisualCommandCenterPilot.state ?? {};
+  const visualPilotPanels = visualPilot.required_panels?.length
+    ? visualPilot.required_panels
+    : fallbackVisualPilotPanels;
+  const visualPilotChecks = visualPilot.read_only_checks?.length
+    ? visualPilot.read_only_checks
+    : fallbackVisualPilotChecks;
+  const visualPilotSteps = visualPilot.operator_pilot_steps?.length
+    ? visualPilot.operator_pilot_steps
+    : fallbackOperatorPilotSteps;
+  const visualPilotFindings = visualPilot.pilot_findings?.findings ?? [];
+  const visualPilotLimitations = visualPilot.pilot_findings?.known_limitations?.length
+    ? visualPilot.pilot_findings.known_limitations
+    : fallbackVisualCommandCenterPilot.pilot_findings?.known_limitations ?? [];
+  const visualPilotSafety = visualPilot.safety ?? fallbackVisualCommandCenterPilot.safety ?? {};
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
   const missionControl = dashboard.mission_control ?? fallbackMissionControl;
   const missionState = missionControl.state ?? fallbackMissionControl.state ?? {};
@@ -1959,6 +2277,50 @@ export default function JarvisCommandCenterPage() {
     ["full pytest required before merge", yesNo(frontendHardening.full_pytest_required_before_merge, "true", "false")],
   ] as const;
 
+  const visualPilotRows = [
+    ["mode", valueText(visualPilotState.mode, "read_only_pilot")],
+    ["route", valueText(visualPilotState.dashboard_route, "/jarvis")],
+    ["endpoint", valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
+    ["backend read model", yesNo(visualPilotState.backend_read_model_connected, "connected", "unknown")],
+    ["frontend execution", yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")],
+    ["real approvals", yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")],
+    ["Hermes direct execution", yesNo(visualPilotState.hermes_direct_execution_enabled, "enabled", "false")],
+    ["real voice", yesNo(visualPilotState.voice_real_enabled, "enabled", "false")],
+    ["real camera", yesNo(visualPilotState.camera_real_enabled, "enabled", "false")],
+    ["mobile runtime", yesNo(visualPilotState.mobile_runtime_enabled, "enabled", "false")],
+    ["money", yesNo(visualPilotState.money_enabled, "enabled", "false")],
+    ["deploy", yesNo(visualPilotState.deploy_enabled, "enabled", "false")],
+    ["email", yesNo(visualPilotState.email_enabled, "enabled", "false")],
+    ["credentials", yesNo(visualPilotState.credentials_enabled, "enabled", "false")],
+  ] as const;
+
+  const criticalButtonRows = [
+    ["mission submit", "disabled / preview-only"],
+    ["approval actions", approvals.action_buttons_enabled ? "unexpected enabled" : "disabled"],
+    ["Hermes execution", hermes.frontend_can_execute ? "unexpected enabled" : "disabled"],
+    ["voice controls", visualPilotState.voice_real_enabled ? "unexpected enabled" : "disabled"],
+    ["camera controls", visualPilotState.camera_real_enabled ? "unexpected enabled" : "disabled"],
+    ["money controls", visualPilotState.money_enabled ? "unexpected enabled" : "disabled"],
+    ["deploy controls", visualPilotState.deploy_enabled ? "unexpected enabled" : "disabled"],
+    ["Kill Switch", "visible / disabled / read-only"],
+  ] as const;
+
+  const visualPilotSafetyRows = [
+    ["pilot_is_read_only", yesNo(visualPilotSafety.pilot_is_read_only, "true", "false")],
+    ["dashboard_may_read_status_only", yesNo(visualPilotSafety.dashboard_may_read_status_only, "true", "false")],
+    ["no_side_effects", yesNo(visualPilotSafety.no_side_effects, "true", "false")],
+    ["no_real_world_actions", yesNo(visualPilotSafety.no_real_world_actions, "true", "false")],
+    ["no_background_workers", yesNo(visualPilotSafety.no_background_workers, "true", "false")],
+    ["no_sensors", yesNo(visualPilotSafety.no_sensors, "true", "false")],
+    ["no_money", yesNo(visualPilotSafety.no_money, "true", "false")],
+    ["no_production", yesNo(visualPilotSafety.no_production, "true", "false")],
+    ["no_credentials", yesNo(visualPilotSafety.no_credentials, "true", "false")],
+    [
+      "approval gates, not permanent bans",
+      yesNo(visualPilotSafety.restrictions_are_approval_gates_not_permanent_bans, "true", "false"),
+    ],
+  ] as const;
+
   const hermesCurrentRows = [
     ["Hermes disponible", yesNo(hermesRuntime.available, "sí", "no")],
     ["Hermes conectado", yesNo(hermesRuntime.connected, "sí", "no")],
@@ -2117,6 +2479,157 @@ export default function JarvisCommandCenterPage() {
           </aside>
         </div>
       </section>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-success" />
+            <CardTitle>Visual Command Center Pilot</CardTitle>
+          </div>
+          <CardDescription>
+            Piloto local read-only del cockpit completo. El dashboard mira, no toca.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <article className="border border-success/40 bg-success/10 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="success">read-only pilot</Badge>
+              <Badge variant="outline">{valueText(visualPilotState.dashboard_route, "/jarvis")}</Badge>
+              <Badge variant="outline">{valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)}</Badge>
+              <Badge variant={visualPilotState.frontend_execution_enabled ? "destructive" : "success"}>
+                execute: {yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")}
+              </Badge>
+              <Badge variant={visualPilotState.approvals_real_enabled ? "destructive" : "success"}>
+                approvals reales: {yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")}
+              </Badge>
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              <SafetyLine>El dashboard mira, no toca.</SafetyLine>
+              <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
+              <SafetyLine>No se activan sensores.</SafetyLine>
+              <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
+              <SafetyLine>No hay métricas falsas.</SafetyLine>
+              <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
+              <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
+            </div>
+          </article>
+
+          <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint / modo</h3>
+              <div className="mt-3">
+                <StatusList items={visualPilotRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de panels</h3>
+                <Badge variant="warning">required panels</Badge>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {visualPilotPanels.map((panel) => (
+                  <div key={panel.name} className="min-h-28 border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-display text-sm">{panel.name}</p>
+                      <Badge variant={statusVariant(valueText(panel.status))}>{valueText(panel.status)}</Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge variant={panel.expected ? "success" : "destructive"}>
+                        expected: {yesNo(panel.expected, "true", "false")}
+                      </Badge>
+                      <Badge variant={panel.can_execute ? "destructive" : "success"}>
+                        can_execute: {yesNo(panel.can_execute, "true", "false")}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.source)}</p>
+                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de seguridad</h3>
+                <Badge variant="success">read-only checks</Badge>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {visualPilotChecks.map((check) => (
+                  <div key={check.name} className="border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
+                      <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>
+                        {valueText(check.status)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
+                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <div className="space-y-4">
+              <article className="border border-warning/40 bg-warning/10 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">
+                  Estado de botones críticos
+                </h3>
+                <div className="mt-3">
+                  <StatusList items={criticalButtonRows} />
+                </div>
+              </article>
+
+              <article className="border border-border/70 bg-background/35 p-4">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+                <div className="mt-3">
+                  <StatusList items={visualPilotSafetyRows} />
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr]">
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pasos para el operador</h3>
+              <ol className="mt-3 space-y-2">
+                {visualPilotSteps.map((step) => (
+                  <li key={`${step.order}-${step.check}`} className="grid grid-cols-[2rem_1fr] gap-2 border border-border/70 bg-background/40 p-3">
+                    <span className="font-mono-ui text-xs text-warning">{step.order}</span>
+                    <span>
+                      <span className="block font-display text-xs uppercase tracking-[0.1em] text-foreground">{step.check}</span>
+                      <span className="mt-1 block font-mono-ui text-[0.7rem] text-muted-foreground">{step.notes}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Limitaciones conocidas</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {visualPilotLimitations.map((limitation) => (
+                  <Badge key={limitation} variant="outline">
+                    {limitation}
+                  </Badge>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot findings</h3>
+              <p className="mt-3 font-mono-ui text-xs text-muted-foreground">
+                Findings reales registrados: {visualPilotFindings.length}
+              </p>
+              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
+                No se declara que David haya abierto el navegador o probado manualmente el piloto.
+              </p>
+            </article>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>

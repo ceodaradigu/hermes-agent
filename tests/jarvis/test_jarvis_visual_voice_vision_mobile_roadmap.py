@@ -37,6 +37,12 @@ def test_visual_voice_vision_mobile_roadmap_exists_and_covers_required_contracts
         "no fake costs",
         "no fake roi",
         "dependency hardening queda para una pr separada",
+        "pr #153 - visual command center pilot",
+        "visual_command_center_pilot",
+        "read_only_pilot",
+        "no frontend hermes call",
+        "no getusermedia",
+        "no fake metrics",
     ):
         assert text in serialized
 

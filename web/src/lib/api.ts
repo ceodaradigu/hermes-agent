@@ -714,6 +714,70 @@ export interface JarvisFrontendPilot {
   read_only?: boolean;
 }
 
+export interface JarvisVisualCommandCenterPilotPanel {
+  name: string;
+  expected: boolean;
+  source: string;
+  status: "ready" | "preview" | "disabled" | "unknown" | string;
+  can_execute: boolean;
+  notes: string;
+}
+
+export interface JarvisVisualCommandCenterPilotCheck {
+  name: string;
+  status: "passed" | "preview" | "unknown" | string;
+  evidence: string;
+  notes: string;
+}
+
+export interface JarvisVisualCommandCenterPilotStep {
+  order: number;
+  check: string;
+  notes: string;
+}
+
+export interface JarvisVisualCommandCenterPilot {
+  state?: {
+    mode?: string;
+    dashboard_route?: string;
+    status_endpoint?: string;
+    backend_read_model_connected?: boolean;
+    frontend_execution_enabled?: boolean;
+    approvals_real_enabled?: boolean;
+    hermes_direct_execution_enabled?: boolean;
+    voice_real_enabled?: boolean;
+    camera_real_enabled?: boolean;
+    mobile_runtime_enabled?: boolean;
+    money_enabled?: boolean;
+    deploy_enabled?: boolean;
+    email_enabled?: boolean;
+    credentials_enabled?: boolean;
+  };
+  required_panels?: JarvisVisualCommandCenterPilotPanel[];
+  read_only_checks?: JarvisVisualCommandCenterPilotCheck[];
+  operator_pilot_steps?: JarvisVisualCommandCenterPilotStep[];
+  pilot_findings?: {
+    findings?: string[];
+    known_limitations?: string[];
+  };
+  safety?: {
+    pilot_is_read_only?: boolean;
+    dashboard_may_read_status_only?: boolean;
+    no_side_effects?: boolean;
+    no_real_world_actions?: boolean;
+    no_background_workers?: boolean;
+    no_sensors?: boolean;
+    no_money?: boolean;
+    no_production?: boolean;
+    no_credentials?: boolean;
+    restrictions_are_approval_gates_not_permanent_bans?: boolean;
+  };
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -779,6 +843,7 @@ export interface JarvisDashboardStatus {
   finance_roi?: JarvisFinanceRoi;
   adaptive_product_builder?: JarvisAdaptiveProductBuilder;
   frontend_pilot?: JarvisFrontendPilot;
+  visual_command_center_pilot?: JarvisVisualCommandCenterPilot;
   mobile?: {
     companion_state?: string;
     direct_hermes_call_allowed?: boolean;

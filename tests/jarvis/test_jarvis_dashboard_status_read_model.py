@@ -1042,6 +1042,136 @@ def test_mark_3_dashboard_status_does_not_call_execution_sensors_or_money(monkey
     assert payload["source_status"]["dangerous_route_audit"]["dangerous_routes_registered"] == []
 
 
+def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract():
+    payload, _ = _payload()
+    pilot = payload["visual_command_center_pilot"]
+    state = pilot["state"]
+    safety = pilot["safety"]
+
+    assert state["mode"] == "read_only_pilot"
+    assert state["dashboard_route"] == "/jarvis"
+    assert state["status_endpoint"] == "/mark-3/dashboard/status"
+    assert state["backend_read_model_connected"] is True
+    assert state["frontend_execution_enabled"] is False
+    assert state["approvals_real_enabled"] is False
+    assert state["hermes_direct_execution_enabled"] is False
+    assert state["voice_real_enabled"] is False
+    assert state["camera_real_enabled"] is False
+    assert state["mobile_runtime_enabled"] is False
+    assert state["money_enabled"] is False
+    assert state["deploy_enabled"] is False
+    assert state["email_enabled"] is False
+    assert state["credentials_enabled"] is False
+
+    assert safety["pilot_is_read_only"] is True
+    assert safety["dashboard_may_read_status_only"] is True
+    assert safety["no_side_effects"] is True
+    assert safety["no_real_world_actions"] is True
+    assert safety["no_background_workers"] is True
+    assert safety["no_sensors"] is True
+    assert safety["no_money"] is True
+    assert safety["no_production"] is True
+    assert safety["no_credentials"] is True
+    assert safety["restrictions_are_approval_gates_not_permanent_bans"] is True
+
+
+def test_mark_3_dashboard_status_visual_command_center_pilot_required_panels_are_non_executable():
+    payload, _ = _payload()
+    panels = {item["name"]: item for item in payload["visual_command_center_pilot"]["required_panels"]}
+
+    expected = {
+        "Header",
+        "Voice Core",
+        "Wake Word Local Safe Flow",
+        "Mission Control",
+        "Approval Console",
+        "Hermes Execution",
+        "Agent / Module Radar",
+        "Camera / Vision",
+        "Mobile Companion",
+        "Finance / ROI",
+        "Product Builder Adaptativo",
+        "Frontend Pilot / Hardening",
+        "Live Timeline / Audit",
+        "Kill Switch",
+    }
+    assert set(panels) == expected
+
+    for panel in panels.values():
+        assert panel["expected"] is True
+        assert panel["source"]
+        assert panel["status"] in {"ready", "preview", "disabled", "unknown"}
+        assert panel["can_execute"] is False
+        assert panel["notes"]
+
+
+def test_mark_3_dashboard_status_visual_command_center_pilot_read_only_checks_and_findings():
+    payload, _ = _payload()
+    pilot = payload["visual_command_center_pilot"]
+    checks = {item["name"]: item for item in pilot["read_only_checks"]}
+
+    for name in (
+        "no_post_put_delete",
+        "no_execute_route",
+        "no_get_user_media",
+        "no_money_movement",
+        "no_fake_metrics",
+    ):
+        assert name in checks
+        assert checks[name]["status"] in {"passed", "preview", "unknown"}
+        assert checks[name]["evidence"]
+        assert checks[name]["notes"]
+
+    for name in (
+        "no_frontend_hermes_call",
+        "no_tool_runner",
+        "no_sensor_activation",
+        "no_media_recorder",
+        "no_audio_context_capture",
+        "no_camera_capture",
+        "no_mobile_runtime",
+        "no_stripe_live",
+        "no_deploy",
+        "no_email_send",
+        "no_credentials",
+    ):
+        assert name in checks
+
+    assert pilot["pilot_findings"]["findings"] == []
+    assert "real approvals not wired" in pilot["pilot_findings"]["known_limitations"]
+    assert "dependency hardening may need separate PR due npm audit vulnerabilities" in pilot["pilot_findings"]["known_limitations"]
+
+
+def test_mark_3_dashboard_status_visual_command_center_pilot_timeline_does_not_invent_execution():
+    payload, _ = _payload()
+    timeline = payload["visual_command_center_pilot"]["timeline"]
+    events = [item["event"] for item in timeline]
+
+    for event in (
+        "Visual Command Center pilot status read",
+        "Dashboard route checked",
+        "Dashboard read model checked",
+        "Read-only safety checks loaded",
+        "No execution performed",
+    ):
+        assert event in events
+
+    assert all(item["read_only"] is True for item in timeline)
+    serialized = " ".join(event.lower() for event in events)
+    for forbidden in (
+        "browser opened",
+        "david tested",
+        "manual pilot completed",
+        "hermes executed",
+        "camera started",
+        "microphone started",
+        "money moved",
+        "deploy completed",
+        "email sent",
+    ):
+        assert forbidden not in serialized
+
+
 def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     payload, _ = _payload()
     events = payload["timeline"]
@@ -1095,6 +1225,11 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Read model expected at /mark-3/dashboard/status" for item in events)
     assert any(item["event"] == "Pilot remains read-only" for item in events)
     assert any(item["event"] == "Dependency hardening deferred to separate PR if needed" for item in events)
+    assert any(item["event"] == "Visual Command Center pilot status read" for item in events)
+    assert any(item["event"] == "Dashboard route checked" for item in events)
+    assert any(item["event"] == "Dashboard read model checked" for item in events)
+    assert any(item["event"] == "Read-only safety checks loaded" for item in events)
+    assert any(item["event"] == "No execution performed" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
 
