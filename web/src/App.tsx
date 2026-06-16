@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Activity, BarChart3, Clock, FileText, KeyRound, MessageSquare, Package, Settings } from "lucide-react";
+import { Activity, BarChart3, Clock, FileText, KeyRound, MessageSquare, Package, Settings, ShieldCheck } from "lucide-react";
 import StatusPage from "@/pages/StatusPage";
 import ConfigPage from "@/pages/ConfigPage";
 import EnvPage from "@/pages/EnvPage";
@@ -8,8 +8,10 @@ import LogsPage from "@/pages/LogsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import CronPage from "@/pages/CronPage";
 import SkillsPage from "@/pages/SkillsPage";
+import JarvisCommandCenterPage from "@/pages/JarvisCommandCenterPage";
 
 const NAV_ITEMS = [
+  { id: "jarvis", label: "JARVIS", icon: ShieldCheck },
   { id: "status", label: "Status", icon: Activity },
   { id: "sessions", label: "Sessions", icon: MessageSquare },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -22,7 +24,17 @@ const NAV_ITEMS = [
 
 type PageId = (typeof NAV_ITEMS)[number]["id"];
 
+const ROUTED_PAGE_BY_PATH: Partial<Record<string, PageId>> = {
+  "/jarvis": "jarvis",
+};
+
+function getInitialPage(): PageId {
+  if (typeof window === "undefined") return "status";
+  return ROUTED_PAGE_BY_PATH[window.location.pathname] ?? "status";
+}
+
 const PAGE_COMPONENTS: Record<PageId, React.FC> = {
+  jarvis: JarvisCommandCenterPage,
   status: StatusPage,
   sessions: SessionsPage,
   analytics: AnalyticsPage,
@@ -34,9 +46,15 @@ const PAGE_COMPONENTS: Record<PageId, React.FC> = {
 };
 
 export default function App() {
-  const [page, setPage] = useState<PageId>("status");
+  const [page, setPage] = useState<PageId>(getInitialPage);
   const [animKey, setAnimKey] = useState(0);
   const initialRef = useRef(true);
+
+  useEffect(() => {
+    const handlePopState = () => setPage(getInitialPage());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     // Skip the animation key bump on initial mount to avoid re-mounting
@@ -49,6 +67,15 @@ export default function App() {
   }, [page]);
 
   const PageComponent = PAGE_COMPONENTS[page];
+
+  const handleNavClick = (id: PageId) => {
+    setPage(id);
+    if (typeof window === "undefined") return;
+    const nextPath = id === "jarvis" ? "/jarvis" : "/";
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({ page: id }, "", nextPath);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -72,7 +99,7 @@ export default function App() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setPage(id)}
+                onClick={() => handleNavClick(id)}
                 className={`group relative inline-flex items-center gap-1.5 border-r border-border px-4 py-2 font-display text-[0.8rem] tracking-[0.12em] uppercase whitespace-nowrap transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                   page === id
                     ? "text-foreground"

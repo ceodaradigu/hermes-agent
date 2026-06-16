@@ -538,6 +538,17 @@ dinero. El siguiente PR recomendado es **PR #145 - JARVIS Local Dashboard
 Shell**: primera pantalla local read-only dentro de `web/`, usando endpoints
 existentes y manteniendo `JARVIS gobierna. Hermes ejecuta.`
 
+PR #145 es **JARVIS Local Dashboard Shell**. Añade la ruta local `/jarvis` en
+el frontend existente `web/` como primera pantalla visual/read-only del Centro
+de Mando JARVIS. Implementa header, Voice Core visual, Mission Control,
+Consola de Aprobación, Hermes Execution, radar de módulos, Camera/Vision
+Privacy, Mobile Companion, Finance/ROI, Product Builder Adaptativo, timeline
+audit preview y Kill Switch visible. No conecta backend wiring real, approvals
+reales, voz real, wake word real, cámara real, mobile real ni Hermes execution;
+los controles quedan `preview`, `disabled`, `not connected`, `gated` o
+`unknown` según corresponda. Mantiene la regla operativa:
+`JARVIS gobierna. Hermes ejecuta.`
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
