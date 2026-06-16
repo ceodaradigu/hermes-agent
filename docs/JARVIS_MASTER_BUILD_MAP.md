@@ -742,3 +742,41 @@ Siguiente PR recomendado:
 - **PR #145 - JARVIS Local Dashboard Shell**, una primera pantalla read-only
   dentro de `web/`, sin nuevos runtimes, sin dependencias nuevas, sin sensores
   reales, sin dinero, sin deploy y sin approvals ejecutables.
+
+## JARVIS Local Dashboard Shell
+
+PR #145 implementa la primera shell visual local de JARVIS en la ruta `/jarvis`
+del frontend existente `web/`.
+
+Incluye:
+
+- Centro de Mando JARVIS read-only.
+- Voice Core visual en modo preview seguro.
+- Mission Control sin creación de misiones reales.
+- Consola de Aprobación demo/preview, sin approve/reject real.
+- Hermes Execution Panel que muestra que JARVIS no ejecuta y Hermes ejecuta
+  solo bajo gates válidos.
+- Agent / Module Radar, Camera/Vision Privacy, Mobile Companion, Finance/ROI,
+  Product Builder Adaptativo, Live Timeline / Audit Preview y Kill Switch
+  visible no conectado.
+
+No implementa:
+
+- backend wiring real;
+- approvals reales;
+- voz real;
+- wake word real;
+- cámara real;
+- mobile real;
+- Hermes execution desde frontend.
+
+La separación sigue siendo obligatoria:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
+El siguiente trabajo recomendado es PR #146 - Backend wiring read model, si se
+quiere conectar esta shell a endpoints read-only/preview existentes sin abrir
+acciones de ejecución.

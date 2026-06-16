@@ -640,6 +640,18 @@ Objective:
 - Add the first JARVIS Command Center shell inside existing `web/`, local-first
   and read-only.
 
+Status in this PR:
+
+- Implemented as the local `/jarvis` route in the existing Vite/React web app.
+- Static/local UI state only; no backend wiring, sensor activation, approval
+  decision path or Hermes execution path is connected.
+- The shell shows the required Command Center zones: header, Voice Core visual,
+  Mission Control, Approval Console, Hermes Execution, Agent/Module Radar,
+  Camera/Vision privacy, Mobile Companion, Finance/ROI, Product Builder,
+  timeline/audit preview and visible Kill Switch.
+- All unknown or unmeasured cost, revenue and ROI values stay `unknown`; no
+  fake metrics, fake revenue or fake costs are displayed.
+
 Scope:
 
 - Add a JARVIS route/nav item to the existing web app.
@@ -683,6 +695,8 @@ Exit criteria:
 
 - David can open a local JARVIS dashboard shell and see all required panels,
   with disabled/unknown states clearly marked.
+- PR #145 still does not implement backend wiring real, approvals reales, voz
+  real, wake word real, cámara real, mobile real or Hermes execution.
 
 ### PR #146 - Backend wiring read model
 
