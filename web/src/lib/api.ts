@@ -325,6 +325,71 @@ export interface JarvisHermesExecution {
   source_endpoint?: string;
 }
 
+export interface JarvisMissionControlMessage {
+  role: "user" | "assistant" | string;
+  speaker: string;
+  content: string;
+  preview_only?: boolean;
+}
+
+export interface JarvisMissionControlLifecycleStep {
+  state: string;
+  description: string;
+  preview_only?: boolean;
+}
+
+export interface JarvisMissionControl {
+  state?: {
+    mode?: string;
+    input_enabled?: boolean | string;
+    conversation_enabled?: boolean | string;
+    execution_enabled?: boolean;
+    hermes_dispatch_enabled?: boolean;
+    approval_creation_enabled?: boolean;
+    persistence_enabled?: boolean;
+    external_network_enabled?: boolean;
+  };
+  supported_inputs?: {
+    text_command?: string;
+    voice_command?: string;
+    mobile_command?: string;
+    wake_word_command?: string;
+    file_drop?: string;
+    camera_context?: string;
+  };
+  sample_command?: string;
+  intent_preview?: {
+    detected_intent?: string;
+    confidence?: string;
+    mission_type?: string;
+    risk_level?: string;
+    approval_level?: string;
+    blocked_reasons?: string[];
+    required_permissions?: string[];
+    next_safe_action?: string;
+  };
+  command_lifecycle?: JarvisMissionControlLifecycleStep[];
+  conversation_preview?: {
+    messages?: JarvisMissionControlMessage[];
+    assistant_status?: string;
+    transcript_persistence?: boolean;
+    memory_write?: boolean;
+    memory_read?: boolean | string;
+    pii_redaction_required?: boolean;
+    raw_audio_stored?: boolean;
+    external_provider_called?: boolean;
+  };
+  safety?: Record<string, boolean>;
+  operator_guidance?: {
+    can_do?: string;
+    cannot_do_yet?: string;
+    future_next_step?: string;
+    sensitive_requires_approval?: string;
+  };
+  source_endpoint?: string;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -352,6 +417,7 @@ export interface JarvisDashboardStatus {
     pilot_executed?: boolean;
   };
   modules?: JarvisDashboardModule[];
+  mission_control?: JarvisMissionControl;
   approvals?: {
     pending_count?: number | string;
     critical_count?: number | string;

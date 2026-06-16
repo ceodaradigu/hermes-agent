@@ -31,6 +31,25 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
 
     for text in (
         "Centro de Mando JARVIS",
+        "Control de Misión",
+        "preview-only",
+        "En esta fase no se ejecuta nada",
+        "Conversation Preview",
+        "Preview conversation",
+        "Intent / Risk Preview",
+        "Mission Lifecycle",
+        "Safety Banner",
+        "No auto execute",
+        "No Hermes dispatch",
+        "No tool call",
+        "No file write",
+        "No network",
+        "No voice recording",
+        "No camera capture",
+        "Wake phrase is not permission",
+        "Si una misión necesita algo sensible, aparecerá en Approval Console",
+        "Hermes solo ejecutará después de approval válido",
+        "El frontend no puede saltarse gates",
         "JARVIS gobierna",
         "Hermes ejecuta",
         "Consola de Aprobación",
@@ -107,6 +126,9 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     assert 'getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status")' in api_source
 
     for forbidden in (
+        "POST",
+        "PUT",
+        "DELETE",
         "method:",
         '"POST"',
         '"PUT"',
@@ -122,6 +144,31 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
         "/mark-3/hermes-runtime/sessions",
         "/tasks",
         "/missions",
+    ):
+        assert forbidden not in content
+
+
+def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
+    content = _read(PAGE)
+
+    for required in (
+        "Control de Misión",
+        "Preparar preview",
+        "Enviar a JARVIS",
+        'aria-disabled="true"',
+        "placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}",
+    ):
+        assert required in content
+
+    for forbidden in (
+        "<form",
+        "onSubmit",
+        "handleSubmit",
+        "submitMission",
+        "createMission",
+        "runMission",
+        "dispatchHermes",
+        "getUserMedia",
     ):
         assert forbidden not in content
 

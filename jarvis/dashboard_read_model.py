@@ -155,6 +155,8 @@ def build_mark_3_dashboard_status(
         session_count=session_count,
     )
     hermes_timeline = _hermes_timeline_events(hermes_execution)
+    mission_control = _mission_control_projection()
+    mission_control_timeline = _mission_control_timeline_events()
 
     payload = {
         "system": {
@@ -296,6 +298,7 @@ def build_mark_3_dashboard_status(
             "source_endpoint": "/approvals/status",
             "raw_status": _status_summary(approvals_status),
         },
+        "mission_control": mission_control,
         "hermes_execution": hermes_execution,
         "voice_wake": {
             "microphone_state": "disabled" if voice_runtime.get("microphone_active") is False else UNKNOWN,
@@ -352,15 +355,22 @@ def build_mark_3_dashboard_status(
         "safety": {
             "frontend_can_execute": False,
             "frontend_can_approve": False,
+            "no_auto_execute": True,
             "no_frontend_execute": True,
             "no_duplicate_hermes_runtime": True,
             "no_get_user_media": True,
             "no_sensor_activation": True,
+            "no_voice_recording": True,
+            "no_camera_capture": True,
             "no_frontend_tool_runner": True,
+            "no_tool_call": True,
+            "no_file_write": True,
+            "no_network_call": True,
             "no_direct_hermes_call_from_mobile": True,
             "no_direct_hermes_call_from_voice": True,
             "no_direct_hermes_call_from_camera": True,
             "no_frontend_hermes_execution": True,
+            "no_hermes_dispatch": True,
             "no_post_put_delete_from_jarvis_page": True,
             "approval_required_before_execution": True,
             "wake_phrase_is_not_permission": True,
@@ -373,6 +383,7 @@ def build_mark_3_dashboard_status(
         },
         "timeline": timeline
         + hermes_timeline
+        + mission_control_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -415,6 +426,178 @@ def build_mark_3_dashboard_status(
         },
     }
     return payload
+
+
+def _mission_control_projection() -> Dict[str, Any]:
+    sample_command = "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro."
+    return {
+        "state": {
+            "mode": "preview",
+            "input_enabled": "preview_only",
+            "conversation_enabled": "preview_only",
+            "execution_enabled": False,
+            "hermes_dispatch_enabled": False,
+            "approval_creation_enabled": False,
+            "persistence_enabled": False,
+            "external_network_enabled": False,
+        },
+        "supported_inputs": {
+            "text_command": "preview",
+            "voice_command": "future_gated",
+            "mobile_command": "future_gated",
+            "wake_word_command": "future_gated",
+            "file_drop": "not_connected",
+            "camera_context": "not_connected",
+        },
+        "sample_command": sample_command,
+        "intent_preview": {
+            "detected_intent": UNKNOWN,
+            "confidence": UNKNOWN,
+            "mission_type": UNKNOWN,
+            "risk_level": UNKNOWN,
+            "approval_level": UNKNOWN,
+            "blocked_reasons": [],
+            "required_permissions": [],
+            "next_safe_action": UNKNOWN,
+        },
+        "command_lifecycle": [
+            {
+                "state": "draft",
+                "description": "Operator-visible command text before any preview.",
+                "preview_only": True,
+            },
+            {
+                "state": "submitted_for_preview",
+                "description": "Future read-only intake would normalize the request without creating work.",
+                "preview_only": True,
+            },
+            {
+                "state": "intent_detected",
+                "description": "JARVIS would identify intent and keep confidence unknown until a safe classifier exists.",
+                "preview_only": True,
+            },
+            {
+                "state": "risk_classified",
+                "description": "Risk would be classified before any approval or Hermes handoff.",
+                "preview_only": True,
+            },
+            {
+                "state": "approval_required",
+                "description": "Sensitive work would require explicit operator approval before execution eligibility.",
+                "preview_only": True,
+            },
+            {
+                "state": "ready_for_operator_review",
+                "description": "The operator reviews scope, risk, permissions, rollback and stop plan.",
+                "preview_only": True,
+            },
+            {
+                "state": "blocked",
+                "description": "Unsafe, ambiguous or unavailable capabilities remain blocked.",
+                "preview_only": True,
+            },
+            {
+                "state": "forbidden",
+                "description": "Credentials, bypass, deception and illegal or unsafe requests cannot be approved here.",
+                "preview_only": True,
+            },
+            {
+                "state": "executable_candidate_after_valid_approval",
+                "description": "A future candidate may become executable only after valid JARVIS approval gates.",
+                "preview_only": True,
+            },
+        ],
+        "conversation_preview": {
+            "messages": [
+                {
+                    "role": "user",
+                    "speaker": "David",
+                    "content": sample_command,
+                    "preview_only": True,
+                },
+                {
+                    "role": "assistant",
+                    "speaker": "JARVIS",
+                    "content": (
+                        "Puedo preparar una misión de revisión. Antes de ejecutar cualquier acción sensible, "
+                        "pediré aprobación."
+                    ),
+                    "preview_only": True,
+                },
+            ],
+            "assistant_status": "preview",
+            "transcript_persistence": False,
+            "memory_write": False,
+            "memory_read": False,
+            "pii_redaction_required": True,
+            "raw_audio_stored": False,
+            "external_provider_called": False,
+        },
+        "safety": {
+            "no_auto_execute": True,
+            "no_hermes_dispatch": True,
+            "no_tool_call": True,
+            "no_file_write": True,
+            "no_network_call": True,
+            "no_email_send": True,
+            "no_money_movement": True,
+            "no_deploy": True,
+            "no_credentials": True,
+            "no_sensor_activation": True,
+            "no_voice_recording": True,
+            "no_camera_capture": True,
+            "wake_phrase_is_not_permission": True,
+        },
+        "operator_guidance": {
+            "can_do": (
+                "David can inspect how JARVIS would receive a command, preview intent/risk placeholders, "
+                "review gates and understand the next safe operator review step."
+            ),
+            "cannot_do_yet": (
+                "This panel cannot submit commands, create missions, create approvals, call providers, "
+                "write memory, dispatch Hermes, activate sensors or execute actions."
+            ),
+            "future_next_step": (
+                "A later PR can add a safe read-only preview/intake classifier before any governed mission "
+                "proposal flow is connected."
+            ),
+            "sensitive_requires_approval": (
+                "Every sensitive action remains blocked until JARVIS has explicit operator approval, scope, "
+                "risk, rollback/stop plan and audit gates."
+            ),
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "read_only": True,
+    }
+
+
+def _mission_control_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Mission Control preview read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Conversation preview read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "No command execution performed",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked_by_preview",
+            "read_only": True,
+        },
+        {
+            "event": "Hermes dispatch disabled from Mission Control",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+    ]
 
 
 def _source(endpoint: str, getter: Callable[[], Dict[str, Any]], timeline: List[Dict[str, Any]]) -> Dict[str, Any]:

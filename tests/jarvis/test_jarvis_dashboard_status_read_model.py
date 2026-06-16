@@ -140,6 +140,109 @@ def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled(
     assert payload["mobile"]["direct_hermes_call_allowed"] is False
 
 
+def test_mark_3_dashboard_status_contains_mission_control_preview_contract():
+    payload, _ = _payload()
+    mission_control = payload["mission_control"]
+    state = mission_control["state"]
+    supported_inputs = mission_control["supported_inputs"]
+    intent_preview = mission_control["intent_preview"]
+    lifecycle_states = [item["state"] for item in mission_control["command_lifecycle"]]
+
+    assert state["mode"] == "preview"
+    assert state["input_enabled"] == "preview_only"
+    assert state["conversation_enabled"] == "preview_only"
+    assert state["execution_enabled"] is False
+    assert state["hermes_dispatch_enabled"] is False
+    assert state["approval_creation_enabled"] is False
+    assert state["persistence_enabled"] is False
+    assert state["external_network_enabled"] is False
+
+    assert supported_inputs["text_command"] == "preview"
+    assert supported_inputs["voice_command"] == "future_gated"
+    assert supported_inputs["mobile_command"] == "future_gated"
+    assert supported_inputs["wake_word_command"] == "future_gated"
+    assert supported_inputs["file_drop"] in {"disabled", "not_connected"}
+    assert supported_inputs["camera_context"] in {"disabled", "not_connected"}
+
+    assert mission_control["sample_command"] == "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro."
+    assert intent_preview == {
+        "detected_intent": "unknown",
+        "confidence": "unknown",
+        "mission_type": "unknown",
+        "risk_level": "unknown",
+        "approval_level": "unknown",
+        "blocked_reasons": [],
+        "required_permissions": [],
+        "next_safe_action": "unknown",
+    }
+    assert lifecycle_states == [
+        "draft",
+        "submitted_for_preview",
+        "intent_detected",
+        "risk_classified",
+        "approval_required",
+        "ready_for_operator_review",
+        "blocked",
+        "forbidden",
+        "executable_candidate_after_valid_approval",
+    ]
+    assert all(item["preview_only"] is True for item in mission_control["command_lifecycle"])
+    assert mission_control["read_only"] is True
+    assert mission_control["source_endpoint"] == "/mark-3/dashboard/status"
+
+
+def test_mark_3_dashboard_status_mission_control_conversation_preview_has_no_side_effects():
+    payload, _ = _payload()
+    conversation = payload["mission_control"]["conversation_preview"]
+    messages = conversation["messages"]
+
+    assert len(messages) >= 2
+    assert messages[0]["speaker"] == "David"
+    assert messages[0]["content"] == "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro."
+    assert messages[1]["speaker"] == "JARVIS"
+    assert "pediré aprobación" in messages[1]["content"]
+    assert all(message["preview_only"] is True for message in messages)
+    assert conversation["assistant_status"] == "preview"
+    assert conversation["transcript_persistence"] is False
+    assert conversation["external_provider_called"] is False
+    assert conversation["memory_write"] is False
+    assert conversation["memory_read"] is False
+    assert conversation["raw_audio_stored"] is False
+    assert conversation["pii_redaction_required"] is True
+
+
+def test_mark_3_dashboard_status_mission_control_safety_keeps_everything_preview_only():
+    payload, _ = _payload()
+    mission_safety = payload["mission_control"]["safety"]
+    global_safety = payload["safety"]
+
+    for key in (
+        "no_auto_execute",
+        "no_hermes_dispatch",
+        "no_tool_call",
+        "no_file_write",
+        "no_network_call",
+        "no_email_send",
+        "no_money_movement",
+        "no_deploy",
+        "no_credentials",
+        "no_sensor_activation",
+        "no_voice_recording",
+        "no_camera_capture",
+        "wake_phrase_is_not_permission",
+    ):
+        assert mission_safety[key] is True
+
+    for key in (
+        "no_auto_execute",
+        "no_tool_call",
+        "no_file_write",
+        "no_network_call",
+        "no_sensor_activation",
+    ):
+        assert global_safety[key] is True
+
+
 def test_mark_3_dashboard_status_hermes_capabilities_are_governed_and_not_frontend_executable():
     payload, _ = _payload()
     capabilities = payload["hermes_execution"]["governed_capabilities"]
@@ -342,6 +445,11 @@ def test_mark_3_dashboard_status_adds_no_dangerous_action_routes():
         ("/mark-3/dashboard/email", "POST"),
         ("/mark-3/dashboard/credentials", "POST"),
         ("/mark-3/dashboard/sensors", "POST"),
+        ("/mark-3/dashboard/mission-control", "POST"),
+        ("/mark-3/mission-control/submit", "POST"),
+        ("/mark-3/mission-control/execute", "POST"),
+        ("/jarvis/mission-control/submit", "POST"),
+        ("/jarvis/mission-control/execute", "POST"),
     ):
         assert forbidden not in routes
 
@@ -399,6 +507,10 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "No active Hermes execution" for item in events)
     assert any(item["event"] == "Frontend direct execution disabled" for item in events)
     assert any(item["event"] == "Approval gates required before Hermes execution" for item in events)
+    assert any(item["event"] == "Mission Control preview read" for item in events)
+    assert any(item["event"] == "Conversation preview read" for item in events)
+    assert any(item["event"] == "No command execution performed" for item in events)
+    assert any(item["event"] == "Hermes dispatch disabled from Mission Control" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
     assert not any("executed" in item["event"].lower() for item in events)

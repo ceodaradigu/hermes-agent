@@ -932,63 +932,83 @@ Exit criteria:
 - The dashboard is prepared for later Mission Control work, but still cannot
   execute, approve, reject, stop real work or call Hermes directly.
 
-### PR #149 - Mission Control and conversation panel
+### PR #149 - Mission Control Conversation Preview
 
 Objective:
 
-- Let David talk/type to JARVIS locally and turn conversation into mission
-  proposals, risk, permissions and next step without auto-execution.
+- Improve `/jarvis` Mission Control so David can see how JARVIS would receive
+  a typed or spoken order, classify intent/risk/approval needs and suggest the
+  next safe operator review step without opening execution.
 
 Scope:
 
-- Add local chat/conversation panel.
-- Use existing intent preview first.
-- Show detected intent, confidence, risk, policy decision, approval need,
-  candidate mission fields and next safe action.
-- Add a mission creation review form that posts to Mark 3 Mission Loop only
-  after David explicitly chooses "create mission proposal".
-- Show mission lifecycle, plan, candidates, outcomes, audit and stop.
+- Enrich `GET /mark-3/dashboard/status` with `mission_control`:
+  `state`, `supported_inputs`, `sample_command`, `intent_preview`,
+  `command_lifecycle`, `conversation_preview`, `safety` and
+  `operator_guidance`.
+- Keep `state.mode=preview` and declare input/conversation as preview-only.
+- Keep execution, Hermes dispatch, approval creation, persistence and external
+  network disabled.
+- Show a safe conversation placeholder:
+  David asks JARVIS to review project status and JARVIS explains that sensitive
+  action will require approval.
+- Show Mission Lifecycle steps visually: draft, preview, intent detected, risk
+  classified, approval required, operator review, Hermes gated and audit.
+- Show safety labels: No auto execute, No Hermes dispatch, No tool call, No
+  file write, No network, No voice recording, No camera capture and Wake phrase
+  is not permission.
+- Explain how Mission Control relates to Approval Console and Hermes Panel:
+  sensitive missions appear in Approval Console, Hermes only executes after a
+  valid approval, and frontend cannot bypass gates.
 
 Probable files:
 
-- `web/src/components/jarvis/ConversationPanel.tsx`
-- `web/src/components/jarvis/MissionControlPanel.tsx`
-- `web/src/lib/jarvis-missions.ts`
+- `jarvis/dashboard_read_model.py`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `web/src/lib/api.ts`
 
 Endpoints consumed:
 
-- `POST /voice/companion/preview`
-- `POST /mobile/intent/preview`
-- `GET /mark-3/mission-loop/policy`
-- `POST /mark-3/mission-loop/missions`
-- `GET /mark-3/mission-loop/missions/{mission_id}`
-- `POST /mark-3/mission-loop/missions/{mission_id}/advance`
-- `POST /mark-3/mission-loop/missions/{mission_id}/feedback`
-- `POST /mark-3/mission-loop/missions/{mission_id}/stop`
-- `GET /mark-3/mission-loop/missions/{mission_id}/audit`
+- Frontend consumes only `GET /mark-3/dashboard/status`.
+- The read model remains local/read-only and does not call Hermes execute,
+  providers, sensors, memory writes or mission mutation endpoints.
 
 New endpoints needed:
 
-- Optional: `POST /jarvis/conversation/preview` to avoid overloading voice or
-  mobile intent preview for desktop chat.
+- None in PR #149.
 
 Expected tests:
 
-- Conversation preview tests for allowed, requires approval, denied, sensitive
-  redacted and unknown.
-- Mission form tests requiring scope, stop conditions and explicit create
-  action.
+- Backend tests proving `mission_control` exists, all execution/dispatch/
+  approval/persistence/network flags are disabled, `conversation_preview`
+  declares no provider call, no memory write and no raw audio storage, safety
+  forbids auto execute/tool/file/network/sensors, timeline contains only
+  read-only preview events and no new dangerous endpoints are added.
+- Static frontend tests proving `/jarvis` contains Control de Misión,
+  preview-only, conversation preview, intent/risk preview, lifecycle, safety
+  labels, Approval Console/Hermes relation text, no POST/PUT/DELETE literals, no
+  execution path wiring, no submit handler and no browser sensor API.
 
 Must not do:
 
-- No auto mission creation from plain chat.
-- No execution from chat.
-- No Hermes call before policy/approval/candidate.
+- No real command submit.
+- No mission creation.
+- No approval creation.
+- No Hermes dispatch.
+- No tool call.
+- No provider call.
+- No memory write or transcript persistence.
+- No file write.
+- No network call.
+- No voice recording, camera capture, microphone or `getUserMedia`.
+- No money, deploy, email or credentials.
 
 Exit criteria:
 
-- David can ask for a mission, review what JARVIS understood, see risk/gates and
-  create a governed mission proposal deliberately.
+- David can see how it would feel to type or speak to JARVIS, inspect the
+  intended classification shape, review safety gates and understand the next
+  safe operator-review step, while the system remains preview/read-only and
+  Hermes remains separate behind JARVIS gates.
 
 ### PR #150 - Voice Core visual and TTS wiring
 
