@@ -866,42 +866,55 @@ Exit criteria:
 
 Objective:
 
-- Show what Hermes is allowed to do for JARVIS today and what it is doing when
-  a governed session exists.
+- Make Hermes visible as the governed execution engine behind JARVIS without
+  giving the frontend any execution power.
 
 Scope:
 
-- Render Hermes runtime status, supported capability, disabled capabilities,
-  session count, running sessions, candidate id, mission id, scope fingerprint,
-  status, interrupt state, tool calls and evidence summary.
-- Provide a visible stop control for existing Hermes session stop route when
-  authorized backend semantics are already satisfied.
+- Enrich `GET /mark-3/dashboard/status` under `hermes_execution` with the
+  JARVIS/Hermes contract, runtime readiness, active-execution state, last known
+  evidence fields, measured cost/duration placeholders and read-only safety
+  flags.
+- Show governed capabilities: local governed read, local docs/repo research,
+  mission-gated execution candidates, approval-gated execution, external tools
+  and deploy/email/money/credentials boundaries.
+- Show blocked frontend routes/actions: no execute route, no approve/reject
+  mutation, no tool runner, no deploy, no money, no email, no credentials, no
+  sensor activation, no camera/mic activation and no external network unless a
+  future governed backend gate exists.
+- Render the `/jarvis` Hermes Execution panel with `JARVIS gobierna. Hermes
+  ejecuta.`, read-only/gated/no-active-execution badges, `Sin ejecución
+  activa`, unknown cost/duration/result/error and future execution
+  requirements: valid approval, exact scope, risk level, rollback/stop plan,
+  audit, cost/impact and human operator.
+- Keep Kill Switch visible but label it as non-operational for Hermes in this
+  PR: there is no active Hermes execution to stop from the panel.
 
-Probable files:
+Files:
 
-- `web/src/components/jarvis/HermesExecutionPanel.tsx`
-- `web/src/components/jarvis/HermesSessionDrawer.tsx`
-- `web/src/lib/jarvis-hermes.ts`
+- `jarvis/dashboard_read_model.py`
+- `web/src/pages/JarvisCommandCenterPage.tsx`
+- `web/src/lib/api.ts`
 
 Endpoints consumed:
 
-- `GET /mark-3/hermes-runtime/status`
-- `GET /mark-3/hermes-runtime/sessions/{session_id}`
-- `POST /mark-3/hermes-runtime/sessions/{session_id}/stop`
-- `GET /mark-3/mission-loop/missions/{mission_id}`
-- `GET /mark-3/mission-loop/missions/{mission_id}/audit`
+- Frontend consumes only `GET /mark-3/dashboard/status`.
+- The read model may internally read existing safe status/audit objects such as
+  `/mark-3/hermes-runtime/status`, but it must not call execute or stop routes.
 
 New endpoints needed:
 
-- `GET /mark-3/hermes-runtime/sessions` if the UI needs a session list rather
-  than known session ids.
-- Do not add general execute endpoints.
+- None in PR #148.
 
 Expected tests:
 
-- UI mapping tests for idle/running/stopped/blocked/timeout states.
-- Backend tests for any new list endpoint proving it redacts content and does
-  not expose raw file contents.
+- Backend tests proving `hermes_execution` contains the contract, refuses
+  frontend execution, lists governed capabilities, lists blocked routes,
+  requires approval/audit/rollback or stop plan and does not invent execution
+  events.
+- Static frontend tests proving `/jarvis` contains the Hermes visibility text,
+  has no POST/PUT/DELETE wiring, has no execute path literal, no frontend tool
+  runner, no browser sensor APIs and keeps Approval Console buttons disabled.
 
 Must not do:
 
@@ -909,11 +922,15 @@ Must not do:
 - No arbitrary tool invocation.
 - No terminal/browser/network/money.
 - No raw secret or file content display.
+- No stop control wired to a real Hermes session.
+- No fake metrics, fake execution, fake result, fake duration or fake cost.
 
 Exit criteria:
 
 - David can see Hermes as the internal execution engine and can see that the UI
   is not a second executor.
+- The dashboard is prepared for later Mission Control work, but still cannot
+  execute, approve, reject, stop real work or call Hermes directly.
 
 ### PR #149 - Mission Control and conversation panel
 
@@ -1444,10 +1461,10 @@ Rules:
 
 ## 10. Recommended next PR
 
-Recommended next PR after PR #147:
+Recommended next PR after PR #148:
 
 ```text
-PR #148 - Hermes Execution Visibility Panel
+PR #149 - Mission Control and conversation panel
 ```
 
 Why:
@@ -1457,6 +1474,9 @@ Why:
 - PR #147 improves the Approval Console visual with normalized preview cards,
   disabled approval affordances and risk/readback/rollback visibility while
   still approving nothing real.
-- The next safe visual step is to make Hermes execution visibility clearer
-  without giving the browser a direct tool runner or duplicate runtime.
+- PR #148 makes Hermes execution visibility clearer without giving the browser
+  a direct tool runner, stop control, execute route or duplicate runtime.
+- The next safe visual step is Mission Control conversation/proposal UX: turn
+  operator input into intent, risk, requirements and candidate state without
+  auto-execution.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

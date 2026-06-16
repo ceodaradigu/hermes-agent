@@ -870,3 +870,44 @@ Hermes ejecuta.
 El siguiente trabajo recomendado es PR #148 - Hermes Execution Visibility
 Panel, manteniendo el frontend como superficie de lectura y control visual,
 sin crear un ejecutor paralelo a Hermes.
+
+## JARVIS Hermes Execution Visibility Panel
+
+PR #148 mejora el panel `Hermes Execution` de `/jarvis` y el read model
+`GET /mark-3/dashboard/status` para mostrar Hermes como motor de ejecución
+gobernado, sin darle al frontend poder de ejecución.
+
+Incluye:
+
+- `hermes_execution.contract` con la separación explícita: JARVIS gobierna
+  intención, riesgo, approval, auditoría y control; Hermes es
+  `execution_engine`.
+- Flags de seguridad: no duplicate Hermes runtime, frontend direct execution
+  disabled, frontend cannot execute and frontend cannot call Hermes execute.
+- `runtime_status` con disponibilidad/conexión/ejecución activa, modo
+  `read_only_visibility` y campos `unknown` para last result/error/rollback,
+  duración y coste cuando no existe evidencia real.
+- `governed_capabilities` para lectura local gobernada, docs/repo research,
+  mission-gated candidates, approval-gated execution, herramientas externas y
+  deploy/email/money/credentials.
+- `blocked_routes` para execute, approve/reject, tool runner, deploy, money,
+  email, credentials, sensores, camera/mic y red externa no gateada.
+- `/jarvis` muestra `Ejecución Hermes`, `JARVIS gobierna. Hermes ejecuta.`,
+  `El frontend no puede ejecutar Hermes directamente.`, `Sin ejecución
+  activa`, rutas bloqueadas y requisitos antes de cualquier ejecución futura.
+
+No implementa:
+
+- endpoint execute nuevo;
+- POST/PUT/DELETE desde `/jarvis`;
+- stop real de Hermes;
+- approval/reject real;
+- tool runner frontend;
+- sensores, micrófono, cámara o `getUserMedia`;
+- dinero, Stripe, deploy, email, credenciales o producción;
+- runtime Hermes duplicado;
+- métricas, coste, duración, resultado o ejecución inventados.
+
+PR #148 prepara el dashboard para Mission Control posterior: una futura UX de
+misiones podrá mostrar intención, riesgo, scope y approvals, pero Hermes seguirá
+ejecutando solo bajo gates válidos emitidos por JARVIS.

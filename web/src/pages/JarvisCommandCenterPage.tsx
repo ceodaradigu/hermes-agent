@@ -17,7 +17,14 @@ import {
   Workflow,
   ZapOff,
 } from "lucide-react";
-import { api, type JarvisApprovalCard, type JarvisDashboardModule, type JarvisDashboardStatus } from "@/lib/api";
+import {
+  api,
+  type JarvisApprovalCard,
+  type JarvisDashboardModule,
+  type JarvisDashboardStatus,
+  type JarvisHermesBlockedRoute,
+  type JarvisHermesGovernedCapability,
+} from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -222,6 +229,97 @@ const riskLegend = [
   ["Nivel 5", "ilegal, inseguro, no autorizado, bypass, deception, fake metrics / forbidden"],
 ] as const;
 
+const fallbackHermesCapabilities: JarvisHermesGovernedCapability[] = [
+  {
+    name: "lectura local gobernada",
+    status: "unknown",
+    approval_required: true,
+    approval_level: "direct",
+    can_execute_from_frontend: false,
+    notes: "Fallback seguro: sin evidencia de backend; mostrar solo visibilidad read-only.",
+  },
+  {
+    name: "research docs/repo",
+    status: "unknown",
+    approval_required: true,
+    approval_level: "level_2_local_read",
+    can_execute_from_frontend: false,
+    notes: "Research local requiere scope exacto y no usa web/GitHub real desde esta pantalla.",
+  },
+  {
+    name: "mission gated execution candidate",
+    status: "gated",
+    approval_required: true,
+    approval_level: "risk_scaled",
+    can_execute_from_frontend: false,
+    notes: "Una candidate no es ejecución; solo expresa readiness gobernada.",
+  },
+  {
+    name: "herramientas externas",
+    status: "not_connected",
+    approval_required: true,
+    approval_level: "strong",
+    can_execute_from_frontend: false,
+    notes: "Browser, red, GitHub y providers externos no están conectados a este panel.",
+  },
+  {
+    name: "deploy/dinero/email/credenciales",
+    status: "forbidden",
+    approval_required: true,
+    approval_level: "level_4_or_forbidden",
+    can_execute_from_frontend: false,
+    notes: "Producción, pagos, email real y credenciales quedan fuera del frontend.",
+  },
+];
+
+const fallbackHermesBlockedRoutes: JarvisHermesBlockedRoute[] = [
+  {
+    route_or_action: "ruta execute directa",
+    action: "ejecución desde frontend",
+    blocked: true,
+    can_execute_from_frontend: false,
+    notes: "Sin ruta de ejecución desde frontend.",
+  },
+  {
+    route_or_action: "approve/reject",
+    action: "mutación de aprobación",
+    blocked: true,
+    can_execute_from_frontend: false,
+    notes: "Los botones de approval permanecen disabled.",
+  },
+  {
+    route_or_action: "runner de herramientas",
+    action: "invocación de tools en navegador",
+    blocked: true,
+    can_execute_from_frontend: false,
+    notes: "Sin registry ni invocación de herramientas en el frontend.",
+  },
+  {
+    route_or_action: "deploy / dinero / email / credenciales",
+    action: "impacto externo o acceso sensible",
+    blocked: true,
+    can_execute_from_frontend: false,
+    notes: "Sin producción, pagos, envío real, secretos, tokens o credenciales.",
+  },
+  {
+    route_or_action: "sensores / móvil / voz / cámara",
+    action: "activación directa o Hermes directo",
+    blocked: true,
+    can_execute_from_frontend: false,
+    notes: "Sin sensores y sin llamadas directas a Hermes desde móvil, voz o cámara.",
+  },
+];
+
+const futureExecutionRequirements = [
+  "approval válido",
+  "scope exacto",
+  "risk level",
+  "rollback/stop plan",
+  "auditoría",
+  "coste/impacto",
+  "operador humano",
+] as const;
+
 function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
   return {
     system: {
@@ -237,7 +335,9 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       jarvis_role: "governs/risk/approval/audit/control",
       hermes_role: "execution_engine",
       no_duplicate_hermes_runtime: true,
+      frontend_direct_execution_allowed: false,
       frontend_can_execute: false,
+      frontend_can_call_hermes_execute: false,
     },
     release_candidate: {
       status: UNKNOWN,
@@ -282,13 +382,57 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
     },
     hermes_execution: {
       available: false,
+      connected: UNKNOWN,
       active_execution: UNKNOWN,
       last_execution: UNKNOWN,
+      last_result: UNKNOWN,
+      last_error: UNKNOWN,
+      measured_duration: UNKNOWN,
+      measured_cost: UNKNOWN,
       frontend_direct_execution_allowed: false,
+      frontend_can_execute: false,
+      frontend_can_call_hermes_execute: false,
       running_sessions: UNKNOWN,
       session_count: UNKNOWN,
       supported_tool: UNKNOWN,
       notes: "Fallback seguro: no se permite ejecución directa desde frontend.",
+      contract: {
+        jarvis_role: "governs/risk/approval/audit/control",
+        hermes_role: "execution_engine",
+        no_duplicate_hermes_runtime: true,
+        frontend_direct_execution_allowed: false,
+        frontend_can_execute: false,
+        frontend_can_call_hermes_execute: false,
+      },
+      runtime_status: {
+        available: false,
+        connected: UNKNOWN,
+        active_execution: UNKNOWN,
+        execution_mode: "read_only_visibility",
+        last_execution: UNKNOWN,
+        last_result: UNKNOWN,
+        last_error: UNKNOWN,
+        last_rollback: UNKNOWN,
+        last_stop_plan: UNKNOWN,
+        measured_duration: UNKNOWN,
+        measured_cost: UNKNOWN,
+        running_sessions: UNKNOWN,
+        session_count: UNKNOWN,
+        supported_tool: UNKNOWN,
+      },
+      governed_capabilities: fallbackHermesCapabilities,
+      blocked_routes: fallbackHermesBlockedRoutes,
+      safety: {
+        no_frontend_execute: true,
+        no_frontend_tool_runner: true,
+        no_direct_hermes_call_from_mobile: true,
+        no_direct_hermes_call_from_voice: true,
+        no_direct_hermes_call_from_camera: true,
+        approval_required_before_execution: true,
+        wake_phrase_is_not_permission: true,
+        audit_required: true,
+        rollback_or_stop_plan_required_for_sensitive_actions: true,
+      },
     },
     voice_wake: {
       microphone_state: "disabled",
@@ -370,7 +514,7 @@ function yesNo(value: unknown, yes = "true", no = "false", fallback = UNKNOWN): 
 
 function statusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
   if (status === "ready") return "success";
-  if (status === "disabled" || status === "not_connected") return "destructive";
+  if (status === "disabled" || status === "not_connected" || status === "forbidden") return "destructive";
   if (status === "gated" || status === "prepare-only" || status === "preview") return "warning";
   return "outline";
 }
@@ -407,6 +551,14 @@ function readModules(modules: JarvisDashboardModule[] | undefined): JarvisDashbo
       notes: "Campo ausente; mostrado como unknown.",
     };
   });
+}
+
+function readHermesCapabilities(items: JarvisHermesGovernedCapability[] | undefined): JarvisHermesGovernedCapability[] {
+  return items?.length ? items : fallbackHermesCapabilities;
+}
+
+function readHermesBlockedRoutes(items: JarvisHermesBlockedRoute[] | undefined): JarvisHermesBlockedRoute[] {
+  return items?.length ? items : fallbackHermesBlockedRoutes;
 }
 
 function StatusList({ items }: { items: readonly (readonly [string, string])[] }) {
@@ -552,6 +704,10 @@ export default function JarvisCommandCenterPage() {
   const approvals = dashboard.approvals ?? {};
   const approvalCards = approvals.cards?.length ? approvals.cards : fallbackApprovalCards;
   const hermes = dashboard.hermes_execution ?? {};
+  const hermesContract = hermes.contract ?? contract;
+  const hermesRuntime = hermes.runtime_status ?? hermes;
+  const hermesCapabilities = readHermesCapabilities(hermes.governed_capabilities);
+  const hermesBlockedRoutes = readHermesBlockedRoutes(hermes.blocked_routes);
   const voiceWake = dashboard.voice_wake ?? {};
   const cameraVision = dashboard.camera_vision ?? {};
   const mobile = dashboard.mobile ?? {};
@@ -592,6 +748,18 @@ export default function JarvisCommandCenterPage() {
     ["revenue confirmado", valueText(finance.confirmed_revenue)],
     ["revenue proyectado", valueText(finance.projected_revenue)],
     ["ROI", valueText(finance.roi)],
+  ] as const;
+
+  const hermesCurrentRows = [
+    ["Hermes disponible", yesNo(hermesRuntime.available, "sí", "no")],
+    ["Hermes conectado", yesNo(hermesRuntime.connected, "sí", "no")],
+    ["ejecución activa", yesNo(hermesRuntime.active_execution, "sí", "no")],
+    ["modo", valueText(hermesRuntime.execution_mode, "read_only_visibility")],
+    ["última ejecución", valueText(hermesRuntime.last_execution)],
+    ["último resultado", valueText(hermesRuntime.last_result)],
+    ["último error", valueText(hermesRuntime.last_error)],
+    ["coste", valueText(hermesRuntime.measured_cost)],
+    ["duración", valueText(hermesRuntime.measured_duration)],
   ] as const;
 
   return (
@@ -645,7 +813,8 @@ export default function JarvisCommandCenterPage() {
               KILL SWITCH
             </Button>
             <p className="mt-3 font-display text-xs text-destructive/80">
-              No hay ejecución real que detener desde esta shell.
+              No hay ejecución real que detener desde este panel. No hay ejecución real que detener desde esta shell.
+              Cuando se conecte a ejecución real, deberá cortar o pausar flujos gobernados.
             </p>
           </aside>
         </div>
@@ -807,31 +976,104 @@ export default function JarvisCommandCenterPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <TerminalSquare className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Hermes Execution / Ejecución Hermes</CardTitle>
+              <CardTitle>Ejecución Hermes</CardTitle>
             </div>
-            <CardDescription>Visibilidad del ejecutor interno; sin ejecución desde frontend.</CardDescription>
+            <CardDescription>Hermes Execution visibility: read-only, gated y sin ejecución activa.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">read-only</Badge>
+                <Badge variant="warning">gated</Badge>
+                <Badge variant={hermesRuntime.active_execution === false ? "success" : "outline"}>no active execution</Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">JARVIS gobierna. Hermes ejecuta.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">
+                El frontend no puede ejecutar Hermes directamente.
+              </p>
+              <p className="mt-3 font-mono-ui text-xs text-foreground">
+                Sin ejecución activa. No hay ejecución real que detener desde este panel.
+              </p>
+            </article>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS</p>
-                <p className="mt-1 font-mono-ui text-sm">{valueText(contract.jarvis_role)}</p>
+                <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.jarvis_role)}</p>
               </div>
               <div className="border border-border/70 bg-background/40 p-3">
                 <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Hermes</p>
-                <p className="mt-1 font-mono-ui text-sm">{valueText(contract.hermes_role, "execution_engine")}</p>
+                <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.hermes_role, "execution_engine")}</p>
               </div>
             </div>
+
             <StatusList
-              items={[
-                ["disponible", yesNo(hermes.available)],
-                ["ejecución activa", valueText(hermes.active_execution)],
-                ["última ejecución", valueText(hermes.last_execution)],
-                ["frontend directo", yesNo(hermes.frontend_direct_execution_allowed, "allowed", "forbidden")],
-                ["sesiones", valueText(hermes.running_sessions)],
-              ]}
+              items={hermesCurrentRows}
             />
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Badge variant={hermesContract.no_duplicate_hermes_runtime ? "success" : "destructive"}>
+                no duplicate runtime: {yesNo(hermesContract.no_duplicate_hermes_runtime)}
+              </Badge>
+              <Badge variant={hermes.frontend_can_execute ? "destructive" : "success"}>
+                frontend ejecuta: {yesNo(hermes.frontend_can_execute, "sí", "no")}
+              </Badge>
+              <Badge variant={hermes.frontend_can_call_hermes_execute ? "destructive" : "success"}>
+                Hermes directo: {yesNo(hermes.frontend_can_call_hermes_execute, "sí", "no")}
+              </Badge>
+            </div>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Capacidades gobernadas</h3>
+              <div className="mt-3 grid gap-3">
+                {hermesCapabilities.map((capability) => (
+                  <div key={capability.name} className="border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-display text-sm">{capability.name}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant={statusVariant(valueText(capability.status))}>{valueText(capability.status)}</Badge>
+                        <Badge variant={capability.approval_required ? "warning" : "outline"}>
+                          approval: {valueText(capability.approval_level)}
+                        </Badge>
+                        <Badge variant={capability.can_execute_from_frontend ? "destructive" : "success"}>
+                          frontend: {yesNo(capability.can_execute_from_frontend, "ejecuta", "no ejecuta")}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(capability.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-destructive/40 bg-destructive/10 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Rutas bloqueadas</h3>
+              <div className="mt-3 grid gap-2">
+                {hermesBlockedRoutes.map((blocked) => (
+                  <div key={`${blocked.route_or_action}-${blocked.action}`} className="border border-destructive/30 bg-background/35 px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-mono-ui text-xs text-foreground">{valueText(blocked.route_or_action)}</span>
+                      <Badge variant="destructive">blocked</Badge>
+                    </div>
+                    <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{valueText(blocked.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Requisitos antes de ejecución futura</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {futureExecutionRequirements.map((requirement) => (
+                  <Badge key={requirement} variant="warning">
+                    {requirement}
+                  </Badge>
+                ))}
+              </div>
+            </article>
+
             <SafetyLine>Hermes ejecuta solo bajo gates válidos.</SafetyLine>
+            <SafetyLine>El Kill Switch permanece visible; en esta fase no hay ejecución Hermes activa que parar.</SafetyLine>
           </CardContent>
         </Card>
       </div>

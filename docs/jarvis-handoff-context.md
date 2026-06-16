@@ -580,6 +580,25 @@ approve/reject/execute, no aprueba nada real, no llama a Hermes, no activa voz,
 micrófono, cámara, sensores, dinero, deploy, email ni credenciales. Mantiene:
 `JARVIS gobierna. Hermes ejecuta.`
 
+PR #148 es **Hermes Execution Visibility Panel**. Enriquece
+`GET /mark-3/dashboard/status` dentro de `hermes_execution` con contrato
+JARVIS/Hermes, runtime status, capabilities gobernadas, rutas bloqueadas,
+safety flags y timeline read-only. La UI `/jarvis` convierte el panel
+`Hermes Execution` en `Ejecución Hermes` y muestra claramente:
+`JARVIS gobierna. Hermes ejecuta.`, `El frontend no puede ejecutar Hermes
+directamente.`, estado read-only/gated/no active execution, disponibilidad,
+conexión, ejecución activa, últimos resultado/error/coste/duración como
+`unknown` si no hay evidencia real, capacidades gobernadas, rutas bloqueadas y
+requisitos antes de una ejecución futura: approval válido, scope exacto, risk
+level, rollback/stop plan, auditoría, coste/impacto y operador humano. Kill
+Switch sigue visible, pero aclara que en esta fase no hay ejecución Hermes
+activa que parar. No añade endpoint execute, no añade POST/PUT/DELETE desde
+`/jarvis`, no aprueba/rechaza, no ejecuta, no llama Hermes execute, no activa
+tools reales, no crea tool runner frontend, no activa sensores, micrófono,
+cámara o `getUserMedia`, no toca deploy/dinero/email/credenciales, no duplica
+Hermes y no inventa métricas ni ejecuciones. Prepara el dashboard para Mission
+Control posterior sin romper la regla: JARVIS gobierna; Hermes ejecuta.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:
