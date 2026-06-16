@@ -20,10 +20,14 @@ import {
 import {
   api,
   type JarvisApprovalCard,
+  type JarvisCameraVision,
+  type JarvisCameraVisionVisualState,
   type JarvisDashboardModule,
   type JarvisDashboardStatus,
   type JarvisHermesBlockedRoute,
   type JarvisHermesGovernedCapability,
+  type JarvisMobileCompanion,
+  type JarvisMobileCompanionView,
   type JarvisVoiceCore,
   type JarvisVoiceCoreVisualState,
   type JarvisWakeWordFlow,
@@ -315,6 +319,241 @@ const fallbackWakeWordFlow: JarvisWakeWordFlow = {
     no_auto_execute: true,
   },
   source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
+const fallbackCameraVisionStates: JarvisCameraVisionVisualState[] = [
+  {
+    state: "camera_off",
+    label: "cámara apagada",
+    description: "Estado actual seguro: no hay cámara activa ni sesión de cámara.",
+    enabled: "preview",
+    risk: "none",
+    can_execute: false,
+  },
+  {
+    state: "camera_available_future",
+    label: "preview futuro",
+    description: "Disponibilidad futura solo bajo permiso explícito, indicador visual y auditoría.",
+    enabled: "future_gated",
+    risk: "sensor_privacy",
+    can_execute: false,
+  },
+  {
+    state: "preview_disabled",
+    label: "preview deshabilitado",
+    description: "La previsualización real de cámara no existe en esta PR.",
+    enabled: false,
+    risk: "sensor_privacy",
+    can_execute: false,
+  },
+  {
+    state: "permission_required",
+    label: "permiso requerido",
+    description: "Cualquier visión futura debe pedir permiso explícito al operador.",
+    enabled: "future_gated",
+    risk: "approval_gate",
+    can_execute: false,
+  },
+  {
+    state: "analyzing_future",
+    label: "análisis futuro",
+    description: "El análisis futuro deberá declarar qué puede ver y no inferir identidad sensible.",
+    enabled: "future_gated",
+    risk: "vision_privacy",
+    can_execute: false,
+  },
+  {
+    state: "recording_disabled",
+    label: "grabación desactivada",
+    description: "No se graba vídeo.",
+    enabled: false,
+    risk: "storage_privacy",
+    can_execute: false,
+  },
+  {
+    state: "storage_disabled",
+    label: "almacenamiento desactivado",
+    description: "No se guarda imagen ni vídeo.",
+    enabled: false,
+    risk: "storage_privacy",
+    can_execute: false,
+  },
+  {
+    state: "blocked",
+    label: "bloqueado",
+    description: "Activación, captura, streaming y provider externo quedan bloqueados.",
+    enabled: "preview",
+    risk: "blocked",
+    can_execute: false,
+  },
+  {
+    state: "kill_switch",
+    label: "kill switch",
+    description: "Parada visible futura si cámara/visión se habilita bajo gates.",
+    enabled: "preview",
+    risk: "stop_control",
+    can_execute: false,
+  },
+];
+
+const fallbackCameraVision: JarvisCameraVision = {
+  state: {
+    mode: "preview",
+    camera_enabled: false,
+    camera_permission_requested: false,
+    preview_enabled: false,
+    recording: false,
+    streaming: false,
+    snapshot_capture_enabled: false,
+    vision_analysis_enabled: false,
+    image_storage_enabled: false,
+    video_storage_enabled: false,
+    external_vision_provider_called: false,
+    local_vision_model_connected: UNKNOWN,
+    background_camera_access: false,
+  },
+  privacy: {
+    no_camera_activation: true,
+    no_get_user_media: true,
+    no_media_stream: true,
+    no_recording: true,
+    no_snapshot_capture: true,
+    no_image_storage: true,
+    no_video_storage: true,
+    no_external_provider: true,
+    explicit_operator_permission_required: true,
+    visual_indicator_required_when_camera_active: true,
+    audit_required_for_future_vision: true,
+  },
+  states: fallbackCameraVisionStates,
+  scope_policy: {
+    allowed_scope: "none/unknown",
+    future_scope_requires_explicit_operator_permission: true,
+    future_analysis_must_state_what_it_can_see: true,
+    future_analysis_must_not_infer_sensitive_identity: true,
+    future_analysis_must_not_store_without_permission: true,
+  },
+  camera_state: "disabled",
+  preview_state: "disabled",
+  recording: false,
+  streaming: false,
+  snapshot: "disabled",
+  vision_analysis: "disabled",
+  storage: false,
+  provider: "none/not_connected",
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  preview_only: true,
+  read_only: true,
+};
+
+const fallbackMobileViews: JarvisMobileCompanionView[] = [
+  {
+    id: "status",
+    name: "Estado",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Solo lectura del estado agregado de JARVIS.",
+  },
+  {
+    id: "approvals_preview",
+    name: "Approvals preview",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Vista futura de approvals; no aprueba ni rechaza acciones reales.",
+  },
+  {
+    id: "mission_preview",
+    name: "Mission preview",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Vista futura de misiones sin crear ejecución.",
+  },
+  {
+    id: "hermes_visibility",
+    name: "Hermes visibility",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Visibilidad read-only de Hermes detrás de gates JARVIS.",
+  },
+  {
+    id: "voice_status",
+    name: "Voice status",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Estado de voz sin activar micrófono ni runtime móvil.",
+  },
+  {
+    id: "camera_status",
+    name: "Camera status",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Estado de cámara sin activar cámara móvil.",
+  },
+  {
+    id: "finance_summary",
+    name: "Finance summary",
+    status: "preview",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Resumen financiero sin inventar métricas.",
+  },
+  {
+    id: "kill_switch_preview",
+    name: "Kill switch preview",
+    status: "future_gated",
+    can_execute: false,
+    can_call_hermes: false,
+    notes: "Control remoto futuro; no está activo en esta PR.",
+  },
+];
+
+const fallbackMobileCompanion: JarvisMobileCompanion = {
+  state: {
+    mode: "preview",
+    pwa_baseline: "preview",
+    mobile_runtime_enabled: false,
+    mobile_can_execute: false,
+    mobile_can_call_hermes_directly: false,
+    mobile_can_approve_real_actions: false,
+    mobile_can_reject_real_actions: false,
+    mobile_can_modify_scope_real: false,
+    mobile_notifications_enabled: false,
+    remote_kill_switch_enabled: false,
+    remote_camera_enabled: false,
+    remote_microphone_enabled: false,
+    external_network_required: false,
+  },
+  mobile_views: fallbackMobileViews,
+  safety: {
+    mobile_is_interface_not_runtime: true,
+    no_direct_hermes_call: true,
+    no_mobile_execute: true,
+    no_mobile_sensor_activation: true,
+    no_mobile_camera_activation: true,
+    no_mobile_microphone_activation: true,
+    no_real_mobile_approval_in_this_pr: true,
+    approval_requires_backend_gate: true,
+    critical_approval_requires_strong_confirmation: true,
+    remote_kill_switch_future_gated: true,
+  },
+  pwa_policy: {
+    installable_pwa: "preview",
+    offline_cache_enabled: false,
+    push_notifications_enabled: false,
+    service_worker_enabled: false,
+    no_background_sync: true,
+    no_credentials_storage: true,
+    no_token_storage: true,
+  },
+  source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
   preview_only: true,
   read_only: true,
 };
@@ -868,18 +1107,14 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       raw_audio_stored: false,
       external_provider_called: false,
     },
-    camera_vision: {
-      camera_state: "disabled",
-      preview_state: "disabled",
-      recording: false,
-      vision_analysis: "disabled",
-      storage: false,
-    },
+    camera_vision: fallbackCameraVision,
+    mobile_companion: fallbackMobileCompanion,
     mobile: {
-      companion_state: "not_connected",
+      companion_state: "preview",
       direct_hermes_call_allowed: false,
       remote_kill_switch_state: "future_gated",
       approval_actions_enabled: false,
+      source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
     },
     finance: {
       actual_cost: UNKNOWN,
@@ -1162,8 +1397,18 @@ export default function JarvisCommandCenterPage() {
   const wakeStopPhrases = wakeWordFlow.stop_phrases?.length
     ? wakeWordFlow.stop_phrases
     : fallbackWakeWordFlow.stop_phrases ?? [];
-  const cameraVision = dashboard.camera_vision ?? {};
-  const mobile = dashboard.mobile ?? {};
+  const cameraVision = dashboard.camera_vision ?? fallbackCameraVision;
+  const cameraVisionState = cameraVision.state ?? fallbackCameraVision.state ?? {};
+  const cameraVisionPrivacy = cameraVision.privacy ?? fallbackCameraVision.privacy ?? {};
+  const cameraVisionStates = cameraVision.states?.length ? cameraVision.states : fallbackCameraVisionStates;
+  const cameraVisionScope = cameraVision.scope_policy ?? fallbackCameraVision.scope_policy ?? {};
+  const mobileCompanion = dashboard.mobile_companion ?? fallbackMobileCompanion;
+  const mobileCompanionState = mobileCompanion.state ?? fallbackMobileCompanion.state ?? {};
+  const mobileCompanionViews = mobileCompanion.mobile_views?.length
+    ? mobileCompanion.mobile_views
+    : fallbackMobileViews;
+  const mobileSafety = mobileCompanion.safety ?? fallbackMobileCompanion.safety ?? {};
+  const pwaPolicy = mobileCompanion.pwa_policy ?? fallbackMobileCompanion.pwa_policy ?? {};
   const finance = dashboard.finance ?? {};
   const productBuilder = dashboard.product_builder ?? {};
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
@@ -1230,21 +1475,89 @@ export default function JarvisCommandCenterPage() {
     ["external provider called", yesNo(missionConversation.external_provider_called, "true", "false")],
   ] as const;
 
-  const privacyRows = [
-    ["cámara", valueText(cameraVision.camera_state)],
-    ["preview", valueText(cameraVision.preview_state)],
-    ["recording", yesNo(cameraVision.recording, "on", "off")],
-    ["vision analysis", valueText(cameraVision.vision_analysis)],
-    ["storage", yesNo(cameraVision.storage, "on", "off")],
-    ["scope", "none"],
+  const cameraCurrentRows = [
+    ["cámara", cameraVisionState.camera_enabled ? "enabled" : "off/disabled"],
+    ["permiso solicitado", yesNo(cameraVisionState.camera_permission_requested, "true", "false")],
+    ["preview", cameraVisionState.preview_enabled ? "enabled" : "disabled"],
+    ["recording", yesNo(cameraVisionState.recording ?? cameraVision.recording, "true", "false")],
+    ["streaming", yesNo(cameraVisionState.streaming ?? cameraVision.streaming, "true", "false")],
+    ["snapshot", cameraVisionState.snapshot_capture_enabled ? "enabled" : valueText(cameraVision.snapshot, "disabled")],
+    ["vision analysis", cameraVisionState.vision_analysis_enabled ? "enabled" : valueText(cameraVision.vision_analysis, "disabled")],
+    ["storage", cameraVisionState.image_storage_enabled || cameraVisionState.video_storage_enabled ? "on" : "off"],
+    [
+      "provider externo",
+      cameraVisionState.external_vision_provider_called ? "called" : valueText(cameraVision.provider, "none/not_connected"),
+    ],
+    ["modelo local", valueText(cameraVisionState.local_vision_model_connected)],
+    ["background camera access", yesNo(cameraVisionState.background_camera_access, "true", "false")],
+  ] as const;
+
+  const cameraPrivacyRows = [
+    ["no camera activation", yesNo(cameraVisionPrivacy.no_camera_activation, "true", "false")],
+    ["no getUserMedia", yesNo(cameraVisionPrivacy.no_get_user_media, "true", "false")],
+    ["no recording", yesNo(cameraVisionPrivacy.no_recording, "true", "false")],
+    ["no snapshot", yesNo(cameraVisionPrivacy.no_snapshot_capture, "true", "false")],
+    ["no image/video storage", cameraVisionPrivacy.no_image_storage && cameraVisionPrivacy.no_video_storage ? "true" : "false"],
+    [
+      "explicit operator permission required",
+      yesNo(cameraVisionPrivacy.explicit_operator_permission_required, "true", "false"),
+    ],
+    ["visual indicator required", yesNo(cameraVisionPrivacy.visual_indicator_required_when_camera_active, "true", "false")],
+    ["audit required", yesNo(cameraVisionPrivacy.audit_required_for_future_vision, "true", "false")],
+  ] as const;
+
+  const cameraScopeRows = [
+    ["allowed scope", valueText(cameraVisionScope.allowed_scope, "none/unknown")],
+    [
+      "future operator permission",
+      yesNo(cameraVisionScope.future_scope_requires_explicit_operator_permission, "required", "false"),
+    ],
+    ["future states what it can see", yesNo(cameraVisionScope.future_analysis_must_state_what_it_can_see, "true", "false")],
+    [
+      "no sensitive identity inference",
+      yesNo(cameraVisionScope.future_analysis_must_not_infer_sensitive_identity, "true", "false"),
+    ],
+    [
+      "no storage without permission",
+      yesNo(cameraVisionScope.future_analysis_must_not_store_without_permission, "true", "false"),
+    ],
   ] as const;
 
   const mobileRows = [
-    ["mobile companion", valueText(mobile.companion_state)],
-    ["approvals desde móvil", yesNo(mobile.approval_actions_enabled, "enabled", "future gated")],
-    ["estado remoto", UNKNOWN],
-    ["kill switch remoto", valueText(mobile.remote_kill_switch_state)],
-    ["Hermes directo desde móvil", yesNo(mobile.direct_hermes_call_allowed, "allowed", "forbidden")],
+    ["PWA baseline", valueText(mobileCompanionState.pwa_baseline, "preview")],
+    ["mobile runtime", yesNo(mobileCompanionState.mobile_runtime_enabled, "enabled", "disabled")],
+    ["approvals reales desde móvil", yesNo(mobileCompanionState.mobile_can_approve_real_actions, "enabled", "disabled")],
+    ["remote kill switch", yesNo(mobileCompanionState.remote_kill_switch_enabled, "enabled", "future gated")],
+    ["mobile camera", yesNo(mobileCompanionState.remote_camera_enabled, "enabled", "disabled")],
+    ["mobile microphone", yesNo(mobileCompanionState.remote_microphone_enabled, "enabled", "disabled")],
+    ["notifications", yesNo(mobileCompanionState.mobile_notifications_enabled, "enabled", "disabled")],
+    ["Hermes directo desde móvil", yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")],
+    ["mobile ejecuta", yesNo(mobileCompanionState.mobile_can_execute, "true", "false")],
+    ["red externa requerida", yesNo(mobileCompanionState.external_network_required, "true", "false")],
+  ] as const;
+
+  const pwaRows = [
+    ["installable PWA", valueText(pwaPolicy.installable_pwa, "preview")],
+    ["offline cache", yesNo(pwaPolicy.offline_cache_enabled, "enabled", "disabled")],
+    ["service worker", yesNo(pwaPolicy.service_worker_enabled, "enabled", "disabled")],
+    ["push", yesNo(pwaPolicy.push_notifications_enabled, "enabled", "disabled")],
+    ["background sync", pwaPolicy.no_background_sync ? "disabled" : UNKNOWN],
+    ["credentials storage", pwaPolicy.no_credentials_storage ? "disabled" : UNKNOWN],
+    ["token storage", pwaPolicy.no_token_storage ? "disabled" : UNKNOWN],
+  ] as const;
+
+  const mobileSafetyRows = [
+    ["mobile es interfaz", yesNo(mobileSafety.mobile_is_interface_not_runtime, "true", "false")],
+    ["no direct Hermes call", yesNo(mobileSafety.no_direct_hermes_call, "true", "false")],
+    ["no mobile execute", yesNo(mobileSafety.no_mobile_execute, "true", "false")],
+    ["no mobile sensor activation", yesNo(mobileSafety.no_mobile_sensor_activation, "true", "false")],
+    ["no real mobile approvals in this PR", yesNo(mobileSafety.no_real_mobile_approval_in_this_pr, "true", "false")],
+    ["approval requires backend gate", yesNo(mobileSafety.approval_requires_backend_gate, "true", "false")],
+    [
+      "critical approval requires strong confirmation",
+      yesNo(mobileSafety.critical_approval_requires_strong_confirmation, "true", "false"),
+    ],
+    ["remote kill switch future gated", yesNo(mobileSafety.remote_kill_switch_future_gated, "true", "false")],
   ] as const;
 
   const financeRows = [
@@ -2016,19 +2329,89 @@ export default function JarvisCommandCenterPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr_0.85fr]">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Camera / Vision Privacy</CardTitle>
+              <CardTitle>Cámara / Visión</CardTitle>
             </div>
-            <CardDescription>Cámara real apagada; sin permisos del navegador.</CardDescription>
+            <CardDescription>
+              <span className="font-display text-warning">preview-only</span> · La cámara no graba por defecto. La visión solo se activa con permiso explícito.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <StatusList items={privacyRows} />
-            <SafetyLine>La cámara no graba por defecto.</SafetyLine>
-            <SafetyLine>La visión solo se activa con permiso explícito.</SafetyLine>
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">preview-only</Badge>
+                <Badge variant={cameraVisionState.camera_enabled ? "destructive" : "success"}>
+                  cámara: {cameraVisionState.camera_enabled ? "enabled" : "off/disabled"}
+                </Badge>
+                <Badge variant={cameraVisionState.external_vision_provider_called ? "destructive" : "success"}>
+                  provider externo: {cameraVisionState.external_vision_provider_called ? "called" : "none/not_connected"}
+                </Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">La cámara no graba por defecto.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">La visión solo se activa con permiso explícito.</p>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
+              <div className="mt-3">
+                <StatusList items={cameraCurrentRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad</h3>
+              <div className="mt-3">
+                <StatusList items={cameraPrivacyRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
+                <Badge variant="warning">preview / disabled / future gated</Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {cameraVisionStates.map((item) => (
+                  <div key={item.state} className="min-h-32 border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
+                        <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
+                      </div>
+                      <Badge variant={item.enabled === "future_gated" ? "warning" : item.enabled === "preview" ? "outline" : "success"}>
+                        {valueText(item.enabled)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant="outline">risk: {valueText(item.risk)}</Badge>
+                      <Badge variant={item.can_execute ? "destructive" : "success"}>
+                        execute: {yesNo(item.can_execute, "true", "false")}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Scope policy</h3>
+              <div className="mt-3">
+                <StatusList items={cameraScopeRows} />
+              </div>
+            </article>
+
+            <div className="grid gap-2">
+              <SafetyLine>La cámara no graba por defecto.</SafetyLine>
+              <SafetyLine>No se captura imagen ni vídeo en esta PR.</SafetyLine>
+              <SafetyLine>No se usa getUserMedia.</SafetyLine>
+              <SafetyLine>No hay proveedor externo de visión.</SafetyLine>
+              <SafetyLine>La visión futura requerirá permiso explícito y auditoría.</SafetyLine>
+            </div>
           </CardContent>
         </Card>
 
@@ -2038,12 +2421,79 @@ export default function JarvisCommandCenterPage() {
               <Smartphone className="h-5 w-5 text-success" />
               <CardTitle>Mobile Companion</CardTitle>
             </div>
-            <CardDescription>Superficie futura, no runtime remoto.</CardDescription>
+            <CardDescription>
+              <span className="font-display text-warning">preview-only</span> · Mobile es una interfaz, no un runtime. Mobile no llama a Hermes directamente.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <StatusList items={mobileRows} />
-            <SafetyLine>Mobile es una interfaz, no un runtime.</SafetyLine>
-            <SafetyLine>Mobile no llama a Hermes directamente.</SafetyLine>
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">preview-only</Badge>
+                <Badge variant={mobileCompanionState.mobile_runtime_enabled ? "destructive" : "success"}>
+                  runtime: {yesNo(mobileCompanionState.mobile_runtime_enabled, "enabled", "disabled")}
+                </Badge>
+                <Badge variant={mobileCompanionState.mobile_can_call_hermes_directly ? "destructive" : "success"}>
+                  Hermes directo: {yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")}
+                </Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">Mobile es una interfaz, no un runtime.</p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">Mobile no llama a Hermes directamente.</p>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
+              <div className="mt-3">
+                <StatusList items={mobileRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">PWA policy</h3>
+              <div className="mt-3">
+                <StatusList items={pwaRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Vistas futuras</h3>
+                <Badge variant="warning">no execute / no Hermes direct</Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {mobileCompanionViews.map((view) => (
+                  <div key={view.id ?? view.name} className="min-h-32 border border-border/70 bg-background/40 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-display text-sm">{valueText(view.name)}</p>
+                      <Badge variant={statusVariant(valueText(view.status))}>{valueText(view.status)}</Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(view.notes)}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={view.can_execute ? "destructive" : "success"}>
+                        no execute: {yesNo(!view.can_execute, "true", "false")}
+                      </Badge>
+                      <Badge variant={view.can_call_hermes ? "destructive" : "success"}>
+                        no Hermes direct: {yesNo(!view.can_call_hermes, "true", "false")}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+              <div className="mt-3">
+                <StatusList items={mobileSafetyRows} />
+              </div>
+            </article>
+
+            <div className="grid gap-2">
+              <SafetyLine>Mobile es una interfaz, no un runtime.</SafetyLine>
+              <SafetyLine>Mobile no llama a Hermes directamente.</SafetyLine>
+              <SafetyLine>Mobile no ejecuta acciones.</SafetyLine>
+              <SafetyLine>Approvals reales desde móvil quedan future-gated.</SafetyLine>
+              <SafetyLine>No se guardan credenciales ni tokens.</SafetyLine>
+            </div>
           </CardContent>
         </Card>
 

@@ -161,6 +161,13 @@ def build_mark_3_dashboard_status(
     voice_core_timeline = _voice_core_timeline_events()
     wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
     wake_word_flow_timeline = _wake_word_flow_timeline_events()
+    camera_vision = _camera_vision_projection(camera_control=camera_control)
+    camera_vision_timeline = _camera_vision_timeline_events()
+    mobile_companion = _mobile_companion_projection(
+        mobile_status=mobile_status,
+        mobile_permissions=mobile_permissions,
+    )
+    mobile_companion_timeline = _mobile_companion_timeline_events()
 
     payload = {
         "system": {
@@ -317,20 +324,14 @@ def build_mark_3_dashboard_status(
             "external_provider_called": False,
             "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
         },
-        "camera_vision": {
-            "camera_state": "disabled" if camera_control.get("camera_session_active") is False else UNKNOWN,
-            "preview_state": "disabled",
-            "recording": False,
-            "vision_analysis": "disabled",
-            "storage": False,
-            "source_endpoint": "/camera-control/status",
-        },
+        "camera_vision": camera_vision,
+        "mobile_companion": mobile_companion,
         "mobile": {
-            "companion_state": "not_connected" if mobile_status.get("native_app_connected") is False else UNKNOWN,
+            "companion_state": mobile_companion["state"]["pwa_baseline"],
             "direct_hermes_call_allowed": False,
             "remote_kill_switch_state": "future_gated",
             "approval_actions_enabled": False,
-            "source_endpoints": ["/mobile/companion/status", "/mobile/companion/permissions"],
+            "source_endpoints": mobile_companion["source_endpoints"],
             "permissions": {
                 "can_read_command_center": bool(mobile_permissions.get("can_read_command_center", False)),
                 "can_execute": False,
@@ -395,6 +396,8 @@ def build_mark_3_dashboard_status(
         + mission_control_timeline
         + voice_core_timeline
         + wake_word_flow_timeline
+        + camera_vision_timeline
+        + mobile_companion_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -437,6 +440,339 @@ def build_mark_3_dashboard_status(
         },
     }
     return payload
+
+
+def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, Any]:
+    camera_disabled = camera_control.get("camera_session_active") is False
+    local_vision_model_connected: bool | str = UNKNOWN
+    return {
+        "state": {
+            "mode": "preview",
+            "camera_enabled": False,
+            "camera_permission_requested": False,
+            "preview_enabled": False,
+            "recording": False,
+            "streaming": False,
+            "snapshot_capture_enabled": False,
+            "vision_analysis_enabled": False,
+            "image_storage_enabled": False,
+            "video_storage_enabled": False,
+            "external_vision_provider_called": False,
+            "local_vision_model_connected": local_vision_model_connected,
+            "background_camera_access": False,
+        },
+        "privacy": {
+            "no_camera_activation": True,
+            "no_get_user_media": True,
+            "no_media_stream": True,
+            "no_recording": True,
+            "no_snapshot_capture": True,
+            "no_image_storage": True,
+            "no_video_storage": True,
+            "no_external_provider": True,
+            "explicit_operator_permission_required": True,
+            "visual_indicator_required_when_camera_active": True,
+            "audit_required_for_future_vision": True,
+        },
+        "states": [
+            _camera_vision_state(
+                "camera_off",
+                "Cámara apagada",
+                "Estado actual seguro: no hay cámara activa ni sesión de cámara.",
+                "preview",
+                "none",
+            ),
+            _camera_vision_state(
+                "camera_available_future",
+                "Cámara disponible futura",
+                "Capacidad futura solo tras permiso explícito, indicador visual y auditoría.",
+                "future_gated",
+                "sensor_privacy",
+            ),
+            _camera_vision_state(
+                "preview_disabled",
+                "Preview deshabilitado",
+                "No hay previsualización real de cámara en esta PR.",
+                False,
+                "sensor_privacy",
+            ),
+            _camera_vision_state(
+                "permission_required",
+                "Permiso requerido",
+                "Cualquier visión futura debe pedir permiso explícito al operador.",
+                "future_gated",
+                "approval_gate",
+            ),
+            _camera_vision_state(
+                "analyzing_future",
+                "Análisis futuro",
+                "El análisis visual futuro deberá declarar qué puede ver y no inferir identidad sensible.",
+                "future_gated",
+                "vision_privacy",
+            ),
+            _camera_vision_state(
+                "recording_disabled",
+                "Grabación desactivada",
+                "No se graba vídeo ni audio desde cámara.",
+                False,
+                "storage_privacy",
+            ),
+            _camera_vision_state(
+                "storage_disabled",
+                "Almacenamiento desactivado",
+                "No se guarda imagen ni vídeo.",
+                False,
+                "storage_privacy",
+            ),
+            _camera_vision_state(
+                "blocked",
+                "Bloqueado",
+                "Cualquier intento de activar cámara, captura, streaming o provider queda bloqueado.",
+                "preview",
+                "blocked",
+            ),
+            _camera_vision_state(
+                "kill_switch",
+                "Kill switch",
+                "Parada visible futura para cortar cámara/visión si alguna vez se habilita bajo gates.",
+                "preview",
+                "stop_control",
+            ),
+        ],
+        "scope_policy": {
+            "allowed_scope": "none/unknown",
+            "future_scope_requires_explicit_operator_permission": True,
+            "future_analysis_must_state_what_it_can_see": True,
+            "future_analysis_must_not_infer_sensitive_identity": True,
+            "future_analysis_must_not_store_without_permission": True,
+        },
+        "timeline": _camera_vision_timeline_events(),
+        "camera_state": "disabled" if camera_disabled else UNKNOWN,
+        "preview_state": "disabled",
+        "recording": False,
+        "streaming": False,
+        "snapshot": "disabled",
+        "vision_analysis": "disabled",
+        "storage": False,
+        "provider": "none/not_connected",
+        "source_endpoint": "/camera-control/status",
+        "source_endpoints": ["/camera-control/status"],
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _camera_vision_state(
+    state: str,
+    label: str,
+    description: str,
+    enabled: bool | str,
+    risk: str,
+) -> Dict[str, Any]:
+    return {
+        "state": state,
+        "label": label,
+        "description": description,
+        "enabled": enabled,
+        "risk": risk,
+        "can_execute": False,
+    }
+
+
+def _camera_vision_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Camera/Vision privacy status read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Camera disabled",
+            "source": "/camera-control/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Recording disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Vision analysis disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "No image or video captured",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+        {
+            "event": "No external vision provider called",
+            "source": "/mark-3/dashboard/status",
+            "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _mobile_companion_projection(
+    *,
+    mobile_status: Dict[str, Any],
+    mobile_permissions: Dict[str, Any],
+) -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "preview",
+            "pwa_baseline": "preview",
+            "mobile_runtime_enabled": False,
+            "mobile_can_execute": False,
+            "mobile_can_call_hermes_directly": False,
+            "mobile_can_approve_real_actions": False,
+            "mobile_can_reject_real_actions": False,
+            "mobile_can_modify_scope_real": False,
+            "mobile_notifications_enabled": False,
+            "remote_kill_switch_enabled": False,
+            "remote_camera_enabled": False,
+            "remote_microphone_enabled": False,
+            "external_network_required": False,
+        },
+        "mobile_views": [
+            _mobile_view(
+                "status",
+                "Estado",
+                "preview",
+                "Solo lectura del estado agregado de JARVIS.",
+            ),
+            _mobile_view(
+                "approvals_preview",
+                "Approvals preview",
+                "preview",
+                "Muestra approvals futuros como preview; no aprueba ni rechaza.",
+            ),
+            _mobile_view(
+                "mission_preview",
+                "Mission preview",
+                "preview",
+                "Vista futura de misión en modo preview sin crear ejecución.",
+            ),
+            _mobile_view(
+                "hermes_visibility",
+                "Hermes visibility",
+                "preview",
+                "Visibilidad read-only de Hermes detrás de gates JARVIS.",
+            ),
+            _mobile_view(
+                "voice_status",
+                "Voice status",
+                "preview",
+                "Estado de voz sin activar micrófono ni runtime móvil.",
+            ),
+            _mobile_view(
+                "camera_status",
+                "Camera status",
+                "preview",
+                "Estado de cámara/visión sin activar cámara móvil.",
+            ),
+            _mobile_view(
+                "finance_summary",
+                "Finance summary",
+                "preview",
+                "Resumen financiero solo con datos unknown o evidencia futura.",
+            ),
+            _mobile_view(
+                "kill_switch_preview",
+                "Kill switch preview",
+                "future_gated",
+                "Control remoto futuro; no hay kill switch remoto real en esta PR.",
+            ),
+        ],
+        "safety": {
+            "mobile_is_interface_not_runtime": True,
+            "no_direct_hermes_call": True,
+            "no_mobile_execute": True,
+            "no_mobile_sensor_activation": True,
+            "no_mobile_camera_activation": True,
+            "no_mobile_microphone_activation": True,
+            "no_real_mobile_approval_in_this_pr": True,
+            "approval_requires_backend_gate": True,
+            "critical_approval_requires_strong_confirmation": True,
+            "remote_kill_switch_future_gated": True,
+        },
+        "pwa_policy": {
+            "installable_pwa": "preview",
+            "offline_cache_enabled": False,
+            "push_notifications_enabled": False,
+            "service_worker_enabled": False,
+            "no_background_sync": True,
+            "no_credentials_storage": True,
+            "no_token_storage": True,
+        },
+        "timeline": _mobile_companion_timeline_events(),
+        "source_endpoints": ["/mobile/companion/status", "/mobile/companion/permissions"],
+        "source_status": {
+            "native_app_connected": bool(mobile_status.get("native_app_connected", False)),
+            "can_read_command_center": bool(mobile_permissions.get("can_read_command_center", False)),
+            "prepare_only": bool(mobile_status.get("prepare_only", True)),
+        },
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _mobile_view(
+    view_id: str,
+    name: str,
+    status: str,
+    notes: str,
+) -> Dict[str, Any]:
+    return {
+        "id": view_id,
+        "name": name,
+        "status": status,
+        "can_execute": False,
+        "can_call_hermes": False,
+        "notes": notes,
+    }
+
+
+def _mobile_companion_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Mobile Companion preview read",
+            "source": "/mark-3/dashboard/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Mobile is interface, not runtime",
+            "source": "/mobile/companion/status",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Mobile direct Hermes call disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Real mobile approvals disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Remote kill switch future gated",
+            "source": "/mark-3/dashboard/status",
+            "status": "future_gated",
+            "read_only": True,
+        },
+    ]
 
 
 def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, Any]:

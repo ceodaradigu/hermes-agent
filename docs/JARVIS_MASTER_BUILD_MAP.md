@@ -1056,3 +1056,130 @@ No implementa:
 PR #150 prepara una futura wake word local segura, pero solo como presencia
 visual/read-only y contrato de seguridad. La wake phrase nunca aprueba ni
 ejecuta, y solo podría abrir una ventana de comando futura bajo gates explícitos.
+
+## JARVIS Vision + Mobile Companion Layer
+
+PR #151 mejora `/jarvis` y `GET /mark-3/dashboard/status` con una capa
+read-only de visión y móvil. Agrupa:
+
+- Camera / Vision Privacy Panel;
+- Mobile Companion / PWA baseline preview.
+
+Incluye `camera_vision`:
+
+- `state.mode=preview`;
+- `camera_enabled=false`;
+- `camera_permission_requested=false`;
+- `preview_enabled=false`;
+- `recording=false`;
+- `streaming=false`;
+- `snapshot_capture_enabled=false`;
+- `vision_analysis_enabled=false`;
+- `image_storage_enabled=false`;
+- `video_storage_enabled=false`;
+- `external_vision_provider_called=false`;
+- `local_vision_model_connected=unknown` si no hay evidencia;
+- `background_camera_access=false`.
+
+Incluye privacidad y scope policy para cámara/visión:
+
+- no camera activation;
+- no browser media capture;
+- no media stream;
+- no recording;
+- no snapshot capture;
+- no image/video storage;
+- no external provider;
+- explicit operator permission required;
+- visual indicator required when camera active;
+- audit required for future vision;
+- future analysis must state what it can see;
+- future analysis must not infer sensitive identity;
+- future analysis must not store without permission.
+
+Los estados visuales de cámara son camera off, camera available future, preview
+disabled, permission required, analyzing future, recording disabled, storage
+disabled, blocked y kill switch; todos tienen label, description, risk,
+enabled false/preview/future-gated y `can_execute=false`.
+
+Incluye `mobile_companion`:
+
+- `state.mode=preview`;
+- `pwa_baseline=preview`;
+- `mobile_runtime_enabled=false`;
+- `mobile_can_execute=false`;
+- `mobile_can_call_hermes_directly=false`;
+- `mobile_can_approve_real_actions=false`;
+- `mobile_can_reject_real_actions=false`;
+- `mobile_can_modify_scope_real=false`;
+- `mobile_notifications_enabled=false`;
+- `remote_kill_switch_enabled=false`;
+- `remote_camera_enabled=false`;
+- `remote_microphone_enabled=false`;
+- `external_network_required=false`.
+
+Las vistas móviles futuras son status, approvals preview, mission preview,
+Hermes visibility, voice status, camera status, finance summary y kill switch
+preview; todas son preview/future-gated/disabled/unknown con
+`can_execute=false` y `can_call_hermes=false`.
+
+Incluye `mobile_companion.safety` y `pwa_policy`:
+
+- mobile is interface not runtime;
+- no direct Hermes call;
+- no mobile execute;
+- no mobile sensor/camera/microphone activation;
+- no real mobile approval in this PR;
+- approval requires backend gate;
+- critical approval requires strong confirmation;
+- remote kill switch future gated;
+- installable PWA preview;
+- offline cache disabled;
+- push notifications disabled;
+- service worker disabled;
+- no background sync;
+- no credentials storage;
+- no token storage.
+
+La UI `/jarvis` muestra `Cámara / Visión` y `Mobile Companion` como
+`preview-only`, con estado actual, privacidad/safety, estados o vistas futuras,
+PWA policy y los textos de guardrail obligatorios:
+
+- `La cámara no graba por defecto.`
+- `No se captura imagen ni vídeo en esta PR.`
+- `No se usa getUserMedia.`
+- `No hay proveedor externo de visión.`
+- `La visión futura requerirá permiso explícito y auditoría.`
+- `Mobile es una interfaz, no un runtime.`
+- `Mobile no llama a Hermes directamente.`
+- `Mobile no ejecuta acciones.`
+- `Approvals reales desde móvil quedan future-gated.`
+- `No se guardan credenciales ni tokens.`
+
+No implementa:
+
+- cámara real;
+- browser media capture;
+- snapshot capture;
+- grabación;
+- streaming;
+- image/video storage;
+- visión/análisis visual real;
+- provider externo de visión;
+- mobile runtime;
+- mobile execution;
+- mobile approvals reales;
+- direct mobile/camera/frontend call to Hermes;
+- service worker;
+- push;
+- background sync;
+- offline cache;
+- credential/token storage;
+- sensores, micrófono, dinero, deploy, email, credenciales o red externa.
+
+PR #151 conserva la separación:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```

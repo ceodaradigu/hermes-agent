@@ -513,6 +513,98 @@ export interface JarvisWakeWordFlow {
   read_only?: boolean;
 }
 
+export interface JarvisCameraVisionVisualState {
+  state: string;
+  label: string;
+  description: string;
+  enabled: boolean | "preview" | "future_gated" | string;
+  risk: string;
+  can_execute: boolean;
+}
+
+export interface JarvisCameraVision {
+  state?: {
+    mode?: string;
+    camera_enabled?: boolean;
+    camera_permission_requested?: boolean;
+    preview_enabled?: boolean;
+    recording?: boolean;
+    streaming?: boolean;
+    snapshot_capture_enabled?: boolean;
+    vision_analysis_enabled?: boolean;
+    image_storage_enabled?: boolean;
+    video_storage_enabled?: boolean;
+    external_vision_provider_called?: boolean;
+    local_vision_model_connected?: boolean | string;
+    background_camera_access?: boolean;
+  };
+  privacy?: Record<string, boolean>;
+  states?: JarvisCameraVisionVisualState[];
+  scope_policy?: {
+    allowed_scope?: string;
+    future_scope_requires_explicit_operator_permission?: boolean;
+    future_analysis_must_state_what_it_can_see?: boolean;
+    future_analysis_must_not_infer_sensitive_identity?: boolean;
+    future_analysis_must_not_store_without_permission?: boolean;
+  };
+  timeline?: JarvisDashboardTimelineEvent[];
+  camera_state?: string;
+  preview_state?: string;
+  recording?: boolean;
+  streaming?: boolean;
+  snapshot?: string;
+  vision_analysis?: string;
+  storage?: boolean;
+  provider?: string;
+  source_endpoint?: string;
+  source_endpoints?: string[];
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisMobileCompanionView {
+  id?: string;
+  name: string;
+  status: "preview" | "future_gated" | "disabled" | "unknown" | string;
+  can_execute: boolean;
+  can_call_hermes: boolean;
+  notes: string;
+}
+
+export interface JarvisMobileCompanion {
+  state?: {
+    mode?: string;
+    pwa_baseline?: string;
+    mobile_runtime_enabled?: boolean;
+    mobile_can_execute?: boolean;
+    mobile_can_call_hermes_directly?: boolean;
+    mobile_can_approve_real_actions?: boolean;
+    mobile_can_reject_real_actions?: boolean;
+    mobile_can_modify_scope_real?: boolean;
+    mobile_notifications_enabled?: boolean;
+    remote_kill_switch_enabled?: boolean;
+    remote_camera_enabled?: boolean;
+    remote_microphone_enabled?: boolean;
+    external_network_required?: boolean | string;
+  };
+  mobile_views?: JarvisMobileCompanionView[];
+  safety?: Record<string, boolean>;
+  pwa_policy?: {
+    installable_pwa?: string;
+    offline_cache_enabled?: boolean;
+    push_notifications_enabled?: boolean;
+    service_worker_enabled?: boolean;
+    no_background_sync?: boolean;
+    no_credentials_storage?: boolean;
+    no_token_storage?: boolean;
+  };
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoints?: string[];
+  source_status?: Record<string, boolean | string | number>;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -573,18 +665,14 @@ export interface JarvisDashboardStatus {
     external_provider_called?: boolean;
     source_endpoints?: string[];
   };
-  camera_vision?: {
-    camera_state?: string;
-    preview_state?: string;
-    recording?: boolean;
-    vision_analysis?: string;
-    storage?: boolean;
-  };
+  camera_vision?: JarvisCameraVision;
+  mobile_companion?: JarvisMobileCompanion;
   mobile?: {
     companion_state?: string;
     direct_hermes_call_allowed?: boolean;
     remote_kill_switch_state?: string;
     approval_actions_enabled?: boolean;
+    source_endpoints?: string[];
   };
   finance?: {
     actual_cost?: string;
