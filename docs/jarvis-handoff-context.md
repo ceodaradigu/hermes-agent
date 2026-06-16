@@ -599,6 +599,28 @@ cámara o `getUserMedia`, no toca deploy/dinero/email/credenciales, no duplica
 Hermes y no inventa métricas ni ejecuciones. Prepara el dashboard para Mission
 Control posterior sin romper la regla: JARVIS gobierna; Hermes ejecuta.
 
+PR #149 es **Mission Control Conversation Preview**. Enriquece
+`GET /mark-3/dashboard/status` con `mission_control` para que `/jarvis` muestre
+cómo JARVIS recibiría una orden de David, qué estructura de intención/riesgo/
+approval esperaría y cuál sería el siguiente paso seguro. Incluye estado
+`mode=preview`, input/conversation `preview_only`, ejecución deshabilitada,
+Hermes dispatch deshabilitado, creación de approvals deshabilitada,
+persistencia deshabilitada y red externa deshabilitada. Declara inputs
+soportados como texto preview, voz/móvil/wake word future-gated y file drop/
+camera context no conectados. Añade un `sample_command`, `intent_preview` en
+`unknown`, lifecycle visual, `conversation_preview` con mensajes seguros de
+David/JARVIS, `external_provider_called=false`, `memory_write=false`,
+`raw_audio_stored=false`, `transcript_persistence=false`, `pii_redaction_required=true`
+y safety flags para no auto execute, no Hermes dispatch, no tool call, no file
+write, no network, no money, no deploy, no email, no credentials, no sensor
+activation, no voice recording y no camera capture. La UI `/jarvis` muestra
+`Control de Misión`, input deshabilitado, botones visuales disabled,
+Conversation Preview, Intent/Risk Preview, Mission Lifecycle, Safety Banner y
+la relación con Approval Console y Hermes Panel. No añade endpoints nuevos, no
+llama providers, no guarda memoria, no crea misiones, no crea approvals, no
+despacha a Hermes, no activa micrófono/cámara/sensores y no ejecuta nada.
+Prepara conversación real futura sin convertir todavía una orden en ejecución.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

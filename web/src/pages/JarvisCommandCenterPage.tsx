@@ -320,6 +320,155 @@ const futureExecutionRequirements = [
   "operador humano",
 ] as const;
 
+const sampleMissionCommand = "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro.";
+
+const fallbackMissionControl: NonNullable<JarvisDashboardStatus["mission_control"]> = {
+  state: {
+    mode: "preview",
+    input_enabled: "preview_only",
+    conversation_enabled: "preview_only",
+    execution_enabled: false,
+    hermes_dispatch_enabled: false,
+    approval_creation_enabled: false,
+    persistence_enabled: false,
+    external_network_enabled: false,
+  },
+  supported_inputs: {
+    text_command: "preview",
+    voice_command: "future_gated",
+    mobile_command: "future_gated",
+    wake_word_command: "future_gated",
+    file_drop: "not_connected",
+    camera_context: "not_connected",
+  },
+  sample_command: sampleMissionCommand,
+  intent_preview: {
+    detected_intent: UNKNOWN,
+    confidence: UNKNOWN,
+    mission_type: UNKNOWN,
+    risk_level: UNKNOWN,
+    approval_level: UNKNOWN,
+    blocked_reasons: [],
+    required_permissions: [],
+    next_safe_action: UNKNOWN,
+  },
+  command_lifecycle: [
+    {
+      state: "draft",
+      description: "La orden queda visible como borrador.",
+      preview_only: true,
+    },
+    {
+      state: "submitted_for_preview",
+      description: "JARVIS prepararía una lectura segura de intención.",
+      preview_only: true,
+    },
+    {
+      state: "intent_detected",
+      description: "La intención se mostraría sin llamar providers.",
+      preview_only: true,
+    },
+    {
+      state: "risk_classified",
+      description: "El riesgo se clasificaría antes de cualquier gate.",
+      preview_only: true,
+    },
+    {
+      state: "approval_required",
+      description: "Lo sensible queda esperando aprobación explícita.",
+      preview_only: true,
+    },
+    {
+      state: "ready_for_operator_review",
+      description: "David revisa scope, permisos y siguiente paso.",
+      preview_only: true,
+    },
+    {
+      state: "blocked",
+      description: "Lo ambiguo o no conectado permanece bloqueado.",
+      preview_only: true,
+    },
+    {
+      state: "forbidden",
+      description: "Credenciales, bypass y acciones inseguras no se aprueban.",
+      preview_only: true,
+    },
+    {
+      state: "executable_candidate_after_valid_approval",
+      description: "Solo un approval válido futuro podría crear elegibilidad.",
+      preview_only: true,
+    },
+  ],
+  conversation_preview: {
+    messages: [
+      {
+        role: "user",
+        speaker: "David",
+        content: sampleMissionCommand,
+        preview_only: true,
+      },
+      {
+        role: "assistant",
+        speaker: "JARVIS",
+        content: "Puedo preparar una misión de revisión. Antes de ejecutar cualquier acción sensible, pediré aprobación.",
+        preview_only: true,
+      },
+    ],
+    assistant_status: "preview",
+    transcript_persistence: false,
+    memory_write: false,
+    memory_read: false,
+    pii_redaction_required: true,
+    raw_audio_stored: false,
+    external_provider_called: false,
+  },
+  safety: {
+    no_auto_execute: true,
+    no_hermes_dispatch: true,
+    no_tool_call: true,
+    no_file_write: true,
+    no_network_call: true,
+    no_email_send: true,
+    no_money_movement: true,
+    no_deploy: true,
+    no_credentials: true,
+    no_sensor_activation: true,
+    no_voice_recording: true,
+    no_camera_capture: true,
+    wake_phrase_is_not_permission: true,
+  },
+  operator_guidance: {
+    can_do: "David puede ver cómo JARVIS recibiría una orden y prepararía una revisión segura.",
+    cannot_do_yet: "Todavía no puede crear misiones, approvals, memoria, llamadas externas ni ejecución.",
+    future_next_step: "El siguiente paso futuro será un intake/classifier seguro antes de propuestas reales.",
+    sensitive_requires_approval: "Todo lo sensible requiere approval explícito, scope, rollback/stop plan y auditoría.",
+  },
+  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+  read_only: true,
+};
+
+const missionLifecycleDisplay = [
+  ["draft", "Orden escrita o dictada como borrador visual."],
+  ["preview", "JARVIS prepara lectura de intención sin mutar estado."],
+  ["intent detected", "La intención queda en unknown hasta tener clasificador seguro."],
+  ["risk classified", "El riesgo se muestra como preview antes de approvals."],
+  ["approval required", "Lo sensible se deriva a Approval Console."],
+  ["operator review", "David revisa scope, permisos y siguiente paso."],
+  ["Hermes gated", "Hermes permanece detrás de gates válidos."],
+  ["audit", "La acción futura deberá dejar evidencia auditable."],
+] as const;
+
+const missionSafetyLabels = [
+  ["No auto execute", "no_auto_execute"],
+  ["No Hermes dispatch", "no_hermes_dispatch"],
+  ["No tool call", "no_tool_call"],
+  ["No file write", "no_file_write"],
+  ["No network", "no_network_call"],
+  ["No voice recording", "no_voice_recording"],
+  ["No camera capture", "no_camera_capture"],
+  ["Wake phrase is not permission", "wake_phrase_is_not_permission"],
+] as const;
+
 function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
   return {
     system: {
@@ -354,6 +503,7 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       risk: UNKNOWN,
       notes: "Fallback seguro: backend offline o campo no conectado.",
     })),
+    mission_control: fallbackMissionControl,
     approvals: {
       pending_count: UNKNOWN,
       critical_count: UNKNOWN,
@@ -471,11 +621,18 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
     safety: {
       frontend_can_execute: false,
       frontend_can_approve: false,
+      no_auto_execute: true,
       no_duplicate_hermes_runtime: true,
       no_get_user_media: true,
       no_sensor_activation: true,
+      no_voice_recording: true,
+      no_camera_capture: true,
       no_frontend_tool_runner: true,
+      no_tool_call: true,
+      no_file_write: true,
+      no_network_call: true,
       no_frontend_hermes_execution: true,
+      no_hermes_dispatch: true,
       no_post_put_delete_from_jarvis_page: true,
       no_money_movement: true,
       no_deploy: true,
@@ -700,7 +857,6 @@ export default function JarvisCommandCenterPage() {
   const modules = useMemo(() => readModules(dashboard.modules), [dashboard.modules]);
   const system = dashboard.system ?? {};
   const contract = dashboard.jarvis_hermes_contract ?? {};
-  const release = dashboard.release_candidate ?? {};
   const approvals = dashboard.approvals ?? {};
   const approvalCards = approvals.cards?.length ? approvals.cards : fallbackApprovalCards;
   const hermes = dashboard.hermes_execution ?? {};
@@ -715,14 +871,66 @@ export default function JarvisCommandCenterPage() {
   const productBuilder = dashboard.product_builder ?? {};
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
   const stages = productBuilder.stages?.length ? productBuilder.stages : [...fallbackStages];
-  const readiness = release.readiness ?? {};
+  const missionControl = dashboard.mission_control ?? fallbackMissionControl;
+  const missionState = missionControl.state ?? fallbackMissionControl.state ?? {};
+  const missionSupportedInputs = missionControl.supported_inputs ?? fallbackMissionControl.supported_inputs ?? {};
+  const missionIntent = missionControl.intent_preview ?? fallbackMissionControl.intent_preview ?? {};
+  const missionConversation = missionControl.conversation_preview ?? fallbackMissionControl.conversation_preview ?? {};
+  const missionMessages = missionConversation.messages?.length
+    ? missionConversation.messages
+    : fallbackMissionControl.conversation_preview?.messages ?? [];
+  const missionSafety = missionControl.safety ?? fallbackMissionControl.safety ?? {};
+  const missionGuidance = missionControl.operator_guidance ?? fallbackMissionControl.operator_guidance ?? {};
+  const requiredPermissions = missionIntent.required_permissions?.length
+    ? missionIntent.required_permissions.join(", ")
+    : "none/unknown";
+  const blockedReasons = missionIntent.blocked_reasons?.length
+    ? missionIntent.blocked_reasons.join(", ")
+    : "none";
+  const nextSafeAction =
+    missionIntent.next_safe_action && missionIntent.next_safe_action !== UNKNOWN
+      ? missionIntent.next_safe_action
+      : "operator review";
 
-  const missionFields = [
-    ["intención detectada", UNKNOWN],
-    ["plan", valueText(readiness.mission_loop)],
-    ["riesgo", "risk_scaled/unknown"],
-    ["permisos necesarios", "none/unknown"],
-    ["estado", valueText(release.status)],
+  const missionStateRows = [
+    ["mode", valueText(missionState.mode, "preview")],
+    ["input", valueText(missionState.input_enabled, "preview_only")],
+    ["conversation", valueText(missionState.conversation_enabled, "preview_only")],
+    ["execution", yesNo(missionState.execution_enabled, "enabled", "false")],
+    ["Hermes dispatch", yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")],
+    ["approval creation", yesNo(missionState.approval_creation_enabled, "enabled", "false")],
+    ["persistence", yesNo(missionState.persistence_enabled, "enabled", "false")],
+    ["external network", yesNo(missionState.external_network_enabled, "enabled", "false")],
+  ] as const;
+
+  const supportedInputRows = [
+    ["text command", valueText(missionSupportedInputs.text_command, "preview")],
+    ["voice command", valueText(missionSupportedInputs.voice_command, "future_gated")],
+    ["mobile command", valueText(missionSupportedInputs.mobile_command, "future_gated")],
+    ["wake word command", valueText(missionSupportedInputs.wake_word_command, "future_gated")],
+    ["file drop", valueText(missionSupportedInputs.file_drop, "not_connected")],
+    ["camera context", valueText(missionSupportedInputs.camera_context, "not_connected")],
+  ] as const;
+
+  const missionIntentRows = [
+    ["intención detectada", `${valueText(missionIntent.detected_intent)}/preview`],
+    ["confidence", valueText(missionIntent.confidence)],
+    ["mission type", valueText(missionIntent.mission_type)],
+    ["riesgo", valueText(missionIntent.risk_level)],
+    ["approval", valueText(missionIntent.approval_level)],
+    ["permisos requeridos", requiredPermissions],
+    ["blocked reasons", blockedReasons],
+    ["siguiente acción segura", nextSafeAction],
+  ] as const;
+
+  const conversationPreviewRows = [
+    ["assistant status", valueText(missionConversation.assistant_status, "preview")],
+    ["transcript persistence", yesNo(missionConversation.transcript_persistence, "true", "false")],
+    ["memory write", yesNo(missionConversation.memory_write, "true", "false")],
+    ["memory read", valueText(missionConversation.memory_read, "false")],
+    ["PII redaction", yesNo(missionConversation.pii_redaction_required, "required", "false")],
+    ["raw audio stored", yesNo(missionConversation.raw_audio_stored, "true", "false")],
+    ["external provider called", yesNo(missionConversation.external_provider_called, "true", "false")],
   ] as const;
 
   const privacyRows = [
@@ -868,18 +1076,124 @@ export default function JarvisCommandCenterPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Workflow className="h-5 w-5 text-success" />
-              <CardTitle>Mission Control</CardTitle>
+              <CardTitle>Control de Misión</CardTitle>
             </div>
-            <CardDescription>Panel visual para futuras misiones; no crea misiones reales desde frontend.</CardDescription>
+            <CardDescription>
+              Escribe o dicta una orden para que JARVIS prepare una misión. En esta fase no se ejecuta nada.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <textarea
-              disabled
-              className="min-h-28 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
-              value={`Entrada preview deshabilitada. Estado RC: ${valueText(release.status)}.`}
-              readOnly
-            />
-            <StatusList items={missionFields} />
+          <CardContent className="space-y-5">
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="warning">preview-only</Badge>
+                <Badge variant={missionState.execution_enabled ? "destructive" : "success"}>
+                  execution: {yesNo(missionState.execution_enabled, "enabled", "false")}
+                </Badge>
+                <Badge variant={missionState.hermes_dispatch_enabled ? "destructive" : "success"}>
+                  Hermes dispatch: {yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")}
+                </Badge>
+              </div>
+              <p className="mt-3 font-display text-sm text-warning">
+                Escribe o dicta una orden para que JARVIS prepare una misión.
+              </p>
+              <p className="mt-1 font-mono-ui text-xs text-warning">
+                En esta fase no se ejecuta nada.
+              </p>
+            </article>
+
+            <div className="space-y-3">
+              <textarea
+                disabled
+                readOnly
+                aria-label="Control de Misión preview input"
+                placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}
+                className="min-h-28 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
+              />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button disabled aria-disabled="true" type="button" variant="outline">
+                  Preparar preview
+                </Button>
+                <Button disabled aria-disabled="true" type="button" variant="outline">
+                  Enviar a JARVIS
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <StatusList items={missionStateRows} />
+              <StatusList items={supportedInputRows} />
+            </div>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Conversation Preview</h3>
+                <Badge variant="warning">assistant: {valueText(missionConversation.assistant_status, "preview")}</Badge>
+              </div>
+              <p className="mb-3 font-display text-xs text-warning">
+                Preview conversation — no provider call, no memory write, no execution.
+              </p>
+              <div className="grid gap-3">
+                {missionMessages.map((message, index) => (
+                  <div key={`${message.speaker}-${index}`} className="border border-border/70 bg-background/40 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                      {valueText(message.speaker)}
+                    </p>
+                    <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(message.content)}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3">
+                <StatusList items={conversationPreviewRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Intent / Risk Preview</h3>
+              <div className="mt-3">
+                <StatusList items={missionIntentRows} />
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Mission Lifecycle</h3>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {missionLifecycleDisplay.map(([step, description]) => (
+                  <div key={step} className="border border-border/70 bg-background/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-display text-xs uppercase tracking-[0.12em]">{step}</span>
+                      <Badge variant="outline">preview</Badge>
+                    </div>
+                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{description}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-warning/40 bg-warning/10 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Safety Banner</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {missionSafetyLabels.map(([label, key]) => (
+                  <Badge key={key} variant={missionSafety[key] ? "success" : "outline"}>
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            </article>
+
+            <article className="border border-border/70 bg-background/35 p-4">
+              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes Panel</h3>
+              <div className="mt-3 grid gap-2">
+                <SafetyLine>Si una misión necesita algo sensible, aparecerá en Approval Console.</SafetyLine>
+                <SafetyLine>Hermes solo ejecutará después de approval válido.</SafetyLine>
+                <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
+              </div>
+              <div className="mt-3 grid gap-2">
+                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.can_do)}</p>
+                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.cannot_do_yet)}</p>
+                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.future_next_step)}</p>
+                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.sensitive_requires_approval)}</p>
+              </div>
+            </article>
           </CardContent>
         </Card>
       </div>

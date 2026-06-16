@@ -911,3 +911,56 @@ No implementa:
 PR #148 prepara el dashboard para Mission Control posterior: una futura UX de
 misiones podrá mostrar intención, riesgo, scope y approvals, pero Hermes seguirá
 ejecutando solo bajo gates válidos emitidos por JARVIS.
+
+## JARVIS Mission Control Conversation Preview
+
+PR #149 mejora `Control de Misión` en `/jarvis` y el read model
+`GET /mark-3/dashboard/status` para mostrar cómo sería hablar o escribir a
+JARVIS sin abrir ejecución.
+
+Incluye:
+
+- `mission_control.state` con `mode=preview`, input/conversation preview-only y
+  execution, Hermes dispatch, approval creation, persistence y external network
+  deshabilitados.
+- `supported_inputs` para texto preview, voz/móvil/wake word future-gated y
+  file drop/camera context no conectados.
+- `sample_command` seguro:
+  `JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro.`
+- `intent_preview` con detected intent, confidence, mission type, risk level,
+  approval level y next safe action en `unknown`, sin inventar clasificación.
+- `command_lifecycle` visual para draft, submitted for preview, intent
+  detected, risk classified, approval required, operator review, blocked,
+  forbidden y executable candidate after valid approval.
+- `conversation_preview` con mensajes placeholder de David/JARVIS,
+  `external_provider_called=false`, `memory_write=false`,
+  `raw_audio_stored=false`, transcript persistence off y redacción PII requerida.
+- Safety flags: no auto execute, no Hermes dispatch, no tool call, no file
+  write, no network call, no money movement, no deploy, no email, no
+  credentials, no sensor activation, no voice recording, no camera capture y
+  wake phrase is not permission.
+- Timeline read-only: Mission Control preview read, Conversation preview read,
+  No command execution performed y Hermes dispatch disabled from Mission
+  Control.
+- `/jarvis` muestra input deshabilitado, botones disabled, Conversation
+  Preview, Intent/Risk Preview, Mission Lifecycle, Safety Banner y la relación
+  con Approval Console y Hermes Panel.
+
+No implementa:
+
+- endpoint nuevo de submit;
+- creación de misión real;
+- creación de approval real;
+- Hermes dispatch;
+- llamadas a providers externos;
+- escritura de memoria o transcript persistence;
+- file write, network call, tool call o ejecución;
+- voz real, micrófono, cámara, sensores o `getUserMedia`;
+- dinero, Stripe, deploy, email, credenciales o producción.
+
+PR #149 prepara conversación real futura, pero mantiene la separación:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
