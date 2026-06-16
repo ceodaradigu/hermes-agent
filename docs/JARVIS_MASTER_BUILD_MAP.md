@@ -1177,6 +1177,137 @@ No implementa:
 - credential/token storage;
 - sensores, micrófono, dinero, deploy, email, credenciales o red externa.
 
+## JARVIS Product Finance Pilot Hardening
+
+PR #152 mejora `/jarvis` y `GET /mark-3/dashboard/status` como macro-PR
+read-only/preview. Agrupa:
+
+- Finance / ROI Panel realista;
+- Product Builder Adaptativo;
+- Frontend Pilot / Hardening.
+
+Incluye `finance_roi`:
+
+- `truth_policy.no_fake_metrics=true`;
+- `unknown_when_no_evidence=true`;
+- `measured_requires_source=true`;
+- `estimated_requires_label=true`;
+- `confirmed_revenue_requires_evidence=true`;
+- `projected_revenue_must_be_labelled=true`;
+- `roi_unknown_without_revenue_and_cost=true`.
+
+Todas las métricas financieras son objetos con `value`, `label`, `source`,
+`evidence_state`, `confidence` y `last_updated`. Sin evidencia real, actual
+cost, estimated cost, confirmed revenue, projected revenue, gross revenue,
+expenses, net revenue, ROI, token cost, API cost, infra cost, manual input cost
+y revenue source quedan como:
+
+- `value=unknown`;
+- `source=not_measured`;
+- `evidence_state=missing`;
+- `confidence=unknown`.
+
+Budget queda not configured/unknown, y la safety de finance declara:
+
+- no money movement;
+- no Stripe live;
+- no checkout creation;
+- no invoice creation;
+- no payment collection;
+- no fake revenue;
+- no fake costs;
+- no fake ROI;
+- approval required for money;
+- strong approval required for live payments.
+
+Incluye `adaptive_product_builder`:
+
+- `state.mode=preview`;
+- `builder_enabled=preview/read_only`;
+- `product_generation_enabled=false`;
+- `code_generation_enabled=false`;
+- `deploy_enabled=false`;
+- `stripe_enabled=false`;
+- `landing_publish_enabled=false`;
+- `external_research_enabled=false`;
+- `hermes_dispatch_enabled=false`.
+
+Las stages son Idea, Validación, Blueprint, Código, Landing, Deploy candidate,
+Monetización y Medición. Cada stage tiene status preview/future-gated/disabled,
+`can_execute=false`, approval metadata, evidence required y notas. La policy
+declara que Product Builder Adaptativo no es Template Builder, no clona
+plantillas, cada producto necesita razón de existir, success metric y lógica de
+monetización, y los productos clonados son fallo. Monetization policy deja
+pricing preview only, Stripe live y checkout bajo aprobación fuerte, revenue
+real bajo confirmación, projected revenue etiquetado y no fake revenue.
+
+Incluye `frontend_pilot`:
+
+- `mode=read_only_pilot`;
+- `dashboard_route=/jarvis`;
+- `backend_status_endpoint=/mark-3/dashboard/status`;
+- `frontend_can_execute=false`;
+- `frontend_can_approve=false`;
+- `frontend_can_activate_sensors=false`;
+- `frontend_can_move_money=false`;
+- `frontend_can_deploy=false`;
+- `frontend_can_send_email=false`.
+
+Readiness checks cubren dashboard route, read model, Approval Console, Hermes
+Execution, Mission Control, Voice Core, Wake Flow, Camera/Vision, Mobile
+Companion, Finance/ROI, Product Builder, Kill Switch, no fake metrics, no
+frontend execute, no sensor activation y no POST/PUT/DELETE. Hardening notes
+declaran que `npm audit fix` no se ejecuta, dependency hardening queda en PR
+separada si toca lockfile/deps, no se esperan cambios de lockfile y frontend
+build/full pytest son requeridos antes de merge.
+
+La UI `/jarvis` muestra los tres paneles con guardrails visibles:
+
+- `No fake metrics.`
+- `Si no hay evidencia, mostrar unknown.`
+- `Revenue confirmado requiere evidencia.`
+- `ROI queda unknown sin revenue y costes reales.`
+- `No se mueve dinero desde este panel.`
+- `Stripe live requiere aprobación fuerte.`
+- `Product Builder Adaptativo`
+- `No es un Template Builder.`
+- `Si dos productos parecen clones, el builder ha fallado.`
+- `Deploy real requiere aprobación fuerte.`
+- `Stripe/checkout real requiere aprobación fuerte.`
+- `Revenue real requiere confirmación.`
+- `Pilot read-only`
+- `El dashboard mira, no toca.`
+- `No POST/PUT/DELETE.`
+- `No execute.`
+- `No sensores.`
+- `Dependency hardening queda para una PR separada.`
+
+No implementa:
+
+- dinero real;
+- Stripe live;
+- checkout real;
+- invoices;
+- payment collection;
+- productos reales;
+- publicación;
+- deploy;
+- envío de email;
+- credenciales;
+- red externa;
+- sensores;
+- frontend file writes;
+- Hermes execution;
+- fake revenue/cost/ROI;
+- dependency hardening o `npm audit fix` en esta PR si requiere lockfile/deps.
+
+PR #152 conserva la separación:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
 PR #151 conserva la separación:
 
 ```text

@@ -1245,7 +1245,109 @@ Exit criteria:
   sensor activation, capture, storage, mobile runtime, approval bypass or
   Hermes direct path.
 
-### PR #154 - Finance/ROI and Product Builder panels
+### PR #152 - Product Finance Pilot Hardening
+
+Objective:
+
+- Close the visual/operational dashboard pilot with honest Finance/ROI,
+  Adaptive Product Builder and Frontend Pilot/Hardening panels.
+- Group three safe surfaces: Finance / ROI Panel realista, Product Builder
+  Adaptativo and Frontend Pilot / Hardening.
+- Keep `/jarvis` as a read-only preview surface consuming only
+  `GET /mark-3/dashboard/status`.
+
+Scope:
+
+- Enrich `GET /mark-3/dashboard/status` with `finance_roi`, including
+  `truth_policy`, metric objects, budget, safety and timeline.
+- All finance metrics default to `unknown` with `source=not_measured`,
+  `evidence_state=missing` and `confidence=unknown` unless real evidence is
+  connected. This covers actual cost, estimated cost, confirmed revenue,
+  projected revenue, gross revenue, expenses, net revenue, ROI, token/API/infra
+  cost, manual input cost and revenue source.
+- Enrich the read model with `adaptive_product_builder` in `mode=preview`:
+  product generation, code generation, deploy, Stripe, landing publish,
+  external research and Hermes dispatch are all disabled.
+- Product Builder stages are Idea, Validación, Blueprint, Código, Landing,
+  Deploy candidate, Monetización and Medición. Every stage has
+  `can_execute=false`, evidence requirements and approval metadata.
+- Enrich the read model with `frontend_pilot` in `mode=read_only_pilot`, route
+  `/jarvis`, endpoint `/mark-3/dashboard/status`, readiness checks, hardening
+  notes and pilot limitations.
+- Upgrade `/jarvis` with three panels: `Finance / ROI`, `Product Builder
+  Adaptativo` and `Frontend Pilot / Hardening`.
+
+Truth and safety rules:
+
+- No fake metrics.
+- No fake revenue.
+- No fake costs.
+- No fake ROI.
+- Confirmed revenue requires evidence.
+- Projected revenue must be labeled.
+- ROI remains unknown without real revenue and real costs.
+- No money movement.
+- No Stripe live.
+- No checkout creation.
+- No invoice creation.
+- No payment collection.
+- No product generation.
+- No real deploy.
+- No publishing.
+- No external network.
+- No email.
+- No credentials.
+- No direct Hermes dispatch from frontend, mobile, voice or camera.
+
+Frontend pilot and dependency notes:
+
+- `/jarvis` remains a read-only pilot: the dashboard looks, it does not touch.
+- The page must not add frontend execute, approval mutation, sensor activation,
+  money, deploy, email, credential or product-publish paths.
+- `No POST/PUT/DELETE` is a visible safety rule for the dashboard page; any
+  dependency hardening or `npm audit fix` that changes lockfiles/dependencies
+  belongs in a separate PR.
+- Dependency hardening queda para una PR separada si toca lockfile/deps.
+- Full pytest and frontend build remain required before merge.
+
+Expected tests:
+
+- Backend read-model tests proving `finance_roi`, `adaptive_product_builder`
+  and `frontend_pilot` exist and keep all real action flags disabled.
+- Static `/jarvis` tests proving the required copy is visible, the dashboard
+  consumes only the read model and no execute, Stripe checkout, money movement
+  or fake metrics implementation is introduced.
+- Roadmap/docs tests proving PR #152 is documented as Product Finance Pilot
+  Hardening and remains read-only/preview.
+
+Must not do:
+
+- No Stripe live.
+- No checkout.
+- No invoice.
+- No payment collection.
+- No deploy.
+- No publish.
+- No real product creation.
+- No fake revenue, cost or ROI.
+- No sensor activation.
+- No frontend file writes.
+- No Hermes execution.
+- No dependency or lockfile hardening unless intentionally split into another
+  PR.
+
+Exit criteria:
+
+- David can see honest finance/product/pilot readiness state in `/jarvis`, with
+  unknowns preserved where evidence is absent, and no real money, Stripe,
+  deploy, publishing, email, credentials, sensors or Hermes execution path.
+
+### PR #154 - Future real Finance/ROI and Product Builder activation
+
+Note: PR #152 implements the read-only/preview Finance/ROI and Adaptive Product
+Builder dashboard panels. This later section is only for a future activation
+phase if JARVIS gains real evidence connectors or product actions under
+separate approvals.
 
 Objective:
 
@@ -1486,10 +1588,10 @@ Rules:
 
 ## 10. Recommended next PR
 
-Recommended next PR after PR #150:
+Recommended next PR after PR #151:
 
 ```text
-PR #151 - Vision + Mobile Companion Layer
+PR #152 - Product Finance Pilot Hardening
 ```
 
 Why:
@@ -1506,7 +1608,11 @@ Why:
 - PR #150 gives Voice Core visual presence, TTS state preview and Wake Word
   Local Safe Flow without microphone, wake runtime, STT, TTS, recording, raw
   storage, background listener or providers.
-- The next safe step is visibility for camera/vision privacy and mobile/PWA
-  companion state without activating camera, capture, sensors, service worker,
-  push, mobile runtime, mobile approvals or direct Hermes calls.
+- PR #151 adds camera/vision privacy and mobile/PWA companion state without
+  activating camera, capture, sensors, service worker, push, mobile runtime,
+  mobile approvals or direct Hermes calls.
+- The next safe step is Product Finance Pilot Hardening: Finance/ROI truth,
+  Adaptive Product Builder preview and Frontend Pilot/Hardening without money,
+  Stripe live, checkout, product creation, deploy, fake metrics or frontend
+  execution.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.

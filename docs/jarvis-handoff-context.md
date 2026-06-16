@@ -728,6 +728,66 @@ sync, offline cache, credential storage, token storage, sensores, micrófono,
 dinero, deploy, email, credenciales o red externa. Mantiene:
 `JARVIS gobierna. Hermes ejecuta.`
 
+PR #152 es **Product Finance Pilot Hardening**. Agrupa Finance/ROI, Product
+Builder Adaptativo y Frontend Pilot/Hardening dentro de `/jarvis` y
+`GET /mark-3/dashboard/status`. Sigue siendo read-only/preview: no mueve
+dinero, no usa Stripe live, no crea checkout, no factura, no cobra, no crea
+productos reales, no publica, no hace deploy, no envía email, no toca
+credenciales, no activa sensores, no llama red externa, no ejecuta Hermes y no
+añade POST/PUT/DELETE desde el dashboard.
+
+Incluye `finance_roi` con `truth_policy`: no fake metrics,
+unknown_when_no_evidence, measured_requires_source, estimated_requires_label,
+confirmed_revenue_requires_evidence, projected_revenue_must_be_labelled y
+roi_unknown_without_revenue_and_cost. Todas las métricas financieras son
+objetos con value, label, source, evidence_state, confidence y last_updated.
+Si no hay evidencia real, quedan `value=unknown`, `source=not_measured`,
+`evidence_state=missing` y `confidence=unknown`. Esto cubre actual cost,
+estimated cost, confirmed revenue, projected revenue, gross revenue, expenses,
+net revenue, ROI, token/API/infra/manual input cost y revenue source. Budget
+queda not configured/unknown. Safety declara no money movement, no Stripe live,
+no checkout/invoice/payment collection, no fake revenue/costs/ROI y approval
+fuerte para pagos reales futuros.
+
+Incluye `adaptive_product_builder` con `mode=preview` y builder
+`preview/read_only`: product generation, code generation, deploy, Stripe,
+landing publish, external research y Hermes dispatch están en false. Las
+stages son Idea, Validación, Blueprint, Código, Landing, Deploy candidate,
+Monetización y Medición; todas tienen `can_execute=false`. La diferenciación
+declara que no es Template Builder, no clona plantillas, cada producto necesita
+razón de existir, métrica de éxito y lógica de monetización, y los productos
+clonados son fallo. Monetization policy deja pricing preview only, Stripe live
+y checkout bajo aprobación fuerte, revenue real bajo confirmación y projected
+revenue etiquetado.
+
+Incluye `frontend_pilot` con `mode=read_only_pilot`, ruta `/jarvis`, endpoint
+`/mark-3/dashboard/status` y flags: frontend cannot execute, approve, activate
+sensors, move money, deploy or send email. Readiness checks cubren route,
+read-model connection, Approval Console, Hermes Execution, Mission Control,
+Voice Core, Wake Flow, Camera/Vision, Mobile Companion, Finance/ROI, Product
+Builder, Kill Switch, no fake metrics, no frontend execute, no sensor
+activation y no POST/PUT/DELETE. Hardening notes dejan claro que si `npm ci`
+observa audit vulnerabilities se registran como observadas, pero `npm audit
+fix` no se ejecuta; dependency hardening queda en PR separada si toca lockfile
+o dependencias, no se esperan cambios de lockfile, y frontend build/full pytest
+son requeridos antes de merge.
+
+La UI `/jarvis` muestra tres paneles nuevos con los textos obligatorios:
+`No fake metrics.`, `Si no hay evidencia, mostrar unknown.`, `Revenue
+confirmado requiere evidencia.`, `ROI queda unknown sin revenue y costes
+reales.`, `No se mueve dinero desde este panel.`, `Stripe live requiere
+aprobación fuerte.`, `No es un Template Builder.`, `Si dos productos parecen
+clones, el builder ha fallado.`, `Deploy real requiere aprobación fuerte.`,
+`Stripe/checkout real requiere aprobación fuerte.`, `Revenue real requiere
+confirmación.`, `Pilot read-only`, `El dashboard mira, no toca.`,
+`No POST/PUT/DELETE.`, `No execute.`, `No sensores.`, `No fake metrics.` y
+`Dependency hardening queda para una PR separada.`
+
+PR #152 mantiene la separación: JARVIS piensa, clasifica riesgo, pide
+aprobación, audita, controla y muestra estado; Hermes sigue siendo solo motor
+de ejecución detrás de gates válidos. Frontend, móvil, voz y cámara no llaman a
+Hermes directamente.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

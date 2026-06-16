@@ -733,6 +733,192 @@ def test_mark_3_dashboard_status_keeps_finance_unknown_and_no_fake_metrics():
     assert finance["no_fake_metrics"] is True
 
 
+def test_mark_3_dashboard_status_contains_finance_roi_truthful_unknown_contract():
+    payload, _ = _payload()
+    finance_roi = payload["finance_roi"]
+    truth_policy = finance_roi["truth_policy"]
+    metrics = finance_roi["metrics"]
+    safety = finance_roi["safety"]
+
+    assert truth_policy["no_fake_metrics"] is True
+    assert truth_policy["unknown_when_no_evidence"] is True
+    assert truth_policy["measured_requires_source"] is True
+    assert truth_policy["estimated_requires_label"] is True
+    assert truth_policy["confirmed_revenue_requires_evidence"] is True
+    assert truth_policy["projected_revenue_must_be_labelled"] is True
+    assert truth_policy["roi_unknown_without_revenue_and_cost"] is True
+
+    for metric_name in (
+        "actual_cost",
+        "estimated_cost",
+        "confirmed_revenue",
+        "projected_revenue",
+        "gross_revenue",
+        "expenses",
+        "net_revenue",
+        "roi",
+        "token_cost",
+        "api_cost",
+        "infra_cost",
+        "manual_input_cost",
+        "revenue_source",
+    ):
+        metric = metrics[metric_name]
+        assert set(metric) == {"value", "label", "source", "evidence_state", "confidence", "last_updated"}
+        assert metric["value"] == "unknown"
+        assert metric["source"] == "not_measured"
+        assert metric["evidence_state"] == "missing"
+        assert metric["confidence"] == "unknown"
+
+    assert metrics["roi"]["value"] == "unknown"
+    assert metrics["confirmed_revenue"]["value"] == "unknown"
+    assert metrics["confirmed_revenue"]["evidence_state"] == "missing"
+    assert finance_roi["budget"]["budget_configured"] is False
+    assert finance_roi["budget"]["remaining_budget"] == "unknown"
+    assert finance_roi["budget"]["monthly_limit"] == "unknown"
+    assert finance_roi["budget"]["alert_threshold"] == "unknown"
+    assert finance_roi["budget"]["hard_stop_enabled"] is False
+
+    for key in (
+        "no_money_movement",
+        "no_stripe_live",
+        "no_checkout_creation",
+        "no_invoice_creation",
+        "no_payment_collection",
+        "no_fake_revenue",
+        "no_fake_costs",
+        "no_fake_roi",
+        "approval_required_for_money",
+        "strong_approval_required_for_live_payments",
+    ):
+        assert safety[key] is True
+
+
+def test_mark_3_dashboard_status_contains_adaptive_product_builder_preview_contract():
+    payload, _ = _payload()
+    builder = payload["adaptive_product_builder"]
+    state = builder["state"]
+    stages = builder["stages"]
+    differentiation = builder["differentiation_policy"]
+    monetization = builder["monetization_policy"]
+    safety = builder["safety"]
+
+    assert state["mode"] == "preview"
+    assert state["builder_enabled"] == "preview/read_only"
+    assert state["product_generation_enabled"] is False
+    assert state["code_generation_enabled"] is False
+    assert state["deploy_enabled"] is False
+    assert state["stripe_enabled"] is False
+    assert state["landing_publish_enabled"] is False
+    assert state["external_research_enabled"] is False
+    assert state["hermes_dispatch_enabled"] is False
+
+    assert [stage["name"] for stage in stages] == [
+        "Idea",
+        "Validación",
+        "Blueprint",
+        "Código",
+        "Landing",
+        "Deploy candidate",
+        "Monetización",
+        "Medición",
+    ]
+    for stage in stages:
+        assert stage["status"] in {"preview", "future_gated", "disabled", "unknown"}
+        assert stage["can_execute"] is False
+        assert isinstance(stage["requires_approval"], bool)
+        assert stage["approval_level"]
+        assert stage["evidence_required"]
+        assert stage["notes"]
+
+    assert differentiation["no_template_clone"] is True
+    assert differentiation["adaptive_builder_not_template_builder"] is True
+    assert differentiation["each_product_needs_reason_to_exist"] is True
+    assert differentiation["each_product_needs_success_metric"] is True
+    assert differentiation["each_product_needs_monetization_logic"] is True
+    assert differentiation["cloned_products_are_failure"] is True
+
+    assert monetization["pricing_preview_only"] is True
+    assert monetization["stripe_live_requires_strong_approval"] is True
+    assert monetization["checkout_requires_strong_approval"] is True
+    assert monetization["real_revenue_requires_confirmation"] is True
+    assert monetization["projected_revenue_label_required"] is True
+    assert monetization["no_fake_revenue"] is True
+
+    for key in (
+        "no_deploy",
+        "no_publish",
+        "no_domain_change",
+        "no_email_send",
+        "no_money_movement",
+        "no_credentials",
+        "no_external_network",
+        "no_hermes_dispatch",
+        "approval_gates_required_for_real_actions",
+    ):
+        assert safety[key] is True
+
+
+def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
+    payload, _ = _payload()
+    pilot = payload["frontend_pilot"]
+    state = pilot["state"]
+    checks = {check["name"]: check for check in pilot["readiness_checks"]}
+    hardening = pilot["hardening_notes"]
+    limitations = pilot["pilot_limitations"]
+
+    assert state["mode"] == "read_only_pilot"
+    assert state["dashboard_route"] == "/jarvis"
+    assert state["backend_status_endpoint"] == "/mark-3/dashboard/status"
+    assert state["frontend_can_execute"] is False
+    assert state["frontend_can_approve"] is False
+    assert state["frontend_can_activate_sensors"] is False
+    assert state["frontend_can_move_money"] is False
+    assert state["frontend_can_deploy"] is False
+    assert state["frontend_can_send_email"] is False
+
+    for name in (
+        "dashboard_route_exists",
+        "read_model_connected",
+        "approval_console_visible",
+        "hermes_execution_visible",
+        "mission_control_visible",
+        "voice_core_visible",
+        "wake_flow_visible",
+        "camera_vision_visible",
+        "mobile_companion_visible",
+        "finance_roi_visible",
+        "product_builder_visible",
+        "kill_switch_visible",
+        "no_fake_metrics",
+        "no_frontend_execute",
+        "no_sensor_activation",
+        "no_post_put_delete",
+    ):
+        assert name in checks
+        assert checks[name]["status"] in {"passed", "preview", "unknown", "failed"}
+        assert checks[name]["evidence"]
+        assert checks[name]["notes"]
+
+    assert hardening["npm_audit_fix_not_run"] is True
+    assert hardening["dependency_hardening_requires_separate_pr"] is True
+    assert hardening["no_lockfile_changes_expected"] is True
+    assert hardening["frontend_build_required_before_merge"] is True
+    assert hardening["full_pytest_required_before_merge"] is True
+
+    for limitation in (
+        "no real approvals",
+        "no real mission submit",
+        "no real Hermes execution",
+        "no real voice",
+        "no real camera",
+        "no real mobile runtime",
+        "no real finance/revenue measurement",
+        "no deploy/money/email/credentials",
+    ):
+        assert limitation in limitations
+
+
 def test_mark_3_dashboard_status_declares_safety_boundaries():
     payload, _ = _payload()
     safety = payload["safety"]
@@ -894,10 +1080,36 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Mobile direct Hermes call disabled" for item in events)
     assert any(item["event"] == "Real mobile approvals disabled" for item in events)
     assert any(item["event"] == "Remote kill switch future gated" for item in events)
+    assert any(item["event"] == "Finance/ROI panel read" for item in events)
+    assert any(item["event"] == "Metrics defaulted to unknown without evidence" for item in events)
+    assert any(item["event"] == "No money movement performed" for item in events)
+    assert any(item["event"] == "No Stripe live action performed" for item in events)
+    assert any(item["event"] == "No fake ROI generated" for item in events)
+    assert any(item["event"] == "Product Builder panel read" for item in events)
+    assert any(item["event"] == "Product stages loaded as preview" for item in events)
+    assert any(item["event"] == "No product generated" for item in events)
+    assert any(item["event"] == "No deploy candidate executed" for item in events)
+    assert any(item["event"] == "No monetization action performed" for item in events)
+    assert any(item["event"] == "Frontend pilot status read" for item in events)
+    assert any(item["event"] == "Dashboard route expected at /jarvis" for item in events)
+    assert any(item["event"] == "Read model expected at /mark-3/dashboard/status" for item in events)
+    assert any(item["event"] == "Pilot remains read-only" for item in events)
+    assert any(item["event"] == "Dependency hardening deferred to separate PR if needed" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)
-    assert not any("executed" in item["event"].lower() for item in events)
-    assert not any("completed" in item["event"].lower() for item in events)
+
+    serialized = " ".join(item["event"].lower() for item in events)
+    for forbidden in (
+        "money movement completed",
+        "stripe live action completed",
+        "fake roi generated successfully",
+        "product generated successfully",
+        "deploy candidate completed",
+        "monetization action completed",
+        "frontend executed",
+        "hermes executed from frontend",
+    ):
+        assert forbidden not in serialized
     assert not any("microphone started" in item["event"].lower() for item in events)
     assert not any(item["event"].lower() == "background listener started" for item in events)
     assert not any("wake word detected" in item["event"].lower() for item in events)

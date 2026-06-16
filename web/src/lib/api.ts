@@ -605,6 +605,115 @@ export interface JarvisMobileCompanion {
   read_only?: boolean;
 }
 
+export interface JarvisFinanceMetric {
+  value?: string | number | boolean;
+  label?: string;
+  source?: string;
+  evidence_state?: string;
+  confidence?: string;
+  last_updated?: string;
+}
+
+export interface JarvisFinanceRoi {
+  truth_policy?: Record<string, boolean>;
+  metrics?: {
+    actual_cost?: JarvisFinanceMetric;
+    estimated_cost?: JarvisFinanceMetric;
+    confirmed_revenue?: JarvisFinanceMetric;
+    projected_revenue?: JarvisFinanceMetric;
+    gross_revenue?: JarvisFinanceMetric;
+    expenses?: JarvisFinanceMetric;
+    net_revenue?: JarvisFinanceMetric;
+    roi?: JarvisFinanceMetric;
+    token_cost?: JarvisFinanceMetric;
+    api_cost?: JarvisFinanceMetric;
+    infra_cost?: JarvisFinanceMetric;
+    manual_input_cost?: JarvisFinanceMetric;
+    revenue_source?: JarvisFinanceMetric;
+    [key: string]: JarvisFinanceMetric | undefined;
+  };
+  budget?: {
+    budget_configured?: boolean | string;
+    remaining_budget?: string;
+    monthly_limit?: string;
+    alert_threshold?: string;
+    hard_stop_enabled?: boolean | string;
+    notes?: string;
+  };
+  safety?: Record<string, boolean>;
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisAdaptiveProductStage {
+  name: string;
+  status: "preview" | "future_gated" | "disabled" | "unknown" | string;
+  can_execute: boolean;
+  requires_approval: boolean;
+  approval_level: string;
+  evidence_required: string;
+  notes: string;
+}
+
+export interface JarvisAdaptiveProductBuilder {
+  state?: {
+    mode?: string;
+    builder_enabled?: string;
+    product_generation_enabled?: boolean;
+    code_generation_enabled?: boolean;
+    deploy_enabled?: boolean;
+    stripe_enabled?: boolean;
+    landing_publish_enabled?: boolean;
+    external_research_enabled?: boolean;
+    hermes_dispatch_enabled?: boolean;
+  };
+  stages?: JarvisAdaptiveProductStage[];
+  differentiation_policy?: Record<string, boolean>;
+  monetization_policy?: Record<string, boolean>;
+  safety?: Record<string, boolean>;
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisFrontendPilotReadinessCheck {
+  name: string;
+  status: "passed" | "preview" | "unknown" | "failed" | string;
+  evidence: string;
+  notes: string;
+}
+
+export interface JarvisFrontendPilot {
+  state?: {
+    mode?: string;
+    dashboard_route?: string;
+    backend_status_endpoint?: string;
+    frontend_can_execute?: boolean;
+    frontend_can_approve?: boolean;
+    frontend_can_activate_sensors?: boolean;
+    frontend_can_move_money?: boolean;
+    frontend_can_deploy?: boolean;
+    frontend_can_send_email?: boolean;
+  };
+  readiness_checks?: JarvisFrontendPilotReadinessCheck[];
+  hardening_notes?: {
+    npm_audit_vulnerabilities_observed?: boolean | string;
+    npm_audit_fix_not_run?: boolean;
+    dependency_hardening_requires_separate_pr?: boolean;
+    no_lockfile_changes_expected?: boolean;
+    frontend_build_required_before_merge?: boolean;
+    full_pytest_required_before_merge?: boolean;
+  };
+  pilot_limitations?: string[];
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -667,6 +776,9 @@ export interface JarvisDashboardStatus {
   };
   camera_vision?: JarvisCameraVision;
   mobile_companion?: JarvisMobileCompanion;
+  finance_roi?: JarvisFinanceRoi;
+  adaptive_product_builder?: JarvisAdaptiveProductBuilder;
+  frontend_pilot?: JarvisFrontendPilot;
   mobile?: {
     companion_state?: string;
     direct_hermes_call_allowed?: boolean;
@@ -679,6 +791,9 @@ export interface JarvisDashboardStatus {
     estimated_cost?: string;
     confirmed_revenue?: string;
     projected_revenue?: string;
+    gross_revenue?: string;
+    expenses?: string;
+    net_revenue?: string;
     roi?: string;
     no_fake_metrics?: boolean;
   };
