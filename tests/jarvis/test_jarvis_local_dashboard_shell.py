@@ -402,6 +402,24 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
     ):
         assert text in content
 
+    for text in (
+        "Cockpit",
+        "Approvals",
+        "Hermes",
+        "Voice / Wake",
+        "Vision / Mobile",
+        "Finance / Product",
+        "Pilot / Audit",
+        "Visual Command Center",
+        "Detalles en pestañas",
+        'data-testid="jarvis-cockpit-layout"',
+        'data-testid="jarvis-command-center-header"',
+        'data-testid="jarvis-tab-detail-panel"',
+        "modo preview/read-only",
+        "max-h-[64vh] overflow-auto",
+    ):
+        assert text in content
+
     for forbidden in (
         'method: "POST"',
         'method: "PUT"',
@@ -507,7 +525,22 @@ def test_approval_controls_are_preview_only_and_not_functional():
     ):
         assert label in content
 
-    assert "onClick" not in content
+    assert "onClick={() => setActiveTab(tab.id)}" in content
+    for forbidden in (
+        "onClick={approve",
+        "onClick={reject",
+        "onClick={execute",
+        "onClick={dispatch",
+        "onClick={start",
+        "onClick={stop",
+        "onClick={() => approve",
+        "onClick={() => reject",
+        "onClick={() => execute",
+        "onClick={() => dispatch",
+        "onClick={() => start",
+        "onClick={() => stop",
+    ):
+        assert forbidden not in content
     assert content.count("disabled") >= 5
 
 
