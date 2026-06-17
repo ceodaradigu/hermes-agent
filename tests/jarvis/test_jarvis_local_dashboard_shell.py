@@ -438,6 +438,39 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
         assert forbidden not in content
 
 
+def test_jarvis_dashboard_shell_contains_presence_ui_local_system_contract():
+    content = _read(PAGE)
+
+    for text in (
+        "Presence UI",
+        "Local System Contract",
+        "JARVIS Presence UI + Local System Contract",
+        "JARVIS runtime/daemon local es el sistema",
+        "/jarvis es solo la interfaz visual",
+        "móvil y VPS serán clientes/puentes futuros",
+        "frontend no ejecuta directamente Hermes",
+        "voz/cámara reales vendrán en PRs posteriores",
+        "idle/calmado",
+        "escuchando",
+        "pensando",
+        "hablando",
+        "alerta/riesgo",
+        "smart bar",
+        "barra inteligente inferior",
+        "transcripción temporal preview",
+        "respuesta temporal preview",
+        "Historial plegado / folded history",
+        "camera placeholder",
+        "Camera Placeholder",
+        "movible/ampliable",
+        'data-testid="jarvis-smart-bar"',
+        'data-testid="jarvis-camera-placeholder"',
+        'data-testid="jarvis-folded-history"',
+        'data-testid="jarvis-local-system-contract"',
+    ):
+        assert text in content
+
+
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
     content = _read(PAGE)
     api_source = _read(API)

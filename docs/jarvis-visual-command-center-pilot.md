@@ -3,6 +3,9 @@
 PR #153 valida el cockpit local `/jarvis` como Visual Command Center read-only.
 PR #154 endurece la composicion UX para que la primera pantalla sea un cockpit
 horizontal compacto, no una pagina vertical interminable.
+PR #155 redefine esa primera pantalla como **JARVIS Presence UI + Local System
+Contract**: `/jarvis` es la cara visual/control center del sistema local de
+JARVIS, no una web ni el runtime.
 La regla central no cambia:
 
 ```text
@@ -29,6 +32,15 @@ Hermes ejecuta.
   Approval Console resumida, Mission Control resumido, Hermes Execution
   resumido, Finance / ROI compacto, Product Builder compacto, Kill Switch y
   salud del sistema.
+- En PR #155 el primer viewport prioriza la presencia viva de JARVIS: nucleo u
+  orbe central dominante, estados visuales `idle/calmado`, `escuchando`,
+  `pensando`, `hablando` y `alerta/riesgo`, laterales con informacion esencial
+  minima, camera placeholder lateral movible/ampliable, smart bar inferior e
+  historial plegado.
+- `GET /mark-3/dashboard/status` expone `local_system_contract`, que declara
+  que el runtime/daemon local de JARVIS es el sistema, `/jarvis` es solo la
+  interfaz visual, movil/VPS seran clientes o puentes futuros, el frontend no
+  ejecuta directamente Hermes y voz/camara reales vendran en PRs posteriores.
 - Los detalles largos quedan en tabs locales: Cockpit, Approvals, Hermes,
   Voice / Wake, Vision / Mobile, Finance / Product y Pilot / Audit.
 - Las listas largas usan scroll interno; abrir `/jarvis` no debe sentirse como
@@ -50,6 +62,10 @@ Hermes ejecuta.
 - no credentials;
 - no production readiness;
 - no browser/manual pilot result claimed by code or docs.
+- no local daemon activation from the frontend;
+- no real STT/TTS;
+- no real mobile bridge;
+- no real VPS bridge.
 
 ## 3. Como arrancar backend
 
@@ -79,15 +95,24 @@ Abrir la URL local del frontend y navegar a `/jarvis`. El proxy de Vite apunta
 3. Comprobar estado general.
 4. Comprobar que el cockpit principal cabe razonablemente above-the-fold en
    desktop.
-5. Comprobar tabs: Cockpit, Approvals, Hermes, Voice / Wake, Vision / Mobile,
+5. Comprobar que el nucleo/orbe central domina la pantalla y comunica presencia
+   viva de JARVIS, no administracion.
+6. Comprobar estados preview: idle/calmado, escuchando, pensando, hablando y
+   alerta/riesgo.
+7. Comprobar camera placeholder lateral: visual, movible/ampliable, sin prompt
+   ni permiso de navegador.
+8. Comprobar smart bar inferior: input disabled/preview, transcripcion temporal
+   preview, respuesta temporal preview e historial plegado.
+9. Comprobar Local System Contract visible.
+10. Comprobar tabs: Cockpit, Approvals, Hermes, Voice / Wake, Vision / Mobile,
    Finance / Product y Pilot / Audit.
-6. Comprobar panels.
-7. Comprobar `unknown`/`disabled`/`not_connected`/`preview`/`future_gated`.
-8. Comprobar que botones criticos estan disabled.
-9. Comprobar que no hay permisos de navegador.
-10. Comprobar que no hay ejecucion Hermes.
-11. Comprobar que Finance / ROI no inventa datos.
-12. Comprobar timeline read-only.
+11. Comprobar panels.
+12. Comprobar `unknown`/`disabled`/`not_connected`/`preview`/`future_gated`.
+13. Comprobar que botones criticos estan disabled.
+14. Comprobar que no hay permisos de navegador.
+15. Comprobar que no hay ejecucion Hermes.
+16. Comprobar que Finance / ROI no inventa datos.
+17. Comprobar timeline read-only.
 
 ## 6. Checklist de seguridad
 
@@ -110,6 +135,11 @@ Abrir la URL local del frontend y navegar a `/jarvis`. El proxy de Vite apunta
 - No email send.
 - No credentials.
 - No fake metrics.
+- Local System Contract visible.
+- Presence UI visible.
+- Smart bar disabled/preview.
+- Camera placeholder visual only.
+- Folded history preview.
 
 ## 7. Criterio de exito
 
@@ -120,6 +150,11 @@ bloqueados y donde esta el Kill Switch. El read model sigue conectado, todos
 los paneles esperados siguen disponibles en tabs, los valores sin evidencia
 degradan honestamente, los botones criticos estan disabled y el timeline es
 read-only, sin que el frontend ejecute Hermes ni active sensores.
+
+Desde PR #155 tambien debe sentirse como presencia local: el nucleo central es
+el elemento dominante, la camara es placeholder lateral, la barra inferior es la
+zona natural para escribir/hablar/transcripcion futura, el historial esta
+plegado y los detalles de administracion no dominan la experiencia inicial.
 
 ## 8. Criterio de fallo
 
@@ -136,6 +171,11 @@ Abrir una PR de correccion si aparece cualquiera de estos casos:
   una credencial.
 - `/jarvis` vuelve a ser una sabana vertical con todos los detalles desplegados
   a la vez.
+- `/jarvis` vuelve a sentirse como dashboard admin antes que presencia viva.
+- El nucleo central deja de ser dominante.
+- La smart bar desaparece o parece funcional real.
+- El camera placeholder pide permisos o parece captura real.
+- El Local System Contract deja de estar visible.
 - Los tabs desaparecen o los paneles largos pierden scroll interno.
 
 ## 9. Findings que deben abrir PR
@@ -155,7 +195,9 @@ Abrir una PR de correccion si aparece cualquiera de estos casos:
 - ejecucion Hermes;
 - voz real;
 - camara real;
+- STT/TTS real;
 - movil real;
+- VPS real;
 - dinero, deploy, email o credenciales;
 - dependency hardening separate PR.
 

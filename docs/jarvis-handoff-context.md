@@ -822,6 +822,31 @@ voz real, wake listener real, cámara real, mobile runtime, dinero, Stripe,
 checkout, deploy, email, credenciales, dependency hardening ni fake metrics. No
 afirma que David haya probado manualmente el piloto.
 
+PR #155 es **JARVIS Presence UI + Local System Contract**. Rediseña `/jarvis`
+para que sea la presencia visual local de JARVIS, no una web ni un dashboard de
+administracion. La primera pantalla pasa a estar dominada por un nucleo/orbe
+central de JARVIS con estados visuales `idle/calmado`, `escuchando`,
+`pensando`, `hablando` y `alerta/riesgo`, todos en modo preview/read-only.
+
+El read model `GET /mark-3/dashboard/status` expone `local_system_contract`:
+`JARVIS runtime/daemon local es el sistema`, `/jarvis` es solo la interfaz
+visual/control center, movil y VPS seran clientes/puentes futuros, el frontend
+no ejecuta directamente Hermes y voz/camara reales vendran en PRs posteriores.
+Mantiene `JARVIS gobierna. Hermes ejecuta.` y `no_duplicate_hermes_runtime`.
+
+La UI principal conserva solo informacion esencial: estado general, approvals
+pendientes, escucha/piensa/habla, mision actual, coste/dinero, camara activa y
+riesgo actual. Los detalles largos quedan en tabs/contratos plegados. Se anade
+un `camera placeholder` lateral visual movible/ampliable sin getUserMedia,
+captura, streaming, grabacion, storage ni permisos del navegador. Se anade una
+`smart bar` inferior para escribir a JARVIS, transcripcion temporal preview,
+respuesta temporal preview e `folded history`, todo disabled/preview.
+
+PR #155 no activa voz real, wake listener real, STT, TTS, camara real,
+getUserMedia, captura, streaming, sensores, grabacion, ejecucion Hermes,
+misiones reales, approvals reales, movil real, VPS real, dinero, deploy, email
+ni credenciales.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

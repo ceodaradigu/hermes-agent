@@ -176,6 +176,8 @@ def build_mark_3_dashboard_status(
     frontend_pilot_timeline = _frontend_pilot_timeline_events()
     visual_command_center_pilot = _visual_command_center_pilot_projection()
     visual_command_center_pilot_timeline = _visual_command_center_pilot_timeline_events()
+    local_system_contract = _local_system_contract_projection()
+    local_system_contract_timeline = _local_system_contract_timeline_events()
 
     payload = {
         "system": {
@@ -197,6 +199,7 @@ def build_mark_3_dashboard_status(
             "frontend_can_call_hermes_execute": False,
             "source_endpoint": "/mark-3/release-candidate/status",
         },
+        "local_system_contract": local_system_contract,
         "release_candidate": {
             "status": release_status.get("release_candidate_status", UNKNOWN),
             "readiness": readiness.get("readiness", {}),
@@ -409,6 +412,7 @@ def build_mark_3_dashboard_status(
         + adaptive_product_builder_timeline
         + frontend_pilot_timeline
         + visual_command_center_pilot_timeline
+        + local_system_contract_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -448,9 +452,101 @@ def build_mark_3_dashboard_status(
             "internal_sources_are_read_only_status_or_audit": True,
             "frontend_must_not_call_execute": True,
             "frontend_must_not_request_sensor_permissions": True,
+            "frontend_is_not_runtime": True,
+            "web_route_is_visual_interface_only": True,
+            "local_runtime_daemon_is_system": True,
+            "mobile_and_vps_are_future_clients_or_bridges": True,
         },
     }
     return payload
+
+
+def _local_system_contract_projection() -> Dict[str, Any]:
+    return {
+        "name": "Local System Contract",
+        "presence_ui": "JARVIS Presence UI",
+        "local_runtime_daemon_is_system": True,
+        "web_route": "/jarvis",
+        "web_route_is_visual_interface_only": True,
+        "frontend_executes_hermes_directly": False,
+        "frontend_is_runtime": False,
+        "frontend_can_activate_real_voice": False,
+        "frontend_can_activate_real_camera": False,
+        "mobile_and_vps_are_future_clients_or_bridges": True,
+        "real_voice_camera_in_future_prs": True,
+        "jarvis_governs": True,
+        "hermes_executes": True,
+        "no_duplicate_hermes_runtime": True,
+        "visual_contract": {
+            "primary_experience": "Presence UI",
+            "central_core_states": [
+                "idle/calmado",
+                "escuchando",
+                "pensando",
+                "hablando",
+                "alerta/riesgo",
+            ],
+            "smart_bar": "disabled/preview",
+            "camera_placeholder": "movable/expandable visual placeholder",
+            "folded_history": "collapsed preview",
+        },
+        "future_bridges": {
+            "mobile": "future client/bridge",
+            "vps": "future secure bridge",
+            "voice_runtime": "future PR",
+            "camera_runtime": "future PR",
+        },
+        "safety": {
+            "no_post_put_delete_from_jarvis_page": True,
+            "no_execute_route": True,
+            "no_frontend_hermes_execution": True,
+            "no_browser_sensor_permission": True,
+            "no_real_voice": True,
+            "no_real_camera": True,
+            "no_money": True,
+            "no_deploy": True,
+            "no_email": True,
+            "no_credentials": True,
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _local_system_contract_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Local System Contract read",
+            "source": "/mark-3/dashboard/status",
+            "status": "read_only",
+            "read_only": True,
+        },
+        {
+            "event": "Presence UI contract read",
+            "source": "/jarvis",
+            "status": "preview",
+            "read_only": True,
+        },
+        {
+            "event": "Smart bar preview loaded",
+            "source": "/jarvis",
+            "status": "disabled_preview",
+            "read_only": True,
+        },
+        {
+            "event": "Camera placeholder rendered",
+            "source": "/jarvis",
+            "status": "visual_placeholder_only",
+            "read_only": True,
+        },
+        {
+            "event": "Folded history preview loaded",
+            "source": "/jarvis",
+            "status": "collapsed_preview",
+            "read_only": True,
+        },
+    ]
 
 
 def _visual_pilot_panel(name: str, source: str, status: str, notes: str) -> Dict[str, Any]:
@@ -505,6 +601,36 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "system + jarvis_hermes_contract",
                 "ready",
                 "Shows local read-only mode and JARVIS/Hermes separation.",
+            ),
+            _visual_pilot_panel(
+                "Presence UI",
+                "local_system_contract.visual_contract",
+                "preview",
+                "Dominant central JARVIS core/orb is the primary experience.",
+            ),
+            _visual_pilot_panel(
+                "Local System Contract",
+                "local_system_contract",
+                "ready",
+                "Declares local daemon/runtime as the system and /jarvis as visual interface only.",
+            ),
+            _visual_pilot_panel(
+                "Smart Bar",
+                "local_system_contract.visual_contract.smart_bar",
+                "preview",
+                "Bottom smart bar is disabled/preview for text, temporary transcript and temporary response.",
+            ),
+            _visual_pilot_panel(
+                "Camera Placeholder",
+                "local_system_contract.visual_contract.camera_placeholder",
+                "disabled",
+                "Movable/expandable visual camera placeholder; no browser camera permission or capture.",
+            ),
+            _visual_pilot_panel(
+                "Folded History",
+                "local_system_contract.visual_contract.folded_history",
+                "preview",
+                "Conversation history is collapsed preview; no new persistence or runtime flow.",
             ),
             _visual_pilot_panel(
                 "Voice Core",
@@ -752,6 +878,12 @@ def _visual_command_center_pilot_timeline_events() -> List[Dict[str, Any]]:
             "event": "Read-only safety checks loaded",
             "source": "/mark-3/dashboard/status",
             "status": "passed",
+            "read_only": True,
+        },
+        {
+            "event": "Presence UI panels loaded",
+            "source": "/jarvis",
+            "status": "preview",
             "read_only": True,
         },
         {
@@ -1049,6 +1181,36 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "preview",
                 "frontend route expected at /jarvis",
                 "Static frontend tests verify this shell route.",
+            ),
+            _frontend_readiness_check(
+                "presence_ui_visible",
+                "passed",
+                "Presence UI central core",
+                "The first viewport presents JARVIS as a living local presence, not an admin dashboard.",
+            ),
+            _frontend_readiness_check(
+                "local_system_contract_visible",
+                "passed",
+                "local_system_contract projection present",
+                "The dashboard declares the local daemon/runtime as the system and /jarvis as interface only.",
+            ),
+            _frontend_readiness_check(
+                "smart_bar_visible",
+                "passed",
+                "smart bar disabled/preview",
+                "The bottom bar supports future text/voice/transcript/response flow without wiring real execution.",
+            ),
+            _frontend_readiness_check(
+                "camera_placeholder_visible",
+                "passed",
+                "camera placeholder",
+                "The visual camera panel is movable/expandable placeholder only.",
+            ),
+            _frontend_readiness_check(
+                "folded_history_visible",
+                "passed",
+                "folded history",
+                "History appears collapsed as preview and does not create persistence.",
             ),
             _frontend_readiness_check(
                 "read_model_connected",
