@@ -45,6 +45,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const DASHBOARD_READ_MODEL_ENDPOINT = "/mark-3/dashboard/status";
 const UNKNOWN = "unknown";
 
+const commandCenterTabs = [
+  { id: "cockpit", label: "Cockpit" },
+  { id: "approvals", label: "Approvals" },
+  { id: "hermes", label: "Hermes" },
+  { id: "voice", label: "Voice / Wake" },
+  { id: "vision", label: "Vision / Mobile" },
+  { id: "finance", label: "Finance / Product" },
+  { id: "pilot", label: "Pilot / Audit" },
+] as const;
+
+type CommandCenterTabId = (typeof commandCenterTabs)[number]["id"];
+
 const previewVoiceSubtitle = "David, estoy en modo preview. No estoy escuchando ni grabando audio.";
 
 const fallbackVoiceVisualStates: JarvisVoiceCoreVisualState[] = [
@@ -1966,6 +1978,7 @@ function SafetyLine({ children }: { children: React.ReactNode }) {
 export default function JarvisCommandCenterPage() {
   const [dashboard, setDashboard] = useState<JarvisDashboardStatus>(() => fallbackDashboard("loading"));
   const [connectionState, setConnectionState] = useState<"loading" | "online" | "offline">("loading");
+  const [activeTab, setActiveTab] = useState<CommandCenterTabId>("cockpit");
 
   useEffect(() => {
     let active = true;
@@ -2422,1300 +2435,1264 @@ export default function JarvisCommandCenterPage() {
     ["audit events", yesNo(wakeApprovalPolicy.approval_events_must_be_audited, "required", "false")],
   ] as const;
 
+  const sensorsDisabled =
+    !voiceCoreState.microphone_enabled &&
+    !cameraVisionState.camera_enabled &&
+    !mobileCompanionState.remote_camera_enabled &&
+    !mobileCompanionState.remote_microphone_enabled;
+  const moneyDeployEmailBlocked =
+    !frontendPilotState.frontend_can_move_money &&
+    !frontendPilotState.frontend_can_deploy &&
+    !frontendPilotState.frontend_can_send_email &&
+    !productBuilderState.deploy_enabled &&
+    financeSafety.no_money_movement;
+  const cockpitAlerts = [
+    ["approvals", valueText(approvals.pending_count)],
+    ["Hermes activo", yesNo(hermesRuntime.active_execution, "sí", "no")],
+    ["sensores", sensorsDisabled ? "apagados" : "revisar"],
+    ["dinero/deploy/email", moneyDeployEmailBlocked ? "bloqueado" : "revisar"],
+  ] as const;
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className="border border-border bg-card/70 p-5">
-        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-4">
+    <div
+      className="relative left-1/2 flex w-[calc(100vw-3rem)] max-w-[1920px] -translate-x-1/2 flex-col gap-4 xl:gap-5"
+      data-testid="jarvis-command-center-page"
+    >
+      <header
+        data-testid="jarvis-command-center-header"
+        className="sticky top-12 z-30 border border-border bg-background/95 p-4 backdrop-blur-sm 2xl:p-5"
+      >
+        <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
+          <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={connectionState === "online" ? "success" : connectionState === "offline" ? "destructive" : "outline"}>
-                API: {valueText(system.api_status)}
+                backend: {valueText(system.api_status, connectionState)}
               </Badge>
-              <Badge variant="outline">Modo: {valueText(system.mode)}</Badge>
-              <Badge variant="warning">Sin autonomía libre</Badge>
-              <Badge variant="outline">Read model: {DASHBOARD_READ_MODEL_ENDPOINT}</Badge>
+              <Badge variant="warning">modo preview/read-only</Badge>
+              <Badge variant="outline">Visual Command Center</Badge>
+              <Badge variant="outline">GET {DASHBOARD_READ_MODEL_ENDPOINT}</Badge>
             </div>
-            <div className="space-y-2">
-              <h1 className="font-expanded text-3xl font-bold uppercase tracking-[0.08em] blend-lighter md:text-5xl">
-                Centro de Mando JARVIS
-              </h1>
-              <p className="max-w-3xl font-display text-base text-muted-foreground">
-                JARVIS gobierna. Hermes ejecuta.
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="border border-border/70 bg-background/40 p-3">
-                <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">autonomía</p>
-                <p className="mt-1 font-mono-ui text-sm">{yesNo(system.free_autonomy_enabled, "libre", "Sin autonomía libre")}</p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h1 className="font-expanded text-2xl font-bold uppercase tracking-[0.08em] blend-lighter md:text-4xl">
+                  Centro de Mando JARVIS
+                </h1>
+                <p className="mt-1 font-display text-sm text-muted-foreground">
+                  JARVIS gobierna. Hermes ejecuta. El dashboard mira, no toca.
+                </p>
               </div>
-              <div className="border border-border/70 bg-background/40 p-3">
-                <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">runtime</p>
-                <p className="mt-1 font-mono-ui text-sm">{yesNo(contract.frontend_can_execute, "frontend ejecuta", "read-only shell")}</p>
-              </div>
-              <div className="border border-border/70 bg-background/40 p-3">
-                <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">sensores</p>
-                <p className="mt-1 font-mono-ui text-sm">disabled</p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={contract.frontend_can_execute ? "destructive" : "success"}>read-only</Badge>
+                <Badge variant="success">No POST/PUT/DELETE</Badge>
+                <Badge variant="success">No execute</Badge>
+                <Badge variant="success">No sensores</Badge>
+                <Badge variant="success">No fake metrics</Badge>
               </div>
             </div>
           </div>
 
-          <aside className="border border-destructive/50 bg-destructive/10 p-4">
+          <aside className="border border-destructive/50 bg-destructive/10 p-3" data-testid="jarvis-header-kill-switch">
             <div className="flex items-center gap-3">
-              <ShieldAlert className="h-6 w-6 text-destructive" />
-              <div>
-                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">
-                  Kill Switch
-                </h2>
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              <div className="min-w-0">
+                <p className="font-expanded text-xs font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch</p>
                 <p className="font-mono-ui text-xs text-destructive/80">{valueText(system.kill_switch_state, "not_wired")}</p>
               </div>
             </div>
-            <Button disabled type="button" variant="destructive" className="mt-4 w-full">
+            <Button disabled aria-disabled="true" type="button" variant="destructive" className="mt-3 w-full">
               KILL SWITCH
             </Button>
-            <p className="mt-3 font-display text-xs text-destructive/80">
-              No hay ejecución real que detener desde este panel. No hay ejecución real que detener desde esta shell.
-              Cuando se conecte a ejecución real, deberá cortar o pausar flujos gobernados.
-            </p>
           </aside>
         </div>
+      </header>
+
+      <section
+        data-testid="jarvis-cockpit-layout"
+        className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px] 2xl:grid-cols-[340px_minmax(760px,1fr)_400px]"
+      >
+        <article className="border border-border bg-card/80 p-4 xl:row-span-2" data-testid="jarvis-agent-radar">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Radar className="h-4 w-4 text-success" />
+              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Agent / Module Radar</h2>
+            </div>
+            <Badge variant="outline">{modules.length} modules</Badge>
+          </div>
+          <div className="max-h-[520px] space-y-2 overflow-auto pr-1">
+            {modules.map((module) => (
+              <div key={module.name} className="border border-border/70 bg-background/35 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-display text-xs uppercase tracking-[0.1em] text-foreground">{module.name}</span>
+                  <Badge variant={statusVariant(valueText(module.status))}>{valueText(module.status)}</Badge>
+                </div>
+                <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(module.notes)}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="relative min-h-[420px] overflow-hidden border border-warning/40 bg-card/80 p-6 2xl:min-h-[500px] 2xl:p-7" data-testid="jarvis-central-core">
+          <div className="absolute inset-6 border border-warning/10 2xl:inset-8" />
+          <div className="relative grid min-h-[370px] gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center 2xl:min-h-[440px] 2xl:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="relative flex h-64 w-64 items-center justify-center 2xl:h-80 2xl:w-80">
+                <div className="absolute h-64 w-64 rounded-full border border-warning/15 animate-pulse 2xl:h-80 2xl:w-80" />
+                <div className="absolute h-52 w-52 rounded-full border border-success/20 2xl:h-64 2xl:w-64" />
+                <div className="absolute h-40 w-40 rounded-full border border-warning/35 animate-pulse 2xl:h-48 2xl:w-48" />
+                <div className="absolute h-px w-full bg-warning/30" />
+                <div className="absolute h-full w-px bg-warning/30" />
+                <div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_58px_rgba(255,189,56,0.22)] 2xl:h-40 2xl:w-40">
+                  <MicOff className="h-12 w-12 text-warning 2xl:h-14 2xl:w-14" />
+                </div>
+              </div>
+              <h2 className="font-expanded text-3xl font-bold uppercase tracking-[0.12em] blend-lighter 2xl:text-4xl">JARVIS</h2>
+              <p className="mt-1 font-display text-sm uppercase tracking-[0.1em] text-warning">Núcleo de Voz JARVIS</p>
+              <p className="mt-4 max-w-3xl font-mono-ui text-sm text-foreground 2xl:text-base">
+                {valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <StatusList
+                items={[
+                  ["backend", valueText(system.api_status, connectionState)],
+                  ["modo", valueText(system.mode, "read_only_dashboard")],
+                  ["voice", valueText(voiceCoreState.current_state, "preview")],
+                  ["Hermes", yesNo(hermesRuntime.active_execution, "ejecutando", "sin ejecución activa")],
+                  ["sensores", sensorsDisabled ? "apagados" : "revisar"],
+                  ["kill", valueText(system.kill_switch_state, "visible")],
+                ]}
+              />
+            </div>
+          </div>
+        </article>
+
+        <article className="border border-warning/40 bg-card/80 p-4 xl:row-span-2" data-testid="jarvis-approval-summary">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-warning" />
+              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Consola de Aprobación</h2>
+            </div>
+            <Badge variant={approvalCards.length ? "warning" : "success"}>{valueText(approvals.pending_count)} pendientes</Badge>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            {approvalCards.slice(0, 3).map((card) => (
+              <div key={card.id} className="border border-border/70 bg-background/35 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-display text-xs uppercase tracking-[0.1em]">{valueText(card.title)}</p>
+                  <Badge variant={riskVariant(valueText(card.risk_level))}>{valueText(card.risk_level)}</Badge>
+                </div>
+                <p className="mt-2 font-mono-ui text-[0.72rem] text-muted-foreground">{valueText(card.action)}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Aprobar</Button>
+                  <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Rechazar</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 font-display text-xs text-warning">
+            Preview-only: approval execution is not wired in this PR.
+          </p>
+        </article>
+
+        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-mission-summary">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Workflow className="h-4 w-4 text-success" />
+              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Control de Misión</h2>
+            </div>
+            <Badge variant="warning">preview-only</Badge>
+          </div>
+          <textarea
+            disabled
+            readOnly
+            aria-label="Control de Misión preview input"
+            placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}
+            className="min-h-20 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
+          />
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Preparar preview</Button>
+            <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Enviar a JARVIS</Button>
+          </div>
+          <p className="mt-3 font-display text-xs text-warning">En esta fase no se ejecuta nada.</p>
+        </article>
       </section>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-success" />
-            <CardTitle>Visual Command Center Pilot</CardTitle>
+      <section className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px] 2xl:grid-cols-[340px_minmax(760px,1fr)_400px]" data-testid="jarvis-cockpit-lower-band">
+        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-finance-summary">
+          <div className="mb-3 flex items-center gap-2">
+            <CircleDollarSign className="h-4 w-4 text-warning" />
+            <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Finance / ROI</h2>
           </div>
-          <CardDescription>
-            Piloto local read-only del cockpit completo. El dashboard mira, no toca.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <article className="border border-success/40 bg-success/10 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="success">read-only pilot</Badge>
-              <Badge variant="outline">{valueText(visualPilotState.dashboard_route, "/jarvis")}</Badge>
-              <Badge variant="outline">{valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)}</Badge>
-              <Badge variant={visualPilotState.frontend_execution_enabled ? "destructive" : "success"}>
-                execute: {yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")}
-              </Badge>
-              <Badge variant={visualPilotState.approvals_real_enabled ? "destructive" : "success"}>
-                approvals reales: {yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")}
-              </Badge>
+          <StatusList
+            items={[
+              ["coste real", financeMetricValue(financeMetrics.actual_cost)],
+              ["revenue", financeMetricValue(financeMetrics.confirmed_revenue)],
+              ["ROI", financeMetricValue(financeMetrics.roi)],
+            ]}
+          />
+          <p className="mt-3 font-display text-xs text-warning">No fake metrics. Si no hay evidencia, mostrar unknown.</p>
+        </article>
+
+        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-hermes-timeline-summary">
+          <div className="mb-3 grid gap-3 lg:grid-cols-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <TerminalSquare className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hermes Execution</h2>
+              </div>
+              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
+                {yesNo(hermesRuntime.active_execution, "ejecución activa", "Sin ejecución activa")}. El frontend no puede ejecutar Hermes directamente.
+              </p>
             </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              <SafetyLine>El dashboard mira, no toca.</SafetyLine>
-              <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
-              <SafetyLine>No se activan sensores.</SafetyLine>
-              <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
-              <SafetyLine>No hay métricas falsas.</SafetyLine>
-              <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
-              <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
-            </div>
-          </article>
-
-          <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint / modo</h3>
-              <div className="mt-3">
-                <StatusList items={visualPilotRows} />
+            <div>
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Timeline / Audit</h2>
               </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de panels</h3>
-                <Badge variant="warning">required panels</Badge>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {visualPilotPanels.map((panel) => (
-                  <div key={panel.name} className="min-h-28 border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-display text-sm">{panel.name}</p>
-                      <Badge variant={statusVariant(valueText(panel.status))}>{valueText(panel.status)}</Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge variant={panel.expected ? "success" : "destructive"}>
-                        expected: {yesNo(panel.expected, "true", "false")}
-                      </Badge>
-                      <Badge variant={panel.can_execute ? "destructive" : "success"}>
-                        can_execute: {yesNo(panel.can_execute, "true", "false")}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.source)}</p>
-                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.notes)}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de seguridad</h3>
-                <Badge variant="success">read-only checks</Badge>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {visualPilotChecks.map((check) => (
-                  <div key={check.name} className="border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
-                      <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>
-                        {valueText(check.status)}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
-                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <div className="space-y-4">
-              <article className="border border-warning/40 bg-warning/10 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">
-                  Estado de botones críticos
-                </h3>
-                <div className="mt-3">
-                  <StatusList items={criticalButtonRows} />
-                </div>
-              </article>
-
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-                <div className="mt-3">
-                  <StatusList items={visualPilotSafetyRows} />
-                </div>
-              </article>
-            </div>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr]">
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pasos para el operador</h3>
-              <ol className="mt-3 space-y-2">
-                {visualPilotSteps.map((step) => (
-                  <li key={`${step.order}-${step.check}`} className="grid grid-cols-[2rem_1fr] gap-2 border border-border/70 bg-background/40 p-3">
-                    <span className="font-mono-ui text-xs text-warning">{step.order}</span>
-                    <span>
-                      <span className="block font-display text-xs uppercase tracking-[0.1em] text-foreground">{step.check}</span>
-                      <span className="mt-1 block font-mono-ui text-[0.7rem] text-muted-foreground">{step.notes}</span>
+              <ol className="mt-2 max-h-24 space-y-2 overflow-auto pr-1">
+                {timeline.slice(0, 4).map((event) => (
+                  <li key={event.source + "-" + event.event} className="grid grid-cols-[16px_1fr] gap-2">
+                    <Square className="mt-0.5 h-2.5 w-2.5 text-warning" />
+                    <span className="font-mono-ui text-[0.7rem] text-muted-foreground">
+                      {valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}
                     </span>
                   </li>
                 ))}
               </ol>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Limitaciones conocidas</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {visualPilotLimitations.map((limitation) => (
-                  <Badge key={limitation} variant="outline">
-                    {limitation}
-                  </Badge>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot findings</h3>
-              <p className="mt-3 font-mono-ui text-xs text-muted-foreground">
-                Findings reales registrados: {visualPilotFindings.length}
-              </p>
-              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
-                No se declara que David haya abierto el navegador o probado manualmente el piloto.
-              </p>
-            </article>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-warning" />
-              <CardTitle>Núcleo de Voz JARVIS</CardTitle>
-            </div>
-            <CardDescription>Voice Core visual + TTS state preview. Sin escucha, sin grabación y sin provider externo.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-              <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden border border-warning/40 bg-background/40">
-                <div className="absolute h-56 w-56 rounded-full border border-warning/15 animate-pulse" />
-                <div className="absolute h-44 w-44 rounded-full border border-success/20" />
-                <div className="absolute h-32 w-32 rounded-full border border-warning/35 animate-pulse" />
-                <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_42px_rgba(255,189,56,0.18)]">
-                  <MicOff className="h-10 w-10 text-warning" />
-                </div>
-                <div className="absolute bottom-4 left-4 right-4 border border-border/70 bg-background/70 px-3 py-2">
-                  <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">estado actual</p>
-                  <p className="mt-1 font-mono-ui text-sm text-warning">
-                    {valueText(voiceCoreState.current_state, "preview")} / {valueText(voiceCoreState.mode, "preview")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <StatusList items={voiceCoreRows} />
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">Subtítulos preview</Badge>
-                    <Badge variant="success">sin TTS real</Badge>
-                    <Badge variant="success">sin STT real</Badge>
-                    <Badge variant="success">sin provider externo</Badge>
-                  </div>
-                  <p className="mt-3 font-mono-ui text-sm text-foreground">
-                    {valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}
-                  </p>
-                  <p className="mt-2 font-display text-xs text-warning">
-                    Subtítulos preview - sin TTS real, sin STT real, sin provider externo.
-                  </p>
-                </article>
-              </div>
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
-                <Badge variant="warning">preview / disabled / future gated / not connected</Badge>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {voiceVisualStates.map((item) => (
-                  <div key={item.state} className="min-h-32 border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
-                        <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
-                      </div>
-                      <Badge variant={item.enabled === "preview" ? "warning" : item.enabled ? "success" : "outline"}>
-                        {valueText(item.enabled)}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="outline">{valueText(item.connection, "preview")}</Badge>
-                      <Badge variant={item.sensor_required ? "destructive" : "success"}>
-                        sensor: {yesNo(item.sensor_required, "required", "false")}
-                      </Badge>
-                      <Badge variant={item.can_approve ? "destructive" : "success"}>
-                        approve: {yesNo(item.can_approve, "true", "false")}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">TTS State</h3>
-                <div className="mt-3">
-                  <StatusList items={ttsRows} />
-                </div>
-              </article>
-
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Política wake word</h3>
-                <div className="mt-3">
-                  <StatusList items={wakePolicyRows} />
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <SafetyLine>Frases soportadas futuras: Hola Jarvis, Jarvis.</SafetyLine>
-                  <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-                  <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
-                  <SafetyLine>Las acciones críticas requieren readback y confirmación fuerte.</SafetyLine>
-                </div>
-              </article>
-            </div>
-
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">
-                  Wake Word Local Safe Flow
-                </h3>
-                <Badge variant="warning">typed preview / read-only</Badge>
-              </div>
-
-              <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-                <div className="space-y-4">
-                  <StatusList items={wakeFlowStateRows} />
-                  <div className="border border-border/70 bg-background/35 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Frases soportadas</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {wakeSupportedPhrases.map((phrase) => (
-                        <Badge key={phrase} variant="outline">
-                          {phrase}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border border-border/70 bg-background/35 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Stop phrases</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {wakeStopPhrases.map((phrase) => (
-                        <Badge key={phrase} variant="outline">
-                          {phrase}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {[
-                      ["Mic hard-off", valueText(wakeModeExplanations.mic_hard_off, "Mic hard-off: no escucha nada.")],
-                      [
-                        "Wake-word-only",
-                        valueText(
-                          wakeModeExplanations.wake_word_only,
-                          "Wake-word-only: futuro modo donde solo detectaría frase.",
-                        ),
-                      ],
-                      [
-                        "Command listening",
-                        valueText(
-                          wakeModeExplanations.command_listening,
-                          "Command listening: futura ventana corta después de wake.",
-                        ),
-                      ],
-                      ["Push-to-talk", valueText(wakeModeExplanations.push_to_talk, "Push-to-talk: futuro modo manual.")],
-                      ["Typed preview", valueText(wakeModeExplanations.typed_preview, "Typed preview: modo actual seguro.")],
-                    ].map(([label, text]) => (
-                      <div key={label} className="border border-border/70 bg-background/35 p-3">
-                        <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">{label}</p>
-                        <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    <div className="border border-border/70 bg-background/35 p-3">
-                      <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">David</p>
-                      <p className="mt-2 font-mono-ui text-sm text-foreground">
-                        {valueText(wakeParsePreview.input_example, "Hola Jarvis, revisa el estado del proyecto")}
-                      </p>
-                    </div>
-                    <div className="border border-border/70 bg-background/35 p-3">
-                      <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS preview</p>
-                      <div className="mt-2">
-                        <StatusList items={wakeParseRows} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    <div className="border border-border/70 bg-background/35 p-3">
-                      <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Policy visible</p>
-                      <div className="mt-3 grid gap-2">
-                        <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-                        <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
-                        <SafetyLine>La wake phrase solo puede abrir una ventana de comando futura.</SafetyLine>
-                        <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
-                        <SafetyLine>Las acciones críticas requieren doble o triple confirmación.</SafetyLine>
-                      </div>
-                    </div>
-                    <div className="border border-border/70 bg-background/35 p-3">
-                      <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Approval policy</p>
-                      <div className="mt-3">
-                        <StatusList items={wakeApprovalRows} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-success/40 bg-background/35 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Safety banner</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={wakeFlowSafety.no_microphone_activation ? "success" : "destructive"}>no micrófono</Badge>
-                      <Badge variant={wakeFlowSafety.no_raw_audio_storage ? "success" : "destructive"}>no grabación</Badge>
-                      <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no STT</Badge>
-                      <Badge variant={wakeFlowSafety.no_external_tts ? "success" : "destructive"}>no TTS real</Badge>
-                      <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no provider externo</Badge>
-                      <Badge variant={wakeFlowSafety.no_background_listening ? "success" : "destructive"}>
-                        no background listener
-                      </Badge>
-                      <Badge variant={wakeFlowSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
-                      <Badge variant={wakeFlowSafety.no_auto_execute ? "success" : "destructive"}>no auto execute</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            <div className="grid gap-4 lg:grid-cols-3">
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad voz</h3>
-                <div className="mt-3">
-                  <StatusList items={voicePrivacyRows} />
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <SafetyLine>micrófono: disabled</SafetyLine>
-                  <SafetyLine>grabación: false</SafetyLine>
-                  <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
-                </div>
-              </article>
-
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes</h3>
-                <div className="mt-3">
-                  <StatusList items={voiceRelationshipRows} />
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <SafetyLine>La voz puede preparar una intención futura.</SafetyLine>
-                  <SafetyLine>Si requiere aprobación, aparecerá en Approval Console.</SafetyLine>
-                  <SafetyLine>Hermes solo ejecuta después de approval válido.</SafetyLine>
-                  <SafetyLine>Frontend/voice no llama Hermes directamente.</SafetyLine>
-                </div>
-              </article>
-
-              <article className="border border-destructive/40 bg-destructive/10 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch voz</h3>
-                <div className="mt-3 grid gap-2">
-                  <Badge variant={voiceSafety.kill_switch_visible ? "success" : "destructive"}>
-                    kill switch visible: {yesNo(voiceSafety.kill_switch_visible)}
-                  </Badge>
-                  <Badge variant={voiceKillSwitch.real_audio_to_stop ? "destructive" : "success"}>
-                    audio real que parar: {yesNo(voiceKillSwitch.real_audio_to_stop, "true", "false")}
-                  </Badge>
-                </div>
-                <p className="mt-3 font-mono-ui text-xs text-destructive/80">
-                  En esta PR no hay audio real que parar. Una integración futura deberá cortar escucha, TTS y ejecución gobernada.
-                </p>
-              </article>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Workflow className="h-5 w-5 text-success" />
-              <CardTitle>Control de Misión</CardTitle>
-            </div>
-            <CardDescription>
-              Escribe o dicta una orden para que JARVIS prepare una misión. En esta fase no se ejecuta nada.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">preview-only</Badge>
-                <Badge variant={missionState.execution_enabled ? "destructive" : "success"}>
-                  execution: {yesNo(missionState.execution_enabled, "enabled", "false")}
-                </Badge>
-                <Badge variant={missionState.hermes_dispatch_enabled ? "destructive" : "success"}>
-                  Hermes dispatch: {yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")}
-                </Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">
-                Escribe o dicta una orden para que JARVIS prepare una misión.
-              </p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">
-                En esta fase no se ejecuta nada.
-              </p>
-            </article>
-
-            <div className="space-y-3">
-              <textarea
-                disabled
-                readOnly
-                aria-label="Control de Misión preview input"
-                placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}
-                className="min-h-28 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
-              />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button disabled aria-disabled="true" type="button" variant="outline">
-                  Preparar preview
-                </Button>
-                <Button disabled aria-disabled="true" type="button" variant="outline">
-                  Enviar a JARVIS
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-2">
-              <StatusList items={missionStateRows} />
-              <StatusList items={supportedInputRows} />
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Conversation Preview</h3>
-                <Badge variant="warning">assistant: {valueText(missionConversation.assistant_status, "preview")}</Badge>
-              </div>
-              <p className="mb-3 font-display text-xs text-warning">
-                Preview conversation — no provider call, no memory write, no execution.
-              </p>
-              <div className="grid gap-3">
-                {missionMessages.map((message, index) => (
-                  <div key={`${message.speaker}-${index}`} className="border border-border/70 bg-background/40 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                      {valueText(message.speaker)}
-                    </p>
-                    <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(message.content)}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3">
-                <StatusList items={conversationPreviewRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Intent / Risk Preview</h3>
-              <div className="mt-3">
-                <StatusList items={missionIntentRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Mission Lifecycle</h3>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {missionLifecycleDisplay.map(([step, description]) => (
-                  <div key={step} className="border border-border/70 bg-background/40 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-display text-xs uppercase tracking-[0.12em]">{step}</span>
-                      <Badge variant="outline">preview</Badge>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{description}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Safety Banner</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {missionSafetyLabels.map(([label, key]) => (
-                  <Badge key={key} variant={missionSafety[key] ? "success" : "outline"}>
-                    {label}
-                  </Badge>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes Panel</h3>
-              <div className="mt-3 grid gap-2">
-                <SafetyLine>Si una misión necesita algo sensible, aparecerá en Approval Console.</SafetyLine>
-                <SafetyLine>Hermes solo ejecutará después de approval válido.</SafetyLine>
-                <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
-              </div>
-              <div className="mt-3 grid gap-2">
-                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.can_do)}</p>
-                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.cannot_do_yet)}</p>
-                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.future_next_step)}</p>
-                <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.sensitive_requires_approval)}</p>
-              </div>
-            </article>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-warning" />
-              <CardTitle>Consola de Aprobación</CardTitle>
-            </div>
-            <CardDescription>Decisiones, riesgos y requisitos de approval; la consola no aprueba ni ejecuta en esta PR.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">preview/read-only</Badge>
-                <Badge variant={approvals.action_buttons_enabled ? "destructive" : "success"}>
-                  botones: {yesNo(approvals.action_buttons_enabled, "enabled", "disabled")}
-                </Badge>
-                <Badge variant={approvals.all_actions_read_only ? "success" : "destructive"}>
-                  read-only: {yesNo(approvals.all_actions_read_only)}
-                </Badge>
-                <Badge variant={approvals.frontend_can_approve ? "destructive" : "success"}>
-                  approve UI: {yesNo(approvals.frontend_can_approve, "allowed", "forbidden")}
-                </Badge>
-              </div>
-              <p className="mt-3 font-display text-xs text-warning">
-                Preview-only: approval execution is not wired in this PR.
-              </p>
-            </article>
-
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-              {[
-                ["pending", valueText(approvals.pending_count)],
-                ["critical", valueText(approvals.critical_count)],
-                ["blocked", valueText(approvals.blocked_count)],
-                ["expired", valueText(approvals.expired_count)],
-                ["preview", valueText(approvals.preview_count)],
-              ].map(([label, value]) => (
-                <div key={label} className="border border-border/70 bg-background/40 p-3">
-                  <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-                  <p className="mt-1 font-mono-ui text-lg text-foreground">{value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-2">
-              <StatusList
-                items={[
-                  ["frontend puede aprobar", yesNo(approvals.frontend_can_approve, "sí", "no")],
-                  ["frontend puede rechazar", yesNo(approvals.frontend_can_reject, "sí", "no")],
-                  ["frontend modifica alcance", yesNo(approvals.frontend_can_modify_scope, "sí", "no")],
-                  ["wake phrase aprueba", yesNo(approvals.wake_phrase_can_approve, "sí", "no")],
-                ]}
-              />
-              <div className="grid gap-2">
-                <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-                <SafetyLine>La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada.</SafetyLine>
-                <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
-                <SafetyLine>Las acciones críticas requieren confirmación fuerte.</SafetyLine>
-              </div>
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readback / confirmación fuerte</h3>
-              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
-                Las acciones críticas requieren readback, confirmación fuerte, doble/triple confirmación,
-                rollback/stop plan y auditoría. La UI muestra estos gates, pero no emite decisiones.
-              </p>
-            </article>
-
-            <div className="space-y-3">
-              {approvalCards.map((card) => (
-                <ApprovalCardView key={card.id} card={card} />
-              ))}
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Leyenda de riesgo</h3>
-              <div className="mt-3 grid gap-2">
-                {riskLegend.map(([level, text]) => (
-                  <div key={level} className="flex items-start justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
-                    <span className="font-display text-xs uppercase tracking-[0.12em] text-warning">{level}</span>
-                    <span className="text-right font-mono-ui text-xs text-foreground">{text}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <TerminalSquare className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Ejecución Hermes</CardTitle>
-            </div>
-            <CardDescription>Hermes Execution visibility: read-only, gated y sin ejecución activa.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">read-only</Badge>
-                <Badge variant="warning">gated</Badge>
-                <Badge variant={hermesRuntime.active_execution === false ? "success" : "outline"}>no active execution</Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">JARVIS gobierna. Hermes ejecuta.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">
-                El frontend no puede ejecutar Hermes directamente.
-              </p>
-              <p className="mt-3 font-mono-ui text-xs text-foreground">
-                Sin ejecución activa. No hay ejecución real que detener desde este panel.
-              </p>
-            </article>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="border border-border/70 bg-background/40 p-3">
-                <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS</p>
-                <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.jarvis_role)}</p>
-              </div>
-              <div className="border border-border/70 bg-background/40 p-3">
-                <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Hermes</p>
-                <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.hermes_role, "execution_engine")}</p>
-              </div>
-            </div>
-
-            <StatusList
-              items={hermesCurrentRows}
-            />
-
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Badge variant={hermesContract.no_duplicate_hermes_runtime ? "success" : "destructive"}>
-                no duplicate runtime: {yesNo(hermesContract.no_duplicate_hermes_runtime)}
-              </Badge>
-              <Badge variant={hermes.frontend_can_execute ? "destructive" : "success"}>
-                frontend ejecuta: {yesNo(hermes.frontend_can_execute, "sí", "no")}
-              </Badge>
-              <Badge variant={hermes.frontend_can_call_hermes_execute ? "destructive" : "success"}>
-                Hermes directo: {yesNo(hermes.frontend_can_call_hermes_execute, "sí", "no")}
-              </Badge>
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Capacidades gobernadas</h3>
-              <div className="mt-3 grid gap-3">
-                {hermesCapabilities.map((capability) => (
-                  <div key={capability.name} className="border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-display text-sm">{capability.name}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant={statusVariant(valueText(capability.status))}>{valueText(capability.status)}</Badge>
-                        <Badge variant={capability.approval_required ? "warning" : "outline"}>
-                          approval: {valueText(capability.approval_level)}
-                        </Badge>
-                        <Badge variant={capability.can_execute_from_frontend ? "destructive" : "success"}>
-                          frontend: {yesNo(capability.can_execute_from_frontend, "ejecuta", "no ejecuta")}
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(capability.notes)}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-destructive/40 bg-destructive/10 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Rutas bloqueadas</h3>
-              <div className="mt-3 grid gap-2">
-                {hermesBlockedRoutes.map((blocked) => (
-                  <div key={`${blocked.route_or_action}-${blocked.action}`} className="border border-destructive/30 bg-background/35 px-3 py-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-mono-ui text-xs text-foreground">{valueText(blocked.route_or_action)}</span>
-                      <Badge variant="destructive">blocked</Badge>
-                    </div>
-                    <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{valueText(blocked.notes)}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Requisitos antes de ejecución futura</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {futureExecutionRequirements.map((requirement) => (
-                  <Badge key={requirement} variant="warning">
-                    {requirement}
-                  </Badge>
-                ))}
-              </div>
-            </article>
-
-            <SafetyLine>Hermes ejecuta solo bajo gates válidos.</SafetyLine>
-            <SafetyLine>El Kill Switch permanece visible; en esta fase no hay ejecución Hermes activa que parar.</SafetyLine>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Radar className="h-5 w-5 text-success" />
-            <CardTitle>Agent / Module Radar</CardTitle>
-          </div>
-          <CardDescription>Estados normalizados desde el read model; campos ausentes se muestran como unknown.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {modules.map((module) => (
-              <div key={module.name} className="flex min-h-24 flex-col justify-between gap-3 border border-border/70 bg-background/35 px-3 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="font-display text-sm">{module.name}</span>
-                  <Badge variant={statusVariant(valueText(module.status))}>
-                    {valueText(module.status)}
-                  </Badge>
-                </div>
-                <p className="line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(module.notes)}</p>
+          <div className="grid gap-2 sm:grid-cols-4">
+            {cockpitAlerts.map(([label, value]) => (
+              <div key={label} className="border border-border/70 bg-background/35 px-3 py-2">
+                <p className="font-display text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+                <p className="mt-1 font-mono-ui text-xs text-foreground">{value}</p>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </article>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr_0.85fr]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Cámara / Visión</CardTitle>
-            </div>
-            <CardDescription>
-              <span className="font-display text-warning">preview-only</span> · La cámara no graba por defecto. La visión solo se activa con permiso explícito.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">preview-only</Badge>
-                <Badge variant={cameraVisionState.camera_enabled ? "destructive" : "success"}>
-                  cámara: {cameraVisionState.camera_enabled ? "enabled" : "off/disabled"}
-                </Badge>
-                <Badge variant={cameraVisionState.external_vision_provider_called ? "destructive" : "success"}>
-                  provider externo: {cameraVisionState.external_vision_provider_called ? "called" : "none/not_connected"}
-                </Badge>
+        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-product-summary">
+          <div className="mb-3 flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-success" />
+            <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Product Builder Adaptativo</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {productBuilderStages.slice(0, 6).map((stage) => (
+              <div key={stage.name} className="border border-border/70 bg-background/35 px-2 py-2">
+                <p className="truncate font-display text-[0.68rem] uppercase tracking-[0.1em]">{stage.name}</p>
+                <Badge className="mt-1" variant={statusVariant(valueText(stage.status))}>{valueText(stage.status)}</Badge>
               </div>
-              <p className="mt-3 font-display text-sm text-warning">La cámara no graba por defecto.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">La visión solo se activa con permiso explícito.</p>
-            </article>
+            ))}
+          </div>
+          <p className="mt-3 font-display text-xs text-warning">Sin deploy, Stripe ni revenue real.</p>
+        </article>
+      </section>
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
-              <div className="mt-3">
-                <StatusList items={cameraCurrentRows} />
-              </div>
-            </article>
+      <section className="grid gap-4 xl:grid-cols-[1fr_460px_1fr] xl:items-center 2xl:grid-cols-[1fr_540px_1fr]" data-testid="jarvis-cockpit-bottom-bar">
+        <div className="border border-border bg-card/80 p-3">
+          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Alertas</p>
+          <p className="mt-1 font-mono-ui text-xs text-warning">Aprobación requerida solo se muestra como preview/read-only.</p>
+        </div>
+        <div className="border border-destructive/60 bg-destructive/10 p-3 text-center">
+          <ShieldAlert className="mx-auto h-5 w-5 text-destructive" />
+          <p className="mt-1 font-expanded text-base font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch</p>
+          <p className="font-mono-ui text-xs text-destructive/80">
+            No hay ejecución real que detener desde este panel. No hay ejecución real que detener desde esta shell.
+          </p>
+        </div>
+        <div className="border border-success/40 bg-success/10 p-3">
+          <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Salud del sistema</p>
+          <p className="mt-1 font-mono-ui text-xs text-foreground">
+            read-only · sensores apagados · dinero/deploy/email bloqueado · valores sin evidencia: unknown
+          </p>
+        </div>
+      </section>
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad</h3>
-              <div className="mt-3">
-                <StatusList items={cameraPrivacyRows} />
-              </div>
-            </article>
+      <section className="border border-border bg-card/80 p-3" data-testid="jarvis-command-center-tabs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Detalles en pestañas</p>
+            <p className="font-mono-ui text-xs text-muted-foreground">
+              El cockpit mantiene lo crítico above-the-fold; el detalle largo queda filtrado por modo y con scroll interno.
+            </p>
+          </div>
+          <div className="flex max-w-full gap-1 overflow-x-auto scrollbar-none" role="tablist" aria-label="JARVIS command center modes">
+            {commandCenterTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={
+                  "shrink-0 border px-3 py-2 font-display text-[0.7rem] uppercase tracking-[0.12em] transition-colors " +
+                  (activeTab === tab.id
+                    ? "border-warning/60 bg-warning/15 text-warning"
+                    : "border-border bg-background/40 text-muted-foreground hover:text-foreground")
+                }
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
-                <Badge variant="warning">preview / disabled / future gated</Badge>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {cameraVisionStates.map((item) => (
-                  <div key={item.state} className="min-h-32 border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
-                        <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
-                      </div>
-                      <Badge variant={item.enabled === "future_gated" ? "warning" : item.enabled === "preview" ? "outline" : "success"}>
-                        {valueText(item.enabled)}
+      <section
+        className="max-h-[64vh] overflow-auto border border-border bg-card/60 p-4 pr-2"
+        data-testid="jarvis-tab-detail-panel"
+      >
+        {activeTab === "cockpit" && (
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-success" />
+                  <CardTitle>Visual Command Center Pilot</CardTitle>
+                </div>
+                <CardDescription>Piloto local read-only del cockpit completo. El dashboard mira, no toca.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+                  <article className="border border-success/40 bg-success/10 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="success">read-only pilot</Badge>
+                      <Badge variant="outline">{valueText(visualPilotState.dashboard_route, "/jarvis")}</Badge>
+                      <Badge variant="outline">{valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)}</Badge>
+                      <Badge variant={visualPilotState.frontend_execution_enabled ? "destructive" : "success"}>
+                        execute: {yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")}
+                      </Badge>
+                      <Badge variant={visualPilotState.approvals_real_enabled ? "destructive" : "success"}>
+                        approvals reales: {yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")}
                       </Badge>
                     </div>
-                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <SafetyLine>El dashboard mira, no toca.</SafetyLine>
+                      <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
+                      <SafetyLine>No se activan sensores.</SafetyLine>
+                      <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
+                      <SafetyLine>No hay métricas falsas.</SafetyLine>
+                      <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
+                      <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
+                    </div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint / modo</h3>
+                    <div className="mt-3"><StatusList items={visualPilotRows} /></div>
+                  </article>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de panels</h3>
+                      <Badge variant="warning">required panels</Badge>
+                    </div>
+                    <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
+                      {visualPilotPanels.map((panel) => (
+                        <div key={panel.name} className="border border-border/70 bg-background/40 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="font-display text-sm">{panel.name}</p>
+                            <Badge variant={statusVariant(valueText(panel.status))}>{valueText(panel.status)}</Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Badge variant={panel.expected ? "success" : "destructive"}>expected: {yesNo(panel.expected, "true", "false")}</Badge>
+                            <Badge variant={panel.can_execute ? "destructive" : "success"}>can_execute: {yesNo(panel.can_execute, "true", "false")}</Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.notes)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de seguridad</h3>
+                      <Badge variant="success">read-only checks</Badge>
+                    </div>
+                    <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
+                      {visualPilotChecks.map((check) => (
+                        <div key={check.name} className="border border-border/70 bg-background/40 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
+                            <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>{valueText(check.status)}</Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-3">
+                  <article className="border border-warning/40 bg-warning/10 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Estado de botones críticos</h3>
+                    <div className="mt-3"><StatusList items={criticalButtonRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+                    <div className="mt-3"><StatusList items={visualPilotSafetyRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pasos para el operador</h3>
+                    <ol className="mt-3 max-h-60 space-y-2 overflow-auto pr-1">
+                      {visualPilotSteps.map((step) => (
+                        <li key={step.order + "-" + step.check} className="grid grid-cols-[2rem_1fr] gap-2 border border-border/70 bg-background/40 p-3">
+                          <span className="font-mono-ui text-xs text-warning">{step.order}</span>
+                          <span>
+                            <span className="block font-display text-xs uppercase tracking-[0.1em] text-foreground">{step.check}</span>
+                            <span className="mt-1 block font-mono-ui text-[0.7rem] text-muted-foreground">{step.notes}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </article>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Limitaciones conocidas</h3>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="outline">risk: {valueText(item.risk)}</Badge>
-                      <Badge variant={item.can_execute ? "destructive" : "success"}>
-                        execute: {yesNo(item.can_execute, "true", "false")}
-                      </Badge>
+                      {visualPilotLimitations.map((limitation) => <Badge key={limitation} variant="outline">{limitation}</Badge>)}
+                    </div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot findings</h3>
+                    <p className="mt-3 font-mono-ui text-xs text-muted-foreground">Findings reales registrados: {visualPilotFindings.length}</p>
+                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">No se declara que David haya abierto el navegador o probado manualmente el piloto.</p>
+                  </article>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "approvals" && (
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-warning" />
+                  <CardTitle>Consola de Aprobación</CardTitle>
+                </div>
+                <CardDescription>Decisiones, riesgos y requisitos de approval; la consola no aprueba ni ejecuta en esta PR.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">preview/read-only</Badge>
+                    <Badge variant={approvals.action_buttons_enabled ? "destructive" : "success"}>botones: {yesNo(approvals.action_buttons_enabled, "enabled", "disabled")}</Badge>
+                    <Badge variant={approvals.all_actions_read_only ? "success" : "destructive"}>read-only: {yesNo(approvals.all_actions_read_only)}</Badge>
+                    <Badge variant={approvals.frontend_can_approve ? "destructive" : "success"}>approve UI: {yesNo(approvals.frontend_can_approve, "allowed", "forbidden")}</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-xs text-warning">Preview-only: approval execution is not wired in this PR.</p>
+                </article>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  {[
+                    ["pending", valueText(approvals.pending_count)],
+                    ["critical", valueText(approvals.critical_count)],
+                    ["blocked", valueText(approvals.blocked_count)],
+                    ["expired", valueText(approvals.expired_count)],
+                    ["preview", valueText(approvals.preview_count)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="border border-border/70 bg-background/40 p-3">
+                      <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+                      <p className="mt-1 font-mono-ui text-lg text-foreground">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <StatusList
+                    items={[
+                      ["frontend puede aprobar", yesNo(approvals.frontend_can_approve, "sí", "no")],
+                      ["frontend puede rechazar", yesNo(approvals.frontend_can_reject, "sí", "no")],
+                      ["frontend modifica alcance", yesNo(approvals.frontend_can_modify_scope, "sí", "no")],
+                      ["wake phrase aprueba", yesNo(approvals.wake_phrase_can_approve, "sí", "no")],
+                    ]}
+                  />
+                  <div className="grid gap-2">
+                    <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                    <SafetyLine>La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada.</SafetyLine>
+                    <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
+                    <SafetyLine>Las acciones críticas requieren confirmación fuerte.</SafetyLine>
+                  </div>
+                </div>
+
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readback / confirmación fuerte</h3>
+                  <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
+                    Las acciones críticas requieren readback, confirmación fuerte, doble/triple confirmación, rollback/stop plan y auditoría. La UI muestra estos gates, pero no emite decisiones.
+                  </p>
+                </article>
+
+                <div className="grid max-h-[520px] gap-3 overflow-auto pr-1">
+                  {approvalCards.map((card) => <ApprovalCardView key={card.id} card={card} />)}
+                </div>
+
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Leyenda de riesgo</h3>
+                  <div className="mt-3 grid gap-2">
+                    {riskLegend.map(([level, text]) => (
+                      <div key={level} className="flex items-start justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
+                        <span className="font-display text-xs uppercase tracking-[0.12em] text-warning">{level}</span>
+                        <span className="text-right font-mono-ui text-xs text-foreground">{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "hermes" && (
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <TerminalSquare className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Ejecución Hermes</CardTitle>
+                </div>
+                <CardDescription>Hermes Execution visibility: read-only, gated y sin ejecución activa.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">read-only</Badge>
+                    <Badge variant="warning">gated</Badge>
+                    <Badge variant={hermesRuntime.active_execution === false ? "success" : "outline"}>no active execution</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">JARVIS gobierna. Hermes ejecuta.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">El frontend no puede ejecutar Hermes directamente.</p>
+                  <p className="mt-3 font-mono-ui text-xs text-foreground">Sin ejecución activa. No hay ejecución real que detener desde este panel.</p>
+                </article>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="border border-border/70 bg-background/40 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS</p>
+                    <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.jarvis_role)}</p>
+                  </div>
+                  <div className="border border-border/70 bg-background/40 p-3">
+                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Hermes</p>
+                    <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.hermes_role, "execution_engine")}</p>
+                  </div>
+                </div>
+
+                <StatusList items={hermesCurrentRows} />
+
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Badge variant={hermesContract.no_duplicate_hermes_runtime ? "success" : "destructive"}>no duplicate runtime: {yesNo(hermesContract.no_duplicate_hermes_runtime)}</Badge>
+                  <Badge variant={hermes.frontend_can_execute ? "destructive" : "success"}>frontend ejecuta: {yesNo(hermes.frontend_can_execute, "sí", "no")}</Badge>
+                  <Badge variant={hermes.frontend_can_call_hermes_execute ? "destructive" : "success"}>Hermes directo: {yesNo(hermes.frontend_can_call_hermes_execute, "sí", "no")}</Badge>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Capacidades gobernadas</h3>
+                    <div className="mt-3 grid max-h-80 gap-3 overflow-auto pr-1">
+                      {hermesCapabilities.map((capability) => (
+                        <div key={capability.name} className="border border-border/70 bg-background/40 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="font-display text-sm">{capability.name}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant={statusVariant(valueText(capability.status))}>{valueText(capability.status)}</Badge>
+                              <Badge variant={capability.approval_required ? "warning" : "outline"}>approval: {valueText(capability.approval_level)}</Badge>
+                              <Badge variant={capability.can_execute_from_frontend ? "destructive" : "success"}>frontend: {yesNo(capability.can_execute_from_frontend, "ejecuta", "no ejecuta")}</Badge>
+                            </div>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(capability.notes)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="border border-destructive/40 bg-destructive/10 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Rutas bloqueadas</h3>
+                    <div className="mt-3 grid max-h-80 gap-2 overflow-auto pr-1">
+                      {hermesBlockedRoutes.map((blocked) => (
+                        <div key={blocked.route_or_action + "-" + blocked.action} className="border border-destructive/30 bg-background/35 px-3 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-mono-ui text-xs text-foreground">{valueText(blocked.route_or_action)}</span>
+                            <Badge variant="destructive">blocked</Badge>
+                          </div>
+                          <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{valueText(blocked.notes)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Requisitos antes de ejecución futura</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {futureExecutionRequirements.map((requirement) => <Badge key={requirement} variant="warning">{requirement}</Badge>)}
+                  </div>
+                </article>
+                <SafetyLine>Hermes ejecuta solo bajo gates válidos.</SafetyLine>
+                <SafetyLine>El Kill Switch permanece visible; en esta fase no hay ejecución Hermes activa que parar.</SafetyLine>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "voice" && (
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-warning" />
+                  <CardTitle>Núcleo de Voz JARVIS</CardTitle>
+                </div>
+                <CardDescription>Voice Core visual + TTS state preview. Sin escucha, sin grabación y sin provider externo.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+                  <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden border border-warning/40 bg-background/40">
+                    <div className="absolute h-56 w-56 rounded-full border border-warning/15 animate-pulse" />
+                    <div className="absolute h-44 w-44 rounded-full border border-success/20" />
+                    <div className="absolute h-32 w-32 rounded-full border border-warning/35 animate-pulse" />
+                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_42px_rgba(255,189,56,0.18)]">
+                      <MicOff className="h-10 w-10 text-warning" />
+                    </div>
+                    <div className="absolute bottom-4 left-4 right-4 border border-border/70 bg-background/70 px-3 py-2">
+                      <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">estado actual</p>
+                      <p className="mt-1 font-mono-ui text-sm text-warning">{valueText(voiceCoreState.current_state, "preview")} / {valueText(voiceCoreState.mode, "preview")}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </article>
+                  <div className="space-y-4">
+                    <StatusList items={voiceCoreRows} />
+                    <article className="border border-warning/40 bg-warning/10 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="warning">Subtítulos preview</Badge>
+                        <Badge variant="success">sin TTS real</Badge>
+                        <Badge variant="success">sin STT real</Badge>
+                        <Badge variant="success">sin provider externo</Badge>
+                      </div>
+                      <p className="mt-3 font-mono-ui text-sm text-foreground">{valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}</p>
+                      <p className="mt-2 font-display text-xs text-warning">Subtítulos preview - sin TTS real, sin STT real, sin provider externo.</p>
+                    </article>
+                  </div>
+                </div>
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Scope policy</h3>
-              <div className="mt-3">
-                <StatusList items={cameraScopeRows} />
-              </div>
-            </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
+                    <Badge variant="warning">preview / disabled / future gated / not connected</Badge>
+                  </div>
+                  <div className="grid max-h-80 gap-2 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
+                    {voiceVisualStates.map((item) => (
+                      <div key={item.state} className="border border-border/70 bg-background/40 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
+                            <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
+                          </div>
+                          <Badge variant={item.enabled === "preview" ? "warning" : item.enabled ? "success" : "outline"}>{valueText(item.enabled)}</Badge>
+                        </div>
+                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant="outline">{valueText(item.connection, "preview")}</Badge>
+                          <Badge variant={item.sensor_required ? "destructive" : "success"}>sensor: {yesNo(item.sensor_required, "required", "false")}</Badge>
+                          <Badge variant={item.can_approve ? "destructive" : "success"}>approve: {yesNo(item.can_approve, "true", "false")}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
 
-            <div className="grid gap-2">
-              <SafetyLine>La cámara no graba por defecto.</SafetyLine>
-              <SafetyLine>No se captura imagen ni vídeo en esta PR.</SafetyLine>
-              <SafetyLine>No se usa getUserMedia.</SafetyLine>
-              <SafetyLine>No hay proveedor externo de visión.</SafetyLine>
-              <SafetyLine>La visión futura requerirá permiso explícito y auditoría.</SafetyLine>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-success" />
-              <CardTitle>Mobile Companion</CardTitle>
-            </div>
-            <CardDescription>
-              <span className="font-display text-warning">preview-only</span> · Mobile es una interfaz, no un runtime. Mobile no llama a Hermes directamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">preview-only</Badge>
-                <Badge variant={mobileCompanionState.mobile_runtime_enabled ? "destructive" : "success"}>
-                  runtime: {yesNo(mobileCompanionState.mobile_runtime_enabled, "enabled", "disabled")}
-                </Badge>
-                <Badge variant={mobileCompanionState.mobile_can_call_hermes_directly ? "destructive" : "success"}>
-                  Hermes directo: {yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")}
-                </Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">Mobile es una interfaz, no un runtime.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">Mobile no llama a Hermes directamente.</p>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
-              <div className="mt-3">
-                <StatusList items={mobileRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">PWA policy</h3>
-              <div className="mt-3">
-                <StatusList items={pwaRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Vistas futuras</h3>
-                <Badge variant="warning">no execute / no Hermes direct</Badge>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {mobileCompanionViews.map((view) => (
-                  <div key={view.id ?? view.name} className="min-h-32 border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-display text-sm">{valueText(view.name)}</p>
-                      <Badge variant={statusVariant(valueText(view.status))}>{valueText(view.status)}</Badge>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">TTS State</h3>
+                    <div className="mt-3"><StatusList items={ttsRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad voz</h3>
+                    <div className="mt-3"><StatusList items={voicePrivacyRows} /></div>
+                    <div className="mt-3 grid gap-2">
+                      <SafetyLine>micrófono: disabled</SafetyLine>
+                      <SafetyLine>grabación: false</SafetyLine>
+                      <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
                     </div>
-                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(view.notes)}</p>
+                  </article>
+                  <article className="border border-destructive/40 bg-destructive/10 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch voz</h3>
+                    <div className="mt-3 grid gap-2">
+                      <Badge variant={voiceSafety.kill_switch_visible ? "success" : "destructive"}>kill switch visible: {yesNo(voiceSafety.kill_switch_visible)}</Badge>
+                      <Badge variant={voiceKillSwitch.real_audio_to_stop ? "destructive" : "success"}>audio real que parar: {yesNo(voiceKillSwitch.real_audio_to_stop, "true", "false")}</Badge>
+                    </div>
+                    <p className="mt-3 font-mono-ui text-xs text-destructive/80">En esta PR no hay audio real que parar. Una integración futura deberá cortar escucha, TTS y ejecución gobernada.</p>
+                  </article>
+                </div>
+
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Wake Word Local Safe Flow</h3>
+                    <Badge variant="warning">typed preview / read-only</Badge>
+                  </div>
+                  <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+                    <div className="space-y-4">
+                      <StatusList items={wakeFlowStateRows} />
+                      <div className="border border-border/70 bg-background/35 p-3">
+                        <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Frases soportadas</p>
+                        <div className="mt-2 flex flex-wrap gap-2">{wakeSupportedPhrases.map((phrase) => <Badge key={phrase} variant="outline">{phrase}</Badge>)}</div>
+                      </div>
+                      <div className="border border-border/70 bg-background/35 p-3">
+                        <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Stop phrases</p>
+                        <div className="mt-2 flex flex-wrap gap-2">{wakeStopPhrases.map((phrase) => <Badge key={phrase} variant="outline">{phrase}</Badge>)}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {[
+                          ["Mic hard-off", valueText(wakeModeExplanations.mic_hard_off, "Mic hard-off: no escucha nada.")],
+                          ["Wake-word-only", valueText(wakeModeExplanations.wake_word_only, "Wake-word-only: futuro modo donde solo detectaría frase.")],
+                          ["Command listening", valueText(wakeModeExplanations.command_listening, "Command listening: futura ventana corta después de wake.")],
+                          ["Push-to-talk", valueText(wakeModeExplanations.push_to_talk, "Push-to-talk: futuro modo manual.")],
+                          ["Typed preview", valueText(wakeModeExplanations.typed_preview, "Typed preview: modo actual seguro.")],
+                        ].map(([label, text]) => (
+                          <div key={label} className="border border-border/70 bg-background/35 p-3">
+                            <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">{label}</p>
+                            <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{text}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">David</p>
+                          <p className="mt-2 font-mono-ui text-sm text-foreground">{valueText(wakeParsePreview.input_example, "Hola Jarvis, revisa el estado del proyecto")}</p>
+                        </div>
+                        <div className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS preview</p>
+                          <div className="mt-2"><StatusList items={wakeParseRows} /></div>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Policy visible</p>
+                          <div className="mt-3 grid gap-2">
+                            <SafetyLine>Wake phrase is not permission.</SafetyLine>
+                            <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                            <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
+                            <SafetyLine>La wake phrase solo puede abrir una ventana de comando futura.</SafetyLine>
+                            <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
+                            <SafetyLine>Las acciones críticas requieren doble o triple confirmación.</SafetyLine>
+                          </div>
+                        </div>
+                        <div className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Approval policy</p>
+                          <div className="mt-3"><StatusList items={wakeApprovalRows} /></div>
+                        </div>
+                      </div>
+                      <div className="border border-success/40 bg-background/35 p-3">
+                        <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Safety banner</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant={wakeFlowSafety.no_microphone_activation ? "success" : "destructive"}>no micrófono</Badge>
+                          <Badge variant={wakeFlowSafety.no_raw_audio_storage ? "success" : "destructive"}>no grabación</Badge>
+                          <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no STT</Badge>
+                          <Badge variant={wakeFlowSafety.no_external_tts ? "success" : "destructive"}>no TTS real</Badge>
+                          <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no provider externo</Badge>
+                          <Badge variant={wakeFlowSafety.no_background_listening ? "success" : "destructive"}>no background listener</Badge>
+                          <Badge variant={wakeFlowSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
+                          <Badge variant={wakeFlowSafety.no_auto_execute ? "success" : "destructive"}>no auto execute</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Política wake word</h3>
+                    <div className="mt-3"><StatusList items={wakePolicyRows} /></div>
+                    <div className="mt-3 grid gap-2">
+                      <SafetyLine>Frases soportadas futuras: Hola Jarvis, Jarvis.</SafetyLine>
+                      <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
+                      <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
+                      <SafetyLine>Las acciones críticas requieren readback y confirmación fuerte.</SafetyLine>
+                    </div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes</h3>
+                    <div className="mt-3"><StatusList items={voiceRelationshipRows} /></div>
+                    <div className="mt-3 grid gap-2">
+                      <SafetyLine>La voz puede preparar una intención futura.</SafetyLine>
+                      <SafetyLine>Si requiere aprobación, aparecerá en Approval Console.</SafetyLine>
+                      <SafetyLine>Hermes solo ejecuta después de approval válido.</SafetyLine>
+                      <SafetyLine>Frontend/voice no llama Hermes directamente.</SafetyLine>
+                    </div>
+                  </article>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "vision" && (
+          <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Cámara / Visión</CardTitle>
+                </div>
+                <CardDescription><span className="font-display text-warning">preview-only</span> · La cámara no graba por defecto. La visión solo se activa con permiso explícito.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">preview-only</Badge>
+                    <Badge variant={cameraVisionState.camera_enabled ? "destructive" : "success"}>cámara: {cameraVisionState.camera_enabled ? "enabled" : "off/disabled"}</Badge>
+                    <Badge variant={cameraVisionState.external_vision_provider_called ? "destructive" : "success"}>provider externo: {cameraVisionState.external_vision_provider_called ? "called" : "none/not_connected"}</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">La cámara no graba por defecto.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">La visión solo se activa con permiso explícito.</p>
+                </article>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
+                    <div className="mt-3"><StatusList items={cameraCurrentRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad</h3>
+                    <div className="mt-3"><StatusList items={cameraPrivacyRows} /></div>
+                  </article>
+                </div>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
+                    <Badge variant="warning">preview / disabled / future gated</Badge>
+                  </div>
+                  <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
+                    {cameraVisionStates.map((item) => (
+                      <div key={item.state} className="border border-border/70 bg-background/40 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
+                            <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
+                          </div>
+                          <Badge variant={item.enabled === "future_gated" ? "warning" : item.enabled === "preview" ? "outline" : "success"}>{valueText(item.enabled)}</Badge>
+                        </div>
+                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant="outline">risk: {valueText(item.risk)}</Badge>
+                          <Badge variant={item.can_execute ? "destructive" : "success"}>execute: {yesNo(item.can_execute, "true", "false")}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Scope policy</h3>
+                  <div className="mt-3"><StatusList items={cameraScopeRows} /></div>
+                </article>
+                <div className="grid gap-2">
+                  <SafetyLine>La cámara no graba por defecto.</SafetyLine>
+                  <SafetyLine>No se captura imagen ni vídeo en esta PR.</SafetyLine>
+                  <SafetyLine>No se usa getUserMedia.</SafetyLine>
+                  <SafetyLine>No hay proveedor externo de visión.</SafetyLine>
+                  <SafetyLine>La visión futura requerirá permiso explícito y auditoría.</SafetyLine>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-success" />
+                  <CardTitle>Mobile Companion</CardTitle>
+                </div>
+                <CardDescription><span className="font-display text-warning">preview-only</span> · Mobile es una interfaz, no un runtime. Mobile no llama a Hermes directamente.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">preview-only</Badge>
+                    <Badge variant={mobileCompanionState.mobile_runtime_enabled ? "destructive" : "success"}>runtime: {yesNo(mobileCompanionState.mobile_runtime_enabled, "enabled", "disabled")}</Badge>
+                    <Badge variant={mobileCompanionState.mobile_can_call_hermes_directly ? "destructive" : "success"}>Hermes directo: {yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")}</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">Mobile es una interfaz, no un runtime.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">Mobile no llama a Hermes directamente.</p>
+                </article>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
+                    <div className="mt-3"><StatusList items={mobileRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">PWA policy</h3>
+                    <div className="mt-3"><StatusList items={pwaRows} /></div>
+                  </article>
+                </div>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Vistas futuras</h3>
+                    <Badge variant="warning">no execute / no Hermes direct</Badge>
+                  </div>
+                  <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
+                    {mobileCompanionViews.map((view) => (
+                      <div key={view.id ?? view.name} className="border border-border/70 bg-background/40 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="font-display text-sm">{valueText(view.name)}</p>
+                          <Badge variant={statusVariant(valueText(view.status))}>{valueText(view.status)}</Badge>
+                        </div>
+                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(view.notes)}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant={view.can_execute ? "destructive" : "success"}>no execute: {yesNo(!view.can_execute, "true", "false")}</Badge>
+                          <Badge variant={view.can_call_hermes ? "destructive" : "success"}>no Hermes direct: {yesNo(!view.can_call_hermes, "true", "false")}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+                  <div className="mt-3"><StatusList items={mobileSafetyRows} /></div>
+                </article>
+                <div className="grid gap-2">
+                  <SafetyLine>Mobile es una interfaz, no un runtime.</SafetyLine>
+                  <SafetyLine>Mobile no llama a Hermes directamente.</SafetyLine>
+                  <SafetyLine>Mobile no ejecuta acciones.</SafetyLine>
+                  <SafetyLine>Approvals reales desde móvil quedan future-gated.</SafetyLine>
+                  <SafetyLine>No se guardan credenciales ni tokens.</SafetyLine>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "finance" && (
+          <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CircleDollarSign className="h-5 w-5 text-warning" />
+                  <CardTitle>Finance / ROI</CardTitle>
+                </div>
+                <CardDescription>Métricas financieras solo con evidencia.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">read-only</Badge>
+                    <Badge variant={financeSafety.no_money_movement ? "success" : "destructive"}>dinero: {financeSafety.no_money_movement ? "bloqueado" : "allowed"}</Badge>
+                    <Badge variant={financeSafety.no_stripe_live ? "success" : "destructive"}>Stripe live: {financeSafety.no_stripe_live ? "bloqueado" : "allowed"}</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">No fake metrics.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">Si no hay evidencia, mostrar unknown.</p>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Métricas</h3>
+                  <div className="mt-3"><StatusList items={financeRows} /></div>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Budget</h3>
+                  <div className="mt-3"><StatusList items={financeBudgetRows} /></div>
+                </article>
+                <div className="grid gap-2">
+                  <SafetyLine>No fake metrics.</SafetyLine>
+                  <SafetyLine>Si no hay evidencia, mostrar unknown.</SafetyLine>
+                  <SafetyLine>Revenue confirmado requiere evidencia.</SafetyLine>
+                  <SafetyLine>ROI queda unknown sin revenue y costes reales.</SafetyLine>
+                  <SafetyLine>No se mueve dinero desde este panel.</SafetyLine>
+                  <SafetyLine>Stripe live requiere aprobación fuerte.</SafetyLine>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <GitBranch className="h-5 w-5 text-success" />
+                  <CardTitle>Product Builder Adaptativo</CardTitle>
+                </div>
+                <CardDescription>Flujo visual de producto; sin deploy, Stripe ni revenue real.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">preview/read-only</Badge>
+                    <Badge variant={productBuilderState.product_generation_enabled ? "destructive" : "success"}>product generation: {yesNo(productBuilderState.product_generation_enabled, "enabled", "false")}</Badge>
+                    <Badge variant={productBuilderState.deploy_enabled ? "destructive" : "success"}>deploy: {yesNo(productBuilderState.deploy_enabled, "enabled", "false")}</Badge>
+                    <Badge variant={productBuilderState.stripe_enabled ? "destructive" : "success"}>Stripe: {yesNo(productBuilderState.stripe_enabled, "enabled", "false")}</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">No es un Template Builder.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">Si dos productos parecen clones, el builder ha fallado.</p>
+                </article>
+                <div className="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado</h3>
+                    <div className="mt-3"><StatusList items={productBuilderStateRows} /></div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Diferenciación</h3>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={view.can_execute ? "destructive" : "success"}>
-                        no execute: {yesNo(!view.can_execute, "true", "false")}
-                      </Badge>
-                      <Badge variant={view.can_call_hermes ? "destructive" : "success"}>
-                        no Hermes direct: {yesNo(!view.can_call_hermes, "true", "false")}
-                      </Badge>
+                      <Badge variant={productDifferentiation.no_template_clone ? "success" : "destructive"}>no template clone</Badge>
+                      <Badge variant={productDifferentiation.adaptive_builder_not_template_builder ? "success" : "destructive"}>adaptive builder</Badge>
+                      <Badge variant={productDifferentiation.each_product_needs_reason_to_exist ? "success" : "destructive"}>razón de existir</Badge>
+                      <Badge variant={productDifferentiation.each_product_needs_success_metric ? "success" : "destructive"}>success metric</Badge>
+                      <Badge variant={productDifferentiation.each_product_needs_monetization_logic ? "success" : "destructive"}>monetización</Badge>
+                      <Badge variant={productDifferentiation.cloned_products_are_failure ? "success" : "destructive"}>clones son fallo</Badge>
                     </div>
+                    <div className="mt-3 grid gap-2">
+                      <SafetyLine>No es un Template Builder.</SafetyLine>
+                      <SafetyLine>Si dos productos parecen clones, el builder ha fallado.</SafetyLine>
+                      <SafetyLine>Cada producto necesita razón de existir, métrica y monetización.</SafetyLine>
+                    </div>
+                  </article>
+                </div>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Stages</h3>
+                    <Badge variant="warning">preview / future-gated / disabled</Badge>
                   </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-              <div className="mt-3">
-                <StatusList items={mobileSafetyRows} />
-              </div>
-            </article>
-
-            <div className="grid gap-2">
-              <SafetyLine>Mobile es una interfaz, no un runtime.</SafetyLine>
-              <SafetyLine>Mobile no llama a Hermes directamente.</SafetyLine>
-              <SafetyLine>Mobile no ejecuta acciones.</SafetyLine>
-              <SafetyLine>Approvals reales desde móvil quedan future-gated.</SafetyLine>
-              <SafetyLine>No se guardan credenciales ni tokens.</SafetyLine>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CircleDollarSign className="h-5 w-5 text-warning" />
-              <CardTitle>Finance / ROI</CardTitle>
-            </div>
-            <CardDescription>Métricas financieras solo con evidencia.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">read-only</Badge>
-                <Badge variant={financeSafety.no_money_movement ? "success" : "destructive"}>
-                  dinero: {financeSafety.no_money_movement ? "bloqueado" : "allowed"}
-                </Badge>
-                <Badge variant={financeSafety.no_stripe_live ? "success" : "destructive"}>
-                  Stripe live: {financeSafety.no_stripe_live ? "bloqueado" : "allowed"}
-                </Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">No fake metrics.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">Si no hay evidencia, mostrar unknown.</p>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Métricas</h3>
-              <div className="mt-3">
-                <StatusList items={financeRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Budget</h3>
-              <div className="mt-3">
-                <StatusList items={financeBudgetRows} />
-              </div>
-            </article>
-
-            <div className="grid gap-2">
-              <SafetyLine>No fake metrics.</SafetyLine>
-              <SafetyLine>Si no hay evidencia, mostrar unknown.</SafetyLine>
-              <SafetyLine>Revenue confirmado requiere evidencia.</SafetyLine>
-              <SafetyLine>ROI queda unknown sin revenue y costes reales.</SafetyLine>
-              <SafetyLine>No se mueve dinero desde este panel.</SafetyLine>
-              <SafetyLine>Stripe live requiere aprobación fuerte.</SafetyLine>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5 text-success" />
-              <CardTitle>Product Builder Adaptativo</CardTitle>
-            </div>
-            <CardDescription>Flujo visual de producto; sin deploy, Stripe ni revenue real.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">preview/read-only</Badge>
-                <Badge variant={productBuilderState.product_generation_enabled ? "destructive" : "success"}>
-                  product generation: {yesNo(productBuilderState.product_generation_enabled, "enabled", "false")}
-                </Badge>
-                <Badge variant={productBuilderState.deploy_enabled ? "destructive" : "success"}>
-                  deploy: {yesNo(productBuilderState.deploy_enabled, "enabled", "false")}
-                </Badge>
-                <Badge variant={productBuilderState.stripe_enabled ? "destructive" : "success"}>
-                  Stripe: {yesNo(productBuilderState.stripe_enabled, "enabled", "false")}
-                </Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">No es un Template Builder.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">
-                Si dos productos parecen clones, el builder ha fallado.
-              </p>
-            </article>
-
-            <div className="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado</h3>
-                <div className="mt-3">
-                  <StatusList items={productBuilderStateRows} />
-                </div>
-              </article>
-
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Diferenciación</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant={productDifferentiation.no_template_clone ? "success" : "destructive"}>
-                    no template clone
-                  </Badge>
-                  <Badge variant={productDifferentiation.adaptive_builder_not_template_builder ? "success" : "destructive"}>
-                    adaptive builder
-                  </Badge>
-                  <Badge variant={productDifferentiation.each_product_needs_reason_to_exist ? "success" : "destructive"}>
-                    razón de existir
-                  </Badge>
-                  <Badge variant={productDifferentiation.each_product_needs_success_metric ? "success" : "destructive"}>
-                    success metric
-                  </Badge>
-                  <Badge variant={productDifferentiation.each_product_needs_monetization_logic ? "success" : "destructive"}>
-                    monetización
-                  </Badge>
-                  <Badge variant={productDifferentiation.cloned_products_are_failure ? "success" : "destructive"}>
-                    clones son fallo
-                  </Badge>
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <SafetyLine>No es un Template Builder.</SafetyLine>
-                  <SafetyLine>Si dos productos parecen clones, el builder ha fallado.</SafetyLine>
-                  <SafetyLine>Cada producto necesita razón de existir, métrica y monetización.</SafetyLine>
-                </div>
-              </article>
-            </div>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Stages</h3>
-                <Badge variant="warning">preview / future-gated / disabled</Badge>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                {productBuilderStages.map((stage) => {
-                  const stageStatus = valueText(stage.status).replace("_", "-");
-                  return (
-                    <div key={stage.name} className="min-h-36 border border-border/70 bg-background/35 p-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <p className="font-display text-xs uppercase tracking-[0.1em]">{stage.name}</p>
-                        <Badge variant={statusVariant(valueText(stage.status))}>{stageStatus}</Badge>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge variant={stage.can_execute ? "destructive" : "success"}>
-                          execute: {yesNo(stage.can_execute, "true", "false")}
-                        </Badge>
-                        <Badge variant={stage.requires_approval ? "warning" : "outline"}>
-                          approval: {valueText(stage.approval_level)}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
-                        evidencia: {valueText(stage.evidence_required)}
-                      </p>
-                      <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(stage.notes)}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </article>
-
-            <div className="grid gap-3 lg:grid-cols-2">
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Monetización</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant={productMonetization.pricing_preview_only ? "success" : "destructive"}>pricing preview</Badge>
-                  <Badge variant={productMonetization.stripe_live_requires_strong_approval ? "warning" : "destructive"}>
-                    Stripe strong approval
-                  </Badge>
-                  <Badge variant={productMonetization.checkout_requires_strong_approval ? "warning" : "destructive"}>
-                    checkout strong approval
-                  </Badge>
-                  <Badge variant={productMonetization.real_revenue_requires_confirmation ? "warning" : "destructive"}>
-                    revenue confirmation
-                  </Badge>
-                  <Badge variant={productMonetization.no_fake_revenue ? "success" : "destructive"}>no fake revenue</Badge>
-                </div>
-              </article>
-
-              <article className="border border-border/70 bg-background/35 p-4">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant={productBuilderSafety.no_deploy ? "success" : "destructive"}>no deploy</Badge>
-                  <Badge variant={productBuilderSafety.no_publish ? "success" : "destructive"}>no publish</Badge>
-                  <Badge variant={productBuilderSafety.no_money_movement ? "success" : "destructive"}>no money</Badge>
-                  <Badge variant={productBuilderSafety.no_external_network ? "success" : "destructive"}>no external network</Badge>
-                  <Badge variant={productBuilderSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
-                </div>
-              </article>
-            </div>
-
-            <div className="grid gap-2 lg:grid-cols-3">
-              <SafetyLine>Deploy real requiere aprobación fuerte.</SafetyLine>
-              <SafetyLine>Stripe/checkout real requiere aprobación fuerte.</SafetyLine>
-              <SafetyLine>Revenue real requiere confirmación.</SafetyLine>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Frontend Pilot / Hardening</CardTitle>
-            </div>
-            <CardDescription>Pilot read-only para `/jarvis`; El dashboard mira, no toca.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <article className="border border-warning/40 bg-warning/10 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">Pilot read-only</Badge>
-                <Badge variant={frontendPilotState.frontend_can_execute ? "destructive" : "success"}>No execute.</Badge>
-                <Badge variant={frontendPilotState.frontend_can_activate_sensors ? "destructive" : "success"}>No sensores.</Badge>
-                <Badge variant={frontendPilotState.frontend_can_move_money ? "destructive" : "success"}>no money</Badge>
-              </div>
-              <p className="mt-3 font-display text-sm text-warning">El dashboard mira, no toca.</p>
-              <p className="mt-1 font-mono-ui text-xs text-warning">No POST/PUT/DELETE.</p>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint</h3>
-              <div className="mt-3">
-                <StatusList items={frontendPilotRows} />
-              </div>
-            </article>
-
-            <article className="border border-border/70 bg-background/35 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readiness checks</h3>
-                <Badge variant="warning">visible modules + safety</Badge>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {frontendReadinessChecks.map((check) => (
-                  <div key={check.name} className="border border-border/70 bg-background/40 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
-                      <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>
-                        {valueText(check.status)}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
-                    <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
+                  <div className="grid max-h-80 gap-2 overflow-auto md:grid-cols-2 xl:grid-cols-4">
+                    {productBuilderStages.map((stage) => {
+                      const stageStatus = valueText(stage.status).replace("_", "-");
+                      return (
+                        <div key={stage.name} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.1em]">{stage.name}</p>
+                            <Badge variant={statusVariant(valueText(stage.status))}>{stageStatus}</Badge>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Badge variant={stage.can_execute ? "destructive" : "success"}>execute: {yesNo(stage.can_execute, "true", "false")}</Badge>
+                            <Badge variant={stage.requires_approval ? "warning" : "outline"}>approval: {valueText(stage.approval_level)}</Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">evidencia: {valueText(stage.evidence_required)}</p>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(stage.notes)}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </article>
+                </article>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Monetización</h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={productMonetization.pricing_preview_only ? "success" : "destructive"}>pricing preview</Badge>
+                      <Badge variant={productMonetization.stripe_live_requires_strong_approval ? "warning" : "destructive"}>Stripe strong approval</Badge>
+                      <Badge variant={productMonetization.checkout_requires_strong_approval ? "warning" : "destructive"}>checkout strong approval</Badge>
+                      <Badge variant={productMonetization.real_revenue_requires_confirmation ? "warning" : "destructive"}>revenue confirmation</Badge>
+                      <Badge variant={productMonetization.no_fake_revenue ? "success" : "destructive"}>no fake revenue</Badge>
+                    </div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={productBuilderSafety.no_deploy ? "success" : "destructive"}>no deploy</Badge>
+                      <Badge variant={productBuilderSafety.no_publish ? "success" : "destructive"}>no publish</Badge>
+                      <Badge variant={productBuilderSafety.no_money_movement ? "success" : "destructive"}>no money</Badge>
+                      <Badge variant={productBuilderSafety.no_external_network ? "success" : "destructive"}>no external network</Badge>
+                      <Badge variant={productBuilderSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
+                    </div>
+                  </article>
+                </div>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  <SafetyLine>Deploy real requiere aprobación fuerte.</SafetyLine>
+                  <SafetyLine>Stripe/checkout real requiere aprobación fuerte.</SafetyLine>
+                  <SafetyLine>Revenue real requiere confirmación.</SafetyLine>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hardening notes</h3>
-              <div className="mt-3">
-                <StatusList items={frontendHardeningRows} />
-              </div>
-              <p className="mt-3 font-mono-ui text-xs text-warning">
-                Dependency hardening queda para una PR separada.
-              </p>
-            </article>
+        {activeTab === "pilot" && (
+          <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Frontend Pilot / Hardening</CardTitle>
+                </div>
+                <CardDescription>Pilot read-only para /jarvis; El dashboard mira, no toca.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">Pilot read-only</Badge>
+                    <Badge variant={frontendPilotState.frontend_can_execute ? "destructive" : "success"}>No execute.</Badge>
+                    <Badge variant={frontendPilotState.frontend_can_activate_sensors ? "destructive" : "success"}>No sensores.</Badge>
+                    <Badge variant={frontendPilotState.frontend_can_move_money ? "destructive" : "success"}>no money</Badge>
+                  </div>
+                  <p className="mt-3 font-display text-sm text-warning">El dashboard mira, no toca.</p>
+                  <p className="mt-1 font-mono-ui text-xs text-warning">No POST/PUT/DELETE.</p>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint</h3>
+                  <div className="mt-3"><StatusList items={frontendPilotRows} /></div>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readiness checks</h3>
+                    <Badge variant="warning">visible modules + safety</Badge>
+                  </div>
+                  <div className="grid max-h-72 gap-2 overflow-auto md:grid-cols-2">
+                    {frontendReadinessChecks.map((check) => (
+                      <div key={check.name} className="border border-border/70 bg-background/40 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
+                          <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>{valueText(check.status)}</Badge>
+                        </div>
+                        <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
+                        <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hardening notes</h3>
+                  <div className="mt-3"><StatusList items={frontendHardeningRows} /></div>
+                  <p className="mt-3 font-mono-ui text-xs text-warning">Dependency hardening queda para una PR separada.</p>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot limitations</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">{frontendLimitations.map((limitation) => <Badge key={limitation} variant="outline">{limitation}</Badge>)}</div>
+                </article>
+                <div className="grid gap-2">
+                  <SafetyLine>Pilot read-only</SafetyLine>
+                  <SafetyLine>El dashboard mira, no toca.</SafetyLine>
+                  <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
+                  <SafetyLine>No execute.</SafetyLine>
+                  <SafetyLine>No sensores.</SafetyLine>
+                  <SafetyLine>No fake metrics.</SafetyLine>
+                  <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
+                </div>
+              </CardContent>
+            </Card>
 
-            <article className="border border-border/70 bg-background/35 p-4">
-              <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot limitations</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {frontendLimitations.map((limitation) => (
-                  <Badge key={limitation} variant="outline">
-                    {limitation}
-                  </Badge>
-                ))}
-              </div>
-            </article>
+            <div className="grid gap-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Workflow className="h-5 w-5 text-success" />
+                    <CardTitle>Control de Misión</CardTitle>
+                  </div>
+                  <CardDescription>Escribe o dicta una orden para que JARVIS prepare una misión. En esta fase no se ejecuta nada.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <article className="border border-warning/40 bg-warning/10 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="warning">preview-only</Badge>
+                      <Badge variant={missionState.execution_enabled ? "destructive" : "success"}>execution: {yesNo(missionState.execution_enabled, "enabled", "false")}</Badge>
+                      <Badge variant={missionState.hermes_dispatch_enabled ? "destructive" : "success"}>Hermes dispatch: {yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")}</Badge>
+                    </div>
+                    <p className="mt-3 font-display text-sm text-warning">Escribe o dicta una orden para que JARVIS prepare una misión.</p>
+                    <p className="mt-1 font-mono-ui text-xs text-warning">En esta fase no se ejecuta nada.</p>
+                  </article>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <StatusList items={missionStateRows} />
+                    <StatusList items={supportedInputRows} />
+                  </div>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Conversation Preview</h3>
+                      <Badge variant="warning">assistant: {valueText(missionConversation.assistant_status, "preview")}</Badge>
+                    </div>
+                    <p className="mb-3 font-display text-xs text-warning">Preview conversation - no provider call, no memory write, no execution.</p>
+                    <div className="grid gap-3">
+                      {missionMessages.map((message, index) => (
+                        <div key={message.speaker + "-" + index} className="border border-border/70 bg-background/40 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">{valueText(message.speaker)}</p>
+                          <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(message.content)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3"><StatusList items={conversationPreviewRows} /></div>
+                  </article>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <article className="border border-border/70 bg-background/35 p-4">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Intent / Risk Preview</h3>
+                      <div className="mt-3"><StatusList items={missionIntentRows} /></div>
+                    </article>
+                    <article className="border border-border/70 bg-background/35 p-4">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Mission Lifecycle</h3>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {missionLifecycleDisplay.map(([step, description]) => (
+                          <div key={step} className="border border-border/70 bg-background/40 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-display text-xs uppercase tracking-[0.12em]">{step}</span>
+                              <Badge variant="outline">preview</Badge>
+                            </div>
+                            <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  </div>
+                  <article className="border border-warning/40 bg-warning/10 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Safety Banner</h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {missionSafetyLabels.map(([label, key]) => <Badge key={key} variant={missionSafety[key] ? "success" : "outline"}>{label}</Badge>)}
+                    </div>
+                  </article>
+                  <article className="border border-border/70 bg-background/35 p-4">
+                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes Panel</h3>
+                    <div className="mt-3 grid gap-2">
+                      <SafetyLine>Si una misión necesita algo sensible, aparecerá en Approval Console.</SafetyLine>
+                      <SafetyLine>Hermes solo ejecutará después de approval válido.</SafetyLine>
+                      <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.can_do)}</p>
+                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.cannot_do_yet)}</p>
+                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.future_next_step)}</p>
+                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.sensitive_requires_approval)}</p>
+                    </div>
+                  </article>
+                </CardContent>
+              </Card>
 
-            <div className="grid gap-2">
-              <SafetyLine>Pilot read-only</SafetyLine>
-              <SafetyLine>El dashboard mira, no toca.</SafetyLine>
-              <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
-              <SafetyLine>No execute.</SafetyLine>
-              <SafetyLine>No sensores.</SafetyLine>
-              <SafetyLine>No fake metrics.</SafetyLine>
-              <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle>Live Timeline / Audit Preview</CardTitle>
+                  </div>
+                  <CardDescription>Eventos reales de lectura del backend; no eventos de ejecución.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ol className="max-h-72 space-y-3 overflow-auto pr-1">
+                    {timeline.map((event) => (
+                      <li key={event.source + "-" + event.event} className="grid grid-cols-[20px_1fr] gap-3">
+                        <Square className="mt-0.5 h-3 w-3 text-warning" />
+                        <span className="font-mono-ui text-xs text-foreground">{valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-warning" />
+                    <CardTitle>Separación JARVIS / Hermes</CardTitle>
+                  </div>
+                  <CardDescription>Contrato visible de esta shell local.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <BadgeCheck className="mb-3 h-5 w-5 text-success" />
+                    <p className="font-mono-ui text-sm">JARVIS gobierna intención, riesgo, policy, approval y auditoría.</p>
+                  </div>
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <TerminalSquare className="mb-3 h-5 w-5 text-muted-foreground" />
+                    <p className="font-mono-ui text-sm">Hermes ejecuta solo cuando JARVIS entrega gates válidos.</p>
+                  </div>
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <ZapOff className="mb-3 h-5 w-5 text-warning" />
+                    <p className="font-mono-ui text-sm">Esta pantalla no llama a Hermes, no aprueba y no ejecuta.</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Live Timeline / Audit Preview</CardTitle>
-            </div>
-            <CardDescription>Eventos reales de lectura del backend; no eventos de ejecución.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-3">
-              {timeline.map((event) => (
-                <li key={`${event.source}-${event.event}`} className="grid grid-cols-[20px_1fr] gap-3">
-                  <Square className="mt-0.5 h-3 w-3 text-warning" />
-                  <span className="font-mono-ui text-xs text-foreground">
-                    {valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-warning" />
-            <CardTitle>Separación JARVIS / Hermes</CardTitle>
           </div>
-          <CardDescription>Contrato visible de esta shell local.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          <div className="border border-border/70 bg-background/35 p-4">
-            <BadgeCheck className="mb-3 h-5 w-5 text-success" />
-            <p className="font-mono-ui text-sm">JARVIS gobierna intención, riesgo, policy, approval y auditoría.</p>
-          </div>
-          <div className="border border-border/70 bg-background/35 p-4">
-            <TerminalSquare className="mb-3 h-5 w-5 text-muted-foreground" />
-            <p className="font-mono-ui text-sm">Hermes ejecuta solo cuando JARVIS entrega gates válidos.</p>
-          </div>
-          <div className="border border-border/70 bg-background/35 p-4">
-            <ZapOff className="mb-3 h-5 w-5 text-warning" />
-            <p className="font-mono-ui text-sm">Esta pantalla no llama a Hermes, no aprueba y no ejecuta.</p>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 # JARVIS Visual Command Center Pilot
 
 PR #153 valida el cockpit local `/jarvis` como Visual Command Center read-only.
+PR #154 endurece la composicion UX para que la primera pantalla sea un cockpit
+horizontal compacto, no una pagina vertical interminable.
 La regla central no cambia:
 
 ```text
@@ -23,6 +25,14 @@ Hermes ejecuta.
 - Los botones criticos permanecen disabled.
 - El timeline es read-only y no afirma ejecucion real.
 - Finance / ROI conserva no fake metrics.
+- El primer viewport prioriza header, radar de modulos, nucleo central JARVIS,
+  Approval Console resumida, Mission Control resumido, Hermes Execution
+  resumido, Finance / ROI compacto, Product Builder compacto, Kill Switch y
+  salud del sistema.
+- Los detalles largos quedan en tabs locales: Cockpit, Approvals, Hermes,
+  Voice / Wake, Vision / Mobile, Finance / Product y Pilot / Audit.
+- Las listas largas usan scroll interno; abrir `/jarvis` no debe sentirse como
+  un informe desplegado completo.
 
 ## 2. Que NO valida
 
@@ -67,13 +77,17 @@ Abrir la URL local del frontend y navegar a `/jarvis`. El proxy de Vite apunta
 1. Arrancar backend.
 2. Abrir `/jarvis`.
 3. Comprobar estado general.
-4. Comprobar panels.
-5. Comprobar `unknown`/`disabled`/`not_connected`/`preview`/`future_gated`.
-6. Comprobar que botones criticos estan disabled.
-7. Comprobar que no hay permisos de navegador.
-8. Comprobar que no hay ejecucion Hermes.
-9. Comprobar que Finance / ROI no inventa datos.
-10. Comprobar timeline read-only.
+4. Comprobar que el cockpit principal cabe razonablemente above-the-fold en
+   desktop.
+5. Comprobar tabs: Cockpit, Approvals, Hermes, Voice / Wake, Vision / Mobile,
+   Finance / Product y Pilot / Audit.
+6. Comprobar panels.
+7. Comprobar `unknown`/`disabled`/`not_connected`/`preview`/`future_gated`.
+8. Comprobar que botones criticos estan disabled.
+9. Comprobar que no hay permisos de navegador.
+10. Comprobar que no hay ejecucion Hermes.
+11. Comprobar que Finance / ROI no inventa datos.
+12. Comprobar timeline read-only.
 
 ## 6. Checklist de seguridad
 
@@ -99,10 +113,13 @@ Abrir la URL local del frontend y navegar a `/jarvis`. El proxy de Vite apunta
 
 ## 7. Criterio de exito
 
-El piloto es correcto cuando David puede ver el dashboard completo, el read
-model conectado, todos los paneles esperados, degradacion honesta de valores
-sin evidencia, botones criticos disabled y timeline read-only, sin que el
-frontend ejecute Hermes ni active sensores.
+El piloto es correcto cuando David puede ver en menos de 10 segundos si JARVIS
+esta online, si esta en modo preview/read-only, si hay approvals, si Hermes
+ejecuta algo, si sensores estan apagados, si dinero/deploy/email estan
+bloqueados y donde esta el Kill Switch. El read model sigue conectado, todos
+los paneles esperados siguen disponibles en tabs, los valores sin evidencia
+degradan honestamente, los botones criticos estan disabled y el timeline es
+read-only, sin que el frontend ejecute Hermes ni active sensores.
 
 ## 8. Criterio de fallo
 
@@ -117,6 +134,9 @@ Abrir una PR de correccion si aparece cualquiera de estos casos:
 - Se conecta Hermes execution desde frontend.
 - Se mueve dinero, se crea checkout, se hace deploy, se envia email o se toca
   una credencial.
+- `/jarvis` vuelve a ser una sabana vertical con todos los detalles desplegados
+  a la vez.
+- Los tabs desaparecen o los paneles largos pierden scroll interno.
 
 ## 9. Findings que deben abrir PR
 
