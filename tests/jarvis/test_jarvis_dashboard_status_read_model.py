@@ -879,6 +879,11 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
 
     for name in (
         "dashboard_route_exists",
+        "presence_ui_visible",
+        "local_system_contract_visible",
+        "smart_bar_visible",
+        "camera_placeholder_visible",
+        "folded_history_visible",
         "read_model_connected",
         "approval_console_visible",
         "hermes_execution_visible",
@@ -917,6 +922,52 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "no deploy/money/email/credentials",
     ):
         assert limitation in limitations
+
+
+def test_mark_3_dashboard_status_contains_local_system_contract():
+    payload, _ = _payload()
+    contract = payload["local_system_contract"]
+    visual = contract["visual_contract"]
+    safety = contract["safety"]
+
+    assert contract["name"] == "Local System Contract"
+    assert contract["presence_ui"] == "JARVIS Presence UI"
+    assert contract["local_runtime_daemon_is_system"] is True
+    assert contract["web_route"] == "/jarvis"
+    assert contract["web_route_is_visual_interface_only"] is True
+    assert contract["frontend_executes_hermes_directly"] is False
+    assert contract["frontend_is_runtime"] is False
+    assert contract["mobile_and_vps_are_future_clients_or_bridges"] is True
+    assert contract["real_voice_camera_in_future_prs"] is True
+    assert contract["jarvis_governs"] is True
+    assert contract["hermes_executes"] is True
+    assert contract["no_duplicate_hermes_runtime"] is True
+
+    assert visual["primary_experience"] == "Presence UI"
+    assert visual["central_core_states"] == [
+        "idle/calmado",
+        "escuchando",
+        "pensando",
+        "hablando",
+        "alerta/riesgo",
+    ]
+    assert visual["smart_bar"] == "disabled/preview"
+    assert visual["camera_placeholder"] == "movable/expandable visual placeholder"
+    assert visual["folded_history"] == "collapsed preview"
+
+    for key in (
+        "no_post_put_delete_from_jarvis_page",
+        "no_execute_route",
+        "no_frontend_hermes_execution",
+        "no_browser_sensor_permission",
+        "no_real_voice",
+        "no_real_camera",
+        "no_money",
+        "no_deploy",
+        "no_email",
+        "no_credentials",
+    ):
+        assert safety[key] is True
 
 
 def test_mark_3_dashboard_status_declares_safety_boundaries():
@@ -1081,6 +1132,11 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_required_panels_are
 
     expected = {
         "Header",
+        "Presence UI",
+        "Local System Contract",
+        "Smart Bar",
+        "Camera Placeholder",
+        "Folded History",
         "Voice Core",
         "Wake Word Local Safe Flow",
         "Mission Control",
@@ -1152,6 +1208,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_timeline_does_not_i
         "Dashboard route checked",
         "Dashboard read model checked",
         "Read-only safety checks loaded",
+        "Presence UI panels loaded",
         "No execution performed",
     ):
         assert event in events
@@ -1229,6 +1286,12 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Dashboard route checked" for item in events)
     assert any(item["event"] == "Dashboard read model checked" for item in events)
     assert any(item["event"] == "Read-only safety checks loaded" for item in events)
+    assert any(item["event"] == "Presence UI panels loaded" for item in events)
+    assert any(item["event"] == "Local System Contract read" for item in events)
+    assert any(item["event"] == "Presence UI contract read" for item in events)
+    assert any(item["event"] == "Smart bar preview loaded" for item in events)
+    assert any(item["event"] == "Camera placeholder rendered" for item in events)
+    assert any(item["event"] == "Folded history preview loaded" for item in events)
     assert any(item["event"] == "No execution performed" for item in events)
     assert any(item["event"] == "dashboard read model generated" for item in events)
     assert all(item["read_only"] is True for item in events)

@@ -1399,6 +1399,57 @@ JARVIS gobierna.
 Hermes ejecuta.
 ```
 
+## JARVIS Presence UI + Local System Contract
+
+PR #155 convierte `/jarvis` en la presencia visual local de JARVIS. La ruta no
+representa una web SaaS ni un runtime: es la cara/control center del sistema
+local que vive en el ordenador de David. El sistema real es el runtime/daemon
+local de JARVIS; movil y VPS quedan como clientes o puentes seguros futuros.
+
+Backend:
+
+- `GET /mark-3/dashboard/status` expone `local_system_contract`.
+- `local_runtime_daemon_is_system=true`.
+- `web_route=/jarvis`.
+- `web_route_is_visual_interface_only=true`.
+- `frontend_executes_hermes_directly=false`.
+- `mobile_and_vps_are_future_clients_or_bridges=true`.
+- `real_voice_camera_in_future_prs=true`.
+- `jarvis_governs=true`.
+- `hermes_executes=true`.
+
+Visual:
+
+- Presence UI como primera experiencia.
+- nucleo/orbe central dominante con estados preview: `idle/calmado`,
+  `escuchando`, `pensando`, `hablando`, `alerta/riesgo`.
+- laterales con informacion esencial solamente: estado general, approvals
+  pendientes, escucha/piensa/habla, mision actual, coste/dinero, camara activa
+  y riesgo actual.
+- `camera placeholder` lateral movible/ampliable visual, sin captura real.
+- `smart bar` inferior disabled/preview para escribir, transcripcion temporal,
+  respuesta temporal e historial plegado.
+- detalles largos en paneles plegados/tabs secundarios, no como experiencia
+  principal.
+
+No implementa:
+
+- ejecucion Hermes;
+- POST/PUT/DELETE desde `/jarvis`;
+- approvals reales;
+- mission submit real;
+- voz real, STT, TTS o wake listener;
+- camara real, getUserMedia, streaming, captura, grabacion o storage;
+- movil real ni VPS real;
+- dinero, Stripe, deploy, email o credenciales.
+
+PR #155 conserva la separación:
+
+```text
+JARVIS gobierna.
+Hermes ejecuta.
+```
+
 PR #151 conserva la separación:
 
 ```text

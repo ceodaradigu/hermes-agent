@@ -778,6 +778,40 @@ export interface JarvisVisualCommandCenterPilot {
   read_only?: boolean;
 }
 
+export interface JarvisLocalSystemContract {
+  name?: string;
+  presence_ui?: string;
+  local_runtime_daemon_is_system?: boolean;
+  web_route?: string;
+  web_route_is_visual_interface_only?: boolean;
+  frontend_executes_hermes_directly?: boolean;
+  frontend_is_runtime?: boolean;
+  frontend_can_activate_real_voice?: boolean;
+  frontend_can_activate_real_camera?: boolean;
+  mobile_and_vps_are_future_clients_or_bridges?: boolean;
+  real_voice_camera_in_future_prs?: boolean;
+  jarvis_governs?: boolean;
+  hermes_executes?: boolean;
+  no_duplicate_hermes_runtime?: boolean;
+  visual_contract?: {
+    primary_experience?: string;
+    central_core_states?: string[];
+    smart_bar?: string;
+    camera_placeholder?: string;
+    folded_history?: string;
+  };
+  future_bridges?: {
+    mobile?: string;
+    vps?: string;
+    voice_runtime?: string;
+    camera_runtime?: string;
+  };
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisDashboardStatus {
   system?: {
     api_status?: string;
@@ -796,6 +830,7 @@ export interface JarvisDashboardStatus {
     frontend_can_execute?: boolean;
     frontend_can_call_hermes_execute?: boolean;
   };
+  local_system_contract?: JarvisLocalSystemContract;
   release_candidate?: {
     status?: string;
     readiness?: Record<string, string>;

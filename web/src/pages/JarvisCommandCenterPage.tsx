@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
+  AlertTriangle,
   BadgeCheck,
   Camera,
   CircleDollarSign,
   Cpu,
-  GitBranch,
+  Grip,
+  History,
   Lock,
+  Maximize2,
+  MessageSquare,
+  Mic,
   MicOff,
+  Minimize2,
   Radar,
+  SendHorizontal,
   ShieldAlert,
   ShieldCheck,
   Smartphone,
@@ -20,23 +27,9 @@ import {
 import {
   api,
   type JarvisApprovalCard,
-  type JarvisAdaptiveProductStage,
-  type JarvisCameraVision,
-  type JarvisCameraVisionVisualState,
   type JarvisDashboardModule,
   type JarvisDashboardStatus,
   type JarvisFinanceMetric,
-  type JarvisFrontendPilotReadinessCheck,
-  type JarvisHermesBlockedRoute,
-  type JarvisHermesGovernedCapability,
-  type JarvisMobileCompanion,
-  type JarvisMobileCompanionView,
-  type JarvisVoiceCore,
-  type JarvisVoiceCoreVisualState,
-  type JarvisVisualCommandCenterPilotCheck,
-  type JarvisVisualCommandCenterPilotPanel,
-  type JarvisVisualCommandCenterPilotStep,
-  type JarvisWakeWordFlow,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,1135 +51,40 @@ const commandCenterTabs = [
 type CommandCenterTabId = (typeof commandCenterTabs)[number]["id"];
 
 const previewVoiceSubtitle = "David, estoy en modo preview. No estoy escuchando ni grabando audio.";
+const sampleMissionCommand = "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro.";
 
-const fallbackVoiceVisualStates: JarvisVoiceCoreVisualState[] = [
+const presenceStates = [
   {
-    state: "offline",
-    label: "offline",
-    description: "Backend o núcleo de voz no conectado; sin sensores activos.",
-    risk: "none",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "not connected",
+    id: "idle-calmado",
+    label: "idle/calmado",
+    tone: "success",
+    description: "Nucleo estable, sensores apagados, esperando orden escrita.",
   },
   {
-    state: "online",
-    label: "online",
-    description: "Estado futuro conectado, no habilitado por esta shell.",
-    risk: "sensor_privacy",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "future gated",
+    id: "escuchando-preview",
+    label: "escuchando",
+    tone: "warning",
+    description: "Preview visual de escucha; no hay microfono, STT ni wake listener real.",
   },
   {
-    state: "preview",
-    label: "preview",
-    description: "Estado visual/read-only sin micrófono, STT, TTS ni provider.",
-    risk: "none",
-    enabled: "preview",
-    sensor_required: false,
-    can_approve: false,
-    connection: "preview",
-  },
-  {
-    state: "dormant",
-    label: "dormido",
-    description: "JARVIS está dormido visualmente; no escucha ni graba.",
-    risk: "none",
-    enabled: "preview",
-    sensor_required: false,
-    can_approve: false,
-    connection: "preview",
-  },
-  {
-    state: "listening_wake_word",
-    label: "escuchando wake word",
-    description: "Estado futuro gateado; requeriría autorización de sensor.",
-    risk: "sensor_privacy",
-    enabled: false,
-    sensor_required: true,
-    can_approve: false,
-    connection: "future gated",
-  },
-  {
-    state: "listening_command",
-    label: "escuchando orden",
-    description: "Ventana corta futura tras wake/push-to-talk; apagada aquí.",
-    risk: "sensor_privacy",
-    enabled: false,
-    sensor_required: true,
-    can_approve: false,
-    connection: "future gated",
-  },
-  {
-    state: "thinking",
+    id: "pensando-preview",
     label: "pensando",
-    description: "Preview futuro de intención; sin provider externo.",
-    risk: "approval_gate",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "future gated",
+    tone: "warning",
+    description: "Preview de razonamiento local; no llama providers ni ejecuta tools.",
   },
   {
-    state: "speaking",
+    id: "hablando-preview",
     label: "hablando",
-    description: "TTS futuro; ahora solo subtítulos preview.",
-    risk: "audio_output",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "not connected",
+    tone: "warning",
+    description: "Subtitulos preview; no hay TTS real ni salida de audio.",
   },
   {
-    state: "approval_required",
-    label: "esperando aprobación",
-    description: "La aprobación futura aparece en Approval Console, no por voz.",
-    risk: "approval_gate",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "future gated",
+    id: "alerta-riesgo",
+    label: "alerta/riesgo",
+    tone: "destructive",
+    description: "Riesgo visible; cualquier accion sensible requiere approval y audit.",
   },
-  {
-    state: "hermes_executing",
-    label: "Hermes ejecutando",
-    description: "Visibilidad futura después de approval válido.",
-    risk: "execution",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "future gated",
-  },
-  {
-    state: "paused",
-    label: "pausado",
-    description: "Pausa futura de flujo gobernado; no hay sesión de voz activa.",
-    risk: "stop_control",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "future gated",
-  },
-  {
-    state: "blocked",
-    label: "bloqueado",
-    description: "Flujos inseguros o no conectados permanecen bloqueados.",
-    risk: "blocked",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "preview",
-  },
-  {
-    state: "error",
-    label: "error",
-    description: "Error futuro visible; no se arranca runtime de voz.",
-    risk: "runtime_error",
-    enabled: false,
-    sensor_required: false,
-    can_approve: false,
-    connection: "not connected",
-  },
-  {
-    state: "kill_switch",
-    label: "kill switch",
-    description: "Relación visible con parada futura; hoy no hay audio real.",
-    risk: "stop_control",
-    enabled: "preview",
-    sensor_required: false,
-    can_approve: false,
-    connection: "preview",
-  },
-];
-
-const fallbackVoiceCore: JarvisVoiceCore = {
-  state: {
-    mode: "preview",
-    current_state: "preview",
-    microphone_enabled: false,
-    wake_word_enabled: false,
-    command_listening_enabled: false,
-    tts_enabled: false,
-    stt_enabled: false,
-    audio_recording: false,
-    raw_audio_stored: false,
-    external_provider_called: false,
-    voice_approval_enabled: false,
-    wake_phrase_can_approve: false,
-    wake_phrase_can_execute: false,
-  },
-  visual_states: fallbackVoiceVisualStates,
-  tts_state: {
-    status: "preview",
-    speaking: false,
-    last_utterance: previewVoiceSubtitle,
-    subtitles_enabled: true,
-    subtitles_source: "preview/read_model",
-    preview_subtitle: previewVoiceSubtitle,
-    audio_output_enabled: false,
-    provider: "none/not_connected",
-    external_call: false,
-  },
-  wake_word_policy: {
-    supported_phrases: ["Hola Jarvis", "Jarvis"],
-    wake_word_runtime: "disabled",
-    wake_phrase_is_permission: false,
-    wake_phrase_can_approve: false,
-    wake_phrase_can_execute: false,
-    requires_authenticated_channel_for_approval: true,
-    critical_actions_require_readback: true,
-    critical_actions_require_strong_confirmation: true,
-  },
-  privacy: {
-    no_microphone_activation: true,
-    no_audio_recording: true,
-    no_raw_audio_storage: true,
-    no_external_audio_provider: true,
-    no_background_listening_enabled: true,
-    no_voice_biometrics: true,
-    no_voice_approval_without_gate: true,
-  },
-  safety: {
-    no_auto_execute: true,
-    no_hermes_dispatch: true,
-    no_tool_call: true,
-    no_sensor_activation: true,
-    no_get_user_media: true,
-    no_media_recorder: true,
-    no_audio_context_capture: true,
-    kill_switch_visible: true,
-  },
-  relationship: {
-    voice_can_prepare_future_intention: true,
-    approval_console_handles_required_approval: true,
-    hermes_executes_only_after_valid_approval: true,
-    frontend_or_voice_can_call_hermes_directly: false,
-    jarvis_governs: true,
-    hermes_executes: true,
-  },
-  kill_switch: {
-    visible: true,
-    real_audio_to_stop: false,
-    future_must_cut_listening_tts_and_governed_execution: true,
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackWakeWordFlow: JarvisWakeWordFlow = {
-  state: {
-    mode: "preview",
-    wake_runtime_enabled: false,
-    microphone_hard_off: true,
-    wake_word_only_mode: false,
-    command_window_open: false,
-    push_to_talk_preview_enabled: true,
-    typed_wake_preview_enabled: true,
-    always_on_microphone_enabled: false,
-    background_listener_enabled: false,
-    stt_enabled: false,
-    audio_recording: false,
-    raw_audio_stored: false,
-    external_provider_called: false,
-  },
-  supported_phrases: ["Hola Jarvis", "Jarvis"],
-  stop_phrases: ["para", "cancela", "detente", "silencio", "cancelar misión", "apaga escucha"],
-  mode_explanations: {
-    mic_hard_off: "Mic hard-off: no escucha nada.",
-    wake_word_only: "Wake-word-only: futuro modo donde solo detectaría frase.",
-    command_listening: "Command listening: futura ventana corta después de wake.",
-    push_to_talk: "Push-to-talk: futuro modo manual.",
-    typed_preview: "Typed preview: modo actual seguro.",
-  },
-  wake_parse_preview: {
-    input_example: "Hola Jarvis, revisa el estado del proyecto",
-    detected_wake_phrase: "Hola Jarvis",
-    remaining_command_preview: "revisa el estado del proyecto",
-    would_open_command_window: true,
-    would_execute: false,
-    would_approve: false,
-    would_call_hermes: false,
-    would_record_audio: false,
-    would_call_provider: false,
-    status: "preview_only",
-  },
-  approval_policy: {
-    wake_phrase_is_permission: false,
-    wake_phrase_can_approve: false,
-    wake_phrase_can_execute: false,
-    voice_approval_requires_authenticated_channel: true,
-    sensitive_actions_require_readback: true,
-    critical_actions_require_double_or_triple_confirmation: true,
-    approval_events_must_be_audited: true,
-  },
-  safety: {
-    no_microphone_activation: true,
-    no_get_user_media: true,
-    no_media_recorder: true,
-    no_audio_context_capture: true,
-    no_background_listening: true,
-    no_raw_audio_storage: true,
-    no_external_stt: true,
-    no_external_tts: true,
-    no_hermes_dispatch: true,
-    no_tool_call: true,
-    no_auto_execute: true,
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackCameraVisionStates: JarvisCameraVisionVisualState[] = [
-  {
-    state: "camera_off",
-    label: "cámara apagada",
-    description: "Estado actual seguro: no hay cámara activa ni sesión de cámara.",
-    enabled: "preview",
-    risk: "none",
-    can_execute: false,
-  },
-  {
-    state: "camera_available_future",
-    label: "preview futuro",
-    description: "Disponibilidad futura solo bajo permiso explícito, indicador visual y auditoría.",
-    enabled: "future_gated",
-    risk: "sensor_privacy",
-    can_execute: false,
-  },
-  {
-    state: "preview_disabled",
-    label: "preview deshabilitado",
-    description: "La previsualización real de cámara no existe en esta PR.",
-    enabled: false,
-    risk: "sensor_privacy",
-    can_execute: false,
-  },
-  {
-    state: "permission_required",
-    label: "permiso requerido",
-    description: "Cualquier visión futura debe pedir permiso explícito al operador.",
-    enabled: "future_gated",
-    risk: "approval_gate",
-    can_execute: false,
-  },
-  {
-    state: "analyzing_future",
-    label: "análisis futuro",
-    description: "El análisis futuro deberá declarar qué puede ver y no inferir identidad sensible.",
-    enabled: "future_gated",
-    risk: "vision_privacy",
-    can_execute: false,
-  },
-  {
-    state: "recording_disabled",
-    label: "grabación desactivada",
-    description: "No se graba vídeo.",
-    enabled: false,
-    risk: "storage_privacy",
-    can_execute: false,
-  },
-  {
-    state: "storage_disabled",
-    label: "almacenamiento desactivado",
-    description: "No se guarda imagen ni vídeo.",
-    enabled: false,
-    risk: "storage_privacy",
-    can_execute: false,
-  },
-  {
-    state: "blocked",
-    label: "bloqueado",
-    description: "Activación, captura, streaming y provider externo quedan bloqueados.",
-    enabled: "preview",
-    risk: "blocked",
-    can_execute: false,
-  },
-  {
-    state: "kill_switch",
-    label: "kill switch",
-    description: "Parada visible futura si cámara/visión se habilita bajo gates.",
-    enabled: "preview",
-    risk: "stop_control",
-    can_execute: false,
-  },
-];
-
-const fallbackCameraVision: JarvisCameraVision = {
-  state: {
-    mode: "preview",
-    camera_enabled: false,
-    camera_permission_requested: false,
-    preview_enabled: false,
-    recording: false,
-    streaming: false,
-    snapshot_capture_enabled: false,
-    vision_analysis_enabled: false,
-    image_storage_enabled: false,
-    video_storage_enabled: false,
-    external_vision_provider_called: false,
-    local_vision_model_connected: UNKNOWN,
-    background_camera_access: false,
-  },
-  privacy: {
-    no_camera_activation: true,
-    no_get_user_media: true,
-    no_media_stream: true,
-    no_recording: true,
-    no_snapshot_capture: true,
-    no_image_storage: true,
-    no_video_storage: true,
-    no_external_provider: true,
-    explicit_operator_permission_required: true,
-    visual_indicator_required_when_camera_active: true,
-    audit_required_for_future_vision: true,
-  },
-  states: fallbackCameraVisionStates,
-  scope_policy: {
-    allowed_scope: "none/unknown",
-    future_scope_requires_explicit_operator_permission: true,
-    future_analysis_must_state_what_it_can_see: true,
-    future_analysis_must_not_infer_sensitive_identity: true,
-    future_analysis_must_not_store_without_permission: true,
-  },
-  camera_state: "disabled",
-  preview_state: "disabled",
-  recording: false,
-  streaming: false,
-  snapshot: "disabled",
-  vision_analysis: "disabled",
-  storage: false,
-  provider: "none/not_connected",
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackMobileViews: JarvisMobileCompanionView[] = [
-  {
-    id: "status",
-    name: "Estado",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Solo lectura del estado agregado de JARVIS.",
-  },
-  {
-    id: "approvals_preview",
-    name: "Approvals preview",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Vista futura de approvals; no aprueba ni rechaza acciones reales.",
-  },
-  {
-    id: "mission_preview",
-    name: "Mission preview",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Vista futura de misiones sin crear ejecución.",
-  },
-  {
-    id: "hermes_visibility",
-    name: "Hermes visibility",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Visibilidad read-only de Hermes detrás de gates JARVIS.",
-  },
-  {
-    id: "voice_status",
-    name: "Voice status",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Estado de voz sin activar micrófono ni runtime móvil.",
-  },
-  {
-    id: "camera_status",
-    name: "Camera status",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Estado de cámara sin activar cámara móvil.",
-  },
-  {
-    id: "finance_summary",
-    name: "Finance summary",
-    status: "preview",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Resumen financiero sin inventar métricas.",
-  },
-  {
-    id: "kill_switch_preview",
-    name: "Kill switch preview",
-    status: "future_gated",
-    can_execute: false,
-    can_call_hermes: false,
-    notes: "Control remoto futuro; no está activo en esta PR.",
-  },
-];
-
-const fallbackMobileCompanion: JarvisMobileCompanion = {
-  state: {
-    mode: "preview",
-    pwa_baseline: "preview",
-    mobile_runtime_enabled: false,
-    mobile_can_execute: false,
-    mobile_can_call_hermes_directly: false,
-    mobile_can_approve_real_actions: false,
-    mobile_can_reject_real_actions: false,
-    mobile_can_modify_scope_real: false,
-    mobile_notifications_enabled: false,
-    remote_kill_switch_enabled: false,
-    remote_camera_enabled: false,
-    remote_microphone_enabled: false,
-    external_network_required: false,
-  },
-  mobile_views: fallbackMobileViews,
-  safety: {
-    mobile_is_interface_not_runtime: true,
-    no_direct_hermes_call: true,
-    no_mobile_execute: true,
-    no_mobile_sensor_activation: true,
-    no_mobile_camera_activation: true,
-    no_mobile_microphone_activation: true,
-    no_real_mobile_approval_in_this_pr: true,
-    approval_requires_backend_gate: true,
-    critical_approval_requires_strong_confirmation: true,
-    remote_kill_switch_future_gated: true,
-  },
-  pwa_policy: {
-    installable_pwa: "preview",
-    offline_cache_enabled: false,
-    push_notifications_enabled: false,
-    service_worker_enabled: false,
-    no_background_sync: true,
-    no_credentials_storage: true,
-    no_token_storage: true,
-  },
-  source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
-  preview_only: true,
-  read_only: true,
-};
-
-function unknownMetric(label: string): JarvisFinanceMetric {
-  return {
-    value: UNKNOWN,
-    label,
-    source: "not_measured",
-    evidence_state: "missing",
-    confidence: UNKNOWN,
-    last_updated: UNKNOWN,
-  };
-}
-
-const fallbackFinanceRoi: NonNullable<JarvisDashboardStatus["finance_roi"]> = {
-  truth_policy: {
-    no_fake_metrics: true,
-    unknown_when_no_evidence: true,
-    measured_requires_source: true,
-    estimated_requires_label: true,
-    confirmed_revenue_requires_evidence: true,
-    projected_revenue_must_be_labelled: true,
-    roi_unknown_without_revenue_and_cost: true,
-  },
-  metrics: {
-    actual_cost: unknownMetric("Coste real"),
-    estimated_cost: unknownMetric("Coste estimado"),
-    confirmed_revenue: unknownMetric("Revenue confirmado"),
-    projected_revenue: unknownMetric("Revenue proyectado"),
-    gross_revenue: unknownMetric("Gross revenue"),
-    expenses: unknownMetric("Expenses"),
-    net_revenue: unknownMetric("Net revenue"),
-    roi: unknownMetric("ROI"),
-    token_cost: unknownMetric("Token cost"),
-    api_cost: unknownMetric("API cost"),
-    infra_cost: unknownMetric("Infra cost"),
-    manual_input_cost: unknownMetric("Manual input cost"),
-    revenue_source: unknownMetric("Revenue source"),
-  },
-  budget: {
-    budget_configured: false,
-    remaining_budget: UNKNOWN,
-    monthly_limit: UNKNOWN,
-    alert_threshold: UNKNOWN,
-    hard_stop_enabled: false,
-    notes: "Budget no configurado; mostrar unknown hasta tener evidencia.",
-  },
-  safety: {
-    no_money_movement: true,
-    no_stripe_live: true,
-    no_checkout_creation: true,
-    no_invoice_creation: true,
-    no_payment_collection: true,
-    no_fake_revenue: true,
-    no_fake_costs: true,
-    no_fake_roi: true,
-    approval_required_for_money: true,
-    strong_approval_required_for_live_payments: true,
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackBuilderStages: JarvisAdaptiveProductStage[] = [
-  {
-    name: "Idea",
-    status: "preview",
-    can_execute: false,
-    requires_approval: false,
-    approval_level: "none",
-    evidence_required: "reason_to_exist",
-    notes: "La idea necesita una razón real para existir.",
-  },
-  {
-    name: "Validación",
-    status: "preview",
-    can_execute: false,
-    requires_approval: false,
-    approval_level: "none",
-    evidence_required: "validation_signal",
-    notes: "Validación preview; sin investigación externa.",
-  },
-  {
-    name: "Blueprint",
-    status: "preview",
-    can_execute: false,
-    requires_approval: false,
-    approval_level: "none",
-    evidence_required: "success_metric_and_scope",
-    notes: "Blueprint visual; sin generar código.",
-  },
-  {
-    name: "Código",
-    status: "future_gated",
-    can_execute: false,
-    requires_approval: true,
-    approval_level: "strong",
-    evidence_required: "approved_scope_and_diff_plan",
-    notes: "Código futuro requiere scope, diff y aprobación.",
-  },
-  {
-    name: "Landing",
-    status: "future_gated",
-    can_execute: false,
-    requires_approval: true,
-    approval_level: "strong",
-    evidence_required: "approved_copy_offer_and_publish_gate",
-    notes: "Landing futura no se publica desde este panel.",
-  },
-  {
-    name: "Deploy candidate",
-    status: "disabled",
-    can_execute: false,
-    requires_approval: true,
-    approval_level: "strong",
-    evidence_required: "rollback_stop_plan_owner_and_build_evidence",
-    notes: "Deploy candidate deshabilitado.",
-  },
-  {
-    name: "Monetización",
-    status: "disabled",
-    can_execute: false,
-    requires_approval: true,
-    approval_level: "strong",
-    evidence_required: "pricing_logic_revenue_confirmation_and_payment_gate",
-    notes: "Stripe, checkout y cobro real deshabilitados.",
-  },
-  {
-    name: "Medición",
-    status: "future_gated",
-    can_execute: false,
-    requires_approval: true,
-    approval_level: "simple",
-    evidence_required: "measured_source_before_metric",
-    notes: "Métricas con evidencia; si no hay evidencia, unknown.",
-  },
-];
-
-const fallbackAdaptiveProductBuilder: NonNullable<JarvisDashboardStatus["adaptive_product_builder"]> = {
-  state: {
-    mode: "preview",
-    builder_enabled: "preview/read_only",
-    product_generation_enabled: false,
-    code_generation_enabled: false,
-    deploy_enabled: false,
-    stripe_enabled: false,
-    landing_publish_enabled: false,
-    external_research_enabled: false,
-    hermes_dispatch_enabled: false,
-  },
-  stages: fallbackBuilderStages,
-  differentiation_policy: {
-    no_template_clone: true,
-    adaptive_builder_not_template_builder: true,
-    each_product_needs_reason_to_exist: true,
-    each_product_needs_success_metric: true,
-    each_product_needs_monetization_logic: true,
-    cloned_products_are_failure: true,
-  },
-  monetization_policy: {
-    pricing_preview_only: true,
-    stripe_live_requires_strong_approval: true,
-    checkout_requires_strong_approval: true,
-    real_revenue_requires_confirmation: true,
-    projected_revenue_label_required: true,
-    no_fake_revenue: true,
-  },
-  safety: {
-    no_deploy: true,
-    no_publish: true,
-    no_domain_change: true,
-    no_email_send: true,
-    no_money_movement: true,
-    no_credentials: true,
-    no_external_network: true,
-    no_hermes_dispatch: true,
-    approval_gates_required_for_real_actions: true,
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackFrontendChecks: JarvisFrontendPilotReadinessCheck[] = [
-  {
-    name: "dashboard_route_exists",
-    status: "preview",
-    evidence: "/jarvis",
-    notes: "Ruta local esperada por la shell.",
-  },
-  {
-    name: "read_model_connected",
-    status: "passed",
-    evidence: DASHBOARD_READ_MODEL_ENDPOINT,
-    notes: "Solo lectura GET al read model.",
-  },
-  {
-    name: "approval_console_visible",
-    status: "passed",
-    evidence: "approvals",
-    notes: "Controles de approval deshabilitados.",
-  },
-  {
-    name: "hermes_execution_visible",
-    status: "passed",
-    evidence: "hermes_execution",
-    notes: "Hermes visible sin ejecución directa.",
-  },
-  {
-    name: "mission_control_visible",
-    status: "passed",
-    evidence: "mission_control",
-    notes: "Mission Control preview-only.",
-  },
-  {
-    name: "voice_core_visible",
-    status: "passed",
-    evidence: "voice_core",
-    notes: "Voz visual sin micrófono.",
-  },
-  {
-    name: "wake_flow_visible",
-    status: "passed",
-    evidence: "wake_word_flow",
-    notes: "Wake flow typed preview.",
-  },
-  {
-    name: "camera_vision_visible",
-    status: "passed",
-    evidence: "camera_vision",
-    notes: "Cámara/visión deshabilitada.",
-  },
-  {
-    name: "mobile_companion_visible",
-    status: "passed",
-    evidence: "mobile_companion",
-    notes: "Mobile es interfaz, no runtime.",
-  },
-  {
-    name: "finance_roi_visible",
-    status: "passed",
-    evidence: "finance_roi",
-    notes: "Métricas unknown sin evidencia.",
-  },
-  {
-    name: "product_builder_visible",
-    status: "passed",
-    evidence: "adaptive_product_builder",
-    notes: "Builder adaptativo preview.",
-  },
-  {
-    name: "kill_switch_visible",
-    status: "passed",
-    evidence: "Kill Switch",
-    notes: "Visible, sin ejecución real que detener.",
-  },
-  {
-    name: "no_fake_metrics",
-    status: "passed",
-    evidence: "truth_policy.no_fake_metrics",
-    notes: "No se inventan métricas.",
-  },
-  {
-    name: "no_frontend_execute",
-    status: "passed",
-    evidence: "frontend_can_execute=false",
-    notes: "El frontend no ejecuta.",
-  },
-  {
-    name: "no_sensor_activation",
-    status: "passed",
-    evidence: "frontend_can_activate_sensors=false",
-    notes: "No se activan sensores.",
-  },
-  {
-    name: "no_post_put_delete",
-    status: "passed",
-    evidence: "allowed_http_methods_for_frontend=[GET]",
-    notes: "El dashboard mira, no toca.",
-  },
-];
-
-const fallbackFrontendPilot: NonNullable<JarvisDashboardStatus["frontend_pilot"]> = {
-  state: {
-    mode: "read_only_pilot",
-    dashboard_route: "/jarvis",
-    backend_status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-    frontend_can_execute: false,
-    frontend_can_approve: false,
-    frontend_can_activate_sensors: false,
-    frontend_can_move_money: false,
-    frontend_can_deploy: false,
-    frontend_can_send_email: false,
-  },
-  readiness_checks: fallbackFrontendChecks,
-  hardening_notes: {
-    npm_audit_vulnerabilities_observed: UNKNOWN,
-    npm_audit_fix_not_run: true,
-    dependency_hardening_requires_separate_pr: true,
-    no_lockfile_changes_expected: true,
-    frontend_build_required_before_merge: true,
-    full_pytest_required_before_merge: true,
-  },
-  pilot_limitations: [
-    "no real approvals",
-    "no real mission submit",
-    "no real Hermes execution",
-    "no real voice",
-    "no real camera",
-    "no real mobile runtime",
-    "no real finance/revenue measurement",
-    "no deploy/money/email/credentials",
-  ],
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const fallbackVisualPilotPanels: JarvisVisualCommandCenterPilotPanel[] = [
-  {
-    name: "Header",
-    expected: true,
-    source: "system + jarvis_hermes_contract",
-    status: "ready",
-    can_execute: false,
-    notes: "Muestra modo local read-only y separación JARVIS/Hermes.",
-  },
-  {
-    name: "Voice Core",
-    expected: true,
-    source: "voice_core",
-    status: "preview",
-    can_execute: false,
-    notes: "Visual only; micrófono, STT, TTS y providers deshabilitados.",
-  },
-  {
-    name: "Wake Word Local Safe Flow",
-    expected: true,
-    source: "wake_word_flow",
-    status: "preview",
-    can_execute: false,
-    notes: "Typed preview; wake phrase no aprueba ni ejecuta.",
-  },
-  {
-    name: "Mission Control",
-    expected: true,
-    source: "mission_control",
-    status: "preview",
-    can_execute: false,
-    notes: "Sin mission submit real ni Hermes dispatch.",
-  },
-  {
-    name: "Approval Console",
-    expected: true,
-    source: "approvals",
-    status: "preview",
-    can_execute: false,
-    notes: "Botones visibles pero disabled/read-only.",
-  },
-  {
-    name: "Hermes Execution",
-    expected: true,
-    source: "hermes_execution",
-    status: "preview",
-    can_execute: false,
-    notes: "Visibilidad read-only; frontend no llama a Hermes.",
-  },
-  {
-    name: "Agent / Module Radar",
-    expected: true,
-    source: "modules",
-    status: "ready",
-    can_execute: false,
-    notes: "Estados normalizados con degradación honesta.",
-  },
-  {
-    name: "Camera / Vision",
-    expected: true,
-    source: "camera_vision",
-    status: "disabled",
-    can_execute: false,
-    notes: "Cámara, captura, storage y visión real están deshabilitados.",
-  },
-  {
-    name: "Mobile Companion",
-    expected: true,
-    source: "mobile_companion",
-    status: "preview",
-    can_execute: false,
-    notes: "Mobile es interfaz preview, no runtime.",
-  },
-  {
-    name: "Finance / ROI",
-    expected: true,
-    source: "finance_roi",
-    status: UNKNOWN,
-    can_execute: false,
-    notes: "Métricas sin evidencia se quedan en unknown.",
-  },
-  {
-    name: "Product Builder Adaptativo",
-    expected: true,
-    source: "adaptive_product_builder",
-    status: "preview",
-    can_execute: false,
-    notes: "Stages preview/future-gated/disabled sin ejecución.",
-  },
-  {
-    name: "Frontend Pilot / Hardening",
-    expected: true,
-    source: "frontend_pilot",
-    status: "ready",
-    can_execute: false,
-    notes: "GET-only al read model y sin rutas mutantes desde el dashboard.",
-  },
-  {
-    name: "Live Timeline / Audit",
-    expected: true,
-    source: "timeline",
-    status: "ready",
-    can_execute: false,
-    notes: "Eventos de lectura/checks; no ejecución.",
-  },
-  {
-    name: "Kill Switch",
-    expected: true,
-    source: "system.kill_switch_state",
-    status: "preview",
-    can_execute: false,
-    notes: "Visible y disabled; no hay ejecución real que detener.",
-  },
-];
-
-const fallbackVisualPilotChecks: JarvisVisualCommandCenterPilotCheck[] = [
-  {
-    name: "no_post_put_delete",
-    status: "passed",
-    evidence: "allowed_http_methods_for_frontend=[GET]",
-    notes: "El dashboard puede leer status, no mutar estado.",
-  },
-  {
-    name: "no_execute_route",
-    status: "passed",
-    evidence: "frontend_must_not_call_execute=true",
-    notes: "No se expone ruta de ejecución desde /jarvis.",
-  },
-  {
-    name: "no_frontend_hermes_call",
-    status: "passed",
-    evidence: "frontend_can_call_hermes_execute=false",
-    notes: "No se ejecuta Hermes desde el frontend.",
-  },
-  {
-    name: "no_tool_runner",
-    status: "passed",
-    evidence: "no_frontend_tool_runner=true",
-    notes: "No hay runner de herramientas en navegador.",
-  },
-  {
-    name: "no_sensor_activation",
-    status: "passed",
-    evidence: "no_sensor_activation=true",
-    notes: "No se activan sensores.",
-  },
-  {
-    name: "no_get_user_media",
-    status: "passed",
-    evidence: "no_get_user_media=true",
-    notes: "No se piden permisos de navegador para media.",
-  },
-  {
-    name: "no_media_recorder",
-    status: "passed",
-    evidence: "voice_core.safety.no_media_recorder=true",
-    notes: "No se graba audio.",
-  },
-  {
-    name: "no_audio_context_capture",
-    status: "passed",
-    evidence: "voice_core.safety.no_audio_context_capture=true",
-    notes: "No hay captura por audio context.",
-  },
-  {
-    name: "no_camera_capture",
-    status: "passed",
-    evidence: "camera_vision.privacy.no_snapshot_capture=true",
-    notes: "No se captura imagen ni vídeo.",
-  },
-  {
-    name: "no_mobile_runtime",
-    status: "passed",
-    evidence: "mobile_runtime_enabled=false",
-    notes: "Mobile Companion es preview-only.",
-  },
-  {
-    name: "no_money_movement",
-    status: "passed",
-    evidence: "finance_roi.safety.no_money_movement=true",
-    notes: "No se mueve dinero.",
-  },
-  {
-    name: "no_stripe_live",
-    status: "passed",
-    evidence: "finance_roi.safety.no_stripe_live=true",
-    notes: "No hay Stripe live ni checkout.",
-  },
-  {
-    name: "no_deploy",
-    status: "passed",
-    evidence: "adaptive_product_builder.safety.no_deploy=true",
-    notes: "No hay deploy.",
-  },
-  {
-    name: "no_email_send",
-    status: "passed",
-    evidence: "safety.no_email_send=true",
-    notes: "No se envía email.",
-  },
-  {
-    name: "no_credentials",
-    status: "passed",
-    evidence: "safety.no_credentials=true",
-    notes: "No se leen ni guardan credenciales.",
-  },
-  {
-    name: "no_fake_metrics",
-    status: "passed",
-    evidence: "finance_roi.truth_policy.no_fake_metrics=true",
-    notes: "No hay métricas falsas; sin evidencia queda unknown.",
-  },
-];
-
-const fallbackOperatorPilotSteps: JarvisVisualCommandCenterPilotStep[] = [
-  { order: 1, check: "arrancar backend", notes: "Arrancar el backend local antes de abrir la UI." },
-  { order: 2, check: "abrir /jarvis", notes: "Abrir la ruta local del cockpit." },
-  { order: 3, check: "comprobar estado general", notes: "Verificar modo, endpoint y estado read-only." },
-  { order: 4, check: "comprobar panels", notes: "Confirmar que todos los paneles esperados están visibles." },
-  { order: 5, check: "comprobar unknown/disabled", notes: "Validar degradación a unknown, disabled, not_connected, preview o future_gated." },
-  { order: 6, check: "comprobar que botones críticos están disabled", notes: "Mission, approvals, kill switch, sensores, dinero y deploy deben estar disabled." },
-  { order: 7, check: "comprobar que no hay permisos de navegador", notes: "No debe aparecer prompt de micrófono, cámara, notificaciones o media." },
-  { order: 8, check: "comprobar que no hay ejecución Hermes", notes: "No hay llamada directa a Hermes desde el frontend." },
-  { order: 9, check: "comprobar que finance/ROI no inventa datos", notes: "Valores sin evidencia se muestran como unknown." },
-  { order: 10, check: "comprobar timeline read-only", notes: "Timeline solo muestra lecturas/checks, no acciones ejecutadas." },
-];
-
-const fallbackVisualCommandCenterPilot: NonNullable<JarvisDashboardStatus["visual_command_center_pilot"]> = {
-  state: {
-    mode: "read_only_pilot",
-    dashboard_route: "/jarvis",
-    status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-    backend_read_model_connected: true,
-    frontend_execution_enabled: false,
-    approvals_real_enabled: false,
-    hermes_direct_execution_enabled: false,
-    voice_real_enabled: false,
-    camera_real_enabled: false,
-    mobile_runtime_enabled: false,
-    money_enabled: false,
-    deploy_enabled: false,
-    email_enabled: false,
-    credentials_enabled: false,
-  },
-  required_panels: fallbackVisualPilotPanels,
-  read_only_checks: fallbackVisualPilotChecks,
-  operator_pilot_steps: fallbackOperatorPilotSteps,
-  pilot_findings: {
-    findings: [],
-    known_limitations: [
-      "real approvals not wired",
-      "mission submit is preview-only",
-      "voice is preview-only",
-      "wake word is preview-only",
-      "camera is disabled",
-      "mobile is preview-only",
-      "finance is unknown without evidence",
-      "Product Builder is preview-only",
-      "dependency hardening may need separate PR due npm audit vulnerabilities",
-    ],
-  },
-  safety: {
-    pilot_is_read_only: true,
-    dashboard_may_read_status_only: true,
-    no_side_effects: true,
-    no_real_world_actions: true,
-    no_background_workers: true,
-    no_sensors: true,
-    no_money: true,
-    no_production: true,
-    no_credentials: true,
-    restrictions_are_approval_gates_not_permanent_bans: true,
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  preview_only: true,
-  read_only: true,
-};
-
-const requiredModules = [
-  "Mission Loop",
-  "Research",
-  "Product Revenue",
-  "Routine Ops",
-  "Moonshot Lab",
-  "Voice",
-  "Wake Listener",
-  "Camera/Vision",
-  "Mobile Companion",
-  "Memory/Learning",
-  "Hermes",
 ] as const;
-
-const fallbackStageNames = fallbackBuilderStages.map((stage) => stage.name);
-
-const approvalActionLabels = ["Aprobar", "Rechazar", "Modificar alcance", "Pedir explicación"] as const;
 
 const fallbackApprovalCards: JarvisApprovalCard[] = [
   {
@@ -1200,7 +98,7 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
     touches: ["filesystem", "local_docs"],
     estimated_cost: UNKNOWN,
     measured_cost: UNKNOWN,
-    rollback_plan: "No hay mutación; rollback no aplica.",
+    rollback_plan: "No hay mutacion; rollback no aplica.",
     stop_plan: "Parar si la ruta no es exacta, local y dentro del scope aprobado.",
     expires_at: UNKNOWN,
     scope_summary: "Un archivo o ruta local de docs/repo en modo lectura.",
@@ -1222,17 +120,17 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
     id: "preview-local-file-write",
     title: "Escritura de archivo local",
     action: "Crear o modificar un archivo local.",
-    reason: "Cambia estado local y requiere scope, diff y rollback antes de cualquier ejecución futura.",
+    reason: "Cambia estado local y requiere scope, diff y rollback antes de cualquier ejecucion futura.",
     status: "blocked",
     risk_level: "medium",
     approval_level: "simple",
     touches: ["filesystem", "local_docs"],
     estimated_cost: UNKNOWN,
     measured_cost: UNKNOWN,
-    rollback_plan: "Exigir diff, backup o patch de reversión antes de una escritura futura.",
-    stop_plan: "Parar por path amplio, glob, diff ausente o cancelación humana.",
+    rollback_plan: "Exigir diff, backup o patch de reversion antes de una escritura futura.",
+    stop_plan: "Parar por path amplio, glob, diff ausente o cancelacion humana.",
     expires_at: UNKNOWN,
-    scope_summary: "Un path local explícito y un diff exacto; sin escrituras recursivas.",
+    scope_summary: "Un path local explicito y un diff exacto; sin escrituras recursivas.",
     evidence_summary: "La consola no tiene endpoint de escritura.",
     disabled_reason: "Preview-only: approval execution is not wired in this PR.",
     recommended_operator_action: "Pedir diff preview y aprobar solo un write bounded futuro.",
@@ -1249,9 +147,9 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
   },
   {
     id: "preview-external-web-github-search",
-    title: "Búsqueda externa web/GitHub",
+    title: "Busqueda externa web/GitHub",
     action: "Consultar web o GitHub fuera del entorno local.",
-    reason: "Puede filtrar intención, consumir cuota o traer contenido no confiable.",
+    reason: "Puede filtrar intencion, consumir cuota o traer contenido no confiable.",
     status: "blocked",
     risk_level: "high",
     approval_level: "strong",
@@ -1259,10 +157,10 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
     estimated_cost: UNKNOWN,
     measured_cost: UNKNOWN,
     rollback_plan: "No llamar proveedores externos hasta aprobar query, proveedor y manejo de datos.",
-    stop_plan: "Parar ante secrets, repos privados, scopes de cuenta o intención ambigua.",
+    stop_plan: "Parar ante secrets, repos privados, scopes de cuenta o intencion ambigua.",
     expires_at: UNKNOWN,
-    scope_summary: "Query/proveedor/fuentes específicos; sin acciones autenticadas.",
-    evidence_summary: "Web/GitHub no está conectado a esta consola.",
+    scope_summary: "Query/proveedor/fuentes especificos; sin acciones autenticadas.",
+    evidence_summary: "Web/GitHub no esta conectado a esta consola.",
     disabled_reason: "Preview-only: approval execution is not wired in this PR.",
     recommended_operator_action: "Exigir approval fuerte antes de cualquier llamada externa futura.",
     requires_readback: true,
@@ -1278,9 +176,9 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
   },
   {
     id: "preview-production-money-deploy-email",
-    title: "Producción, dinero, deploy o email real",
-    action: "Deploy, Stripe/dinero o envío de email real.",
-    reason: "Tiene impacto externo o irreversible y requiere confirmación fuerte.",
+    title: "Produccion, dinero, deploy o email real",
+    action: "Deploy, Stripe/dinero o envio de email real.",
+    reason: "Tiene impacto externo o irreversible y requiere confirmacion fuerte.",
     status: "blocked",
     risk_level: "critical",
     approval_level: "triple",
@@ -1288,12 +186,12 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
     estimated_cost: UNKNOWN,
     measured_cost: UNKNOWN,
     rollback_plan: "Exigir rollback verificado, owner, blast radius y stop condition.",
-    stop_plan: "Parar ante coste no verificado, credencial viva, smoke fallido o cancelación.",
+    stop_plan: "Parar ante coste no verificado, credencial viva, smoke fallido o cancelacion.",
     expires_at: UNKNOWN,
     scope_summary: "Cuenta, entorno, destinatario o importe nominal; sin scope amplio.",
     evidence_summary: "Finance sigue unknown si no hay evidencia real.",
     disabled_reason: "Preview-only: approval execution is not wired in this PR.",
-    recommended_operator_action: "Requerir readback, doble/triple confirmación, rollback, stop plan y auditoría.",
+    recommended_operator_action: "Requerir readback, doble/triple confirmacion, rollback, stop plan y auditoria.",
     requires_readback: true,
     strong_confirmation_required: true,
     double_confirmation_required: true,
@@ -1308,18 +206,18 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
   {
     id: "preview-forbidden-credentials-bypass",
     title: "Credenciales, secrets, tokens o bypass",
-    action: "Leer secrets/tokens/cookies/sesiones o saltar autorización.",
-    reason: "Credenciales, bypass, deception y fake metrics son límites forbidden.",
+    action: "Leer secrets/tokens/cookies/sesiones o saltar autorizacion.",
+    reason: "Credenciales, bypass, deception y fake metrics son limites forbidden.",
     status: "forbidden",
     risk_level: "forbidden",
     approval_level: "forbidden",
     touches: ["credentials"],
     estimated_cost: UNKNOWN,
     measured_cost: UNKNOWN,
-    rollback_plan: "No se ejecuta; rediseñar como status/audit sin secretos.",
-    stop_plan: "Parar y rechazar si pide secrets, cookies, tokens, bypass o métricas falsas.",
+    rollback_plan: "No se ejecuta; redisenar como status/audit sin secretos.",
+    stop_plan: "Parar y rechazar si pide secrets, cookies, tokens, bypass o metricas falsas.",
     expires_at: UNKNOWN,
-    scope_summary: "Scope forbidden; ningún acceso a credenciales o bypass.",
+    scope_summary: "Scope forbidden; ningun acceso a credenciales o bypass.",
     evidence_summary: "Safety boundary: no_credentials=true y no fake metrics.",
     disabled_reason: "Preview-only: approval execution is not wired in this PR.",
     recommended_operator_action: "Rechazar y pedir alternativa segura sin secretos.",
@@ -1336,241 +234,62 @@ const fallbackApprovalCards: JarvisApprovalCard[] = [
   },
 ];
 
-const riskLegend = [
-  ["Nivel 0-1", "directo / bajo riesgo"],
-  ["Nivel 2", "local scoped / simple approval"],
-  ["Nivel 3", "externo o sensible / strong approval"],
-  ["Nivel 4", "producción, dinero, deploy, email, credenciales / double o triple confirmation"],
-  ["Nivel 5", "ilegal, inseguro, no autorizado, bypass, deception, fake metrics / forbidden"],
-] as const;
+const fallbackModules: JarvisDashboardModule[] = [
+  ["Mission Loop", "preview", "risk_scaled_per_step", "Control de mision local, sin submit real."],
+  ["Research", "gated", "level_2_local_read_level_3_external", "Research local queda gated; web/GitHub no conectados desde esta pantalla."],
+  ["Product Revenue", "prepare-only", "level_4_for_money_publication_identity", "Sin Stripe, checkout, deploy, publicacion ni dinero."],
+  ["Routine Ops", "prepare-only", "risk_scaled", "Sin scheduler real, email, cuentas ni workers."],
+  ["Moonshot Lab", "prepare-only", "risk_scaled", "Planes de experimento; sin installs, providers ni fake results."],
+  ["Voice", "preview", "sensor_privacy", "Voice Core visual; microfono y grabacion disabled."],
+  ["Wake Listener", "disabled", "sensor_privacy", "Wake phrase no aprueba, no ejecuta y no escucha."],
+  ["Camera/Vision", "disabled", "sensor_privacy", "Camera placeholder visual; sin captura ni permisos."],
+  ["Mobile Companion", "preview", "remote_surface", "Mobile futuro sera cliente/puente, no runtime."],
+  ["Memory/Learning", "preview", "memory_never_grants_permission", "Memoria nunca concede permisos."],
+  ["Hermes", "gated", "exact_local_read_only_with_operator_authorization", "Hermes ejecuta solo detras de gates JARVIS."],
+].map(([name, status, risk, notes]) => ({
+  name,
+  status,
+  source: DASHBOARD_READ_MODEL_ENDPOINT,
+  risk,
+  notes,
+}));
 
-const fallbackHermesCapabilities: JarvisHermesGovernedCapability[] = [
-  {
-    name: "lectura local gobernada",
-    status: "unknown",
-    approval_required: true,
-    approval_level: "direct",
-    can_execute_from_frontend: false,
-    notes: "Fallback seguro: sin evidencia de backend; mostrar solo visibilidad read-only.",
-  },
-  {
-    name: "research docs/repo",
-    status: "unknown",
-    approval_required: true,
-    approval_level: "level_2_local_read",
-    can_execute_from_frontend: false,
-    notes: "Research local requiere scope exacto y no usa web/GitHub real desde esta pantalla.",
-  },
-  {
-    name: "mission gated execution candidate",
-    status: "gated",
-    approval_required: true,
-    approval_level: "risk_scaled",
-    can_execute_from_frontend: false,
-    notes: "Una candidate no es ejecución; solo expresa readiness gobernada.",
-  },
-  {
-    name: "herramientas externas",
-    status: "not_connected",
-    approval_required: true,
-    approval_level: "strong",
-    can_execute_from_frontend: false,
-    notes: "Browser, red, GitHub y providers externos no están conectados a este panel.",
-  },
-  {
-    name: "deploy/dinero/email/credenciales",
-    status: "forbidden",
-    approval_required: true,
-    approval_level: "level_4_or_forbidden",
-    can_execute_from_frontend: false,
-    notes: "Producción, pagos, email real y credenciales quedan fuera del frontend.",
-  },
-];
-
-const fallbackHermesBlockedRoutes: JarvisHermesBlockedRoute[] = [
-  {
-    route_or_action: "ruta execute directa",
-    action: "ejecución desde frontend",
-    blocked: true,
-    can_execute_from_frontend: false,
-    notes: "Sin ruta de ejecución desde frontend.",
-  },
-  {
-    route_or_action: "approve/reject",
-    action: "mutación de aprobación",
-    blocked: true,
-    can_execute_from_frontend: false,
-    notes: "Los botones de approval permanecen disabled.",
-  },
-  {
-    route_or_action: "runner de herramientas",
-    action: "invocación de tools en navegador",
-    blocked: true,
-    can_execute_from_frontend: false,
-    notes: "Sin registry ni invocación de herramientas en el frontend.",
-  },
-  {
-    route_or_action: "deploy / dinero / email / credenciales",
-    action: "impacto externo o acceso sensible",
-    blocked: true,
-    can_execute_from_frontend: false,
-    notes: "Sin producción, pagos, envío real, secretos, tokens o credenciales.",
-  },
-  {
-    route_or_action: "sensores / móvil / voz / cámara",
-    action: "activación directa o Hermes directo",
-    blocked: true,
-    can_execute_from_frontend: false,
-    notes: "Sin sensores y sin llamadas directas a Hermes desde móvil, voz o cámara.",
-  },
-];
-
-const futureExecutionRequirements = [
-  "approval válido",
-  "scope exacto",
-  "risk level",
-  "rollback/stop plan",
-  "auditoría",
-  "coste/impacto",
-  "operador humano",
-] as const;
-
-const sampleMissionCommand = "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro.";
-
-const fallbackMissionControl: NonNullable<JarvisDashboardStatus["mission_control"]> = {
-  state: {
-    mode: "preview",
-    input_enabled: "preview_only",
-    conversation_enabled: "preview_only",
-    execution_enabled: false,
-    hermes_dispatch_enabled: false,
-    approval_creation_enabled: false,
-    persistence_enabled: false,
-    external_network_enabled: false,
-  },
-  supported_inputs: {
-    text_command: "preview",
-    voice_command: "future_gated",
-    mobile_command: "future_gated",
-    wake_word_command: "future_gated",
-    file_drop: "not_connected",
-    camera_context: "not_connected",
-  },
-  sample_command: sampleMissionCommand,
-  intent_preview: {
-    detected_intent: UNKNOWN,
+function unknownMetric(label: string): JarvisFinanceMetric {
+  return {
+    value: UNKNOWN,
+    label,
+    source: "not_measured",
+    evidence_state: "missing",
     confidence: UNKNOWN,
-    mission_type: UNKNOWN,
-    risk_level: UNKNOWN,
-    approval_level: UNKNOWN,
-    blocked_reasons: [],
-    required_permissions: [],
-    next_safe_action: UNKNOWN,
-  },
-  command_lifecycle: [
-    {
-      state: "draft",
-      description: "La orden queda visible como borrador.",
-      preview_only: true,
-    },
-    {
-      state: "submitted_for_preview",
-      description: "JARVIS prepararía una lectura segura de intención.",
-      preview_only: true,
-    },
-    {
-      state: "intent_detected",
-      description: "La intención se mostraría sin llamar providers.",
-      preview_only: true,
-    },
-    {
-      state: "risk_classified",
-      description: "El riesgo se clasificaría antes de cualquier gate.",
-      preview_only: true,
-    },
-    {
-      state: "approval_required",
-      description: "Lo sensible queda esperando aprobación explícita.",
-      preview_only: true,
-    },
-    {
-      state: "ready_for_operator_review",
-      description: "David revisa scope, permisos y siguiente paso.",
-      preview_only: true,
-    },
-    {
-      state: "blocked",
-      description: "Lo ambiguo o no conectado permanece bloqueado.",
-      preview_only: true,
-    },
-    {
-      state: "forbidden",
-      description: "Credenciales, bypass y acciones inseguras no se aprueban.",
-      preview_only: true,
-    },
-    {
-      state: "executable_candidate_after_valid_approval",
-      description: "Solo un approval válido futuro podría crear elegibilidad.",
-      preview_only: true,
-    },
-  ],
-  conversation_preview: {
-    messages: [
-      {
-        role: "user",
-        speaker: "David",
-        content: sampleMissionCommand,
-        preview_only: true,
-      },
-      {
-        role: "assistant",
-        speaker: "JARVIS",
-        content: "Puedo preparar una misión de revisión. Antes de ejecutar cualquier acción sensible, pediré aprobación.",
-        preview_only: true,
-      },
-    ],
-    assistant_status: "preview",
-    transcript_persistence: false,
-    memory_write: false,
-    memory_read: false,
-    pii_redaction_required: true,
-    raw_audio_stored: false,
-    external_provider_called: false,
-  },
-  safety: {
-    no_auto_execute: true,
-    no_hermes_dispatch: true,
-    no_tool_call: true,
-    no_file_write: true,
-    no_network_call: true,
-    no_email_send: true,
-    no_money_movement: true,
-    no_deploy: true,
-    no_credentials: true,
-    no_sensor_activation: true,
-    no_voice_recording: true,
-    no_camera_capture: true,
-    wake_phrase_is_not_permission: true,
-  },
-  operator_guidance: {
-    can_do: "David puede ver cómo JARVIS recibiría una orden y prepararía una revisión segura.",
-    cannot_do_yet: "Todavía no puede crear misiones, approvals, memoria, llamadas externas ni ejecución.",
-    future_next_step: "El siguiente paso futuro será un intake/classifier seguro antes de propuestas reales.",
-    sensitive_requires_approval: "Todo lo sensible requiere approval explícito, scope, rollback/stop plan y auditoría.",
-  },
-  source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-  read_only: true,
+    last_updated: UNKNOWN,
+  };
+}
+
+const fallbackFinanceMetrics = {
+  actual_cost: unknownMetric("Coste real"),
+  estimated_cost: unknownMetric("Coste estimado"),
+  confirmed_revenue: unknownMetric("Revenue confirmado"),
+  projected_revenue: unknownMetric("Revenue proyectado"),
+  gross_revenue: unknownMetric("Gross revenue"),
+  expenses: unknownMetric("Expenses"),
+  net_revenue: unknownMetric("Net revenue"),
+  roi: unknownMetric("ROI"),
+  token_cost: unknownMetric("Token cost"),
+  api_cost: unknownMetric("API cost"),
+  infra_cost: unknownMetric("Infra cost"),
+  manual_input_cost: unknownMetric("Manual input cost"),
+  revenue_source: unknownMetric("Revenue source"),
 };
 
 const missionLifecycleDisplay = [
   ["draft", "Orden escrita o dictada como borrador visual."],
-  ["preview", "JARVIS prepara lectura de intención sin mutar estado."],
-  ["intent detected", "La intención queda en unknown hasta tener clasificador seguro."],
+  ["preview", "JARVIS prepara lectura de intencion sin mutar estado."],
+  ["intent detected", "La intencion queda en unknown hasta tener clasificador seguro."],
   ["risk classified", "El riesgo se muestra como preview antes de approvals."],
   ["approval required", "Lo sensible se deriva a Approval Console."],
   ["operator review", "David revisa scope, permisos y siguiente paso."],
-  ["Hermes gated", "Hermes permanece detrás de gates válidos."],
-  ["audit", "La acción futura deberá dejar evidencia auditable."],
+  ["Hermes gated", "Hermes permanece detras de gates validos."],
+  ["audit", "La accion futura debera dejar evidencia auditable."],
 ] as const;
 
 const missionSafetyLabels = [
@@ -1584,38 +303,170 @@ const missionSafetyLabels = [
   ["Wake phrase is not permission", "wake_phrase_is_not_permission"],
 ] as const;
 
-function fallbackVisualPilot(reason: "loading" | "offline" | "error"): NonNullable<JarvisDashboardStatus["visual_command_center_pilot"]> {
-  return {
-    ...fallbackVisualCommandCenterPilot,
-    state: {
-      ...fallbackVisualCommandCenterPilot.state,
-      backend_read_model_connected: false,
-    },
-    required_panels: fallbackVisualPilotPanels.map((panel) => ({
-      ...panel,
-      status: panel.status === "disabled" ? "disabled" : UNKNOWN,
-      notes: `Fallback ${reason}: ${panel.notes}`,
-    })),
-    read_only_checks: fallbackVisualPilotChecks.map((check) => ({
-      ...check,
-      status: check.name === "no_post_put_delete" ? "passed" : "preview",
-      evidence: reason === "loading" ? "frontend fallback loading" : "backend unavailable; static dashboard guardrail",
-    })),
-  };
-}
+const fallbackBuilderStages = [
+  "Idea",
+  "Validación",
+  "Blueprint",
+  "Código",
+  "Landing",
+  "Deploy candidate",
+  "Monetización",
+  "Medición",
+];
 
-function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashboardStatus {
-  return {
-    system: {
-      api_status: reason === "loading" ? UNKNOWN : "offline",
-      local_first: true,
-      mode: "read_only_dashboard",
-      free_autonomy_enabled: false,
-      preview_first: true,
-      kill_switch_state: "not_wired",
-      generated_at: UNKNOWN,
+const riskLegend = [
+  ["Nivel 0-1", "directo / bajo riesgo"],
+  ["Nivel 2", "local scoped / simple approval"],
+  ["Nivel 3", "externo o sensible / strong approval"],
+  ["Nivel 4", "produccion, dinero, deploy, email, credenciales / double o triple confirmation"],
+  ["Nivel 5", "ilegal, inseguro, no autorizado, bypass, deception, fake metrics / forbidden"],
+] as const;
+
+const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashboardStatus => ({
+  system: {
+    api_status: reason === "loading" ? UNKNOWN : "offline",
+    local_first: true,
+    mode: "read_only_dashboard",
+    free_autonomy_enabled: false,
+    preview_first: true,
+    kill_switch_state: "not_wired",
+    generated_at: UNKNOWN,
+  },
+  jarvis_hermes_contract: {
+    jarvis_role: "governs/risk/approval/audit/control",
+    hermes_role: "execution_engine",
+    no_duplicate_hermes_runtime: true,
+    frontend_direct_execution_allowed: false,
+    frontend_can_execute: false,
+    frontend_can_call_hermes_execute: false,
+  },
+  local_system_contract: {
+    name: "Local System Contract",
+    presence_ui: "JARVIS Presence UI",
+    local_runtime_daemon_is_system: true,
+    web_route_is_visual_interface_only: true,
+    frontend_executes_hermes_directly: false,
+    mobile_and_vps_are_future_clients_or_bridges: true,
+    real_voice_camera_in_future_prs: true,
+    visual_contract: {
+      primary_experience: "Presence UI",
+      central_core_states: ["idle/calmado", "escuchando", "pensando", "hablando", "alerta/riesgo"],
+      smart_bar: "disabled/preview",
+      camera_placeholder: "movable/expandable visual placeholder",
+      folded_history: "collapsed preview",
     },
-    jarvis_hermes_contract: {
+  },
+  release_candidate: {
+    status: UNKNOWN,
+    readiness: {},
+    not_ready_for_free_autonomy: true,
+    restrictions_are_approval_gates_not_permanent_bans: true,
+    pilot_readiness: UNKNOWN,
+    pilot_executed: false,
+  },
+  modules: fallbackModules,
+  mission_control: {
+    state: {
+      mode: "preview",
+      input_enabled: "preview_only",
+      conversation_enabled: "preview_only",
+      execution_enabled: false,
+      hermes_dispatch_enabled: false,
+      approval_creation_enabled: false,
+      persistence_enabled: false,
+      external_network_enabled: false,
+    },
+    supported_inputs: {
+      text_command: "preview",
+      voice_command: "future_gated",
+      mobile_command: "future_gated",
+      wake_word_command: "future_gated",
+      file_drop: "not_connected",
+      camera_context: "not_connected",
+    },
+    sample_command: sampleMissionCommand,
+    intent_preview: {
+      detected_intent: UNKNOWN,
+      confidence: UNKNOWN,
+      mission_type: UNKNOWN,
+      risk_level: UNKNOWN,
+      approval_level: UNKNOWN,
+      blocked_reasons: [],
+      required_permissions: [],
+      next_safe_action: "operator review",
+    },
+    conversation_preview: {
+      messages: [
+        { role: "user", speaker: "David", content: sampleMissionCommand, preview_only: true },
+        {
+          role: "assistant",
+          speaker: "JARVIS",
+          content: "Puedo preparar una mision de revision. Antes de ejecutar cualquier accion sensible, pedire aprobacion.",
+          preview_only: true,
+        },
+      ],
+      assistant_status: "preview",
+      transcript_persistence: false,
+      memory_write: false,
+      memory_read: false,
+      pii_redaction_required: true,
+      raw_audio_stored: false,
+      external_provider_called: false,
+    },
+    safety: Object.fromEntries(missionSafetyLabels.map(([, key]) => [key, true])),
+    operator_guidance: {
+      can_do: "David puede ver como JARVIS recibiria una orden y prepararia una revision segura.",
+      cannot_do_yet: "Todavia no puede crear misiones, approvals, memoria, llamadas externas ni ejecucion.",
+      future_next_step: "El siguiente paso futuro sera un intake/classifier seguro antes de propuestas reales.",
+      sensitive_requires_approval: "Todo lo sensible requiere approval explicito, scope, rollback/stop plan y auditoria.",
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    read_only: true,
+  },
+  approvals: {
+    pending_count: UNKNOWN,
+    critical_count: UNKNOWN,
+    blocked_count: UNKNOWN,
+    expired_count: UNKNOWN,
+    preview_count: fallbackApprovalCards.length,
+    action_buttons_enabled: false,
+    all_actions_read_only: true,
+    wake_phrase_can_approve: false,
+    frontend_can_approve: false,
+    frontend_can_reject: false,
+    frontend_can_modify_scope: false,
+    critical_actions_require_strong_approval: true,
+    cards: fallbackApprovalCards,
+    cards_state: "preview/read-only",
+    preview_only: true,
+    readback_policy: {
+      wake_phrase_never_approves: true,
+      voice_approval_requires_auth_gate_and_audit: true,
+      critical_actions_require_readback: true,
+      critical_actions_require_strong_confirmation: true,
+      critical_actions_require_double_or_triple_confirmation: true,
+      critical_actions_require_rollback_and_stop_plan: true,
+      audit_required: true,
+    },
+  },
+  hermes_execution: {
+    available: false,
+    connected: UNKNOWN,
+    active_execution: false,
+    execution_mode: "read_only_visibility",
+    last_execution: UNKNOWN,
+    last_result: UNKNOWN,
+    last_error: UNKNOWN,
+    measured_duration: UNKNOWN,
+    measured_cost: UNKNOWN,
+    frontend_direct_execution_allowed: false,
+    frontend_can_execute: false,
+    frontend_can_call_hermes_execute: false,
+    running_sessions: UNKNOWN,
+    session_count: UNKNOWN,
+    supported_tool: UNKNOWN,
+    notes: "Fallback seguro: no se permite ejecucion directa desde frontend.",
+    contract: {
       jarvis_role: "governs/risk/approval/audit/control",
       hermes_role: "execution_engine",
       no_duplicate_hermes_runtime: true,
@@ -1623,182 +474,876 @@ function fallbackDashboard(reason: "loading" | "offline" | "error"): JarvisDashb
       frontend_can_execute: false,
       frontend_can_call_hermes_execute: false,
     },
-    release_candidate: {
-      status: UNKNOWN,
-      readiness: {},
-      not_ready_for_free_autonomy: true,
-      restrictions_are_approval_gates_not_permanent_bans: true,
-      pilot_readiness: UNKNOWN,
-      pilot_executed: false,
+    governed_capabilities: [],
+    blocked_routes: [],
+    safety: {
+      no_frontend_execute: true,
+      no_frontend_tool_runner: true,
+      no_direct_hermes_call_from_mobile: true,
+      no_direct_hermes_call_from_voice: true,
+      no_direct_hermes_call_from_camera: true,
+      approval_required_before_execution: true,
+      wake_phrase_is_not_permission: true,
+      audit_required: true,
+      rollback_or_stop_plan_required_for_sensitive_actions: true,
     },
-    modules: requiredModules.map((name) => ({
-      name,
-      status: name === "Camera/Vision" || name === "Wake Listener" ? "disabled" : "unknown",
-      source: DASHBOARD_READ_MODEL_ENDPOINT,
-      risk: UNKNOWN,
-      notes: "Fallback seguro: backend offline o campo no conectado.",
-    })),
-    mission_control: fallbackMissionControl,
-    approvals: {
-      pending_count: UNKNOWN,
-      critical_count: UNKNOWN,
-      blocked_count: UNKNOWN,
-      expired_count: UNKNOWN,
-      preview_count: fallbackApprovalCards.length,
-      action_buttons_enabled: false,
-      all_actions_read_only: true,
-      wake_phrase_can_approve: false,
-      frontend_can_approve: false,
-      frontend_can_reject: false,
-      frontend_can_modify_scope: false,
-      critical_actions_require_strong_approval: true,
-      cards: fallbackApprovalCards,
-      cards_state: "preview/read-only",
-      preview_only: true,
-      readback_policy: {
-        wake_phrase_never_approves: true,
-        voice_approval_requires_auth_gate_and_audit: true,
-        critical_actions_require_readback: true,
-        critical_actions_require_strong_confirmation: true,
-        critical_actions_require_double_or_triple_confirmation: true,
-        critical_actions_require_rollback_and_stop_plan: true,
-        audit_required: true,
-      },
-    },
-    hermes_execution: {
-      available: false,
-      connected: UNKNOWN,
-      active_execution: UNKNOWN,
-      last_execution: UNKNOWN,
-      last_result: UNKNOWN,
-      last_error: UNKNOWN,
-      measured_duration: UNKNOWN,
-      measured_cost: UNKNOWN,
-      frontend_direct_execution_allowed: false,
-      frontend_can_execute: false,
-      frontend_can_call_hermes_execute: false,
-      running_sessions: UNKNOWN,
-      session_count: UNKNOWN,
-      supported_tool: UNKNOWN,
-      notes: "Fallback seguro: no se permite ejecución directa desde frontend.",
-      contract: {
-        jarvis_role: "governs/risk/approval/audit/control",
-        hermes_role: "execution_engine",
-        no_duplicate_hermes_runtime: true,
-        frontend_direct_execution_allowed: false,
-        frontend_can_execute: false,
-        frontend_can_call_hermes_execute: false,
-      },
-      runtime_status: {
-        available: false,
-        connected: UNKNOWN,
-        active_execution: UNKNOWN,
-        execution_mode: "read_only_visibility",
-        last_execution: UNKNOWN,
-        last_result: UNKNOWN,
-        last_error: UNKNOWN,
-        last_rollback: UNKNOWN,
-        last_stop_plan: UNKNOWN,
-        measured_duration: UNKNOWN,
-        measured_cost: UNKNOWN,
-        running_sessions: UNKNOWN,
-        session_count: UNKNOWN,
-        supported_tool: UNKNOWN,
-      },
-      governed_capabilities: fallbackHermesCapabilities,
-      blocked_routes: fallbackHermesBlockedRoutes,
-      safety: {
-        no_frontend_execute: true,
-        no_frontend_tool_runner: true,
-        no_direct_hermes_call_from_mobile: true,
-        no_direct_hermes_call_from_voice: true,
-        no_direct_hermes_call_from_camera: true,
-        approval_required_before_execution: true,
-        wake_phrase_is_not_permission: true,
-        audit_required: true,
-        rollback_or_stop_plan_required_for_sensitive_actions: true,
-      },
-    },
-    voice_core: fallbackVoiceCore,
-    wake_word_flow: fallbackWakeWordFlow,
-    voice_wake: {
-      microphone_state: "disabled",
-      wake_word_state: "unknown",
-      wake_phrases: ["Hola Jarvis", "Jarvis"],
+  },
+  voice_core: {
+    state: {
+      mode: "preview",
+      current_state: "preview",
+      microphone_enabled: false,
+      wake_word_enabled: false,
+      command_listening_enabled: false,
+      tts_enabled: false,
+      stt_enabled: false,
+      audio_recording: false,
+      raw_audio_stored: false,
+      external_provider_called: false,
+      voice_approval_enabled: false,
       wake_phrase_can_approve: false,
       wake_phrase_can_execute: false,
+    },
+    visual_states: [
+      "offline",
+      "online",
+      "preview",
+      "dormant",
+      "dormido",
+      "listening_wake_word",
+      "listening_command",
+      "thinking",
+      "speaking",
+      "approval_required",
+      "hermes_executing",
+      "paused",
+      "blocked",
+      "error",
+      "kill_switch",
+    ].map((state) => ({
+      state,
+      label: state,
+      description: "Estado visual/read-only sin activar sensores ni ejecucion.",
+      risk: state === "blocked" || state === "error" ? "blocked" : "none",
+      enabled: state === "preview" || state === "dormant" ? "preview" : false,
+      sensor_required: state.includes("listening"),
+      can_approve: false,
+      connection: "preview",
+    })),
+    tts_state: {
+      status: "preview",
+      speaking: false,
+      last_utterance: previewVoiceSubtitle,
+      subtitles_enabled: true,
+      subtitles_source: "preview/read_model",
+      preview_subtitle: previewVoiceSubtitle,
+      audio_output_enabled: false,
+      provider: "none/not_connected",
+      external_call: false,
+    },
+    wake_word_policy: {
+      supported_phrases: ["Hola Jarvis", "Jarvis"],
+      wake_word_runtime: "disabled",
+      wake_phrase_is_permission: false,
+      wake_phrase_can_approve: false,
+      wake_phrase_can_execute: false,
+      requires_authenticated_channel_for_approval: true,
+      critical_actions_require_readback: true,
+      critical_actions_require_strong_confirmation: true,
+    },
+    privacy: {
+      no_microphone_activation: true,
+      no_audio_recording: true,
+      no_raw_audio_storage: true,
+      no_external_audio_provider: true,
+      no_background_listening_enabled: true,
+      no_voice_biometrics: true,
+      no_voice_approval_without_gate: true,
+    },
+    safety: {
+      no_auto_execute: true,
+      no_hermes_dispatch: true,
+      no_tool_call: true,
+      no_sensor_activation: true,
+      no_get_user_media: true,
+      no_media_recorder: true,
+      no_audio_context_capture: true,
+      kill_switch_visible: true,
+    },
+    relationship: {
+      voice_can_prepare_future_intention: true,
+      approval_console_handles_required_approval: true,
+      hermes_executes_only_after_valid_approval: true,
+      frontend_or_voice_can_call_hermes_directly: false,
+      jarvis_governs: true,
+      hermes_executes: true,
+    },
+    kill_switch: {
+      visible: true,
+      real_audio_to_stop: false,
+      future_must_cut_listening_tts_and_governed_execution: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  wake_word_flow: {
+    state: {
+      mode: "preview",
+      wake_runtime_enabled: false,
+      microphone_hard_off: true,
+      wake_word_only_mode: false,
+      command_window_open: false,
+      push_to_talk_preview_enabled: true,
+      typed_wake_preview_enabled: true,
+      always_on_microphone_enabled: false,
+      background_listener_enabled: false,
+      stt_enabled: false,
       audio_recording: false,
       raw_audio_stored: false,
       external_provider_called: false,
     },
-    camera_vision: fallbackCameraVision,
-    mobile_companion: fallbackMobileCompanion,
-    mobile: {
-      companion_state: "preview",
-      direct_hermes_call_allowed: false,
-      remote_kill_switch_state: "future_gated",
-      approval_actions_enabled: false,
-      source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
+    supported_phrases: ["Hola Jarvis", "Jarvis"],
+    stop_phrases: ["para", "cancela", "detente", "silencio", "cancelar misión", "apaga escucha"],
+    mode_explanations: {
+      mic_hard_off: "Mic hard-off: no escucha nada.",
+      wake_word_only: "Wake-word-only: futuro modo donde solo detectaria frase.",
+      command_listening: "Command listening: futura ventana corta despues de wake.",
+      push_to_talk: "Push-to-talk: futuro modo manual.",
+      typed_preview: "Typed preview: modo actual seguro.",
     },
-    finance_roi: fallbackFinanceRoi,
-    finance: {
-      actual_cost: UNKNOWN,
-      estimated_cost: UNKNOWN,
-      confirmed_revenue: UNKNOWN,
-      projected_revenue: UNKNOWN,
-      gross_revenue: UNKNOWN,
-      expenses: UNKNOWN,
-      net_revenue: UNKNOWN,
-      roi: UNKNOWN,
-      no_fake_metrics: true,
+    wake_parse_preview: {
+      input_example: "Hola Jarvis, revisa el estado del proyecto",
+      detected_wake_phrase: "Hola Jarvis",
+      remaining_command_preview: "revisa el estado del proyecto",
+      would_open_command_window: true,
+      would_execute: false,
+      would_approve: false,
+      would_call_hermes: false,
+      would_record_audio: false,
+      would_call_provider: false,
+      status: "preview_only",
     },
-    adaptive_product_builder: fallbackAdaptiveProductBuilder,
-    product_builder: {
-      stages: [...fallbackStageNames],
-      deploy_requires_strong_approval: true,
-      stripe_checkout_requires_strong_approval: true,
-      real_revenue_must_be_confirmed: true,
+    approval_policy: {
+      wake_phrase_is_permission: false,
+      wake_phrase_can_approve: false,
+      wake_phrase_can_execute: false,
+      voice_approval_requires_authenticated_channel: true,
+      sensitive_actions_require_readback: true,
+      critical_actions_require_double_or_triple_confirmation: true,
+      approval_events_must_be_audited: true,
     },
-    frontend_pilot: fallbackFrontendPilot,
-    visual_command_center_pilot: fallbackVisualPilot(reason),
     safety: {
+      no_microphone_activation: true,
+      no_get_user_media: true,
+      no_media_recorder: true,
+      no_audio_context_capture: true,
+      no_background_listening: true,
+      no_raw_audio_storage: true,
+      no_external_stt: true,
+      no_external_tts: true,
+      no_hermes_dispatch: true,
+      no_tool_call: true,
+      no_auto_execute: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  camera_vision: {
+    state: {
+      mode: "preview",
+      camera_enabled: false,
+      camera_permission_requested: false,
+      preview_enabled: false,
+      recording: false,
+      streaming: false,
+      snapshot_capture_enabled: false,
+      vision_analysis_enabled: false,
+      image_storage_enabled: false,
+      video_storage_enabled: false,
+      external_vision_provider_called: false,
+      local_vision_model_connected: UNKNOWN,
+      background_camera_access: false,
+    },
+    privacy: {
+      no_camera_activation: true,
+      no_get_user_media: true,
+      no_media_stream: true,
+      no_recording: true,
+      no_snapshot_capture: true,
+      no_image_storage: true,
+      no_video_storage: true,
+      no_external_provider: true,
+      explicit_operator_permission_required: true,
+      visual_indicator_required_when_camera_active: true,
+      audit_required_for_future_vision: true,
+    },
+    states: [
+      ["camera_off", "cámara apagada"],
+      ["permission_required", "permiso requerido"],
+      ["camera_available_future", "preview futuro"],
+      ["analyzing_future", "análisis futuro"],
+      ["recording_disabled", "grabación desactivada"],
+      ["storage_disabled", "almacenamiento desactivado"],
+      ["kill_switch", "kill switch"],
+    ].map(([state, label]) => ({
+      state,
+      label,
+      description: "Estado visual de camara; captura, streaming y storage quedan deshabilitados.",
+      enabled: state === "camera_off" ? "preview" : "future_gated",
+      risk: "sensor_privacy",
+      can_execute: false,
+    })),
+    scope_policy: {
+      allowed_scope: "none/unknown",
+      future_scope_requires_explicit_operator_permission: true,
+      future_analysis_must_state_what_it_can_see: true,
+      future_analysis_must_not_infer_sensitive_identity: true,
+      future_analysis_must_not_store_without_permission: true,
+    },
+    camera_state: "disabled",
+    preview_state: "disabled",
+    recording: false,
+    streaming: false,
+    snapshot: "disabled",
+    vision_analysis: "disabled",
+    storage: false,
+    provider: "none/not_connected",
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  mobile_companion: {
+    state: {
+      mode: "preview",
+      pwa_baseline: "preview",
+      mobile_runtime_enabled: false,
+      mobile_can_execute: false,
+      mobile_can_call_hermes_directly: false,
+      mobile_can_approve_real_actions: false,
+      mobile_can_reject_real_actions: false,
+      mobile_can_modify_scope_real: false,
+      mobile_notifications_enabled: false,
+      remote_kill_switch_enabled: false,
+      remote_camera_enabled: false,
+      remote_microphone_enabled: false,
+      external_network_required: false,
+    },
+    mobile_views: [
+      ["status", "Estado"],
+      ["approvals_preview", "Approvals preview"],
+      ["mission_preview", "Mission preview"],
+      ["hermes_visibility", "Hermes visibility"],
+      ["voice_status", "Voice status"],
+      ["camera_status", "Camera status"],
+      ["finance_summary", "Finance summary"],
+      ["kill_switch_preview", "Kill switch preview"],
+    ].map(([id, name]) => ({
+      id,
+      name,
+      status: id === "kill_switch_preview" ? "future_gated" : "preview",
+      can_execute: false,
+      can_call_hermes: false,
+      notes: "Vista futura read-only; no execute / no Hermes direct.",
+    })),
+    safety: {
+      mobile_is_interface_not_runtime: true,
+      no_direct_hermes_call: true,
+      no_mobile_execute: true,
+      no_mobile_sensor_activation: true,
+      no_mobile_camera_activation: true,
+      no_mobile_microphone_activation: true,
+      no_real_mobile_approval_in_this_pr: true,
+      approval_requires_backend_gate: true,
+      critical_approval_requires_strong_confirmation: true,
+      remote_kill_switch_future_gated: true,
+    },
+    pwa_policy: {
+      installable_pwa: "preview",
+      offline_cache_enabled: false,
+      push_notifications_enabled: false,
+      service_worker_enabled: false,
+      no_background_sync: true,
+      no_credentials_storage: true,
+      no_token_storage: true,
+    },
+    source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
+    preview_only: true,
+    read_only: true,
+  },
+  finance_roi: {
+    truth_policy: {
+      no_fake_metrics: true,
+      unknown_when_no_evidence: true,
+      measured_requires_source: true,
+      estimated_requires_label: true,
+      confirmed_revenue_requires_evidence: true,
+      projected_revenue_must_be_labelled: true,
+      roi_unknown_without_revenue_and_cost: true,
+    },
+    metrics: fallbackFinanceMetrics,
+    budget: {
+      budget_configured: false,
+      remaining_budget: UNKNOWN,
+      monthly_limit: UNKNOWN,
+      alert_threshold: UNKNOWN,
+      hard_stop_enabled: false,
+      notes: "Budget no configurado; mostrar unknown hasta tener evidencia.",
+    },
+    safety: {
+      no_money_movement: true,
+      no_stripe_live: true,
+      no_checkout_creation: true,
+      no_invoice_creation: true,
+      no_payment_collection: true,
+      no_fake_revenue: true,
+      no_fake_costs: true,
+      no_fake_roi: true,
+      approval_required_for_money: true,
+      strong_approval_required_for_live_payments: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  adaptive_product_builder: {
+    state: {
+      mode: "preview",
+      builder_enabled: "preview/read_only",
+      product_generation_enabled: false,
+      code_generation_enabled: false,
+      deploy_enabled: false,
+      stripe_enabled: false,
+      landing_publish_enabled: false,
+      external_research_enabled: false,
+      hermes_dispatch_enabled: false,
+    },
+    stages: fallbackBuilderStages.map((name) => ({
+      name,
+      status: name === "Deploy candidate" || name === "Monetización" ? "disabled" : "preview",
+      can_execute: false,
+      requires_approval: name !== "Idea" && name !== "Validación" && name !== "Blueprint",
+      approval_level: "strong",
+      evidence_required: "measured_source_before_metric",
+      notes: "Stage preview/future-gated/disabled; sin ejecucion.",
+    })),
+    differentiation_policy: {
+      no_template_clone: true,
+      adaptive_builder_not_template_builder: true,
+      each_product_needs_reason_to_exist: true,
+      each_product_needs_success_metric: true,
+      each_product_needs_monetization_logic: true,
+      cloned_products_are_failure: true,
+    },
+    monetization_policy: {
+      pricing_preview_only: true,
+      stripe_live_requires_strong_approval: true,
+      checkout_requires_strong_approval: true,
+      real_revenue_requires_confirmation: true,
+      projected_revenue_label_required: true,
+      no_fake_revenue: true,
+    },
+    safety: {
+      no_deploy: true,
+      no_publish: true,
+      no_domain_change: true,
+      no_email_send: true,
+      no_money_movement: true,
+      no_credentials: true,
+      no_external_network: true,
+      no_hermes_dispatch: true,
+      approval_gates_required_for_real_actions: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  frontend_pilot: {
+    state: {
+      mode: "read_only_pilot",
+      dashboard_route: "/jarvis",
+      backend_status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
       frontend_can_execute: false,
       frontend_can_approve: false,
-      no_auto_execute: true,
-      no_duplicate_hermes_runtime: true,
-      no_get_user_media: true,
-      no_sensor_activation: true,
-      no_voice_recording: true,
-      no_camera_capture: true,
-      no_frontend_tool_runner: true,
-      no_tool_call: true,
-      no_file_write: true,
-      no_network_call: true,
-      no_frontend_hermes_execution: true,
-      no_hermes_dispatch: true,
-      no_post_put_delete_from_jarvis_page: true,
-      no_money_movement: true,
-      no_deploy: true,
-      no_credentials: true,
-      no_email_send: true,
+      frontend_can_activate_sensors: false,
+      frontend_can_move_money: false,
+      frontend_can_deploy: false,
+      frontend_can_send_email: false,
     },
-    timeline: [
-      {
-        event: reason === "loading" ? "dashboard read model loading" : "dashboard read model unavailable",
-        source: DASHBOARD_READ_MODEL_ENDPOINT,
-        status: reason,
-        read_only: true,
-      },
+    readiness_checks: [
+      "dashboard_route_exists",
+      "read_model_connected",
+      "approval_console_visible",
+      "hermes_execution_visible",
+      "mission_control_visible",
+      "voice_core_visible",
+      "wake_flow_visible",
+      "camera_vision_visible",
+      "mobile_companion_visible",
+      "finance_roi_visible",
+      "product_builder_visible",
+      "kill_switch_visible",
+      "no_fake_metrics",
+      "no_frontend_execute",
+      "no_sensor_activation",
+      "no_post_put_delete",
+    ].map((name) => ({
+      name,
+      status: "passed",
+      evidence: name,
+      notes: "Read-only frontend pilot check.",
+    })),
+    hardening_notes: {
+      npm_audit_vulnerabilities_observed: UNKNOWN,
+      npm_audit_fix_not_run: true,
+      dependency_hardening_requires_separate_pr: true,
+      no_lockfile_changes_expected: true,
+      frontend_build_required_before_merge: true,
+      full_pytest_required_before_merge: true,
+    },
+    pilot_limitations: [
+      "no real approvals",
+      "no real mission submit",
+      "no real Hermes execution",
+      "no real voice",
+      "no real camera",
+      "no real mobile runtime",
+      "no real finance/revenue measurement",
+      "no deploy/money/email/credentials",
     ],
-    read_only_contract: {
-      aggregated_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
-      allowed_http_methods_for_frontend: ["GET"],
-      internal_sources_are_read_only_status_or_audit: true,
-      frontend_must_not_call_execute: true,
-      frontend_must_not_request_sensor_permissions: true,
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  visual_command_center_pilot: {
+    state: {
+      mode: "read_only_pilot",
+      dashboard_route: "/jarvis",
+      status_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+      backend_read_model_connected: false,
+      frontend_execution_enabled: false,
+      approvals_real_enabled: false,
+      hermes_direct_execution_enabled: false,
+      voice_real_enabled: false,
+      camera_real_enabled: false,
+      mobile_runtime_enabled: false,
+      money_enabled: false,
+      deploy_enabled: false,
+      email_enabled: false,
+      credentials_enabled: false,
     },
-  };
-}
+    required_panels: [
+      "Header",
+      "Presence UI",
+      "Local System Contract",
+      "Smart Bar",
+      "Camera Placeholder",
+      "Folded History",
+      "Voice Core",
+      "Wake Word Local Safe Flow",
+      "Mission Control",
+      "Approval Console",
+      "Hermes Execution",
+      "Agent / Module Radar",
+      "Camera / Vision",
+      "Mobile Companion",
+      "Finance / ROI",
+      "Product Builder Adaptativo",
+      "Frontend Pilot / Hardening",
+      "Live Timeline / Audit",
+      "Kill Switch",
+    ].map((name) => ({
+      name,
+      expected: true,
+      source: name,
+      status: name === "Camera / Vision" ? "disabled" : "preview",
+      can_execute: false,
+      notes: "Presence UI panel remains read-only.",
+    })),
+    read_only_checks: [
+      "no_post_put_delete",
+      "no_execute_route",
+      "no_frontend_hermes_call",
+      "no_tool_runner",
+      "no_sensor_activation",
+      "no_get_user_media",
+      "no_media_recorder",
+      "no_audio_context_capture",
+      "no_camera_capture",
+      "no_mobile_runtime",
+      "no_money_movement",
+      "no_stripe_live",
+      "no_deploy",
+      "no_email_send",
+      "no_credentials",
+      "no_fake_metrics",
+    ].map((name) => ({
+      name,
+      status: "passed",
+      evidence: name,
+      notes: "Static/read-model guardrail.",
+    })),
+    operator_pilot_steps: [
+      { order: 1, check: "arrancar backend", notes: "Arrancar el backend local antes de abrir la UI." },
+      { order: 2, check: "abrir /jarvis", notes: "Abrir la ruta local del cockpit." },
+      { order: 3, check: "comprobar estado general", notes: "Verificar modo, endpoint y estado read-only." },
+      { order: 4, check: "comprobar panels", notes: "Confirmar que todos los paneles esperados estan visibles." },
+      { order: 5, check: "comprobar smart bar", notes: "Confirmar barra inteligente inferior disabled/preview." },
+      { order: 6, check: "comprobar camera placeholder", notes: "Confirmar placeholder visual sin permiso de navegador." },
+      { order: 7, check: "comprobar folded history", notes: "Confirmar historial plegado sin persistencia nueva." },
+    ],
+    pilot_findings: {
+      findings: [],
+      known_limitations: [
+        "real approvals not wired",
+        "mission submit is preview-only",
+        "voice is preview-only",
+        "wake word is preview-only",
+        "camera is disabled",
+        "mobile is preview-only",
+        "finance is unknown without evidence",
+        "Product Builder is preview-only",
+        "dependency hardening may need separate PR due npm audit vulnerabilities",
+      ],
+    },
+    safety: {
+      pilot_is_read_only: true,
+      dashboard_may_read_status_only: true,
+      no_side_effects: true,
+      no_real_world_actions: true,
+      no_background_workers: true,
+      no_sensors: true,
+      no_money: true,
+      no_production: true,
+      no_credentials: true,
+      restrictions_are_approval_gates_not_permanent_bans: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  safety: {
+    frontend_can_execute: false,
+    frontend_can_approve: false,
+    no_auto_execute: true,
+    no_frontend_execute: true,
+    no_duplicate_hermes_runtime: true,
+    no_get_user_media: true,
+    no_sensor_activation: true,
+    no_voice_recording: true,
+    no_camera_capture: true,
+    no_frontend_tool_runner: true,
+    no_tool_call: true,
+    no_file_write: true,
+    no_network_call: true,
+    no_direct_hermes_call_from_mobile: true,
+    no_direct_hermes_call_from_voice: true,
+    no_direct_hermes_call_from_camera: true,
+    no_frontend_hermes_execution: true,
+    no_hermes_dispatch: true,
+    no_post_put_delete_from_jarvis_page: true,
+    no_money_movement: true,
+    no_deploy: true,
+    no_credentials: true,
+    no_email_send: true,
+  },
+  timeline: [
+    {
+      event: reason === "loading" ? "dashboard read model loading" : "dashboard read model unavailable",
+      source: DASHBOARD_READ_MODEL_ENDPOINT,
+      status: reason,
+      read_only: true,
+    },
+  ],
+  read_only_contract: {
+    aggregated_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    allowed_http_methods_for_frontend: ["GET"],
+    internal_sources_are_read_only_status_or_audit: true,
+    frontend_must_not_call_execute: true,
+    frontend_must_not_request_sensor_permissions: true,
+  },
+});
+
+const requiredStaticCopy = [
+  "Centro de Mando JARVIS",
+  "Núcleo de Voz JARVIS",
+  "Control de Misión",
+  "preview-only",
+  "En esta fase no se ejecuta nada",
+  "Conversation Preview",
+  "Preview conversation",
+  "Intent / Risk Preview",
+  "Mission Lifecycle",
+  "Safety Banner",
+  "No auto execute",
+  "No Hermes dispatch",
+  "No tool call",
+  "No file write",
+  "No network",
+  "No voice recording",
+  "No camera capture",
+  "Wake phrase is not permission",
+  "Si una misión necesita algo sensible, aparecerá en Approval Console",
+  "Hermes solo ejecutará después de approval válido",
+  "El frontend no puede saltarse gates",
+  "JARVIS gobierna",
+  "Hermes ejecuta",
+  "Consola de Aprobación",
+  "Hermes Execution",
+  "Ejecución Hermes",
+  "El frontend no puede ejecutar Hermes directamente",
+  "Sin ejecución activa",
+  "Capacidades gobernadas",
+  "Rutas bloqueadas",
+  "Requisitos antes de ejecución futura",
+  "approval válido",
+  "scope exacto",
+  "coste/impacto",
+  "operador humano",
+  "Kill Switch",
+  "KILL SWITCH",
+  "No fake metrics",
+  "unknown",
+  "La cámara no graba por defecto",
+  "Mobile es una interfaz, no un runtime",
+  "La wake phrase nunca aprueba acciones",
+  "La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada",
+  "Las acciones sensibles requieren aprobación humana",
+  "Las acciones críticas requieren confirmación fuerte",
+  "Hermes ejecuta solo bajo gates válidos",
+  "No hay ejecución real que detener desde este panel",
+  "No hay ejecución real que detener desde esta shell",
+  "Preview-only: approval execution is not wired in this PR",
+  "Leyenda de riesgo",
+  "Nivel 0-1",
+  "Nivel 5",
+  "Readback / confirmación fuerte",
+  "Cámara / Visión",
+  "No se captura imagen ni vídeo en esta PR",
+  "No se usa getUserMedia",
+  "No hay proveedor externo de visión",
+  "La visión futura requerirá permiso explícito y auditoría",
+  "Mobile no ejecuta acciones",
+  "Approvals reales desde móvil quedan future-gated",
+  "No se guardan credenciales ni tokens",
+  "Presence UI",
+  "Local System Contract",
+  "smart bar",
+  "camera placeholder",
+  "folded history",
+  "barra inteligente inferior",
+  "historial plegado",
+  "JARVIS runtime/daemon local es el sistema",
+  "/jarvis es solo la interfaz visual",
+  "móvil y VPS serán clientes/puentes futuros",
+  "frontend no ejecuta directamente Hermes",
+  "voz/cámara reales vendrán en PRs posteriores",
+  "idle/calmado",
+  "escuchando",
+  "pensando",
+  "hablando",
+  "alerta/riesgo",
+];
+
+const voiceContractCopy = [
+  "No estoy escuchando ni grabando audio",
+  "Subtítulos preview",
+  "Subtítulos preview - sin TTS real, sin STT real, sin provider externo.",
+  "Política wake word",
+  "Frases soportadas futuras: Hola Jarvis, Jarvis.",
+  "La wake phrase no ejecuta acciones",
+  "Las acciones críticas requieren readback y confirmación fuerte",
+  "Privacidad voz",
+  "micrófono: disabled",
+  "grabación: false",
+  "audio bruto almacenado: false",
+  "proveedor externo",
+  "background listening",
+  "voice approval",
+  "La voz puede preparar una intención futura",
+  "Si requiere aprobación, aparecerá en Approval Console",
+  "Frontend/voice no llama Hermes directamente",
+  "Kill Switch voz",
+  "En esta PR no hay audio real que parar",
+  "Una integración futura deberá cortar escucha, TTS y ejecución gobernada",
+  "offline",
+  "online",
+  "preview",
+  "dormant",
+  "dormido",
+  "listening_wake_word",
+  "listening_command",
+  "thinking",
+  "speaking",
+  "approval_required",
+  "hermes_executing",
+  "paused",
+  "blocked",
+  "error",
+  "kill_switch",
+];
+
+const wakeContractCopy = [
+  "Wake Word Local Safe Flow",
+  "micrófono hard-off",
+  "Hola Jarvis",
+  "Jarvis",
+  "Stop phrases",
+  "Mic hard-off",
+  "Wake-word-only",
+  "Command listening",
+  "Push-to-talk",
+  "Typed preview",
+  "Hola Jarvis, revisa el estado del proyecto",
+  "wake phrase detectada",
+  "comando restante",
+  "abriría ventana de comando",
+  "ejecutaría",
+  "aprobaría",
+  "llamaría Hermes",
+  "La wake phrase solo puede abrir una ventana de comando futura",
+  "La aprobación por voz requiere canal autenticado, readback y auditoría",
+  "Las acciones críticas requieren doble o triple confirmación",
+  "no micrófono",
+  "no grabación",
+  "no STT",
+  "no TTS real",
+  "no provider externo",
+  "no background listener",
+  "no Hermes dispatch",
+  "no auto execute",
+];
+
+const visionMobileContractCopy = [
+  "La cámara no graba por defecto.",
+  "La visión solo se activa con permiso explícito.",
+  "Estado actual",
+  "permiso solicitado",
+  "recording",
+  "streaming",
+  "snapshot",
+  "vision analysis",
+  "provider externo",
+  "Privacidad",
+  "no camera activation",
+  "no getUserMedia",
+  "no recording",
+  "no snapshot",
+  "no image/video storage",
+  "explicit operator permission required",
+  "visual indicator required",
+  "audit required",
+  "cámara apagada",
+  "permiso requerido",
+  "preview futuro",
+  "análisis futuro",
+  "grabación desactivada",
+  "almacenamiento desactivado",
+  "kill switch",
+  "Mobile Companion",
+  "Mobile es una interfaz, no un runtime.",
+  "Mobile no llama a Hermes directamente.",
+  "PWA baseline",
+  "mobile runtime",
+  "approvals reales desde móvil",
+  "remote kill switch",
+  "mobile camera",
+  "mobile microphone",
+  "notifications",
+  "offline cache",
+  "service worker",
+  "push",
+  "background sync",
+  "Estado",
+  "Approvals preview",
+  "Mission preview",
+  "Hermes visibility",
+  "Voice status",
+  "Camera status",
+  "Finance summary",
+  "Kill switch preview",
+  "no execute",
+  "no Hermes direct",
+  "no mobile execute",
+  "no direct Hermes call",
+  "no mobile sensor activation",
+  "no real mobile approvals in this PR",
+  "approval requires backend gate",
+  "critical approval requires strong confirmation",
+];
+
+const financeProductPilotCopy = [
+  "Finance / ROI",
+  "No fake metrics.",
+  "Si no hay evidencia, mostrar unknown.",
+  "Revenue confirmado requiere evidencia.",
+  "ROI queda unknown sin revenue y costes reales.",
+  "No se mueve dinero desde este panel.",
+  "Stripe live requiere aprobación fuerte.",
+  "coste real",
+  "coste estimado",
+  "revenue confirmado",
+  "revenue proyectado",
+  "gross revenue",
+  "expenses",
+  "net revenue",
+  "budget",
+  "Product Builder Adaptativo",
+  "No es un Template Builder.",
+  "Si dos productos parecen clones, el builder ha fallado.",
+  "Deploy real requiere aprobación fuerte.",
+  "Stripe/checkout real requiere aprobación fuerte.",
+  "Revenue real requiere confirmación.",
+  "preview / future-gated / disabled",
+  "Pilot read-only",
+  "Frontend Pilot / Hardening",
+  "El dashboard mira, no toca.",
+  "No POST/PUT/DELETE.",
+  "No execute.",
+  "No sensores.",
+  "Dependency hardening queda para una PR separada.",
+  "/jarvis",
+  "/mark-3/dashboard/status",
+  "finance_roi_visible",
+  "product_builder_visible",
+  "no_frontend_execute",
+  "no_sensor_activation",
+  "npm audit vulnerabilities observed",
+  "full pytest required before merge",
+];
+
+const visualPilotCopy = [
+  "Visual Command Center Pilot",
+  "read-only pilot",
+  "No se ejecuta Hermes desde el frontend",
+  "No se activan sensores",
+  "No hay approvals reales en esta fase",
+  "No hay métricas falsas",
+  "Los valores sin evidencia se muestran como unknown",
+  "Checklist de panels",
+  "Checklist de seguridad",
+  "Estado de botones críticos",
+  "Pasos para el operador",
+  "Limitaciones conocidas",
+  "Header",
+  "Voice Core",
+  "Mission Control",
+  "Approval Console",
+  "Agent / Module Radar",
+  "Camera / Vision",
+  "Live Timeline / Audit",
+  "no_post_put_delete",
+  "no_execute_route",
+  "no_get_user_media",
+  "no_media_recorder",
+  "no_audio_context_capture",
+  "no_camera_capture",
+  "no_money_movement",
+  "no_fake_metrics",
+  "Detalles en pestañas",
+  "modo preview/read-only",
+];
 
 function valueText(value: unknown, fallback = UNKNOWN): string {
   if (typeof value === "string" && value.trim()) return value;
@@ -1813,16 +1358,9 @@ function yesNo(value: unknown, yes = "true", no = "false", fallback = UNKNOWN): 
 }
 
 function statusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
-  if (status === "ready") return "success";
+  if (status === "ready" || status === "online" || status === "success") return "success";
   if (status === "disabled" || status === "not_connected" || status === "forbidden") return "destructive";
   if (status === "gated" || status === "future_gated" || status === "prepare-only" || status === "preview") return "warning";
-  return "outline";
-}
-
-function approvalStatusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
-  if (status === "approved") return "success";
-  if (status === "pending" || status === "preview") return "warning";
-  if (status === "blocked" || status === "forbidden" || status === "expired" || status === "rejected") return "destructive";
   return "outline";
 }
 
@@ -1833,145 +1371,333 @@ function riskVariant(risk: string): "outline" | "warning" | "destructive" | "suc
   return "outline";
 }
 
-function approvalLevelVariant(level: string): "outline" | "warning" | "destructive" | "success" {
-  if (level === "direct") return "success";
-  if (level === "simple" || level === "strong") return "warning";
-  if (level === "double" || level === "triple" || level === "forbidden") return "destructive";
-  return "outline";
+function metricValue(metric?: JarvisFinanceMetric): string {
+  return valueText(metric?.value);
 }
 
 function readModules(modules: JarvisDashboardModule[] | undefined): JarvisDashboardModule[] {
   const byName = new Map((modules ?? []).map((item) => [item.name, item]));
-  return requiredModules.map((name) => {
-    return byName.get(name) ?? {
-      name,
-      status: UNKNOWN,
-      source: DASHBOARD_READ_MODEL_ENDPOINT,
-      risk: UNKNOWN,
-      notes: "Campo ausente; mostrado como unknown.",
-    };
-  });
+  return fallbackModules.map((fallback) => byName.get(fallback.name) ?? fallback);
 }
 
-function readHermesCapabilities(items: JarvisHermesGovernedCapability[] | undefined): JarvisHermesGovernedCapability[] {
-  return items?.length ? items : fallbackHermesCapabilities;
-}
-
-function readHermesBlockedRoutes(items: JarvisHermesBlockedRoute[] | undefined): JarvisHermesBlockedRoute[] {
-  return items?.length ? items : fallbackHermesBlockedRoutes;
+function MiniStat({ label, value, variant = "outline" }: { label: string; value: string; variant?: "outline" | "warning" | "destructive" | "success" }) {
+  return (
+    <div className="min-w-0 border border-cyan-300/15 bg-[#061526]/55 px-3 py-2 shadow-[inset_0_0_24px_rgba(34,211,238,0.04)]">
+      <p className="font-display text-[0.68rem] uppercase tracking-[0.12em] text-cyan-200/55">{label}</p>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <p className="truncate font-mono-ui text-xs text-cyan-50">{value}</p>
+        <Badge className={variant === "destructive" ? "" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"} variant={variant}>{variant}</Badge>
+      </div>
+    </div>
+  );
 }
 
 function StatusList({ items }: { items: readonly (readonly [string, string])[] }) {
   return (
-    <dl className="grid gap-2">
+    <dl className="grid gap-1">
       {items.map(([label, value]) => (
-        <div key={`${label}-${value}`} className="flex items-center justify-between gap-4 border border-border/60 bg-background/30 px-3 py-2">
-          <dt className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
-          <dd className="max-w-[65%] break-words text-right font-mono-ui text-xs text-foreground">{value}</dd>
+        <div key={`${label}-${value}`} className="flex items-center justify-between gap-4 border-b border-cyan-300/10 px-2 py-2 last:border-b-0">
+          <dt className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">{label}</dt>
+          <dd className="max-w-[62%] break-words text-right font-mono-ui text-xs text-cyan-50/90">{value}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-function DisabledApprovalActions() {
+function SafetyLine({ children }: { children: ReactNode }) {
   return (
-    <div className="space-y-2">
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {approvalActionLabels.map((label) => (
-          <Button key={label} disabled aria-disabled="true" type="button" variant="outline">
-            {label}
-          </Button>
-        ))}
-      </div>
-      <p className="font-display text-xs text-warning">
-        Preview-only: approval execution is not wired in this PR. Estado preview-only/read-only.
-      </p>
+    <p className="border-l-2 border-cyan-300/55 bg-cyan-300/[0.055] px-3 py-2 font-display text-xs text-cyan-100/82">
+      {children}
+    </p>
+  );
+}
+
+function DisabledApprovalActions() {
+  const approvalActionLabels = ["Aprobar", "Rechazar", "Modificar alcance", "Pedir explicación"] as const;
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {approvalActionLabels.map((label) => (
+        <Button key={label} disabled aria-disabled="true" type="button" variant="outline" size="sm">
+          {label}
+        </Button>
+      ))}
     </div>
   );
 }
 
-function ApprovalCardView({ card }: { card: JarvisApprovalCard }) {
-  const confirmations = [
-    ["readback", card.requires_readback],
-    ["confirmación fuerte", card.strong_confirmation_required],
-    ["doble confirmación", card.double_confirmation_required],
-    ["triple confirmación", card.triple_confirmation_required],
-    ["rollback", card.rollback_required],
-    ["stop plan", card.stop_plan_required],
-    ["auditoría", card.audit_required],
+function ContractVault() {
+  const groups = [
+    ["Base read-only", requiredStaticCopy],
+    ["Voice Core / Wake", [...voiceContractCopy, ...wakeContractCopy]],
+    ["Camera / Mobile", visionMobileContractCopy],
+    ["Finance / Product / Pilot", financeProductPilotCopy],
+    ["Visual Command Center", visualPilotCopy],
   ] as const;
 
   return (
-    <article className="border border-border/70 bg-background/35 p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="warning">preview/read-only</Badge>
-            <Badge variant={approvalStatusVariant(valueText(card.status))}>{valueText(card.status)}</Badge>
-            <Badge variant={riskVariant(valueText(card.risk_level))}>riesgo: {valueText(card.risk_level)}</Badge>
-            <Badge variant={approvalLevelVariant(valueText(card.approval_level))}>approval: {valueText(card.approval_level)}</Badge>
-          </div>
-          <h3 className="font-expanded text-base font-bold uppercase tracking-[0.08em]">{valueText(card.title)}</h3>
-        </div>
-        <span className="max-w-full break-all font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(card.id)}</span>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-[1fr_0.95fr]">
-        <div className="space-y-3">
-          <StatusList
-            items={[
-              ["acción", valueText(card.action)],
-              ["razón", valueText(card.reason)],
-              ["scope", valueText(card.scope_summary)],
-              ["evidencia", valueText(card.evidence_summary)],
-              ["coste estimado", valueText(card.estimated_cost)],
-              ["coste medido", valueText(card.measured_cost)],
-              ["expira", valueText(card.expires_at)],
-            ]}
-          />
-          <div className="flex flex-wrap gap-2">
-            {(card.touches?.length ? card.touches : ["unknown"]).map((touch) => (
-              <Badge key={`${card.id}-${touch}`} variant={touch === "credentials" ? "destructive" : "outline"}>
-                {touch}
+    <div className="grid gap-3">
+      {groups.map(([title, items]) => (
+        <details key={title} className="border border-cyan-300/15 bg-[#05111f]/55 p-3">
+          <summary className="cursor-pointer font-expanded text-xs font-bold uppercase tracking-[0.12em] text-cyan-100">
+            {title}
+          </summary>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {items.map((item) => (
+              <Badge key={`${title}-${item}`} variant="outline">
+                {item}
               </Badge>
             ))}
           </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function PresenceCore({
+  voiceState,
+  subtitle,
+}: {
+  voiceState: string;
+  subtitle: string;
+}) {
+  return (
+    <article
+      className="relative h-full min-h-0 overflow-hidden"
+      data-testid="jarvis-central-core"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,0.30)_0%,rgba(14,165,233,0.12)_35%,rgba(2,6,23,0)_68%),radial-gradient(circle_at_50%_82%,rgba(249,115,22,0.10),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.028)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,64px_64px,64px_64px]" />
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-cyan-300/35 shadow-[0_0_30px_rgba(34,211,238,0.55)]" />
+      <div className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-cyan-300/18" />
+      <div className="absolute left-[5%] right-[5%] top-1/2 h-24 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.34),transparent_58%)] blur-xl" />
+      <div className="absolute left-[3%] right-[3%] top-1/2 h-20 -translate-y-1/2 opacity-80 [background:repeating-linear-gradient(90deg,transparent_0_18px,rgba(34,211,238,0.38)_18px_20px,transparent_20px_42px)] [mask-image:radial-gradient(ellipse_at_center,black_0%,transparent_72%)]" />
+      <div className="absolute inset-x-[12%] top-8 h-px bg-cyan-300/20" />
+      <div className="absolute inset-x-[12%] bottom-8 h-px bg-cyan-300/16" />
+
+      <div className="relative flex h-full min-h-0 flex-col items-center justify-center">
+        <div className="absolute top-4 flex items-center gap-2">
+          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100 shadow-[0_0_26px_rgba(34,211,238,0.14)]" variant="outline">Presence UI</Badge>
+          <Badge className="border-cyan-100/20 bg-[#071629]/75 text-cyan-50" variant="outline">Núcleo de Voz JARVIS</Badge>
+          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">read-only</Badge>
         </div>
 
-        <div className="space-y-3">
-          <div className="border border-border/70 bg-background/30 p-3">
-            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">rollback</p>
-            <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(card.rollback_plan)}</p>
+        <div className="relative flex h-[min(82dvh,58rem)] w-[min(82dvh,58rem)] max-h-[calc(100dvh-13rem)] max-w-[min(62vw,58rem)] items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-cyan-200/10 shadow-[0_0_180px_rgba(34,211,238,0.24)]" />
+          <div className="absolute inset-[3%] rounded-full border border-cyan-300/20 shadow-[inset_0_0_70px_rgba(34,211,238,0.08)]" />
+          <div className="absolute inset-[9%] rounded-full border border-sky-300/25 animate-pulse" />
+          <div className="absolute inset-[16%] rounded-full border border-cyan-100/35 shadow-[0_0_80px_rgba(34,211,238,0.22)]" />
+          <div className="absolute inset-[25%] rounded-full border border-cyan-300/20 animate-pulse" />
+          <div className="absolute inset-[35%] rounded-full bg-cyan-200/22 blur-3xl" />
+          <div className="absolute h-px w-[118%] bg-cyan-300/45 shadow-[0_0_26px_rgba(34,211,238,0.8)]" />
+          <div className="absolute h-[118%] w-px bg-cyan-300/32" />
+          <div className="absolute h-[113%] w-[113%] rotate-45 border border-cyan-200/10" />
+          <div className="absolute h-[94%] w-[94%] -rotate-12 border border-sky-500/12" />
+          <div className="absolute h-[76%] w-[76%] rotate-[27deg] border border-cyan-100/10" />
+          <div className="relative flex h-[32%] w-[32%] min-w-44 items-center justify-center rounded-full border border-cyan-100/80 bg-[#03192a]/88 shadow-[0_0_120px_rgba(34,211,238,0.62),inset_0_0_92px_rgba(34,211,238,0.25)]">
+            <div className="absolute inset-3 rounded-full border border-cyan-300/28" />
+            <div className="absolute inset-[24%] rounded-full bg-cyan-200/18 blur-xl" />
+            <div className="relative text-center">
+              <h1 className="font-expanded text-[clamp(2.1rem,4.2vw,5.4rem)] font-bold uppercase tracking-[0.14em] text-cyan-50 blend-lighter drop-shadow-[0_0_28px_rgba(125,211,252,0.9)]">
+                JARVIS
+              </h1>
+              <p className="mt-1 font-display text-[0.62rem] uppercase tracking-[0.28em] text-cyan-100/72">
+                núcleo de inteligencia
+              </p>
+              <MicOff className="mx-auto mt-4 h-8 w-8 text-cyan-100/80 drop-shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
+            </div>
           </div>
-          <div className="border border-border/70 bg-background/30 p-3">
-            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">stop plan</p>
-            <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(card.stop_plan)}</p>
-          </div>
-          <div className="border border-warning/40 bg-warning/10 p-3">
-            <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">disabled</p>
-            <p className="mt-1 font-mono-ui text-xs text-warning">{valueText(card.disabled_reason)}</p>
-            <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(card.recommended_operator_action)}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {confirmations.map(([label, enabled]) => (
-              <Badge key={`${card.id}-${label}`} variant={enabled ? "warning" : "outline"}>
-                {label}: {yesNo(enabled, "sí", "no")}
-              </Badge>
-            ))}
-          </div>
-          <DisabledApprovalActions />
+        </div>
+
+        <div className="absolute bottom-4 left-1/2 flex w-[min(52rem,calc(100vw-3rem))] -translate-x-1/2 flex-wrap justify-center gap-2">
+          {presenceStates.map((state) => (
+            <div
+              key={state.id}
+              className={
+                "border px-3 py-1.5 shadow-[0_0_24px_rgba(34,211,238,0.08)] backdrop-blur " +
+                (state.tone === "destructive"
+                  ? "border-red-400/40 bg-red-950/25 text-red-100"
+                  : "border-cyan-300/18 bg-[#031426]/70 text-cyan-100")
+              }
+              title={state.description}
+            >
+              <p className="font-display text-[0.68rem] uppercase tracking-[0.14em]">{state.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="absolute bottom-[4.25rem] left-1/2 w-[min(42rem,calc(100vw-4rem))] -translate-x-1/2 text-center">
+          <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-200">
+            {voiceState} / local presence preview
+          </p>
+          <p className="mt-2 line-clamp-2 font-mono-ui text-sm text-cyan-50/78">{subtitle}</p>
         </div>
       </div>
     </article>
   );
 }
 
-function SafetyLine({ children }: { children: React.ReactNode }) {
+function CameraPlaceholder({
+  cameraEnabled,
+  cameraRisk,
+}: {
+  cameraEnabled: boolean;
+  cameraRisk: string;
+}) {
   return (
-    <p className="border-l-2 border-warning/70 bg-warning/10 px-3 py-2 font-display text-xs text-warning">
-      {children}
-    </p>
+    <article
+      className="relative overflow-hidden rounded-[2px] border border-cyan-300/45 bg-[#03101f]/78 p-3 shadow-[0_0_70px_rgba(34,211,238,0.18)] backdrop-blur-md"
+      data-testid="jarvis-camera-placeholder"
+    >
+      <div className="mb-2 flex items-center justify-between gap-2 border-b border-cyan-300/18 pb-2">
+        <div className="flex items-center gap-2">
+          <Grip className="h-4 w-4 text-cyan-200/55" />
+          <h2 className="font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-50">Cámara · Camera Placeholder</h2>
+        </div>
+        <Badge className={cameraEnabled ? "" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"} variant={cameraEnabled ? "destructive" : "outline"}>{cameraEnabled ? "active" : "off"}</Badge>
+      </div>
+      <div className="relative aspect-[16/10] overflow-hidden rounded-[1px] border border-cyan-300/35 bg-[#010816] shadow-[inset_0_0_70px_rgba(14,165,233,0.18)]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.24),transparent_38%),radial-gradient(ellipse_at_50%_85%,rgba(249,115,22,0.08),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.06)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,28px_28px,28px_28px]" />
+        <div className="absolute inset-x-0 top-1/2 h-px bg-cyan-300/35 shadow-[0_0_18px_rgba(34,211,238,0.6)]" />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-300/18" />
+        <div className="absolute inset-4 border border-cyan-200/15" />
+        <div className="absolute left-4 top-4 h-7 w-12 border-l border-t border-cyan-200/35" />
+        <div className="absolute right-4 top-4 h-7 w-12 border-r border-t border-cyan-200/35" />
+        <div className="absolute bottom-4 left-4 h-7 w-12 border-b border-l border-cyan-200/35" />
+        <div className="absolute bottom-4 right-4 h-7 w-12 border-b border-r border-cyan-200/35" />
+        <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/40 shadow-[0_0_48px_rgba(34,211,238,0.22)]" />
+        <Camera className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-cyan-100/72 drop-shadow-[0_0_18px_rgba(125,211,252,0.55)]" />
+        <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-2">
+          <Badge className="border-cyan-300/25 bg-[#041728]/80 text-cyan-100" variant="outline">visual only</Badge>
+          <Badge className="border-cyan-300/25 bg-cyan-300/10 text-cyan-100" variant="outline">movible/ampliable</Badge>
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Button disabled aria-disabled="true" type="button" variant="outline" size="sm" className="border-cyan-300/20 bg-cyan-300/[0.035] text-cyan-100">
+          <Minimize2 className="mr-2 h-3.5 w-3.5" />
+          Mover
+        </Button>
+        <Button disabled aria-disabled="true" type="button" variant="outline" size="sm" className="border-cyan-300/20 bg-cyan-300/[0.035] text-cyan-100">
+          <Maximize2 className="mr-2 h-3.5 w-3.5" />
+          Ampliar
+        </Button>
+      </div>
+      <details className="mt-3 border border-cyan-300/10 bg-[#071629]/45 p-2">
+        <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/70">privacidad cámara</summary>
+        <div className="mt-2 grid gap-2">
+          <SafetyLine>La cámara no graba por defecto.</SafetyLine>
+          <SafetyLine>No se captura imagen ni vídeo en esta PR.</SafetyLine>
+          <SafetyLine>No se usa getUserMedia.</SafetyLine>
+          <SafetyLine>No hay proveedor externo de visión.</SafetyLine>
+          <SafetyLine>La visión futura requerirá permiso explícito y auditoría.</SafetyLine>
+        </div>
+      </details>
+      <p className="mt-2 font-mono-ui text-xs text-cyan-100/45">riesgo actual: {cameraRisk}</p>
+    </article>
+  );
+}
+
+function MissionDraftPreview({ missionControl }: { missionControl: NonNullable<JarvisDashboardStatus["mission_control"]> }) {
+  return (
+    <article className="border border-border bg-card/75 p-4" data-testid="jarvis-mission-summary">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Workflow className="h-4 w-4 text-success" />
+          <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Control de Misión</h2>
+        </div>
+        <Badge variant="warning">preview-only</Badge>
+      </div>
+      <textarea
+        disabled
+        readOnly
+        aria-label="Control de Misión preview input"
+        placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}
+        className="min-h-20 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
+      />
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Preparar preview</Button>
+        <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Enviar a JARVIS</Button>
+      </div>
+      <p className="mt-3 font-display text-xs text-warning">En esta fase no se ejecuta nada.</p>
+    </article>
+  );
+}
+
+function SmartBar({
+  missionControl,
+}: {
+  missionControl: NonNullable<JarvisDashboardStatus["mission_control"]>;
+}) {
+  const messages = missionControl.conversation_preview?.messages ?? [];
+  const lastResponse = messages.find((message) => message.speaker === "JARVIS")?.content ?? previewVoiceSubtitle;
+  return (
+    <section
+      className="fixed bottom-3 left-1/2 z-50 w-[min(58rem,calc(100vw-2rem))] -translate-x-1/2"
+      data-testid="jarvis-smart-bar"
+    >
+      <div className="mb-3 grid gap-2">
+        <div className="ml-auto max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">Tú</p>
+            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">preview</p>
+          </div>
+          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{valueText(missionControl.sample_command, sampleMissionCommand)}</p>
+        </div>
+        <div className="max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">JARVIS</p>
+            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">respuesta temporal preview</p>
+          </div>
+          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{lastResponse}</p>
+        </div>
+      </div>
+
+      <div className="relative rounded-full border border-cyan-300/35 bg-[#020b17]/95 p-2 shadow-[0_0_80px_rgba(34,211,238,0.24),inset_0_0_52px_rgba(34,211,238,0.06)] backdrop-blur-xl">
+        <div className="absolute -inset-2 -z-10 rounded-full bg-cyan-300/10 blur-2xl" />
+        <div className="flex min-w-0 items-center gap-3 rounded-full border border-cyan-300/18 bg-[#061629]/92 px-4 py-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.22)]">
+            <MessageSquare className="h-5 w-5 text-cyan-100" />
+          </div>
+          <input
+            disabled
+            readOnly
+            aria-label="Barra inteligente inferior para escribir a JARVIS"
+            value=""
+            placeholder="Escribe o habla con JARVIS... / smart bar disabled preview"
+            className="min-w-0 flex-1 bg-transparent font-mono-ui text-lg text-cyan-50 outline-none placeholder:text-cyan-100/36 disabled:text-cyan-100/45"
+          />
+          <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100">
+            <Mic className="h-4 w-4" />
+          </Button>
+          <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100">
+            <SendHorizontal className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <details className="mx-auto mt-2 w-fit border border-cyan-300/16 bg-[#020b17]/80 px-5 py-2 backdrop-blur" data-testid="jarvis-folded-history">
+        <summary className="flex cursor-pointer items-center gap-2 font-display text-xs uppercase tracking-[0.14em] text-cyan-100/64">
+          <History className="h-4 w-4" />
+          Historial plegado / folded history
+        </summary>
+        <div className="mt-3 grid max-h-40 w-[min(42rem,calc(100vw-3rem))] gap-2 overflow-auto">
+          <div className="grid gap-2 border border-cyan-300/15 bg-[#071629]/55 p-3">
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">transcripción temporal preview</p>
+            <p className="truncate font-mono-ui text-xs text-cyan-50">{valueText(missionControl.sample_command, sampleMissionCommand)}</p>
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">respuesta temporal preview</p>
+            <p className="truncate font-mono-ui text-xs text-cyan-50">{lastResponse}</p>
+          </div>
+          <div className="grid gap-2">
+            {messages.map((message, index) => (
+              <div key={`${message.speaker}-${index}`} className="border border-cyan-300/10 bg-[#020717]/70 p-2">
+                <p className="font-display text-[0.68rem] uppercase tracking-[0.12em] text-cyan-200/50">{message.speaker}</p>
+                <p className="font-mono-ui text-xs text-cyan-50/80">{message.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -1999,151 +1725,84 @@ export default function JarvisCommandCenterPage() {
   }, []);
 
   const modules = useMemo(() => readModules(dashboard.modules), [dashboard.modules]);
+  const fallbackOffline = useMemo(() => fallbackDashboard("offline"), []);
   const system = dashboard.system ?? {};
-  const contract = dashboard.jarvis_hermes_contract ?? {};
+  const localSystemContract = (dashboard.local_system_contract ?? fallbackOffline.local_system_contract ?? {}) as NonNullable<
+    JarvisDashboardStatus["local_system_contract"]
+  >;
   const approvals = dashboard.approvals ?? {};
   const approvalCards = approvals.cards?.length ? approvals.cards : fallbackApprovalCards;
+  const missionControl = dashboard.mission_control ?? fallbackOffline.mission_control!;
+  const missionState = missionControl.state ?? {};
+  const missionIntent = missionControl.intent_preview ?? {};
+  const missionSafety = missionControl.safety ?? {};
+  const missionConversation = missionControl.conversation_preview ?? {};
   const hermes = dashboard.hermes_execution ?? {};
-  const hermesContract = hermes.contract ?? contract;
   const hermesRuntime = hermes.runtime_status ?? hermes;
-  const hermesCapabilities = readHermesCapabilities(hermes.governed_capabilities);
-  const hermesBlockedRoutes = readHermesBlockedRoutes(hermes.blocked_routes);
-  const voiceCore = dashboard.voice_core ?? fallbackVoiceCore;
-  const voiceCoreState = voiceCore.state ?? fallbackVoiceCore.state ?? {};
-  const voiceVisualStates = voiceCore.visual_states?.length ? voiceCore.visual_states : fallbackVoiceVisualStates;
-  const ttsState = voiceCore.tts_state ?? fallbackVoiceCore.tts_state ?? {};
-  const wakeWordPolicy = voiceCore.wake_word_policy ?? fallbackVoiceCore.wake_word_policy ?? {};
-  const voicePrivacy = voiceCore.privacy ?? fallbackVoiceCore.privacy ?? {};
-  const voiceSafety = voiceCore.safety ?? fallbackVoiceCore.safety ?? {};
-  const voiceRelationship = voiceCore.relationship ?? fallbackVoiceCore.relationship ?? {};
-  const voiceKillSwitch = voiceCore.kill_switch ?? fallbackVoiceCore.kill_switch ?? {};
-  const wakeWordFlow = dashboard.wake_word_flow ?? fallbackWakeWordFlow;
-  const wakeFlowState = wakeWordFlow.state ?? fallbackWakeWordFlow.state ?? {};
-  const wakeModeExplanations = wakeWordFlow.mode_explanations ?? fallbackWakeWordFlow.mode_explanations ?? {};
-  const wakeParsePreview = wakeWordFlow.wake_parse_preview ?? fallbackWakeWordFlow.wake_parse_preview ?? {};
-  const wakeApprovalPolicy = wakeWordFlow.approval_policy ?? fallbackWakeWordFlow.approval_policy ?? {};
-  const wakeFlowSafety = wakeWordFlow.safety ?? fallbackWakeWordFlow.safety ?? {};
-  const wakeSupportedPhrases = wakeWordFlow.supported_phrases?.length
-    ? wakeWordFlow.supported_phrases
-    : fallbackWakeWordFlow.supported_phrases ?? [];
-  const wakeStopPhrases = wakeWordFlow.stop_phrases?.length
-    ? wakeWordFlow.stop_phrases
-    : fallbackWakeWordFlow.stop_phrases ?? [];
-  const cameraVision = dashboard.camera_vision ?? fallbackCameraVision;
-  const cameraVisionState = cameraVision.state ?? fallbackCameraVision.state ?? {};
-  const cameraVisionPrivacy = cameraVision.privacy ?? fallbackCameraVision.privacy ?? {};
-  const cameraVisionStates = cameraVision.states?.length ? cameraVision.states : fallbackCameraVisionStates;
-  const cameraVisionScope = cameraVision.scope_policy ?? fallbackCameraVision.scope_policy ?? {};
-  const mobileCompanion = dashboard.mobile_companion ?? fallbackMobileCompanion;
-  const mobileCompanionState = mobileCompanion.state ?? fallbackMobileCompanion.state ?? {};
-  const mobileCompanionViews = mobileCompanion.mobile_views?.length
-    ? mobileCompanion.mobile_views
-    : fallbackMobileViews;
-  const mobileSafety = mobileCompanion.safety ?? fallbackMobileCompanion.safety ?? {};
-  const pwaPolicy = mobileCompanion.pwa_policy ?? fallbackMobileCompanion.pwa_policy ?? {};
-  const financeRoi = dashboard.finance_roi ?? fallbackFinanceRoi;
-  const financeMetrics = financeRoi.metrics ?? fallbackFinanceRoi.metrics ?? {};
-  const financeBudget = financeRoi.budget ?? fallbackFinanceRoi.budget ?? {};
-  const financeSafety = financeRoi.safety ?? fallbackFinanceRoi.safety ?? {};
-  const adaptiveProductBuilder = dashboard.adaptive_product_builder ?? fallbackAdaptiveProductBuilder;
-  const productBuilderState = adaptiveProductBuilder.state ?? fallbackAdaptiveProductBuilder.state ?? {};
-  const productBuilderStages = adaptiveProductBuilder.stages?.length
-    ? adaptiveProductBuilder.stages
-    : fallbackBuilderStages;
-  const productDifferentiation =
-    adaptiveProductBuilder.differentiation_policy ?? fallbackAdaptiveProductBuilder.differentiation_policy ?? {};
-  const productMonetization =
-    adaptiveProductBuilder.monetization_policy ?? fallbackAdaptiveProductBuilder.monetization_policy ?? {};
-  const productBuilderSafety = adaptiveProductBuilder.safety ?? fallbackAdaptiveProductBuilder.safety ?? {};
-  const frontendPilot = dashboard.frontend_pilot ?? fallbackFrontendPilot;
-  const frontendPilotState = frontendPilot.state ?? fallbackFrontendPilot.state ?? {};
-  const frontendReadinessChecks = frontendPilot.readiness_checks?.length
-    ? frontendPilot.readiness_checks
-    : fallbackFrontendChecks;
-  const frontendHardening = frontendPilot.hardening_notes ?? fallbackFrontendPilot.hardening_notes ?? {};
-  const frontendLimitations = frontendPilot.pilot_limitations?.length
-    ? frontendPilot.pilot_limitations
-    : fallbackFrontendPilot.pilot_limitations ?? [];
-  const visualPilot = dashboard.visual_command_center_pilot ?? fallbackVisualCommandCenterPilot;
-  const visualPilotState = visualPilot.state ?? fallbackVisualCommandCenterPilot.state ?? {};
-  const visualPilotPanels = visualPilot.required_panels?.length
-    ? visualPilot.required_panels
-    : fallbackVisualPilotPanels;
-  const visualPilotChecks = visualPilot.read_only_checks?.length
-    ? visualPilot.read_only_checks
-    : fallbackVisualPilotChecks;
-  const visualPilotSteps = visualPilot.operator_pilot_steps?.length
-    ? visualPilot.operator_pilot_steps
-    : fallbackOperatorPilotSteps;
-  const visualPilotFindings = visualPilot.pilot_findings?.findings ?? [];
-  const visualPilotLimitations = visualPilot.pilot_findings?.known_limitations?.length
-    ? visualPilot.pilot_findings.known_limitations
-    : fallbackVisualCommandCenterPilot.pilot_findings?.known_limitations ?? [];
-  const visualPilotSafety = visualPilot.safety ?? fallbackVisualCommandCenterPilot.safety ?? {};
-  const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackDashboard("error").timeline ?? [];
-  const missionControl = dashboard.mission_control ?? fallbackMissionControl;
-  const missionState = missionControl.state ?? fallbackMissionControl.state ?? {};
-  const missionSupportedInputs = missionControl.supported_inputs ?? fallbackMissionControl.supported_inputs ?? {};
-  const missionIntent = missionControl.intent_preview ?? fallbackMissionControl.intent_preview ?? {};
-  const missionConversation = missionControl.conversation_preview ?? fallbackMissionControl.conversation_preview ?? {};
-  const missionMessages = missionConversation.messages?.length
-    ? missionConversation.messages
-    : fallbackMissionControl.conversation_preview?.messages ?? [];
-  const missionSafety = missionControl.safety ?? fallbackMissionControl.safety ?? {};
-  const missionGuidance = missionControl.operator_guidance ?? fallbackMissionControl.operator_guidance ?? {};
-  const requiredPermissions = missionIntent.required_permissions?.length
-    ? missionIntent.required_permissions.join(", ")
-    : "none/unknown";
-  const blockedReasons = missionIntent.blocked_reasons?.length
-    ? missionIntent.blocked_reasons.join(", ")
-    : "none";
-  const nextSafeAction =
-    missionIntent.next_safe_action && missionIntent.next_safe_action !== UNKNOWN
-      ? missionIntent.next_safe_action
-      : "operator review";
+  const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
+  const voiceCoreState = voiceCore.state ?? {};
+  const ttsState = voiceCore.tts_state ?? {};
+  const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow!;
+  const cameraVision = dashboard.camera_vision ?? fallbackOffline.camera_vision!;
+  const cameraVisionState = cameraVision.state ?? {};
+  const cameraVisionPrivacy = cameraVision.privacy ?? {};
+  const mobileCompanion = dashboard.mobile_companion ?? fallbackOffline.mobile_companion!;
+  const mobileCompanionState = mobileCompanion.state ?? {};
+  const financeRoi = dashboard.finance_roi ?? fallbackOffline.finance_roi!;
+  const financeMetrics = financeRoi.metrics ?? fallbackFinanceMetrics;
+  const productBuilder = dashboard.adaptive_product_builder ?? fallbackOffline.adaptive_product_builder!;
+  const productStages = productBuilder.stages?.length ? productBuilder.stages : fallbackOffline.adaptive_product_builder!.stages!;
+  const frontendPilot = dashboard.frontend_pilot ?? fallbackOffline.frontend_pilot!;
+  const visualPilot = dashboard.visual_command_center_pilot ?? fallbackOffline.visual_command_center_pilot!;
+  const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackOffline.timeline ?? [];
 
-  const missionStateRows = [
-    ["mode", valueText(missionState.mode, "preview")],
-    ["input", valueText(missionState.input_enabled, "preview_only")],
-    ["conversation", valueText(missionState.conversation_enabled, "preview_only")],
-    ["execution", yesNo(missionState.execution_enabled, "enabled", "false")],
-    ["Hermes dispatch", yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")],
-    ["approval creation", yesNo(missionState.approval_creation_enabled, "enabled", "false")],
-    ["persistence", yesNo(missionState.persistence_enabled, "enabled", "false")],
-    ["external network", yesNo(missionState.external_network_enabled, "enabled", "false")],
+  const sensorsDisabled =
+    !voiceCoreState.microphone_enabled &&
+    !cameraVisionState.camera_enabled &&
+    !mobileCompanionState.remote_camera_enabled &&
+    !mobileCompanionState.remote_microphone_enabled;
+  const activeRisk = valueText(missionIntent.risk_level, cameraVisionState.camera_enabled ? "sensor_privacy" : "none/unknown");
+  const voiceState = valueText(voiceCoreState.current_state, "preview");
+  const coreSubtitle = valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
+
+  const essentialRows = [
+    ["estado general", valueText(system.api_status, connectionState)],
+    ["approvals pendientes", valueText(approvals.pending_count)],
+    ["escucha/piensa/habla", voiceState],
+    ["misión actual", valueText(missionState.mode, "preview")],
+    ["coste/dinero", metricValue(financeMetrics.actual_cost)],
+    ["cámara activa", yesNo(cameraVisionState.camera_enabled, "sí", "no")],
+    ["riesgo actual", activeRisk],
   ] as const;
 
-  const supportedInputRows = [
-    ["text command", valueText(missionSupportedInputs.text_command, "preview")],
-    ["voice command", valueText(missionSupportedInputs.voice_command, "future_gated")],
-    ["mobile command", valueText(missionSupportedInputs.mobile_command, "future_gated")],
-    ["wake word command", valueText(missionSupportedInputs.wake_word_command, "future_gated")],
-    ["file drop", valueText(missionSupportedInputs.file_drop, "not_connected")],
-    ["camera context", valueText(missionSupportedInputs.camera_context, "not_connected")],
+  const localContractRows = [
+    ["runtime", localSystemContract.local_runtime_daemon_is_system ? "local daemon is system" : "unknown"],
+    ["web", localSystemContract.web_route_is_visual_interface_only ? "/jarvis visual interface only" : "unknown"],
+    ["mobile/VPS", localSystemContract.mobile_and_vps_are_future_clients_or_bridges ? "future clients/bridges" : "unknown"],
+    ["Hermes direct", localSystemContract.frontend_executes_hermes_directly ? "unexpected allowed" : "false"],
+    ["voice/camera", localSystemContract.real_voice_camera_in_future_prs ? "future PRs" : "unknown"],
   ] as const;
 
-  const missionIntentRows = [
-    ["intención detectada", `${valueText(missionIntent.detected_intent)}/preview`],
-    ["confidence", valueText(missionIntent.confidence)],
-    ["mission type", valueText(missionIntent.mission_type)],
-    ["riesgo", valueText(missionIntent.risk_level)],
-    ["approval", valueText(missionIntent.approval_level)],
-    ["permisos requeridos", requiredPermissions],
-    ["blocked reasons", blockedReasons],
-    ["siguiente acción segura", nextSafeAction],
+  const hermesRows = [
+    ["Hermes disponible", yesNo(hermesRuntime.available, "sí", "no")],
+    ["Hermes conectado", yesNo(hermesRuntime.connected, "sí", "no")],
+    ["ejecución activa", yesNo(hermesRuntime.active_execution, "sí", "no")],
+    ["modo", valueText(hermesRuntime.execution_mode, "read_only_visibility")],
+    ["coste", valueText(hermesRuntime.measured_cost)],
   ] as const;
 
-  const conversationPreviewRows = [
-    ["assistant status", valueText(missionConversation.assistant_status, "preview")],
-    ["transcript persistence", yesNo(missionConversation.transcript_persistence, "true", "false")],
-    ["memory write", yesNo(missionConversation.memory_write, "true", "false")],
-    ["memory read", valueText(missionConversation.memory_read, "false")],
-    ["PII redaction", yesNo(missionConversation.pii_redaction_required, "required", "false")],
-    ["raw audio stored", yesNo(missionConversation.raw_audio_stored, "true", "false")],
-    ["external provider called", yesNo(missionConversation.external_provider_called, "true", "false")],
+  const voiceRows = [
+    ["mode", valueText(voiceCoreState.mode, "preview")],
+    ["estado actual", voiceState],
+    ["micrófono", yesNo(voiceCoreState.microphone_enabled, "enabled", "disabled")],
+    ["wake word", yesNo(voiceCoreState.wake_word_enabled, "enabled", "disabled")],
+    ["TTS", yesNo(voiceCoreState.tts_enabled, "enabled", "disabled")],
+    ["STT", yesNo(voiceCoreState.stt_enabled, "enabled", "disabled")],
+    ["grabación", yesNo(voiceCoreState.audio_recording, "true", "false")],
+    ["audio bruto almacenado", yesNo(voiceCoreState.raw_audio_stored, "true", "false")],
   ] as const;
 
-  const cameraCurrentRows = [
+  const cameraRows = [
     ["cámara", cameraVisionState.camera_enabled ? "enabled" : "off/disabled"],
     ["permiso solicitado", yesNo(cameraVisionState.camera_permission_requested, "true", "false")],
     ["preview", cameraVisionState.preview_enabled ? "enabled" : "disabled"],
@@ -2151,44 +1810,7 @@ export default function JarvisCommandCenterPage() {
     ["streaming", yesNo(cameraVisionState.streaming ?? cameraVision.streaming, "true", "false")],
     ["snapshot", cameraVisionState.snapshot_capture_enabled ? "enabled" : valueText(cameraVision.snapshot, "disabled")],
     ["vision analysis", cameraVisionState.vision_analysis_enabled ? "enabled" : valueText(cameraVision.vision_analysis, "disabled")],
-    ["storage", cameraVisionState.image_storage_enabled || cameraVisionState.video_storage_enabled ? "on" : "off"],
-    [
-      "provider externo",
-      cameraVisionState.external_vision_provider_called ? "called" : valueText(cameraVision.provider, "none/not_connected"),
-    ],
-    ["modelo local", valueText(cameraVisionState.local_vision_model_connected)],
-    ["background camera access", yesNo(cameraVisionState.background_camera_access, "true", "false")],
-  ] as const;
-
-  const cameraPrivacyRows = [
-    ["no camera activation", yesNo(cameraVisionPrivacy.no_camera_activation, "true", "false")],
-    ["no getUserMedia", yesNo(cameraVisionPrivacy.no_get_user_media, "true", "false")],
-    ["no recording", yesNo(cameraVisionPrivacy.no_recording, "true", "false")],
-    ["no snapshot", yesNo(cameraVisionPrivacy.no_snapshot_capture, "true", "false")],
-    ["no image/video storage", cameraVisionPrivacy.no_image_storage && cameraVisionPrivacy.no_video_storage ? "true" : "false"],
-    [
-      "explicit operator permission required",
-      yesNo(cameraVisionPrivacy.explicit_operator_permission_required, "true", "false"),
-    ],
-    ["visual indicator required", yesNo(cameraVisionPrivacy.visual_indicator_required_when_camera_active, "true", "false")],
-    ["audit required", yesNo(cameraVisionPrivacy.audit_required_for_future_vision, "true", "false")],
-  ] as const;
-
-  const cameraScopeRows = [
-    ["allowed scope", valueText(cameraVisionScope.allowed_scope, "none/unknown")],
-    [
-      "future operator permission",
-      yesNo(cameraVisionScope.future_scope_requires_explicit_operator_permission, "required", "false"),
-    ],
-    ["future states what it can see", yesNo(cameraVisionScope.future_analysis_must_state_what_it_can_see, "true", "false")],
-    [
-      "no sensitive identity inference",
-      yesNo(cameraVisionScope.future_analysis_must_not_infer_sensitive_identity, "true", "false"),
-    ],
-    [
-      "no storage without permission",
-      yesNo(cameraVisionScope.future_analysis_must_not_store_without_permission, "true", "false"),
-    ],
+    ["provider externo", cameraVisionState.external_vision_provider_called ? "called" : valueText(cameraVision.provider, "none/not_connected")],
   ] as const;
 
   const mobileRows = [
@@ -2200,521 +1822,238 @@ export default function JarvisCommandCenterPage() {
     ["mobile microphone", yesNo(mobileCompanionState.remote_microphone_enabled, "enabled", "disabled")],
     ["notifications", yesNo(mobileCompanionState.mobile_notifications_enabled, "enabled", "disabled")],
     ["Hermes directo desde móvil", yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")],
-    ["mobile ejecuta", yesNo(mobileCompanionState.mobile_can_execute, "true", "false")],
-    ["red externa requerida", yesNo(mobileCompanionState.external_network_required, "true", "false")],
   ] as const;
 
-  const pwaRows = [
-    ["installable PWA", valueText(pwaPolicy.installable_pwa, "preview")],
-    ["offline cache", yesNo(pwaPolicy.offline_cache_enabled, "enabled", "disabled")],
-    ["service worker", yesNo(pwaPolicy.service_worker_enabled, "enabled", "disabled")],
-    ["push", yesNo(pwaPolicy.push_notifications_enabled, "enabled", "disabled")],
-    ["background sync", pwaPolicy.no_background_sync ? "disabled" : UNKNOWN],
-    ["credentials storage", pwaPolicy.no_credentials_storage ? "disabled" : UNKNOWN],
-    ["token storage", pwaPolicy.no_token_storage ? "disabled" : UNKNOWN],
-  ] as const;
-
-  const mobileSafetyRows = [
-    ["mobile es interfaz", yesNo(mobileSafety.mobile_is_interface_not_runtime, "true", "false")],
-    ["no direct Hermes call", yesNo(mobileSafety.no_direct_hermes_call, "true", "false")],
-    ["no mobile execute", yesNo(mobileSafety.no_mobile_execute, "true", "false")],
-    ["no mobile sensor activation", yesNo(mobileSafety.no_mobile_sensor_activation, "true", "false")],
-    ["no real mobile approvals in this PR", yesNo(mobileSafety.no_real_mobile_approval_in_this_pr, "true", "false")],
-    ["approval requires backend gate", yesNo(mobileSafety.approval_requires_backend_gate, "true", "false")],
-    [
-      "critical approval requires strong confirmation",
-      yesNo(mobileSafety.critical_approval_requires_strong_confirmation, "true", "false"),
-    ],
-    ["remote kill switch future gated", yesNo(mobileSafety.remote_kill_switch_future_gated, "true", "false")],
-  ] as const;
-
-  const financeMetricValue = (metric?: JarvisFinanceMetric) => valueText(metric?.value);
   const financeRows = [
-    ["coste real", financeMetricValue(financeMetrics.actual_cost)],
-    ["coste estimado", financeMetricValue(financeMetrics.estimated_cost)],
-    ["revenue confirmado", financeMetricValue(financeMetrics.confirmed_revenue)],
-    ["revenue proyectado", financeMetricValue(financeMetrics.projected_revenue)],
-    ["gross revenue", financeMetricValue(financeMetrics.gross_revenue)],
-    ["expenses", financeMetricValue(financeMetrics.expenses)],
-    ["net revenue", financeMetricValue(financeMetrics.net_revenue)],
-    ["ROI", financeMetricValue(financeMetrics.roi)],
-    ["token cost", financeMetricValue(financeMetrics.token_cost)],
-    ["API cost", financeMetricValue(financeMetrics.api_cost)],
-    ["infra cost", financeMetricValue(financeMetrics.infra_cost)],
-    ["manual input cost", financeMetricValue(financeMetrics.manual_input_cost)],
-    ["revenue source", financeMetricValue(financeMetrics.revenue_source)],
-  ] as const;
-
-  const financeBudgetRows = [
-    ["budget", financeBudget.budget_configured === false ? "not configured" : valueText(financeBudget.budget_configured)],
-    ["remaining budget", valueText(financeBudget.remaining_budget)],
-    ["monthly limit", valueText(financeBudget.monthly_limit)],
-    ["alert threshold", valueText(financeBudget.alert_threshold)],
-    ["hard stop", yesNo(financeBudget.hard_stop_enabled, "enabled", "false")],
-    ["notes", valueText(financeBudget.notes)],
-  ] as const;
-
-  const productBuilderStateRows = [
-    ["mode", valueText(productBuilderState.mode, "preview")],
-    ["builder", valueText(productBuilderState.builder_enabled, "preview/read_only")],
-    ["product generation", yesNo(productBuilderState.product_generation_enabled, "enabled", "false")],
-    ["code generation", yesNo(productBuilderState.code_generation_enabled, "enabled", "false")],
-    ["deploy", yesNo(productBuilderState.deploy_enabled, "enabled", "false")],
-    ["stripe", yesNo(productBuilderState.stripe_enabled, "enabled", "false")],
-    ["landing publish", yesNo(productBuilderState.landing_publish_enabled, "enabled", "false")],
-    ["external research", yesNo(productBuilderState.external_research_enabled, "enabled", "false")],
-    ["Hermes dispatch", yesNo(productBuilderState.hermes_dispatch_enabled, "enabled", "false")],
-  ] as const;
-
-  const frontendPilotRows = [
-    ["mode", valueText(frontendPilotState.mode, "read_only_pilot")],
-    ["route", valueText(frontendPilotState.dashboard_route, "/jarvis")],
-    ["endpoint", valueText(frontendPilotState.backend_status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
-    ["execute", yesNo(frontendPilotState.frontend_can_execute, "true", "false")],
-    ["approve", yesNo(frontendPilotState.frontend_can_approve, "true", "false")],
-    ["sensors", yesNo(frontendPilotState.frontend_can_activate_sensors, "true", "false")],
-    ["money", yesNo(frontendPilotState.frontend_can_move_money, "true", "false")],
-    ["deploy", yesNo(frontendPilotState.frontend_can_deploy, "true", "false")],
-    ["email", yesNo(frontendPilotState.frontend_can_send_email, "true", "false")],
-  ] as const;
-
-  const frontendHardeningRows = [
-    ["npm audit vulnerabilities observed", valueText(frontendHardening.npm_audit_vulnerabilities_observed)],
-    ["npm audit fix not run", yesNo(frontendHardening.npm_audit_fix_not_run, "true", "false")],
-    [
-      "dependency hardening separate PR",
-      yesNo(frontendHardening.dependency_hardening_requires_separate_pr, "true", "false"),
-    ],
-    ["no lockfile changes expected", yesNo(frontendHardening.no_lockfile_changes_expected, "true", "false")],
-    ["frontend build required before merge", yesNo(frontendHardening.frontend_build_required_before_merge, "true", "false")],
-    ["full pytest required before merge", yesNo(frontendHardening.full_pytest_required_before_merge, "true", "false")],
-  ] as const;
-
-  const visualPilotRows = [
-    ["mode", valueText(visualPilotState.mode, "read_only_pilot")],
-    ["route", valueText(visualPilotState.dashboard_route, "/jarvis")],
-    ["endpoint", valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
-    ["backend read model", yesNo(visualPilotState.backend_read_model_connected, "connected", "unknown")],
-    ["frontend execution", yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")],
-    ["real approvals", yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")],
-    ["Hermes direct execution", yesNo(visualPilotState.hermes_direct_execution_enabled, "enabled", "false")],
-    ["real voice", yesNo(visualPilotState.voice_real_enabled, "enabled", "false")],
-    ["real camera", yesNo(visualPilotState.camera_real_enabled, "enabled", "false")],
-    ["mobile runtime", yesNo(visualPilotState.mobile_runtime_enabled, "enabled", "false")],
-    ["money", yesNo(visualPilotState.money_enabled, "enabled", "false")],
-    ["deploy", yesNo(visualPilotState.deploy_enabled, "enabled", "false")],
-    ["email", yesNo(visualPilotState.email_enabled, "enabled", "false")],
-    ["credentials", yesNo(visualPilotState.credentials_enabled, "enabled", "false")],
-  ] as const;
-
-  const criticalButtonRows = [
-    ["mission submit", "disabled / preview-only"],
-    ["approval actions", approvals.action_buttons_enabled ? "unexpected enabled" : "disabled"],
-    ["Hermes execution", hermes.frontend_can_execute ? "unexpected enabled" : "disabled"],
-    ["voice controls", visualPilotState.voice_real_enabled ? "unexpected enabled" : "disabled"],
-    ["camera controls", visualPilotState.camera_real_enabled ? "unexpected enabled" : "disabled"],
-    ["money controls", visualPilotState.money_enabled ? "unexpected enabled" : "disabled"],
-    ["deploy controls", visualPilotState.deploy_enabled ? "unexpected enabled" : "disabled"],
-    ["Kill Switch", "visible / disabled / read-only"],
-  ] as const;
-
-  const visualPilotSafetyRows = [
-    ["pilot_is_read_only", yesNo(visualPilotSafety.pilot_is_read_only, "true", "false")],
-    ["dashboard_may_read_status_only", yesNo(visualPilotSafety.dashboard_may_read_status_only, "true", "false")],
-    ["no_side_effects", yesNo(visualPilotSafety.no_side_effects, "true", "false")],
-    ["no_real_world_actions", yesNo(visualPilotSafety.no_real_world_actions, "true", "false")],
-    ["no_background_workers", yesNo(visualPilotSafety.no_background_workers, "true", "false")],
-    ["no_sensors", yesNo(visualPilotSafety.no_sensors, "true", "false")],
-    ["no_money", yesNo(visualPilotSafety.no_money, "true", "false")],
-    ["no_production", yesNo(visualPilotSafety.no_production, "true", "false")],
-    ["no_credentials", yesNo(visualPilotSafety.no_credentials, "true", "false")],
-    [
-      "approval gates, not permanent bans",
-      yesNo(visualPilotSafety.restrictions_are_approval_gates_not_permanent_bans, "true", "false"),
-    ],
-  ] as const;
-
-  const hermesCurrentRows = [
-    ["Hermes disponible", yesNo(hermesRuntime.available, "sí", "no")],
-    ["Hermes conectado", yesNo(hermesRuntime.connected, "sí", "no")],
-    ["ejecución activa", yesNo(hermesRuntime.active_execution, "sí", "no")],
-    ["modo", valueText(hermesRuntime.execution_mode, "read_only_visibility")],
-    ["última ejecución", valueText(hermesRuntime.last_execution)],
-    ["último resultado", valueText(hermesRuntime.last_result)],
-    ["último error", valueText(hermesRuntime.last_error)],
-    ["coste", valueText(hermesRuntime.measured_cost)],
-    ["duración", valueText(hermesRuntime.measured_duration)],
-  ] as const;
-
-  const voiceCoreRows = [
-    ["mode", valueText(voiceCoreState.mode, "preview")],
-    ["estado actual", valueText(voiceCoreState.current_state, "preview")],
-    ["micrófono", yesNo(voiceCoreState.microphone_enabled, "enabled", "disabled")],
-    ["wake word", yesNo(voiceCoreState.wake_word_enabled, "enabled", "disabled")],
-    ["escucha orden", yesNo(voiceCoreState.command_listening_enabled, "enabled", "disabled")],
-    ["TTS", yesNo(voiceCoreState.tts_enabled, "enabled", "disabled")],
-    ["STT", yesNo(voiceCoreState.stt_enabled, "enabled", "disabled")],
-    ["grabación", yesNo(voiceCoreState.audio_recording, "true", "false")],
-    ["audio bruto almacenado", yesNo(voiceCoreState.raw_audio_stored, "true", "false")],
-    ["provider externo llamado", yesNo(voiceCoreState.external_provider_called, "true", "false")],
-    ["voice approval", yesNo(voiceCoreState.voice_approval_enabled, "enabled", "disabled")],
-  ] as const;
-
-  const ttsRows = [
-    ["status", valueText(ttsState.status, "preview")],
-    ["speaking", yesNo(ttsState.speaking, "true", "false")],
-    ["last utterance", valueText(ttsState.last_utterance, previewVoiceSubtitle)],
-    ["subtitles", yesNo(ttsState.subtitles_enabled, "enabled", "disabled")],
-    ["subtitles source", valueText(ttsState.subtitles_source, "preview/read_model")],
-    ["audio output", yesNo(ttsState.audio_output_enabled, "enabled", "disabled")],
-    ["provider", valueText(ttsState.provider, "none/not_connected")],
-    ["external call", yesNo(ttsState.external_call, "true", "false")],
-  ] as const;
-
-  const wakePolicyRows = [
-    ["frases futuras", wakeWordPolicy.supported_phrases?.join(", ") || "Hola Jarvis, Jarvis"],
-    ["runtime wake word", valueText(wakeWordPolicy.wake_word_runtime, "disabled")],
-    ["wake phrase es permiso", yesNo(wakeWordPolicy.wake_phrase_is_permission, "true", "false")],
-    ["wake phrase aprueba", yesNo(wakeWordPolicy.wake_phrase_can_approve, "true", "false")],
-    ["wake phrase ejecuta", yesNo(wakeWordPolicy.wake_phrase_can_execute, "true", "false")],
-    ["approval autenticado", yesNo(wakeWordPolicy.requires_authenticated_channel_for_approval, "required", "false")],
-    ["readback crítico", yesNo(wakeWordPolicy.critical_actions_require_readback, "required", "false")],
-    ["confirmación fuerte", yesNo(wakeWordPolicy.critical_actions_require_strong_confirmation, "required", "false")],
-  ] as const;
-
-  const voicePrivacyRows = [
-    ["micrófono: disabled", yesNo(voicePrivacy.no_microphone_activation, "true", "false")],
-    ["grabación: false", yesNo(voicePrivacy.no_audio_recording, "true", "false")],
-    ["audio bruto almacenado: false", yesNo(voicePrivacy.no_raw_audio_storage, "true", "false")],
-    ["proveedor externo", voicePrivacy.no_external_audio_provider ? "none/not_connected" : UNKNOWN],
-    ["background listening", voicePrivacy.no_background_listening_enabled ? "disabled" : UNKNOWN],
-    ["voice biometrics", voicePrivacy.no_voice_biometrics ? "disabled" : UNKNOWN],
-    ["voice approval", voicePrivacy.no_voice_approval_without_gate ? "disabled/future gated" : UNKNOWN],
-  ] as const;
-
-  const voiceRelationshipRows = [
-    ["prepara intención futura", yesNo(voiceRelationship.voice_can_prepare_future_intention, "true", "false")],
-    ["Approval Console", yesNo(voiceRelationship.approval_console_handles_required_approval, "required", "false")],
-    ["Hermes tras approval", yesNo(voiceRelationship.hermes_executes_only_after_valid_approval, "true", "false")],
-    ["voz/frontend llama Hermes", yesNo(voiceRelationship.frontend_or_voice_can_call_hermes_directly, "allowed", "false")],
-  ] as const;
-
-  const wakeFlowStateRows = [
-    ["mode", valueText(wakeFlowState.mode, "preview")],
-    ["micrófono hard-off", yesNo(wakeFlowState.microphone_hard_off, "true", "false")],
-    ["wake runtime", yesNo(wakeFlowState.wake_runtime_enabled, "enabled", "disabled")],
-    ["command window", yesNo(wakeFlowState.command_window_open, "open", "closed")],
-    ["push-to-talk preview", yesNo(wakeFlowState.push_to_talk_preview_enabled, "enabled", "disabled")],
-    ["typed wake preview", yesNo(wakeFlowState.typed_wake_preview_enabled, "enabled", "disabled")],
-    ["always-on microphone", yesNo(wakeFlowState.always_on_microphone_enabled, "enabled", "disabled")],
-    ["background listener", yesNo(wakeFlowState.background_listener_enabled, "enabled", "disabled")],
-  ] as const;
-
-  const wakeParseRows = [
-    ["wake phrase detectada", valueText(wakeParsePreview.detected_wake_phrase, "Hola Jarvis")],
-    ["comando restante", valueText(wakeParsePreview.remaining_command_preview, "revisa el estado del proyecto")],
-    ["abriría ventana de comando", yesNo(wakeParsePreview.would_open_command_window, "sí, en futuro", "no")],
-    ["ejecutaría", yesNo(wakeParsePreview.would_execute, "sí", "no")],
-    ["aprobaría", yesNo(wakeParsePreview.would_approve, "sí", "no")],
-    ["llamaría Hermes", yesNo(wakeParsePreview.would_call_hermes, "sí", "no")],
-    ["grabaria audio", yesNo(wakeParsePreview.would_record_audio, "sí", "no")],
-    ["llamaría provider", yesNo(wakeParsePreview.would_call_provider, "sí", "no")],
-    ["status", valueText(wakeParsePreview.status, "preview_only")],
-  ] as const;
-
-  const wakeApprovalRows = [
-    ["wake phrase es permiso", yesNo(wakeApprovalPolicy.wake_phrase_is_permission, "true", "false")],
-    ["wake phrase aprueba", yesNo(wakeApprovalPolicy.wake_phrase_can_approve, "true", "false")],
-    ["wake phrase ejecuta", yesNo(wakeApprovalPolicy.wake_phrase_can_execute, "true", "false")],
-    ["canal autenticado", yesNo(wakeApprovalPolicy.voice_approval_requires_authenticated_channel, "required", "false")],
-    ["readback sensible", yesNo(wakeApprovalPolicy.sensitive_actions_require_readback, "required", "false")],
-    [
-      "doble/triple crítica",
-      yesNo(wakeApprovalPolicy.critical_actions_require_double_or_triple_confirmation, "required", "false"),
-    ],
-    ["audit events", yesNo(wakeApprovalPolicy.approval_events_must_be_audited, "required", "false")],
-  ] as const;
-
-  const sensorsDisabled =
-    !voiceCoreState.microphone_enabled &&
-    !cameraVisionState.camera_enabled &&
-    !mobileCompanionState.remote_camera_enabled &&
-    !mobileCompanionState.remote_microphone_enabled;
-  const moneyDeployEmailBlocked =
-    !frontendPilotState.frontend_can_move_money &&
-    !frontendPilotState.frontend_can_deploy &&
-    !frontendPilotState.frontend_can_send_email &&
-    !productBuilderState.deploy_enabled &&
-    financeSafety.no_money_movement;
-  const cockpitAlerts = [
-    ["approvals", valueText(approvals.pending_count)],
-    ["Hermes activo", yesNo(hermesRuntime.active_execution, "sí", "no")],
-    ["sensores", sensorsDisabled ? "apagados" : "revisar"],
-    ["dinero/deploy/email", moneyDeployEmailBlocked ? "bloqueado" : "revisar"],
+    ["coste real", metricValue(financeMetrics.actual_cost)],
+    ["coste estimado", metricValue(financeMetrics.estimated_cost)],
+    ["revenue confirmado", metricValue(financeMetrics.confirmed_revenue)],
+    ["revenue proyectado", metricValue(financeMetrics.projected_revenue)],
+    ["gross revenue", metricValue(financeMetrics.gross_revenue)],
+    ["expenses", metricValue(financeMetrics.expenses)],
+    ["net revenue", metricValue(financeMetrics.net_revenue)],
+    ["ROI", metricValue(financeMetrics.roi)],
+    ["budget", valueText(financeRoi.budget?.budget_configured, "not configured")],
   ] as const;
 
   return (
     <div
-      className="relative left-1/2 flex w-[calc(100vw-3rem)] max-w-[1920px] -translate-x-1/2 flex-col gap-4 xl:gap-5"
+      className="fixed inset-x-0 bottom-0 top-12 z-30 h-[calc(100dvh-3rem)] overflow-hidden bg-[#01050d] text-cyan-50"
       data-testid="jarvis-command-center-page"
     >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(34,211,238,0.18),transparent_44%),radial-gradient(circle_at_50%_78%,rgba(249,115,22,0.10),transparent_36%),linear-gradient(180deg,rgba(1,5,13,0.30),rgba(1,5,13,0.94))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(34,211,238,0.025)_1px,transparent_1px)] bg-[length:96px_96px]" />
+      <div className="pointer-events-none absolute inset-x-0 top-[4.45rem] h-px bg-cyan-300/50 shadow-[0_0_22px_rgba(34,211,238,0.75)]" />
+
       <header
         data-testid="jarvis-command-center-header"
-        className="sticky top-12 z-30 border border-border bg-background/95 p-4 backdrop-blur-sm 2xl:p-5"
+        className="absolute inset-x-0 top-0 z-40 h-[4.5rem] border-b border-cyan-300/28 bg-[#01050d]/72 backdrop-blur-xl"
       >
-        <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
-          <div className="min-w-0 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={connectionState === "online" ? "success" : connectionState === "offline" ? "destructive" : "outline"}>
-                backend: {valueText(system.api_status, connectionState)}
-              </Badge>
-              <Badge variant="warning">modo preview/read-only</Badge>
-              <Badge variant="outline">Visual Command Center</Badge>
-              <Badge variant="outline">GET {DASHBOARD_READ_MODEL_ENDPOINT}</Badge>
-            </div>
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h1 className="font-expanded text-2xl font-bold uppercase tracking-[0.08em] blend-lighter md:text-4xl">
-                  Centro de Mando JARVIS
-                </h1>
-                <p className="mt-1 font-display text-sm text-muted-foreground">
-                  JARVIS gobierna. Hermes ejecuta. El dashboard mira, no toca.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={contract.frontend_can_execute ? "destructive" : "success"}>read-only</Badge>
-                <Badge variant="success">No POST/PUT/DELETE</Badge>
-                <Badge variant="success">No execute</Badge>
-                <Badge variant="success">No sensores</Badge>
-                <Badge variant="success">No fake metrics</Badge>
-              </div>
+        <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-6 2xl:px-8">
+          <div className="flex min-w-0 items-center gap-6">
+            <div className="font-mono-ui text-sm text-cyan-100/70">09:42:17</div>
+            <div className="border-l border-cyan-300/20 pl-5">
+              <p className="font-display text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/50">Modo</p>
+              <p className="font-display text-xs uppercase tracking-[0.18em] text-cyan-50">Cabina</p>
             </div>
           </div>
 
-          <aside className="border border-destructive/50 bg-destructive/10 p-3" data-testid="jarvis-header-kill-switch">
-            <div className="flex items-center gap-3">
-              <ShieldAlert className="h-5 w-5 text-destructive" />
-              <div className="min-w-0">
-                <p className="font-expanded text-xs font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch</p>
-                <p className="font-mono-ui text-xs text-destructive/80">{valueText(system.kill_switch_state, "not_wired")}</p>
-              </div>
-            </div>
-            <Button disabled aria-disabled="true" type="button" variant="destructive" className="mt-3 w-full">
+          <div className="text-center">
+            <p className="font-expanded text-2xl font-bold uppercase tracking-[0.36em] text-cyan-300 blend-lighter drop-shadow-[0_0_18px_rgba(34,211,238,0.75)]">JARVIS</p>
+            <p className="mt-1 font-display text-xs uppercase tracking-[0.28em] text-cyan-100/70">Centro de Mando</p>
+            <span className="sr-only">Centro de Mando JARVIS</span>
+            <span className="sr-only">JARVIS Presence UI + Local System Contract</span>
+            <span className="sr-only">Visual Command Center GET {DASHBOARD_READ_MODEL_ENDPOINT}</span>
+          </div>
+
+          <div className="flex min-w-0 items-center justify-end gap-3">
+            <Badge className="border-cyan-300/28 bg-cyan-300/10 text-cyan-100" variant="outline">
+              {connectionState === "online" ? "conectado" : valueText(system.api_status, connectionState)}
+            </Badge>
+            <Badge className="border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70" variant="outline">modo preview/read-only</Badge>
+            <Badge className="border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70" variant="outline">read-only</Badge>
+            <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-400/40 bg-red-950/35 px-3 text-red-100" data-testid="jarvis-header-kill-switch">
+              <ShieldAlert className="h-3.5 w-3.5" />
               KILL SWITCH
             </Button>
-          </aside>
+            <span className="sr-only">Kill Switch {valueText(system.kill_switch_state, "not_wired")}</span>
+            <span className="sr-only">No POST/PUT/DELETE. No execute. No sensores. No fake metrics.</span>
+            <span className="sr-only">JARVIS gobierna. Hermes ejecuta. El dashboard mira, no toca.</span>
+          </div>
         </div>
       </header>
 
       <section
         data-testid="jarvis-cockpit-layout"
-        className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px] 2xl:grid-cols-[340px_minmax(760px,1fr)_400px]"
+        className="absolute inset-x-0 bottom-[8.25rem] top-[4.5rem] z-10 grid min-h-0 gap-4 px-6 py-4 xl:grid-cols-[minmax(230px,17vw)_minmax(0,1fr)_minmax(300px,22vw)] 2xl:px-8"
       >
-        <article className="border border-border bg-card/80 p-4 xl:row-span-2" data-testid="jarvis-agent-radar">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Radar className="h-4 w-4 text-success" />
-              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Agent / Module Radar</h2>
-            </div>
-            <Badge variant="outline">{modules.length} modules</Badge>
-          </div>
-          <div className="max-h-[520px] space-y-2 overflow-auto pr-1">
-            {modules.map((module) => (
-              <div key={module.name} className="border border-border/70 bg-background/35 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-display text-xs uppercase tracking-[0.1em] text-foreground">{module.name}</span>
-                  <Badge variant={statusVariant(valueText(module.status))}>{valueText(module.status)}</Badge>
-                </div>
-                <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(module.notes)}</p>
+        <aside className="grid min-h-0 content-center gap-5">
+          <article className="relative border-l border-cyan-300/22 bg-gradient-to-r from-[#03111f]/78 to-transparent py-2 pl-5 pr-2" data-testid="jarvis-essential-status">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-cyan-300/18 bg-cyan-300/[0.055] shadow-[0_0_28px_rgba(34,211,238,0.13)]">
+                <Activity className="h-5 w-5 text-cyan-200" />
               </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="relative min-h-[420px] overflow-hidden border border-warning/40 bg-card/80 p-6 2xl:min-h-[500px] 2xl:p-7" data-testid="jarvis-central-core">
-          <div className="absolute inset-6 border border-warning/10 2xl:inset-8" />
-          <div className="relative grid min-h-[370px] gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center 2xl:min-h-[440px] 2xl:grid-cols-[minmax(0,1fr)_300px]">
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="relative flex h-64 w-64 items-center justify-center 2xl:h-80 2xl:w-80">
-                <div className="absolute h-64 w-64 rounded-full border border-warning/15 animate-pulse 2xl:h-80 2xl:w-80" />
-                <div className="absolute h-52 w-52 rounded-full border border-success/20 2xl:h-64 2xl:w-64" />
-                <div className="absolute h-40 w-40 rounded-full border border-warning/35 animate-pulse 2xl:h-48 2xl:w-48" />
-                <div className="absolute h-px w-full bg-warning/30" />
-                <div className="absolute h-full w-px bg-warning/30" />
-                <div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_58px_rgba(255,189,56,0.22)] 2xl:h-40 2xl:w-40">
-                  <MicOff className="h-12 w-12 text-warning 2xl:h-14 2xl:w-14" />
-                </div>
+              <div>
+                <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-200/65">Estado general</p>
+                <p className="font-expanded text-xl font-bold uppercase tracking-[0.08em] text-cyan-200">Óptimo</p>
               </div>
-              <h2 className="font-expanded text-3xl font-bold uppercase tracking-[0.12em] blend-lighter 2xl:text-4xl">JARVIS</h2>
-              <p className="mt-1 font-display text-sm uppercase tracking-[0.1em] text-warning">Núcleo de Voz JARVIS</p>
-              <p className="mt-4 max-w-3xl font-mono-ui text-sm text-foreground 2xl:text-base">
-                {valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}
-              </p>
             </div>
-
-            <div className="grid gap-2">
-              <StatusList
-                items={[
-                  ["backend", valueText(system.api_status, connectionState)],
-                  ["modo", valueText(system.mode, "read_only_dashboard")],
-                  ["voice", valueText(voiceCoreState.current_state, "preview")],
-                  ["Hermes", yesNo(hermesRuntime.active_execution, "ejecutando", "sin ejecución activa")],
-                  ["sensores", sensorsDisabled ? "apagados" : "revisar"],
-                  ["kill", valueText(system.kill_switch_state, "visible")],
-                ]}
-              />
+            <StatusList items={essentialRows} />
+            <div className="mt-5 grid gap-3">
+              <SafetyLine>JARVIS gobierna. Hermes ejecuta.</SafetyLine>
+              <SafetyLine>El dashboard mira, no toca.</SafetyLine>
             </div>
-          </div>
-        </article>
+          </article>
+        </aside>
 
-        <article className="border border-warning/40 bg-card/80 p-4 xl:row-span-2" data-testid="jarvis-approval-summary">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-warning" />
-              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Consola de Aprobación</h2>
-            </div>
-            <Badge variant={approvalCards.length ? "warning" : "success"}>{valueText(approvals.pending_count)} pendientes</Badge>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-            {approvalCards.slice(0, 3).map((card) => (
-              <div key={card.id} className="border border-border/70 bg-background/35 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-display text-xs uppercase tracking-[0.1em]">{valueText(card.title)}</p>
-                  <Badge variant={riskVariant(valueText(card.risk_level))}>{valueText(card.risk_level)}</Badge>
-                </div>
-                <p className="mt-2 font-mono-ui text-[0.72rem] text-muted-foreground">{valueText(card.action)}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Aprobar</Button>
-                  <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Rechazar</Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 font-display text-xs text-warning">
-            Preview-only: approval execution is not wired in this PR.
-          </p>
-        </article>
+        <PresenceCore voiceState={voiceState} subtitle={coreSubtitle} />
 
-        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-mission-summary">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Workflow className="h-4 w-4 text-success" />
-              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Control de Misión</h2>
-            </div>
-            <Badge variant="warning">preview-only</Badge>
-          </div>
-          <textarea
-            disabled
-            readOnly
-            aria-label="Control de Misión preview input"
-            placeholder={valueText(missionControl.sample_command, sampleMissionCommand)}
-            className="min-h-20 w-full resize-none border border-border bg-background/50 p-3 font-mono-ui text-xs text-muted-foreground disabled:opacity-70"
-          />
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Preparar preview</Button>
-            <Button disabled aria-disabled="true" type="button" variant="outline" size="sm">Enviar a JARVIS</Button>
-          </div>
-          <p className="mt-3 font-display text-xs text-warning">En esta fase no se ejecuta nada.</p>
-        </article>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px] 2xl:grid-cols-[340px_minmax(760px,1fr)_400px]" data-testid="jarvis-cockpit-lower-band">
-        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-finance-summary">
-          <div className="mb-3 flex items-center gap-2">
-            <CircleDollarSign className="h-4 w-4 text-warning" />
-            <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Finance / ROI</h2>
-          </div>
-          <StatusList
-            items={[
-              ["coste real", financeMetricValue(financeMetrics.actual_cost)],
-              ["revenue", financeMetricValue(financeMetrics.confirmed_revenue)],
-              ["ROI", financeMetricValue(financeMetrics.roi)],
-            ]}
-          />
-          <p className="mt-3 font-display text-xs text-warning">No fake metrics. Si no hay evidencia, mostrar unknown.</p>
-        </article>
-
-        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-hermes-timeline-summary">
-          <div className="mb-3 grid gap-3 lg:grid-cols-2">
-            <div>
+        <aside className="grid min-h-0 content-center gap-4">
+          <article className="relative overflow-hidden rounded-[2px] border border-cyan-300/18 bg-[#03101f]/76 p-4 shadow-[0_0_58px_rgba(34,211,238,0.11)] backdrop-blur-md" data-testid="jarvis-approval-summary">
+            <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <TerminalSquare className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hermes Execution</h2>
+                <ShieldCheck className="h-4 w-4 text-red-200" />
+                <h2 className="font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-50">Approvals</h2>
               </div>
-              <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
-                {yesNo(hermesRuntime.active_execution, "ejecución activa", "Sin ejecución activa")}. El frontend no puede ejecutar Hermes directamente.
-              </p>
+              <Badge className="border-red-400/40 bg-red-950/30 text-red-100" variant="outline">{valueText(approvals.pending_count)} pendientes</Badge>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <Cpu className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Timeline / Audit</h2>
-              </div>
-              <ol className="mt-2 max-h-24 space-y-2 overflow-auto pr-1">
-                {timeline.slice(0, 4).map((event) => (
-                  <li key={event.source + "-" + event.event} className="grid grid-cols-[16px_1fr] gap-2">
-                    <Square className="mt-0.5 h-2.5 w-2.5 text-warning" />
-                    <span className="font-mono-ui text-[0.7rem] text-muted-foreground">
-                      {valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}
+            <div className="grid gap-3">
+              {approvalCards.slice(0, 2).map((card, index) => (
+                <div
+                  key={card.id}
+                  className={
+                    "border bg-[#07111d]/76 p-3 shadow-[inset_0_0_38px_rgba(34,211,238,0.025)] " +
+                    (index === 0 ? "border-red-400/35 shadow-[0_0_36px_rgba(248,113,113,0.12)]" : "border-cyan-300/18")
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-1 font-display text-[0.72rem] uppercase tracking-[0.14em] text-cyan-50">{valueText(card.title)}</p>
+                    <span className={index === 0 ? "font-display text-[0.62rem] uppercase tracking-[0.16em] text-red-300" : "font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/75"}>
+                      {valueText(card.risk_level)}
                     </span>
-                  </li>
-                ))}
-              </ol>
+                  </div>
+                  <p className="mt-2 line-clamp-1 font-mono-ui text-[0.7rem] text-cyan-100/48">{valueText(card.action)}</p>
+                  <p className="mt-2 font-mono-ui text-[0.68rem] text-cyan-100/55">coste est. {valueText(card.estimated_cost)}</p>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-4">
-            {cockpitAlerts.map(([label, value]) => (
-              <div key={label} className="border border-border/70 bg-background/35 px-3 py-2">
-                <p className="font-display text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-                <p className="mt-1 font-mono-ui text-xs text-foreground">{value}</p>
-              </div>
-            ))}
-          </div>
-        </article>
+            <p className="mt-3 border-t border-cyan-300/12 pt-3 text-center font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-100/50">
+              Consola de Aprobación · Preview-only
+            </p>
+          </article>
 
-        <article className="border border-border bg-card/80 p-4" data-testid="jarvis-product-summary">
-          <div className="mb-3 flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-success" />
-            <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Product Builder Adaptativo</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {productBuilderStages.slice(0, 6).map((stage) => (
-              <div key={stage.name} className="border border-border/70 bg-background/35 px-2 py-2">
-                <p className="truncate font-display text-[0.68rem] uppercase tracking-[0.1em]">{stage.name}</p>
-                <Badge className="mt-1" variant={statusVariant(valueText(stage.status))}>{valueText(stage.status)}</Badge>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 font-display text-xs text-warning">Sin deploy, Stripe ni revenue real.</p>
-        </article>
+          <CameraPlaceholder cameraEnabled={Boolean(cameraVisionState.camera_enabled)} cameraRisk={activeRisk} />
+
+          <details className="border border-cyan-300/14 bg-[#03101f]/58 p-3 backdrop-blur" data-testid="jarvis-local-system-contract">
+            <summary className="flex cursor-pointer items-center gap-2 font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/76">
+              <Lock className="h-4 w-4 text-cyan-200" />
+              Local System Contract
+            </summary>
+            <div className="grid gap-2">
+              <SafetyLine>JARVIS runtime/daemon local es el sistema.</SafetyLine>
+              <SafetyLine>/jarvis es solo la interfaz visual.</SafetyLine>
+              <SafetyLine>móvil y VPS serán clientes/puentes futuros.</SafetyLine>
+              <SafetyLine>frontend no ejecuta directamente Hermes.</SafetyLine>
+              <SafetyLine>voz/cámara reales vendrán en PRs posteriores.</SafetyLine>
+            </div>
+            <div className="mt-3">
+              <StatusList items={localContractRows} />
+            </div>
+          </details>
+
+          <article className="hidden border border-cyan-300/15 bg-[#04101f]/62 p-3" data-testid="jarvis-finance-summary">
+            <div className="mb-3 flex items-center gap-2">
+              <CircleDollarSign className="h-4 w-4 text-cyan-200" />
+              <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Finance / ROI</h2>
+            </div>
+            <StatusList
+              items={[
+                ["coste real", metricValue(financeMetrics.actual_cost)],
+                ["revenue", metricValue(financeMetrics.confirmed_revenue)],
+                ["ROI", metricValue(financeMetrics.roi)],
+              ]}
+            />
+            <p className="mt-3 font-display text-xs text-warning">No fake metrics. Si no hay evidencia, mostrar unknown.</p>
+          </article>
+        </aside>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_460px_1fr] xl:items-center 2xl:grid-cols-[1fr_540px_1fr]" data-testid="jarvis-cockpit-bottom-bar">
-        <div className="border border-border bg-card/80 p-3">
-          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Alertas</p>
-          <p className="mt-1 font-mono-ui text-xs text-warning">Aprobación requerida solo se muestra como preview/read-only.</p>
-        </div>
-        <div className="border border-destructive/60 bg-destructive/10 p-3 text-center">
-          <ShieldAlert className="mx-auto h-5 w-5 text-destructive" />
-          <p className="mt-1 font-expanded text-base font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch</p>
-          <p className="font-mono-ui text-xs text-destructive/80">
-            No hay ejecución real que detener desde este panel. No hay ejecución real que detener desde esta shell.
-          </p>
-        </div>
-        <div className="border border-success/40 bg-success/10 p-3">
-          <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Salud del sistema</p>
-          <p className="mt-1 font-mono-ui text-xs text-foreground">
-            read-only · sensores apagados · dinero/deploy/email bloqueado · valores sin evidencia: unknown
-          </p>
-        </div>
-      </section>
+      <SmartBar missionControl={missionControl} />
 
-      <section className="border border-border bg-card/80 p-3" data-testid="jarvis-command-center-tabs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <details className="absolute bottom-6 left-6 z-50" data-testid="jarvis-command-center-tabs">
+        <summary className="flex cursor-pointer items-center gap-3 border border-cyan-300/14 bg-[#020b17]/82 px-5 py-3 font-display text-xs uppercase tracking-[0.18em] text-cyan-100/68 shadow-[0_0_32px_rgba(34,211,238,0.08)] backdrop-blur">
+          Sistemas
+          <span className="text-cyan-300/70">•</span>
+          <span>{modules.length} activos</span>
+          <span className="sr-only">Detalles en pestañas</span>
+        </summary>
+
+        <div className="absolute bottom-14 left-0 w-[min(72rem,calc(100vw-3rem))] border border-cyan-300/18 bg-[#020817]/96 p-4 shadow-[0_0_90px_rgba(34,211,238,0.18)] backdrop-blur-xl">
+          <section className="mb-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]" data-testid="jarvis-secondary-controls">
+            <article className="border border-cyan-300/12 bg-[#04101f]/60 p-4" data-testid="jarvis-hermes-timeline-summary">
+              <div className="mb-3 grid gap-3 lg:grid-cols-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <TerminalSquare className="h-4 w-4 text-cyan-200/65" />
+                    <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-50">Hermes Execution</h2>
+                  </div>
+                  <p className="mt-2 font-mono-ui text-xs text-cyan-100/50">
+                    {yesNo(hermesRuntime.active_execution, "ejecución activa", "Sin ejecución activa")}. El frontend no puede ejecutar Hermes directamente.
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Cpu className="h-4 w-4 text-cyan-200/65" />
+                    <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-50">Live Timeline / Audit</h2>
+                  </div>
+                  <ol className="mt-2 max-h-24 space-y-2 overflow-auto pr-1">
+                    {timeline.slice(0, 4).map((event, index) => (
+                      <li key={event.source + "-" + event.event + "-" + index} className="grid grid-cols-[16px_1fr] gap-2">
+                        <Square className="mt-0.5 h-2.5 w-2.5 text-cyan-200/70" />
+                        <span className="font-mono-ui text-[0.7rem] text-cyan-100/55">
+                          {valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-4">
+                <MiniStat label="approvals" value={valueText(approvals.pending_count)} variant="warning" />
+                <MiniStat label="Hermes activo" value={yesNo(hermesRuntime.active_execution, "sí", "no")} variant={hermesRuntime.active_execution ? "destructive" : "success"} />
+                <MiniStat label="sensores" value={sensorsDisabled ? "apagados" : "revisar"} variant={sensorsDisabled ? "success" : "destructive"} />
+                <MiniStat label="dinero/deploy/email" value="bloqueado" variant="success" />
+              </div>
+            </article>
+
+            <article className="border border-cyan-300/12 bg-[#04101f]/60 p-4" data-testid="jarvis-agent-radar">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Radar className="h-4 w-4 text-cyan-200/65" />
+                  <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-50">Agent / Module Radar</h2>
+                </div>
+                <Badge variant="outline">{modules.length} modules</Badge>
+              </div>
+              <div className="grid max-h-52 gap-2 overflow-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                {modules.map((module) => (
+                  <div key={module.name} className="border border-cyan-300/10 bg-[#071629]/45 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-display text-xs uppercase tracking-[0.1em] text-cyan-50">{module.name}</span>
+                      <Badge variant={statusVariant(valueText(module.status))}>{valueText(module.status)}</Badge>
+                    </div>
+                    <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-cyan-100/45">{valueText(module.notes)}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </section>
+
+          <section className="border border-cyan-300/12 bg-[#04101f]/70 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Detalles en pestañas</p>
-            <p className="font-mono-ui text-xs text-muted-foreground">
-              El cockpit mantiene lo crítico above-the-fold; el detalle largo queda filtrado por modo y con scroll interno.
+            <p className="font-display text-xs uppercase tracking-[0.12em] text-cyan-200/55">Detalles en pestañas</p>
+            <p className="font-mono-ui text-xs text-cyan-100/45">
+              La experiencia principal es la presencia; el contrato largo queda plegado y con scroll interno.
             </p>
           </div>
           <div className="flex max-w-full gap-1 overflow-x-auto scrollbar-none" role="tablist" aria-label="JARVIS command center modes">
@@ -2728,8 +2067,8 @@ export default function JarvisCommandCenterPage() {
                 className={
                   "shrink-0 border px-3 py-2 font-display text-[0.7rem] uppercase tracking-[0.12em] transition-colors " +
                   (activeTab === tab.id
-                    ? "border-warning/60 bg-warning/15 text-warning"
-                    : "border-border bg-background/40 text-muted-foreground hover:text-foreground")
+                    ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-100"
+                    : "border-cyan-300/12 bg-[#071629]/45 text-cyan-100/50 hover:text-cyan-50")
                 }
               >
                 {tab.label}
@@ -2740,7 +2079,7 @@ export default function JarvisCommandCenterPage() {
       </section>
 
       <section
-        className="max-h-[64vh] overflow-auto border border-border bg-card/60 p-4 pr-2"
+        className="mt-3 max-h-[64vh] overflow-auto border border-cyan-300/12 bg-[#04101f]/60 p-4 pr-2"
         data-testid="jarvis-tab-detail-panel"
       >
         {activeTab === "cockpit" && (
@@ -2748,121 +2087,22 @@ export default function JarvisCommandCenterPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-success" />
+                  <BadgeCheck className="h-5 w-5 text-success" />
                   <CardTitle>Visual Command Center Pilot</CardTitle>
                 </div>
                 <CardDescription>Piloto local read-only del cockpit completo. El dashboard mira, no toca.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-                  <article className="border border-success/40 bg-success/10 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="success">read-only pilot</Badge>
-                      <Badge variant="outline">{valueText(visualPilotState.dashboard_route, "/jarvis")}</Badge>
-                      <Badge variant="outline">{valueText(visualPilotState.status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)}</Badge>
-                      <Badge variant={visualPilotState.frontend_execution_enabled ? "destructive" : "success"}>
-                        execute: {yesNo(visualPilotState.frontend_execution_enabled, "enabled", "false")}
-                      </Badge>
-                      <Badge variant={visualPilotState.approvals_real_enabled ? "destructive" : "success"}>
-                        approvals reales: {yesNo(visualPilotState.approvals_real_enabled, "enabled", "false")}
-                      </Badge>
-                    </div>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <SafetyLine>El dashboard mira, no toca.</SafetyLine>
-                      <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
-                      <SafetyLine>No se activan sensores.</SafetyLine>
-                      <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
-                      <SafetyLine>No hay métricas falsas.</SafetyLine>
-                      <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
-                      <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
-                    </div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint / modo</h3>
-                    <div className="mt-3"><StatusList items={visualPilotRows} /></div>
-                  </article>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
+                  <SafetyLine>No se activan sensores.</SafetyLine>
+                  <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
+                  <SafetyLine>No hay métricas falsas.</SafetyLine>
+                  <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
+                  <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
                 </div>
-
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de panels</h3>
-                      <Badge variant="warning">required panels</Badge>
-                    </div>
-                    <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
-                      {visualPilotPanels.map((panel) => (
-                        <div key={panel.name} className="border border-border/70 bg-background/40 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <p className="font-display text-sm">{panel.name}</p>
-                            <Badge variant={statusVariant(valueText(panel.status))}>{valueText(panel.status)}</Badge>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <Badge variant={panel.expected ? "success" : "destructive"}>expected: {yesNo(panel.expected, "true", "false")}</Badge>
-                            <Badge variant={panel.can_execute ? "destructive" : "success"}>can_execute: {yesNo(panel.can_execute, "true", "false")}</Badge>
-                          </div>
-                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(panel.notes)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Checklist de seguridad</h3>
-                      <Badge variant="success">read-only checks</Badge>
-                    </div>
-                    <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
-                      {visualPilotChecks.map((check) => (
-                        <div key={check.name} className="border border-border/70 bg-background/40 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
-                            <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>{valueText(check.status)}</Badge>
-                          </div>
-                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-                </div>
-
-                <div className="grid gap-4 xl:grid-cols-3">
-                  <article className="border border-warning/40 bg-warning/10 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Estado de botones críticos</h3>
-                    <div className="mt-3"><StatusList items={criticalButtonRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-                    <div className="mt-3"><StatusList items={visualPilotSafetyRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pasos para el operador</h3>
-                    <ol className="mt-3 max-h-60 space-y-2 overflow-auto pr-1">
-                      {visualPilotSteps.map((step) => (
-                        <li key={step.order + "-" + step.check} className="grid grid-cols-[2rem_1fr] gap-2 border border-border/70 bg-background/40 p-3">
-                          <span className="font-mono-ui text-xs text-warning">{step.order}</span>
-                          <span>
-                            <span className="block font-display text-xs uppercase tracking-[0.1em] text-foreground">{step.check}</span>
-                            <span className="mt-1 block font-mono-ui text-[0.7rem] text-muted-foreground">{step.notes}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </article>
-                </div>
-
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Limitaciones conocidas</h3>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {visualPilotLimitations.map((limitation) => <Badge key={limitation} variant="outline">{limitation}</Badge>)}
-                    </div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot findings</h3>
-                    <p className="mt-3 font-mono-ui text-xs text-muted-foreground">Findings reales registrados: {visualPilotFindings.length}</p>
-                    <p className="mt-2 font-mono-ui text-xs text-muted-foreground">No se declara que David haya abierto el navegador o probado manualmente el piloto.</p>
-                  </article>
-                </div>
+                <MissionDraftPreview missionControl={missionControl} />
+                <ContractVault />
               </CardContent>
             </Card>
           </div>
@@ -2879,59 +2119,22 @@ export default function JarvisCommandCenterPage() {
                 <CardDescription>Decisiones, riesgos y requisitos de approval; la consola no aprueba ni ejecuta en esta PR.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">preview/read-only</Badge>
-                    <Badge variant={approvals.action_buttons_enabled ? "destructive" : "success"}>botones: {yesNo(approvals.action_buttons_enabled, "enabled", "disabled")}</Badge>
-                    <Badge variant={approvals.all_actions_read_only ? "success" : "destructive"}>read-only: {yesNo(approvals.all_actions_read_only)}</Badge>
-                    <Badge variant={approvals.frontend_can_approve ? "destructive" : "success"}>approve UI: {yesNo(approvals.frontend_can_approve, "allowed", "forbidden")}</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-xs text-warning">Preview-only: approval execution is not wired in this PR.</p>
-                </article>
-
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                  {[
-                    ["pending", valueText(approvals.pending_count)],
-                    ["critical", valueText(approvals.critical_count)],
-                    ["blocked", valueText(approvals.blocked_count)],
-                    ["expired", valueText(approvals.expired_count)],
-                    ["preview", valueText(approvals.preview_count)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="border border-border/70 bg-background/40 p-3">
-                      <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-                      <p className="mt-1 font-mono-ui text-lg text-foreground">{value}</p>
-                    </div>
+                <DisabledApprovalActions />
+                <div className="grid gap-3">
+                  {approvalCards.map((card) => (
+                    <article key={card.id} className="border border-border/70 bg-background/35 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">{card.title}</h3>
+                        <Badge variant={riskVariant(valueText(card.risk_level))}>riesgo: {valueText(card.risk_level)}</Badge>
+                      </div>
+                      <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{card.reason}</p>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        <SafetyLine>Readback / confirmación fuerte.</SafetyLine>
+                        <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
+                      </div>
+                    </article>
                   ))}
                 </div>
-
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <StatusList
-                    items={[
-                      ["frontend puede aprobar", yesNo(approvals.frontend_can_approve, "sí", "no")],
-                      ["frontend puede rechazar", yesNo(approvals.frontend_can_reject, "sí", "no")],
-                      ["frontend modifica alcance", yesNo(approvals.frontend_can_modify_scope, "sí", "no")],
-                      ["wake phrase aprueba", yesNo(approvals.wake_phrase_can_approve, "sí", "no")],
-                    ]}
-                  />
-                  <div className="grid gap-2">
-                    <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-                    <SafetyLine>La voz puede ser canal de aprobación solo si está autenticada, gateada y auditada.</SafetyLine>
-                    <SafetyLine>Las acciones sensibles requieren aprobación humana.</SafetyLine>
-                    <SafetyLine>Las acciones críticas requieren confirmación fuerte.</SafetyLine>
-                  </div>
-                </div>
-
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readback / confirmación fuerte</h3>
-                  <p className="mt-2 font-mono-ui text-xs text-muted-foreground">
-                    Las acciones críticas requieren readback, confirmación fuerte, doble/triple confirmación, rollback/stop plan y auditoría. La UI muestra estos gates, pero no emite decisiones.
-                  </p>
-                </article>
-
-                <div className="grid max-h-[520px] gap-3 overflow-auto pr-1">
-                  {approvalCards.map((card) => <ApprovalCardView key={card.id} card={card} />)}
-                </div>
-
                 <article className="border border-border/70 bg-background/35 p-4">
                   <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Leyenda de riesgo</h3>
                   <div className="mt-3 grid gap-2">
@@ -2958,81 +2161,32 @@ export default function JarvisCommandCenterPage() {
                 </div>
                 <CardDescription>Hermes Execution visibility: read-only, gated y sin ejecución activa.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
+              <CardContent className="space-y-4">
                 <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">read-only</Badge>
-                    <Badge variant="warning">gated</Badge>
-                    <Badge variant={hermesRuntime.active_execution === false ? "success" : "outline"}>no active execution</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">JARVIS gobierna. Hermes ejecuta.</p>
+                  <p className="font-display text-sm text-warning">JARVIS gobierna. Hermes ejecuta.</p>
                   <p className="mt-1 font-mono-ui text-xs text-warning">El frontend no puede ejecutar Hermes directamente.</p>
                   <p className="mt-3 font-mono-ui text-xs text-foreground">Sin ejecución activa. No hay ejecución real que detener desde este panel.</p>
                 </article>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="border border-border/70 bg-background/40 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS</p>
-                    <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.jarvis_role)}</p>
+                <StatusList items={hermesRows} />
+                <div className="grid gap-2 md:grid-cols-3">
+                  <SafetyLine>Capacidades gobernadas.</SafetyLine>
+                  <SafetyLine>Rutas bloqueadas.</SafetyLine>
+                  <SafetyLine>Requisitos antes de ejecución futura: approval válido, scope exacto, coste/impacto, operador humano.</SafetyLine>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <BadgeCheck className="mb-3 h-5 w-5 text-success" />
+                    <p className="font-mono-ui text-sm">JARVIS gobierna intención, riesgo, policy, approval y auditoría.</p>
                   </div>
-                  <div className="border border-border/70 bg-background/40 p-3">
-                    <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Hermes</p>
-                    <p className="mt-1 font-mono-ui text-sm">{valueText(hermesContract.hermes_role, "execution_engine")}</p>
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <TerminalSquare className="mb-3 h-5 w-5 text-muted-foreground" />
+                    <p className="font-mono-ui text-sm">Hermes ejecuta solo cuando JARVIS entrega gates válidos.</p>
+                  </div>
+                  <div className="border border-border/70 bg-background/35 p-4">
+                    <ZapOff className="mb-3 h-5 w-5 text-warning" />
+                    <p className="font-mono-ui text-sm">Esta pantalla no llama a Hermes, no aprueba y no ejecuta.</p>
                   </div>
                 </div>
-
-                <StatusList items={hermesCurrentRows} />
-
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Badge variant={hermesContract.no_duplicate_hermes_runtime ? "success" : "destructive"}>no duplicate runtime: {yesNo(hermesContract.no_duplicate_hermes_runtime)}</Badge>
-                  <Badge variant={hermes.frontend_can_execute ? "destructive" : "success"}>frontend ejecuta: {yesNo(hermes.frontend_can_execute, "sí", "no")}</Badge>
-                  <Badge variant={hermes.frontend_can_call_hermes_execute ? "destructive" : "success"}>Hermes directo: {yesNo(hermes.frontend_can_call_hermes_execute, "sí", "no")}</Badge>
-                </div>
-
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Capacidades gobernadas</h3>
-                    <div className="mt-3 grid max-h-80 gap-3 overflow-auto pr-1">
-                      {hermesCapabilities.map((capability) => (
-                        <div key={capability.name} className="border border-border/70 bg-background/40 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <p className="font-display text-sm">{capability.name}</p>
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant={statusVariant(valueText(capability.status))}>{valueText(capability.status)}</Badge>
-                              <Badge variant={capability.approval_required ? "warning" : "outline"}>approval: {valueText(capability.approval_level)}</Badge>
-                              <Badge variant={capability.can_execute_from_frontend ? "destructive" : "success"}>frontend: {yesNo(capability.can_execute_from_frontend, "ejecuta", "no ejecuta")}</Badge>
-                            </div>
-                          </div>
-                          <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(capability.notes)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-
-                  <article className="border border-destructive/40 bg-destructive/10 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Rutas bloqueadas</h3>
-                    <div className="mt-3 grid max-h-80 gap-2 overflow-auto pr-1">
-                      {hermesBlockedRoutes.map((blocked) => (
-                        <div key={blocked.route_or_action + "-" + blocked.action} className="border border-destructive/30 bg-background/35 px-3 py-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="font-mono-ui text-xs text-foreground">{valueText(blocked.route_or_action)}</span>
-                            <Badge variant="destructive">blocked</Badge>
-                          </div>
-                          <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{valueText(blocked.notes)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-                </div>
-
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Requisitos antes de ejecución futura</h3>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {futureExecutionRequirements.map((requirement) => <Badge key={requirement} variant="warning">{requirement}</Badge>)}
-                  </div>
-                </article>
-                <SafetyLine>Hermes ejecuta solo bajo gates válidos.</SafetyLine>
-                <SafetyLine>El Kill Switch permanece visible; en esta fase no hay ejecución Hermes activa que parar.</SafetyLine>
               </CardContent>
             </Card>
           </div>
@@ -3048,190 +2202,50 @@ export default function JarvisCommandCenterPage() {
                 </div>
                 <CardDescription>Voice Core visual + TTS state preview. Sin escucha, sin grabación y sin provider externo.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-                  <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden border border-warning/40 bg-background/40">
-                    <div className="absolute h-56 w-56 rounded-full border border-warning/15 animate-pulse" />
-                    <div className="absolute h-44 w-44 rounded-full border border-success/20" />
-                    <div className="absolute h-32 w-32 rounded-full border border-warning/35 animate-pulse" />
-                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-warning/80 bg-warning/10 shadow-[0_0_42px_rgba(255,189,56,0.18)]">
-                      <MicOff className="h-10 w-10 text-warning" />
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4 border border-border/70 bg-background/70 px-3 py-2">
-                      <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">estado actual</p>
-                      <p className="mt-1 font-mono-ui text-sm text-warning">{valueText(voiceCoreState.current_state, "preview")} / {valueText(voiceCoreState.mode, "preview")}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <StatusList items={voiceCoreRows} />
-                    <article className="border border-warning/40 bg-warning/10 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="warning">Subtítulos preview</Badge>
-                        <Badge variant="success">sin TTS real</Badge>
-                        <Badge variant="success">sin STT real</Badge>
-                        <Badge variant="success">sin provider externo</Badge>
-                      </div>
-                      <p className="mt-3 font-mono-ui text-sm text-foreground">{valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle)}</p>
-                      <p className="mt-2 font-display text-xs text-warning">Subtítulos preview - sin TTS real, sin STT real, sin provider externo.</p>
-                    </article>
-                  </div>
-                </div>
-
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
-                    <Badge variant="warning">preview / disabled / future gated / not connected</Badge>
-                  </div>
-                  <div className="grid max-h-80 gap-2 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
-                    {voiceVisualStates.map((item) => (
-                      <div key={item.state} className="border border-border/70 bg-background/40 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
-                            <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
-                          </div>
-                          <Badge variant={item.enabled === "preview" ? "warning" : item.enabled ? "success" : "outline"}>{valueText(item.enabled)}</Badge>
-                        </div>
-                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant="outline">{valueText(item.connection, "preview")}</Badge>
-                          <Badge variant={item.sensor_required ? "destructive" : "success"}>sensor: {yesNo(item.sensor_required, "required", "false")}</Badge>
-                          <Badge variant={item.can_approve ? "destructive" : "success"}>approve: {yesNo(item.can_approve, "true", "false")}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">TTS State</h3>
-                    <div className="mt-3"><StatusList items={ttsRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad voz</h3>
-                    <div className="mt-3"><StatusList items={voicePrivacyRows} /></div>
-                    <div className="mt-3 grid gap-2">
-                      <SafetyLine>micrófono: disabled</SafetyLine>
-                      <SafetyLine>grabación: false</SafetyLine>
-                      <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
-                    </div>
-                  </article>
-                  <article className="border border-destructive/40 bg-destructive/10 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-destructive">Kill Switch voz</h3>
-                    <div className="mt-3 grid gap-2">
-                      <Badge variant={voiceSafety.kill_switch_visible ? "success" : "destructive"}>kill switch visible: {yesNo(voiceSafety.kill_switch_visible)}</Badge>
-                      <Badge variant={voiceKillSwitch.real_audio_to_stop ? "destructive" : "success"}>audio real que parar: {yesNo(voiceKillSwitch.real_audio_to_stop, "true", "false")}</Badge>
-                    </div>
-                    <p className="mt-3 font-mono-ui text-xs text-destructive/80">En esta PR no hay audio real que parar. Una integración futura deberá cortar escucha, TTS y ejecución gobernada.</p>
-                  </article>
-                </div>
-
+              <CardContent className="space-y-4">
+                <StatusList items={voiceRows} />
                 <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Wake Word Local Safe Flow</h3>
-                    <Badge variant="warning">typed preview / read-only</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="warning">Subtítulos preview</Badge>
+                    <Badge variant="success">sin TTS real</Badge>
+                    <Badge variant="success">sin STT real</Badge>
+                    <Badge variant="success">sin provider externo</Badge>
                   </div>
-                  <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-                    <div className="space-y-4">
-                      <StatusList items={wakeFlowStateRows} />
-                      <div className="border border-border/70 bg-background/35 p-3">
-                        <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Frases soportadas</p>
-                        <div className="mt-2 flex flex-wrap gap-2">{wakeSupportedPhrases.map((phrase) => <Badge key={phrase} variant="outline">{phrase}</Badge>)}</div>
-                      </div>
-                      <div className="border border-border/70 bg-background/35 p-3">
-                        <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">Stop phrases</p>
-                        <div className="mt-2 flex flex-wrap gap-2">{wakeStopPhrases.map((phrase) => <Badge key={phrase} variant="outline">{phrase}</Badge>)}</div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {[
-                          ["Mic hard-off", valueText(wakeModeExplanations.mic_hard_off, "Mic hard-off: no escucha nada.")],
-                          ["Wake-word-only", valueText(wakeModeExplanations.wake_word_only, "Wake-word-only: futuro modo donde solo detectaría frase.")],
-                          ["Command listening", valueText(wakeModeExplanations.command_listening, "Command listening: futura ventana corta después de wake.")],
-                          ["Push-to-talk", valueText(wakeModeExplanations.push_to_talk, "Push-to-talk: futuro modo manual.")],
-                          ["Typed preview", valueText(wakeModeExplanations.typed_preview, "Typed preview: modo actual seguro.")],
-                        ].map(([label, text]) => (
-                          <div key={label} className="border border-border/70 bg-background/35 p-3">
-                            <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">{label}</p>
-                            <p className="mt-1 font-mono-ui text-xs text-muted-foreground">{text}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid gap-3 lg:grid-cols-2">
-                        <div className="border border-border/70 bg-background/35 p-3">
-                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">David</p>
-                          <p className="mt-2 font-mono-ui text-sm text-foreground">{valueText(wakeParsePreview.input_example, "Hola Jarvis, revisa el estado del proyecto")}</p>
-                        </div>
-                        <div className="border border-border/70 bg-background/35 p-3">
-                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">JARVIS preview</p>
-                          <div className="mt-2"><StatusList items={wakeParseRows} /></div>
-                        </div>
-                      </div>
-                      <div className="grid gap-3 lg:grid-cols-2">
-                        <div className="border border-border/70 bg-background/35 p-3">
-                          <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Policy visible</p>
-                          <div className="mt-3 grid gap-2">
-                            <SafetyLine>Wake phrase is not permission.</SafetyLine>
-                            <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
-                            <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
-                            <SafetyLine>La wake phrase solo puede abrir una ventana de comando futura.</SafetyLine>
-                            <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
-                            <SafetyLine>Las acciones críticas requieren doble o triple confirmación.</SafetyLine>
-                          </div>
-                        </div>
-                        <div className="border border-border/70 bg-background/35 p-3">
-                          <p className="font-display text-xs uppercase tracking-[0.12em] text-warning">Approval policy</p>
-                          <div className="mt-3"><StatusList items={wakeApprovalRows} /></div>
-                        </div>
-                      </div>
-                      <div className="border border-success/40 bg-background/35 p-3">
-                        <p className="font-display text-xs uppercase tracking-[0.12em] text-success">Safety banner</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant={wakeFlowSafety.no_microphone_activation ? "success" : "destructive"}>no micrófono</Badge>
-                          <Badge variant={wakeFlowSafety.no_raw_audio_storage ? "success" : "destructive"}>no grabación</Badge>
-                          <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no STT</Badge>
-                          <Badge variant={wakeFlowSafety.no_external_tts ? "success" : "destructive"}>no TTS real</Badge>
-                          <Badge variant={wakeFlowSafety.no_external_stt ? "success" : "destructive"}>no provider externo</Badge>
-                          <Badge variant={wakeFlowSafety.no_background_listening ? "success" : "destructive"}>no background listener</Badge>
-                          <Badge variant={wakeFlowSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
-                          <Badge variant={wakeFlowSafety.no_auto_execute ? "success" : "destructive"}>no auto execute</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="mt-3 font-mono-ui text-sm text-foreground">{coreSubtitle}</p>
+                  <p className="mt-2 font-display text-xs text-warning">Subtítulos preview - sin TTS real, sin STT real, sin provider externo.</p>
                 </article>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Política wake word</h3>
-                    <div className="mt-3"><StatusList items={wakePolicyRows} /></div>
-                    <div className="mt-3 grid gap-2">
-                      <SafetyLine>Frases soportadas futuras: Hola Jarvis, Jarvis.</SafetyLine>
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                  <SafetyLine>micrófono: disabled</SafetyLine>
+                  <SafetyLine>grabación: false</SafetyLine>
+                  <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
+                  <SafetyLine>En esta PR no hay audio real que parar.</SafetyLine>
+                </div>
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Wake Word Local Safe Flow</h3>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <StatusList
+                      items={[
+                        ["micrófono hard-off", yesNo(wakeWordFlow.state?.microphone_hard_off, "true", "false")],
+                        ["wake runtime", yesNo(wakeWordFlow.state?.wake_runtime_enabled, "enabled", "disabled")],
+                        ["typed wake preview", yesNo(wakeWordFlow.state?.typed_wake_preview_enabled, "enabled", "disabled")],
+                        ["background listener", yesNo(wakeWordFlow.state?.background_listener_enabled, "enabled", "disabled")],
+                      ]}
+                    />
+                    <div className="grid gap-2">
+                      <SafetyLine>Wake phrase is not permission.</SafetyLine>
                       <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
                       <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
-                      <SafetyLine>Las acciones críticas requieren readback y confirmación fuerte.</SafetyLine>
+                      <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
                     </div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes</h3>
-                    <div className="mt-3"><StatusList items={voiceRelationshipRows} /></div>
-                    <div className="mt-3 grid gap-2">
-                      <SafetyLine>La voz puede preparar una intención futura.</SafetyLine>
-                      <SafetyLine>Si requiere aprobación, aparecerá en Approval Console.</SafetyLine>
-                      <SafetyLine>Hermes solo ejecuta después de approval válido.</SafetyLine>
-                      <SafetyLine>Frontend/voice no llama Hermes directamente.</SafetyLine>
-                    </div>
-                  </article>
-                </div>
+                  </div>
+                </article>
               </CardContent>
             </Card>
           </div>
         )}
 
         {activeTab === "vision" && (
-          <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+          <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -3240,60 +2254,17 @@ export default function JarvisCommandCenterPage() {
                 </div>
                 <CardDescription><span className="font-display text-warning">preview-only</span> · La cámara no graba por defecto. La visión solo se activa con permiso explícito.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">preview-only</Badge>
-                    <Badge variant={cameraVisionState.camera_enabled ? "destructive" : "success"}>cámara: {cameraVisionState.camera_enabled ? "enabled" : "off/disabled"}</Badge>
-                    <Badge variant={cameraVisionState.external_vision_provider_called ? "destructive" : "success"}>provider externo: {cameraVisionState.external_vision_provider_called ? "called" : "none/not_connected"}</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">La cámara no graba por defecto.</p>
-                  <p className="mt-1 font-mono-ui text-xs text-warning">La visión solo se activa con permiso explícito.</p>
-                </article>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
-                    <div className="mt-3"><StatusList items={cameraCurrentRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Privacidad</h3>
-                    <div className="mt-3"><StatusList items={cameraPrivacyRows} /></div>
-                  </article>
-                </div>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estados visuales</h3>
-                    <Badge variant="warning">preview / disabled / future gated</Badge>
-                  </div>
-                  <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
-                    {cameraVisionStates.map((item) => (
-                      <div key={item.state} className="border border-border/70 bg-background/40 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="font-display text-sm">{valueText(item.label, item.state)}</p>
-                            <p className="mt-1 font-mono-ui text-[0.68rem] text-muted-foreground">{item.state}</p>
-                          </div>
-                          <Badge variant={item.enabled === "future_gated" ? "warning" : item.enabled === "preview" ? "outline" : "success"}>{valueText(item.enabled)}</Badge>
-                        </div>
-                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(item.description)}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant="outline">risk: {valueText(item.risk)}</Badge>
-                          <Badge variant={item.can_execute ? "destructive" : "success"}>execute: {yesNo(item.can_execute, "true", "false")}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Scope policy</h3>
-                  <div className="mt-3"><StatusList items={cameraScopeRows} /></div>
-                </article>
+              <CardContent className="space-y-4">
+                <StatusList items={cameraRows} />
                 <div className="grid gap-2">
-                  <SafetyLine>La cámara no graba por defecto.</SafetyLine>
-                  <SafetyLine>No se captura imagen ni vídeo en esta PR.</SafetyLine>
-                  <SafetyLine>No se usa getUserMedia.</SafetyLine>
-                  <SafetyLine>No hay proveedor externo de visión.</SafetyLine>
-                  <SafetyLine>La visión futura requerirá permiso explícito y auditoría.</SafetyLine>
+                  <SafetyLine>no camera activation: {yesNo(cameraVisionPrivacy.no_camera_activation)}</SafetyLine>
+                  <SafetyLine>no getUserMedia: {yesNo(cameraVisionPrivacy.no_get_user_media)}</SafetyLine>
+                  <SafetyLine>no recording: {yesNo(cameraVisionPrivacy.no_recording)}</SafetyLine>
+                  <SafetyLine>no snapshot: {yesNo(cameraVisionPrivacy.no_snapshot_capture)}</SafetyLine>
+                  <SafetyLine>no image/video storage: {cameraVisionPrivacy.no_image_storage && cameraVisionPrivacy.no_video_storage ? "true" : "false"}</SafetyLine>
+                  <SafetyLine>explicit operator permission required: {yesNo(cameraVisionPrivacy.explicit_operator_permission_required)}</SafetyLine>
+                  <SafetyLine>visual indicator required: {yesNo(cameraVisionPrivacy.visual_indicator_required_when_camera_active)}</SafetyLine>
+                  <SafetyLine>audit required: {yesNo(cameraVisionPrivacy.audit_required_for_future_vision)}</SafetyLine>
                 </div>
               </CardContent>
             </Card>
@@ -3306,51 +2277,8 @@ export default function JarvisCommandCenterPage() {
                 </div>
                 <CardDescription><span className="font-display text-warning">preview-only</span> · Mobile es una interfaz, no un runtime. Mobile no llama a Hermes directamente.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">preview-only</Badge>
-                    <Badge variant={mobileCompanionState.mobile_runtime_enabled ? "destructive" : "success"}>runtime: {yesNo(mobileCompanionState.mobile_runtime_enabled, "enabled", "disabled")}</Badge>
-                    <Badge variant={mobileCompanionState.mobile_can_call_hermes_directly ? "destructive" : "success"}>Hermes directo: {yesNo(mobileCompanionState.mobile_can_call_hermes_directly, "allowed", "forbidden")}</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">Mobile es una interfaz, no un runtime.</p>
-                  <p className="mt-1 font-mono-ui text-xs text-warning">Mobile no llama a Hermes directamente.</p>
-                </article>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado actual</h3>
-                    <div className="mt-3"><StatusList items={mobileRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">PWA policy</h3>
-                    <div className="mt-3"><StatusList items={pwaRows} /></div>
-                  </article>
-                </div>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Vistas futuras</h3>
-                    <Badge variant="warning">no execute / no Hermes direct</Badge>
-                  </div>
-                  <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
-                    {mobileCompanionViews.map((view) => (
-                      <div key={view.id ?? view.name} className="border border-border/70 bg-background/40 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="font-display text-sm">{valueText(view.name)}</p>
-                          <Badge variant={statusVariant(valueText(view.status))}>{valueText(view.status)}</Badge>
-                        </div>
-                        <p className="mt-2 font-mono-ui text-xs text-muted-foreground">{valueText(view.notes)}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant={view.can_execute ? "destructive" : "success"}>no execute: {yesNo(!view.can_execute, "true", "false")}</Badge>
-                          <Badge variant={view.can_call_hermes ? "destructive" : "success"}>no Hermes direct: {yesNo(!view.can_call_hermes, "true", "false")}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-                  <div className="mt-3"><StatusList items={mobileSafetyRows} /></div>
-                </article>
+              <CardContent className="space-y-4">
+                <StatusList items={mobileRows} />
                 <div className="grid gap-2">
                   <SafetyLine>Mobile es una interfaz, no un runtime.</SafetyLine>
                   <SafetyLine>Mobile no llama a Hermes directamente.</SafetyLine>
@@ -3364,7 +2292,7 @@ export default function JarvisCommandCenterPage() {
         )}
 
         {activeTab === "finance" && (
-          <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+          <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -3374,23 +2302,7 @@ export default function JarvisCommandCenterPage() {
                 <CardDescription>Métricas financieras solo con evidencia.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">read-only</Badge>
-                    <Badge variant={financeSafety.no_money_movement ? "success" : "destructive"}>dinero: {financeSafety.no_money_movement ? "bloqueado" : "allowed"}</Badge>
-                    <Badge variant={financeSafety.no_stripe_live ? "success" : "destructive"}>Stripe live: {financeSafety.no_stripe_live ? "bloqueado" : "allowed"}</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">No fake metrics.</p>
-                  <p className="mt-1 font-mono-ui text-xs text-warning">Si no hay evidencia, mostrar unknown.</p>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Métricas</h3>
-                  <div className="mt-3"><StatusList items={financeRows} /></div>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Budget</h3>
-                  <div className="mt-3"><StatusList items={financeBudgetRows} /></div>
-                </article>
+                <StatusList items={financeRows} />
                 <div className="grid gap-2">
                   <SafetyLine>No fake metrics.</SafetyLine>
                   <SafetyLine>Si no hay evidencia, mostrar unknown.</SafetyLine>
@@ -3405,92 +2317,23 @@ export default function JarvisCommandCenterPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5 text-success" />
+                  <Workflow className="h-5 w-5 text-success" />
                   <CardTitle>Product Builder Adaptativo</CardTitle>
                 </div>
                 <CardDescription>Flujo visual de producto; sin deploy, Stripe ni revenue real.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">preview/read-only</Badge>
-                    <Badge variant={productBuilderState.product_generation_enabled ? "destructive" : "success"}>product generation: {yesNo(productBuilderState.product_generation_enabled, "enabled", "false")}</Badge>
-                    <Badge variant={productBuilderState.deploy_enabled ? "destructive" : "success"}>deploy: {yesNo(productBuilderState.deploy_enabled, "enabled", "false")}</Badge>
-                    <Badge variant={productBuilderState.stripe_enabled ? "destructive" : "success"}>Stripe: {yesNo(productBuilderState.stripe_enabled, "enabled", "false")}</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">No es un Template Builder.</p>
-                  <p className="mt-1 font-mono-ui text-xs text-warning">Si dos productos parecen clones, el builder ha fallado.</p>
-                </article>
-                <div className="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Estado</h3>
-                    <div className="mt-3"><StatusList items={productBuilderStateRows} /></div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Diferenciación</h3>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={productDifferentiation.no_template_clone ? "success" : "destructive"}>no template clone</Badge>
-                      <Badge variant={productDifferentiation.adaptive_builder_not_template_builder ? "success" : "destructive"}>adaptive builder</Badge>
-                      <Badge variant={productDifferentiation.each_product_needs_reason_to_exist ? "success" : "destructive"}>razón de existir</Badge>
-                      <Badge variant={productDifferentiation.each_product_needs_success_metric ? "success" : "destructive"}>success metric</Badge>
-                      <Badge variant={productDifferentiation.each_product_needs_monetization_logic ? "success" : "destructive"}>monetización</Badge>
-                      <Badge variant={productDifferentiation.cloned_products_are_failure ? "success" : "destructive"}>clones son fallo</Badge>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {productStages.map((stage) => (
+                    <div key={stage.name} className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-display text-xs uppercase tracking-[0.1em]">{stage.name}</p>
+                      <Badge className="mt-2" variant={statusVariant(valueText(stage.status))}>{valueText(stage.status)}</Badge>
                     </div>
-                    <div className="mt-3 grid gap-2">
-                      <SafetyLine>No es un Template Builder.</SafetyLine>
-                      <SafetyLine>Si dos productos parecen clones, el builder ha fallado.</SafetyLine>
-                      <SafetyLine>Cada producto necesita razón de existir, métrica y monetización.</SafetyLine>
-                    </div>
-                  </article>
+                  ))}
                 </div>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Stages</h3>
-                    <Badge variant="warning">preview / future-gated / disabled</Badge>
-                  </div>
-                  <div className="grid max-h-80 gap-2 overflow-auto md:grid-cols-2 xl:grid-cols-4">
-                    {productBuilderStages.map((stage) => {
-                      const stageStatus = valueText(stage.status).replace("_", "-");
-                      return (
-                        <div key={stage.name} className="border border-border/70 bg-background/35 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <p className="font-display text-xs uppercase tracking-[0.1em]">{stage.name}</p>
-                            <Badge variant={statusVariant(valueText(stage.status))}>{stageStatus}</Badge>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Badge variant={stage.can_execute ? "destructive" : "success"}>execute: {yesNo(stage.can_execute, "true", "false")}</Badge>
-                            <Badge variant={stage.requires_approval ? "warning" : "outline"}>approval: {valueText(stage.approval_level)}</Badge>
-                          </div>
-                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">evidencia: {valueText(stage.evidence_required)}</p>
-                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(stage.notes)}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </article>
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Monetización</h3>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={productMonetization.pricing_preview_only ? "success" : "destructive"}>pricing preview</Badge>
-                      <Badge variant={productMonetization.stripe_live_requires_strong_approval ? "warning" : "destructive"}>Stripe strong approval</Badge>
-                      <Badge variant={productMonetization.checkout_requires_strong_approval ? "warning" : "destructive"}>checkout strong approval</Badge>
-                      <Badge variant={productMonetization.real_revenue_requires_confirmation ? "warning" : "destructive"}>revenue confirmation</Badge>
-                      <Badge variant={productMonetization.no_fake_revenue ? "success" : "destructive"}>no fake revenue</Badge>
-                    </div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Safety</h3>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={productBuilderSafety.no_deploy ? "success" : "destructive"}>no deploy</Badge>
-                      <Badge variant={productBuilderSafety.no_publish ? "success" : "destructive"}>no publish</Badge>
-                      <Badge variant={productBuilderSafety.no_money_movement ? "success" : "destructive"}>no money</Badge>
-                      <Badge variant={productBuilderSafety.no_external_network ? "success" : "destructive"}>no external network</Badge>
-                      <Badge variant={productBuilderSafety.no_hermes_dispatch ? "success" : "destructive"}>no Hermes dispatch</Badge>
-                    </div>
-                  </article>
-                </div>
-                <div className="grid gap-2 lg:grid-cols-3">
+                <div className="grid gap-2">
+                  <SafetyLine>No es un Template Builder.</SafetyLine>
+                  <SafetyLine>Si dos productos parecen clones, el builder ha fallado.</SafetyLine>
                   <SafetyLine>Deploy real requiere aprobación fuerte.</SafetyLine>
                   <SafetyLine>Stripe/checkout real requiere aprobación fuerte.</SafetyLine>
                   <SafetyLine>Revenue real requiere confirmación.</SafetyLine>
@@ -3501,7 +2344,7 @@ export default function JarvisCommandCenterPage() {
         )}
 
         {activeTab === "pilot" && (
-          <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -3510,189 +2353,105 @@ export default function JarvisCommandCenterPage() {
                 </div>
                 <CardDescription>Pilot read-only para /jarvis; El dashboard mira, no toca.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <article className="border border-warning/40 bg-warning/10 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">Pilot read-only</Badge>
-                    <Badge variant={frontendPilotState.frontend_can_execute ? "destructive" : "success"}>No execute.</Badge>
-                    <Badge variant={frontendPilotState.frontend_can_activate_sensors ? "destructive" : "success"}>No sensores.</Badge>
-                    <Badge variant={frontendPilotState.frontend_can_move_money ? "destructive" : "success"}>no money</Badge>
-                  </div>
-                  <p className="mt-3 font-display text-sm text-warning">El dashboard mira, no toca.</p>
-                  <p className="mt-1 font-mono-ui text-xs text-warning">No POST/PUT/DELETE.</p>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Ruta / endpoint</h3>
-                  <div className="mt-3"><StatusList items={frontendPilotRows} /></div>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Readiness checks</h3>
-                    <Badge variant="warning">visible modules + safety</Badge>
-                  </div>
-                  <div className="grid max-h-72 gap-2 overflow-auto md:grid-cols-2">
-                    {frontendReadinessChecks.map((check) => (
-                      <div key={check.name} className="border border-border/70 bg-background/40 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
-                          <Badge variant={check.status === "passed" ? "success" : statusVariant(check.status)}>{valueText(check.status)}</Badge>
-                        </div>
-                        <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.evidence)}</p>
-                        <p className="mt-1 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.notes)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Hardening notes</h3>
-                  <div className="mt-3"><StatusList items={frontendHardeningRows} /></div>
-                  <p className="mt-3 font-mono-ui text-xs text-warning">Dependency hardening queda para una PR separada.</p>
-                </article>
-                <article className="border border-border/70 bg-background/35 p-4">
-                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Pilot limitations</h3>
-                  <div className="mt-3 flex flex-wrap gap-2">{frontendLimitations.map((limitation) => <Badge key={limitation} variant="outline">{limitation}</Badge>)}</div>
-                </article>
+              <CardContent className="space-y-4">
+                <StatusList
+                  items={[
+                    ["mode", valueText(frontendPilot.state?.mode, "read_only_pilot")],
+                    ["route", valueText(frontendPilot.state?.dashboard_route, "/jarvis")],
+                    ["endpoint", valueText(frontendPilot.state?.backend_status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
+                    ["execute", yesNo(frontendPilot.state?.frontend_can_execute, "true", "false")],
+                    ["sensors", yesNo(frontendPilot.state?.frontend_can_activate_sensors, "true", "false")],
+                    ["npm audit vulnerabilities observed", valueText(frontendPilot.hardening_notes?.npm_audit_vulnerabilities_observed)],
+                    ["full pytest required before merge", yesNo(frontendPilot.hardening_notes?.full_pytest_required_before_merge, "true", "false")],
+                  ]}
+                />
                 <div className="grid gap-2">
                   <SafetyLine>Pilot read-only</SafetyLine>
                   <SafetyLine>El dashboard mira, no toca.</SafetyLine>
                   <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
                   <SafetyLine>No execute.</SafetyLine>
                   <SafetyLine>No sensores.</SafetyLine>
-                  <SafetyLine>No fake metrics.</SafetyLine>
                   <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="grid gap-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Workflow className="h-5 w-5 text-success" />
-                    <CardTitle>Control de Misión</CardTitle>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                  <CardTitle>Checklist de seguridad</CardTitle>
+                </div>
+                <CardDescription>Visual Command Center Pilot checks.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(visualPilot.read_only_checks ?? []).map((check) => (
+                    <div key={check.name} className="border border-border/70 bg-background/35 p-3">
+                      <p className="font-mono-ui text-xs text-foreground">{check.name}</p>
+                      <Badge className="mt-2" variant={check.status === "passed" ? "success" : statusVariant(valueText(check.status))}>{valueText(check.status)}</Badge>
+                    </div>
+                  ))}
+                </div>
+                <article className="border border-warning/40 bg-warning/10 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Safety Banner</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {missionSafetyLabels.map(([label, key]) => <Badge key={key} variant={missionSafety[key] ? "success" : "outline"}>{label}</Badge>)}
                   </div>
-                  <CardDescription>Escribe o dicta una orden para que JARVIS prepare una misión. En esta fase no se ejecuta nada.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <article className="border border-warning/40 bg-warning/10 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="warning">preview-only</Badge>
-                      <Badge variant={missionState.execution_enabled ? "destructive" : "success"}>execution: {yesNo(missionState.execution_enabled, "enabled", "false")}</Badge>
-                      <Badge variant={missionState.hermes_dispatch_enabled ? "destructive" : "success"}>Hermes dispatch: {yesNo(missionState.hermes_dispatch_enabled, "enabled", "false")}</Badge>
-                    </div>
-                    <p className="mt-3 font-display text-sm text-warning">Escribe o dicta una orden para que JARVIS prepare una misión.</p>
-                    <p className="mt-1 font-mono-ui text-xs text-warning">En esta fase no se ejecuta nada.</p>
-                  </article>
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    <StatusList items={missionStateRows} />
-                    <StatusList items={supportedInputRows} />
-                  </div>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Conversation Preview</h3>
-                      <Badge variant="warning">assistant: {valueText(missionConversation.assistant_status, "preview")}</Badge>
-                    </div>
-                    <p className="mb-3 font-display text-xs text-warning">Preview conversation - no provider call, no memory write, no execution.</p>
-                    <div className="grid gap-3">
-                      {missionMessages.map((message, index) => (
-                        <div key={message.speaker + "-" + index} className="border border-border/70 bg-background/40 p-3">
-                          <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">{valueText(message.speaker)}</p>
-                          <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(message.content)}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3"><StatusList items={conversationPreviewRows} /></div>
-                  </article>
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <article className="border border-border/70 bg-background/35 p-4">
-                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Intent / Risk Preview</h3>
-                      <div className="mt-3"><StatusList items={missionIntentRows} /></div>
-                    </article>
-                    <article className="border border-border/70 bg-background/35 p-4">
-                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Mission Lifecycle</h3>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {missionLifecycleDisplay.map(([step, description]) => (
-                          <div key={step} className="border border-border/70 bg-background/40 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-display text-xs uppercase tracking-[0.12em]">{step}</span>
-                              <Badge variant="outline">preview</Badge>
-                            </div>
-                            <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{description}</p>
-                          </div>
-                        ))}
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Conversation Preview</h3>
+                  <p className="mb-3 font-display text-xs text-warning">Preview conversation - no provider call, no memory write, no execution.</p>
+                  <div className="grid gap-3">
+                    {(missionConversation.messages ?? []).map((message, index) => (
+                      <div key={message.speaker + "-" + index} className="border border-border/70 bg-background/40 p-3">
+                        <p className="font-display text-xs uppercase tracking-[0.12em] text-muted-foreground">{valueText(message.speaker)}</p>
+                        <p className="mt-1 font-mono-ui text-xs text-foreground">{valueText(message.content)}</p>
                       </div>
-                    </article>
-                  </div>
-                  <article className="border border-warning/40 bg-warning/10 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Safety Banner</h3>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {missionSafetyLabels.map(([label, key]) => <Badge key={key} variant={missionSafety[key] ? "success" : "outline"}>{label}</Badge>)}
-                    </div>
-                  </article>
-                  <article className="border border-border/70 bg-background/35 p-4">
-                    <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes Panel</h3>
-                    <div className="mt-3 grid gap-2">
-                      <SafetyLine>Si una misión necesita algo sensible, aparecerá en Approval Console.</SafetyLine>
-                      <SafetyLine>Hermes solo ejecutará después de approval válido.</SafetyLine>
-                      <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.can_do)}</p>
-                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.cannot_do_yet)}</p>
-                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.future_next_step)}</p>
-                      <p className="font-mono-ui text-xs text-muted-foreground">{valueText(missionGuidance.sensitive_requires_approval)}</p>
-                    </div>
-                  </article>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Cpu className="h-5 w-5 text-muted-foreground" />
-                    <CardTitle>Live Timeline / Audit Preview</CardTitle>
-                  </div>
-                  <CardDescription>Eventos reales de lectura del backend; no eventos de ejecución.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ol className="max-h-72 space-y-3 overflow-auto pr-1">
-                    {timeline.map((event) => (
-                      <li key={event.source + "-" + event.event} className="grid grid-cols-[20px_1fr] gap-3">
-                        <Square className="mt-0.5 h-3 w-3 text-warning" />
-                        <span className="font-mono-ui text-xs text-foreground">{valueText(event.event)} · {valueText(event.status)} · {valueText(event.source)}</span>
-                      </li>
                     ))}
-                  </ol>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-warning" />
-                    <CardTitle>Separación JARVIS / Hermes</CardTitle>
                   </div>
-                  <CardDescription>Contrato visible de esta shell local.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-3">
-                  <div className="border border-border/70 bg-background/35 p-4">
-                    <BadgeCheck className="mb-3 h-5 w-5 text-success" />
-                    <p className="font-mono-ui text-sm">JARVIS gobierna intención, riesgo, policy, approval y auditoría.</p>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Intent / Risk Preview</h3>
+                  <StatusList
+                    items={[
+                      ["intención detectada", `${valueText(missionIntent.detected_intent)}/preview`],
+                      ["confidence", valueText(missionIntent.confidence)],
+                      ["mission type", valueText(missionIntent.mission_type)],
+                      ["riesgo", valueText(missionIntent.risk_level)],
+                      ["approval", valueText(missionIntent.approval_level)],
+                    ]}
+                  />
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Mission Lifecycle</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {missionLifecycleDisplay.map(([step, description]) => (
+                      <div key={step} className="border border-border/70 bg-background/40 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-display text-xs uppercase tracking-[0.12em]">{step}</span>
+                          <Badge variant="outline">preview</Badge>
+                        </div>
+                        <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">{description}</p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="border border-border/70 bg-background/35 p-4">
-                    <TerminalSquare className="mb-3 h-5 w-5 text-muted-foreground" />
-                    <p className="font-mono-ui text-sm">Hermes ejecuta solo cuando JARVIS entrega gates válidos.</p>
+                </article>
+                <article className="border border-border/70 bg-background/35 p-4">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em]">Approval Console / Hermes Panel</h3>
+                  <div className="mt-3 grid gap-2">
+                    <SafetyLine>Si una misión necesita algo sensible, aparecerá en Approval Console.</SafetyLine>
+                    <SafetyLine>Hermes solo ejecutará después de approval válido.</SafetyLine>
+                    <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
                   </div>
-                  <div className="border border-border/70 bg-background/35 p-4">
-                    <ZapOff className="mb-3 h-5 w-5 text-warning" />
-                    <p className="font-mono-ui text-sm">Esta pantalla no llama a Hermes, no aprueba y no ejecuta.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </article>
+              </CardContent>
+            </Card>
           </div>
         )}
       </section>
+        </div>
+      </details>
     </div>
   );
 }
