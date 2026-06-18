@@ -9,10 +9,20 @@ PAGE = Path("web/src/pages/JarvisCommandCenterPage.tsx")
 APP = Path("web/src/App.tsx")
 API = Path("web/src/lib/api.ts")
 VITE_CONFIG = Path("web/vite.config.ts")
+JARVIS_COMPONENT_DIR = Path("web/src/components/jarvis")
+JARVIS_HOOK_DIR = Path("web/src/hooks/jarvis")
 
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _jarvis_sources() -> str:
+    paths = [PAGE]
+    paths.extend(sorted(JARVIS_COMPONENT_DIR.glob("*.ts")))
+    paths.extend(sorted(JARVIS_COMPONENT_DIR.glob("*.tsx")))
+    paths.extend(sorted(JARVIS_HOOK_DIR.glob("*.ts")))
+    return "\n".join(_read(path) for path in paths)
 
 
 def test_jarvis_dashboard_shell_file_and_local_route_exist():
@@ -27,7 +37,7 @@ def test_jarvis_dashboard_shell_file_and_local_route_exist():
 
 
 def test_jarvis_dashboard_shell_contains_required_read_only_content():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Centro de Mando JARVIS",
@@ -45,8 +55,8 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "No tool call",
         "No file write",
         "No network",
-        "No voice recording",
-        "No camera capture",
+        "No hidden voice recording",
+        "No camera auto capture",
         "Wake phrase is not permission",
         "Si una misión necesita algo sensible, aparecerá en Approval Console",
         "Hermes solo ejecutará después de approval válido",
@@ -84,13 +94,27 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "Nivel 5",
         "Readback / confirmación fuerte",
         "Cámara / Visión",
-        "No se captura imagen ni vídeo en esta PR",
-        "No se usa getUserMedia",
+        "Preview local con botón explícito",
+        "No se sube vídeo al backend",
         "No hay proveedor externo de visión",
         "La visión futura requerirá permiso explícito y auditoría",
         "Mobile no ejecuta acciones",
         "Approvals reales desde móvil quedan future-gated",
         "No se guardan credenciales ni tokens",
+        "Sensor Ledger",
+        "metadata-only",
+        "No guarda audio bruto, frames, vídeo, imágenes, tokens ni credenciales",
+        "requested / started / stopped / cancelled / failed / deleted / retention_updated",
+        "Sensores requieren opt-in, indicador visible, stop/cancel y auditoría",
+        "Event Stream Health",
+        "schema_version / event_id / heartbeat",
+        "El stream no ejecuta comandos",
+        "No transporta secretos, audio bruto ni frames",
+        "Heartbeat y snapshot son seguros ante desconexión",
+        "Policy Status",
+        "Wake phrase never approves",
+        "Frontend never executes Hermes directly",
+        "Dangerous execution requires ApprovalGateway, risk classification, audit and rollback/stop plan",
     ):
         assert text in content
 
@@ -120,7 +144,7 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
 
 
 def test_jarvis_dashboard_shell_contains_voice_core_tts_preview_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Núcleo de Voz JARVIS",
@@ -151,7 +175,7 @@ def test_jarvis_dashboard_shell_contains_voice_core_tts_preview_contract():
         "micrófono: manual bajo botón explícito",
         "conversation_active",
         "wake_listening",
-        "recording=false",
+        "raw recorder",
         "grabación: false",
         "audio bruto almacenado: false",
         "proveedor de navegador puede variar",
@@ -169,7 +193,7 @@ def test_jarvis_dashboard_shell_contains_voice_core_tts_preview_contract():
 
 
 def test_jarvis_dashboard_shell_contains_wake_word_local_safe_flow_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Wake Word Local Safe Flow",
@@ -208,15 +232,15 @@ def test_jarvis_dashboard_shell_contains_wake_word_local_safe_flow_contract():
 
 
 def test_jarvis_dashboard_shell_uses_only_browser_speech_api_without_raw_capture():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for required in (
         "SpeechRecognition",
         "webkitSpeechRecognition",
         "speechSynthesis",
         "SpeechSynthesisUtterance",
-        "onBegin={beginLocalVoiceLoop}",
-        "onCancel={cancelLocalVoiceLoop}",
+        "onBegin={localVoice.beginLocalVoiceLoop}",
+        "onCancel={localVoice.cancelLocalVoiceLoop}",
         "queueNextLocalVoiceTurn",
         "selectPreferredSpanishVoice",
         "conversationActive",
@@ -226,21 +250,12 @@ def test_jarvis_dashboard_shell_uses_only_browser_speech_api_without_raw_capture
         assert required in content
 
     for forbidden in (
-        "navigator.mediaDevices",
-        ".getUserMedia(",
-        "getUserMedia(",
-        "await getUserMedia",
-        "mediaDevices",
-        "MediaStream",
-        "MediaRecorder",
         "AudioContext",
         "webkitAudioContext",
         "navigator.permissions",
         "recordedChunks",
         "startListening",
         "stopListening",
-        "startRecording",
-        "stopRecording",
         "recordAudio",
         "listenForWakeWord",
         "wakeWordListener",
@@ -248,8 +263,6 @@ def test_jarvis_dashboard_shell_uses_only_browser_speech_api_without_raw_capture
         "captureFrame",
         "takeSnapshot",
         "saveSnapshot",
-        "startCamera",
-        "stopCamera",
         "streamCamera",
         "analyzeVision",
         "analyzeImage",
@@ -264,11 +277,50 @@ def test_jarvis_dashboard_shell_uses_only_browser_speech_api_without_raw_capture
     ):
         assert forbidden not in content
 
-    assert "No se usa getUserMedia." in content
+    sensor_hooks = _read(JARVIS_HOOK_DIR / "useJarvisCameraControl.ts") + _read(JARVIS_HOOK_DIR / "useJarvisAudioRecorder.ts")
+    page_and_shell = _read(PAGE) + _read(JARVIS_COMPONENT_DIR / "JarvisPresenceShell.tsx")
+    assert "navigator.mediaDevices.getUserMedia" in sensor_hooks
+    assert "MediaRecorder" in sensor_hooks
+    assert "raw_audio_sent_to_backend: false" in sensor_hooks
+    assert ".getUserMedia(" not in page_and_shell
+    assert "new MediaRecorder" not in page_and_shell
+
+
+def test_jarvis_local_voice_loop_has_conversational_brain_not_transcript_echo():
+    content = _read(JARVIS_COMPONENT_DIR / "utils.ts") + _read(JARVIS_HOOK_DIR / "useLocalVoiceLoop.ts")
+    smart_bar = _read(JARVIS_COMPONENT_DIR / "JarvisSmartBar.tsx")
+
+    for text in (
+        "buildLocalJarvisResponse",
+        "Sí, David. Te escucho.",
+        "Ahora puedo escucharte, responder en local",
+        "esa misión",
+        "Puedo preparar ${noun} como preview",
+        "No puedo hacer eso, David. Las credenciales y secretos están protegidos.",
+        "No lo ejecutaré ni lo aprobaré por voz.",
+        "Wake phrase nunca aprueba ni ejecuta.",
+        "intent_detected",
+        "risk_level",
+        "requires_approval",
+        "can_prepare_preview",
+        "cannot_execute_reason",
+        "suggested_next_action",
+    ):
+        assert text in content or text in smart_bar
+
+    for forbidden in (
+        'Te escuché: "${normalized}"',
+        "he escuchado lo que has dicho",
+        "solo repite",
+        "dispatchHermes",
+        '"/execute"',
+        "/execute",
+    ):
+        assert forbidden not in content
 
 
 def test_jarvis_dashboard_shell_contains_camera_vision_privacy_panel_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Cámara / Visión",
@@ -278,13 +330,23 @@ def test_jarvis_dashboard_shell_contains_camera_vision_privacy_panel_contract():
         "Estado actual",
         "permiso solicitado",
         "recording",
+        "Grabar vídeo",
+        "Stop vídeo",
+        "Descargar vídeo",
+        "Borrar vídeo",
+        "REC local",
+        "El navegador no soporta grabación de vídeo local.",
+        "browser-sensor-ledger-overlay",
+        "recent_sensor_events",
+        "backend_ingestion_enabled: false",
+        "no_video_frames: true",
         "streaming",
         "snapshot",
         "vision analysis",
         "provider externo",
         "Privacidad",
-        "no camera activation",
-        "no getUserMedia",
+        "no camera activation on load",
+        "manual getUserMedia only",
         "no recording",
         "no snapshot",
         "no image/video storage",
@@ -298,16 +360,18 @@ def test_jarvis_dashboard_shell_contains_camera_vision_privacy_panel_contract():
         "grabación desactivada",
         "almacenamiento desactivado",
         "kill switch",
-        "No se captura imagen ni vídeo en esta PR.",
-        "No se usa getUserMedia.",
+        "Botón explícito, permiso del navegador e indicador visible.",
+        "No se captura snapshot, no se almacena vídeo y no se sube streaming.",
+        "La grabación de vídeo es local, descargable y borrable.",
+        "No se sube vídeo al backend.",
         "No hay proveedor externo de visión.",
-        "La visión futura requerirá permiso explícito y auditoría.",
+        "Stop corta tracks locales",
     ):
         assert text in content
 
 
 def test_jarvis_dashboard_shell_contains_mobile_companion_preview_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Mobile Companion",
@@ -347,7 +411,7 @@ def test_jarvis_dashboard_shell_contains_mobile_companion_preview_contract():
 
 
 def test_jarvis_dashboard_shell_contains_product_finance_pilot_hardening_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Finance / ROI",
@@ -400,7 +464,7 @@ def test_jarvis_dashboard_shell_contains_product_finance_pilot_hardening_contrac
 
 
 def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Visual Command Center Pilot",
@@ -436,7 +500,8 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
         "Kill Switch",
         "no_post_put_delete",
         "no_execute_route",
-        "no_get_user_media",
+        "manual_get_user_media_only",
+        "manual_media_recorder_only",
         "no_money_movement",
         "no_fake_metrics",
         "unknown",
@@ -467,9 +532,6 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
         'method: "DELETE"',
         '"/execute"',
         "/execute",
-        "getUserMedia(",
-        ".getUserMedia(",
-        "MediaRecorder",
         "checkout.sessions.create",
         "createCheckout",
         "paymentIntent",
@@ -480,13 +542,14 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
 
 
 def test_jarvis_dashboard_shell_contains_presence_ui_local_system_contract():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for text in (
         "Presence UI",
         "Local System Contract",
         "JARVIS Presence UI + Local System Contract",
         "reactor/orbe cinematográfico",
+        "orbe 3D real / HUD cinematográfico",
         "partículas",
         "HUD futurista",
         "JARVIS runtime/daemon local es el sistema",
@@ -494,7 +557,7 @@ def test_jarvis_dashboard_shell_contains_presence_ui_local_system_contract():
         "móvil y VPS serán clientes/puentes futuros",
         "frontend no ejecuta directamente Hermes",
         "voz local controlada disponible en esta PR",
-        "cámara real vendrá en PRs posteriores",
+        "cámara preview y grabación local bajo botón explícito",
         "idle/calmado",
         "escuchando",
         "transcribiendo",
@@ -507,19 +570,97 @@ def test_jarvis_dashboard_shell_contains_presence_ui_local_system_contract():
         "respuesta temporal local controlada",
         "reactor de presencia",
         "Historial plegado / folded history",
-        "camera placeholder",
-        "Camera Placeholder",
-        "movible/ampliable",
+        "camera preview",
+        "Preview local",
+        "raw audio recorder",
         'data-testid="jarvis-smart-bar"',
-        'data-testid="jarvis-camera-placeholder"',
+        'data-testid="jarvis-camera-preview-panel"',
+        'data-testid="jarvis-local-audio-recorder"',
         'data-testid="jarvis-folded-history"',
         'data-testid="jarvis-local-system-contract"',
     ):
         assert text in content
 
 
+def test_jarvis_dashboard_shell_contains_phase_2_cinematic_orb_and_fallback_contract():
+    content = _jarvis_sources()
+    orb_source = _read(JARVIS_COMPONENT_DIR / "JarvisOrb3D.tsx")
+
+    for text in (
+        'data-testid="jarvis-cinematic-orb-hud"',
+        'data-testid="jarvis-holographic-radial-marks"',
+        'data-testid="jarvis-state-wave-rings"',
+        'data-testid="jarvis-orb-webgl-fallback"',
+        "reactor/orbe cinematográfico WebGL con bloom, profundidad, partículas, anillos y HUD futurista",
+        "fallback sin WebGL",
+        "fallback si canvas falla",
+        "FPS budget",
+        "particle budget",
+        "power save",
+        "idle wake_listening listening transcribing thinking speaking alert error stopped executing",
+        "Fallback visual seguro sin WebGL",
+        "orbe 3D real / HUD cinematográfico",
+        "marcas holográficas",
+        "partículas orbitando",
+        "HUD agresivo futurista",
+    ):
+        assert text in content
+
+    for state in (
+        "idle",
+        "wake_listening",
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "alert",
+        "error",
+        "stopped",
+        "executing",
+    ):
+        assert state in orb_source
+
+    for performance_marker in (
+        "targetFrameMs",
+        "particleBudget",
+        "prefers-reduced-motion",
+        "webglcontextlost",
+        "powerPreference",
+        "maxParticles",
+    ):
+        assert performance_marker in orb_source
+
+
+def test_phase_2_orb_does_not_add_sensor_or_execution_apis():
+    orb_source = _read(JARVIS_COMPONENT_DIR / "JarvisOrb3D.tsx")
+    shell_source = _read(JARVIS_COMPONENT_DIR / "JarvisPresenceShell.tsx")
+
+    for forbidden in (
+        "navigator.mediaDevices",
+        ".getUserMedia(",
+        "getUserMedia(",
+        "MediaRecorder",
+        "AudioContext",
+        "webkitAudioContext",
+        "new EventSource",
+        "fetch(",
+        'method: "POST"',
+        'method: "PUT"',
+        'method: "DELETE"',
+        '"/execute"',
+        "/execute",
+        "HermesRuntimeAdapter",
+        "AIAgent",
+    ):
+        assert forbidden not in orb_source
+
+    assert "hermesRuntime.active_execution === true" in shell_source
+    assert "latestWakeEvent?.payload?.wake_runtime_enabled === true" in shell_source
+    assert "approvalsPending" in shell_source
+
+
 def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
-    content = _read(PAGE)
+    content = _jarvis_sources()
     api_source = _read(API)
 
     assert "api.getJarvisDashboardStatus()" in content
@@ -563,7 +704,7 @@ def test_jarvis_dashboard_shell_does_not_call_hermes_or_runtime_from_frontend():
 
 
 def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
-    content = _read(PAGE)
+    content = _read(JARVIS_COMPONENT_DIR / "JarvisDebugDrawer.tsx")
 
     for required in (
         "Control de Misión",
@@ -593,7 +734,7 @@ def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
 
 
 def test_approval_controls_are_preview_only_and_not_functional():
-    content = _read(PAGE)
+    content = _jarvis_sources()
 
     for label in (
         "Aprobar",
@@ -605,7 +746,7 @@ def test_approval_controls_are_preview_only_and_not_functional():
     ):
         assert label in content
 
-    assert "onClick={() => setActiveTab(tab.id)}" in content
+    assert "onClick={() => onTabChange(tab.id)}" in content
     for forbidden in (
         "onClick={approve",
         "onClick={reject",

@@ -89,6 +89,24 @@ Piezas relevantes ya documentadas:
 
 - `PolicyEngine` como límite de decisión antes de ejecución.
 - `ApprovalGateway` como vía obligatoria para acciones sensibles.
+- Sensor Ledger metadata-only local para `camera`, `recording`, `wake`,
+  `voice_session`, `tts` y `stt`, expuesto solo como read model desde
+  `/mark-3/dashboard/status`; no guarda audio bruto, frames ni secretos.
+- Event stream de dashboard robusto con `schema_version`, `event_id`,
+  `created_at`, `risk_level`, payload seguro y heartbeat en
+  `/mark-3/dashboard/events` y `/mark-3/dashboard/events/stream`; no ejecuta.
+- Local Doctor ampliado con backend, frontend esperado `/jarvis`, stream,
+  Hermes, deps opcionales, Python/plataforma/proceso, puertos esperados y
+  capacidades browser-only marcadas `client_side_unknown`, sin activar sensores.
+- Policy Status read-only visible: JARVIS gobierna, Hermes ejecuta, frontend no
+  ejecuta Hermes directamente, wake phrase nunca aprueba, sensores requieren
+  opt-in y ejecución peligrosa requiere `ApprovalGateway` + riesgo + auditoría +
+  rollback/stop.
+- Orbe 3D/HUD de `/jarvis` reforzado en WebGL manual: partículas orbitando,
+  anillos radiales, marcas holográficas, profundidad, glow/bloom simulado,
+  estados visuales `idle`/`wake_listening`/`listening`/`transcribing`/
+  `thinking`/`speaking`/`alert`/`error`/`stopped`/`executing`, performance budget
+  y fallback visible sin WebGL/canvas.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.
@@ -1502,6 +1520,31 @@ Frontend `/jarvis`:
   anillos, particulas y HUD; `alerta/intenso/error` empujan acentos
   naranja/rojo.
 
+Conversational Brain Bridge en `/jarvis`:
+
+- el fallback local ya no hace eco de la transcripcion;
+- responde preguntas simples como `¿Me escuchas?` o `¿Qué puedes hacer ahora?`;
+- prepara previews de misión/tarea/activo sin ejecutar;
+- bloquea credenciales/secretos y declara approval para acciones sensibles;
+- muestra `intent_detected`, `risk_level`, `requires_approval`,
+  `can_prepare_preview`, `cannot_execute_reason` y
+  `suggested_next_action` en detalle plegado;
+- no llama LLM externo ni Hermes; la ruta futura debe pasar por
+  ApprovalGateway, risk, audit y rollback/stop.
+
+Camara y video local opt-in:
+
+- preview de camara con `getUserMedia` solo tras boton explicito;
+- grabacion de video con `MediaRecorder` solo tras boton `Grabar video`;
+- indicador visible `REC local`, stop, descarga de blob local y borrado con
+  revocacion de URL;
+- no graba al cargar, no sube video al backend, no hace streaming externo, no
+  captura snapshot automatico y no analiza personas/identidad;
+- read model/event stream declaran `browser_local_video_recorder` inactivo por
+  defecto y metadata-only;
+- el event stream puede superponer `sensor_ledger_state` local con metadata de
+  sesiones del navegador, sin POST de media al backend.
+
 Contrato de wake futuro:
 
 - `wake_listening` significa escucha minima para activacion, sin grabacion ni
@@ -1525,9 +1568,10 @@ No implementa:
 - POST/PUT/DELETE desde `/jarvis`;
 - endpoint `/execute`;
 - subida o almacenamiento de audio bruto;
-- `getUserMedia`, `MediaRecorder` o `AudioContext` para capturar audio bruto;
+- `AudioContext` para capturar audio bruto;
+- ejecucion, streaming externo, snapshot automatico o analisis de vision;
 - dinero, deploy, email, credenciales, Stripe, produccion;
-- camara real.
+- camara autonoma o vision real.
 
 Cómo probar:
 

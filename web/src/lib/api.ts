@@ -587,8 +587,13 @@ export interface JarvisCameraVision {
     mode?: string;
     camera_enabled?: boolean;
     camera_permission_requested?: boolean;
-    preview_enabled?: boolean;
+    preview_enabled?: boolean | string;
     recording?: boolean;
+    video_recording_available?: string;
+    video_recording_active?: boolean;
+    video_recording_permission_requested?: boolean;
+    video_recording_blob_ready?: boolean;
+    raw_video_sent_to_backend?: boolean;
     streaming?: boolean;
     snapshot_capture_enabled?: boolean;
     vision_analysis_enabled?: boolean;
@@ -607,6 +612,7 @@ export interface JarvisCameraVision {
     future_analysis_must_not_infer_sensitive_identity?: boolean;
     future_analysis_must_not_store_without_permission?: boolean;
   };
+  video_recorder?: Record<string, string | boolean>;
   timeline?: JarvisDashboardTimelineEvent[];
   camera_state?: string;
   preview_state?: string;
@@ -757,6 +763,7 @@ export interface JarvisFrontendPilot {
     frontend_can_move_money?: boolean;
     frontend_can_deploy?: boolean;
     frontend_can_send_email?: boolean;
+    sensor_activation_scope?: string;
   };
   readiness_checks?: JarvisFrontendPilotReadinessCheck[];
   hardening_notes?: {
@@ -808,6 +815,8 @@ export interface JarvisVisualCommandCenterPilot {
     voice_real_enabled?: boolean;
     browser_local_voice_loop_enabled?: boolean;
     camera_real_enabled?: boolean;
+    raw_audio_recording_enabled?: boolean;
+    vision_analysis_enabled?: boolean;
     mobile_runtime_enabled?: boolean;
     money_enabled?: boolean;
     deploy_enabled?: boolean;
@@ -850,10 +859,16 @@ export interface JarvisLocalSystemContract {
   frontend_is_runtime?: boolean;
   frontend_can_activate_real_voice?: boolean;
   frontend_can_activate_real_camera?: boolean;
+  frontend_can_record_raw_audio_locally?: boolean;
+  frontend_can_record_video_locally?: boolean;
   mobile_and_vps_are_future_clients_or_bridges?: boolean;
   real_voice_camera_in_future_prs?: boolean;
   real_browser_voice_loop_in_this_pr?: boolean;
+  real_browser_camera_preview_in_this_pr?: boolean;
+  real_browser_raw_audio_recorder_in_this_pr?: boolean;
+  real_browser_video_recorder_in_this_pr?: boolean;
   real_camera_in_future_prs?: boolean;
+  real_vision_analysis_in_future_prs?: boolean;
   jarvis_governs?: boolean;
   hermes_executes?: boolean;
   no_duplicate_hermes_runtime?: boolean;
@@ -862,6 +877,7 @@ export interface JarvisLocalSystemContract {
     central_core_states?: string[];
     smart_bar?: string;
     camera_placeholder?: string;
+    raw_audio_recorder?: string;
     folded_history?: string;
   };
   future_bridges?: {
@@ -873,6 +889,89 @@ export interface JarvisLocalSystemContract {
   safety?: Record<string, boolean>;
   source_endpoint?: string;
   preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisRawAudioRecording {
+  state?: {
+    mode?: string;
+    available?: string | boolean;
+    recording_active?: boolean;
+    activation?: string;
+    stop_control_required?: boolean;
+    download_available_after_stop?: boolean;
+    delete_available_after_stop?: boolean;
+    backend_upload_enabled?: boolean;
+    external_streaming_enabled?: boolean;
+    hidden_recording_enabled?: boolean;
+  };
+  retention?: Record<string, string | boolean>;
+  audit?: {
+    metadata_only?: boolean;
+    events?: string[];
+    raw_audio_in_audit?: boolean;
+    backend_audit_complete?: boolean;
+    backend_audit_gap?: string;
+  };
+  privacy?: Record<string, boolean>;
+  source_endpoint?: string;
+  browser_source?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisMemoryBrain {
+  state?: Record<string, string | boolean>;
+  entities?: Array<Record<string, unknown>>;
+  preferences?: Array<Record<string, unknown>>;
+  decisions?: Array<Record<string, unknown>>;
+  contradictions?: Array<Record<string, unknown>>;
+  counts?: {
+    outcomes?: number | string;
+    failures?: number | string;
+    learning_proposals?: number | string;
+    audit_events?: number | string;
+  };
+  why_jarvis_remembers?: string[];
+  compaction?: Record<string, string | boolean>;
+  forget_delete?: Record<string, string | boolean>;
+  safety?: Record<string, boolean>;
+  source_endpoints?: string[];
+  source_status?: Record<string, unknown>;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisLocalDoctorCheck {
+  name: string;
+  status: string;
+  evidence: string;
+  read_only?: boolean;
+}
+
+export interface JarvisLocalDoctor {
+  state?: Record<string, string | boolean | number>;
+  checks?: JarvisLocalDoctorCheck[];
+  optional_dependencies?: Record<string, { available?: boolean; source?: string; status?: string; version?: string }>;
+  runtime?: Record<string, unknown>;
+  ports?: Record<string, unknown>;
+  browser_checks?: Record<string, unknown>;
+  browser_only_capabilities?: Record<string, unknown>;
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+  source_status?: Record<string, unknown>;
+}
+
+export interface JarvisSensorLedger {
+  schema_version?: string;
+  state?: Record<string, any>;
+  events?: Array<Record<string, unknown>>;
+  retention?: Record<string, unknown>;
+  contracts?: Array<Record<string, unknown>>;
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
   read_only?: boolean;
 }
 
@@ -939,6 +1038,11 @@ export interface JarvisDashboardStatus {
     source_endpoints?: string[];
   };
   camera_vision?: JarvisCameraVision;
+  raw_audio_recording?: JarvisRawAudioRecording;
+  sensor_ledger?: JarvisSensorLedger;
+  event_bus?: Record<string, any>;
+  policy_status?: Record<string, any>;
+  memory_brain?: JarvisMemoryBrain;
   mobile_companion?: JarvisMobileCompanion;
   finance_roi?: JarvisFinanceRoi;
   adaptive_product_builder?: JarvisAdaptiveProductBuilder;
@@ -970,6 +1074,7 @@ export interface JarvisDashboardStatus {
   };
   safety?: Record<string, boolean>;
   timeline?: JarvisDashboardTimelineEvent[];
+  local_doctor?: JarvisLocalDoctor;
   read_only_contract?: {
     aggregated_endpoint?: string;
     allowed_http_methods_for_frontend?: string[];
@@ -978,6 +1083,7 @@ export interface JarvisDashboardStatus {
     frontend_must_not_request_sensor_permissions?: boolean;
     frontend_sensor_permission_scope?: string;
     frontend_must_not_request_camera_permissions?: boolean;
+    frontend_camera_permission_scope?: string;
   };
 }
 
