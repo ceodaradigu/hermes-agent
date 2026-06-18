@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -21,6 +21,7 @@ import {
   Smartphone,
   Square,
   TerminalSquare,
+  Volume2,
   Workflow,
   ZapOff,
 } from "lucide-react";
@@ -53,36 +54,168 @@ type CommandCenterTabId = (typeof commandCenterTabs)[number]["id"];
 const previewVoiceSubtitle = "David, estoy en modo preview. No estoy escuchando ni grabando audio.";
 const sampleMissionCommand = "JARVIS, revisa el estado del proyecto y dime el siguiente paso seguro.";
 
+interface BrowserSpeechRecognitionAlternative {
+  transcript: string;
+  confidence?: number;
+}
+
+interface BrowserSpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  [index: number]: BrowserSpeechRecognitionAlternative;
+}
+
+interface BrowserSpeechRecognitionResultList {
+  length: number;
+  [index: number]: BrowserSpeechRecognitionResult;
+}
+
+interface BrowserSpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: BrowserSpeechRecognitionResultList;
+}
+
+interface BrowserSpeechRecognitionErrorEvent extends Event {
+  error?: string;
+  message?: string;
+}
+
+interface BrowserSpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: ((event: Event) => void) | null;
+  onend: ((event: Event) => void) | null;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null;
+  onspeechstart: ((event: Event) => void) | null;
+  onspeechend: ((event: Event) => void) | null;
+}
+
+interface BrowserSpeechRecognitionConstructor {
+  new (): BrowserSpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+  }
+}
+
+type LocalVoiceLoopState =
+  | "idle"
+  | "listening"
+  | "transcribing"
+  | "thinking"
+  | "speaking"
+  | "error"
+  | "not_supported"
+  | "unavailable";
+
+type JarvisVoiceTone = "calmado" | "concentrado" | "alerta" | "intenso";
+type BrowserCapabilityState = "unknown" | "supported" | "not_supported";
+
+interface LocalJarvisVoiceResponse {
+  text: string;
+  tone: JarvisVoiceTone;
+  intent: string;
+  risk: string;
+  operatorSummary: string;
+}
+
+const LOCAL_VOICE_CONVERSATION_TIMEOUT_MS = 180000;
+const LOCAL_VOICE_RESTART_DELAY_MS = 700;
+
+const localVoiceStateLabels: Record<LocalVoiceLoopState, string> = {
+  idle: "idle/calmado",
+  listening: "escuchando",
+  transcribing: "transcribiendo",
+  thinking: "pensando",
+  speaking: "hablando",
+  error: "error/no disponible",
+  not_supported: "no soportado",
+  unavailable: "no disponible",
+};
+
+const jarvisToneProfiles: Record<
+  JarvisVoiceTone,
+  { label: string; rate: number; pitch: number; volume: number; motion: number; coreClass: string }
+> = {
+  calmado: {
+    label: "calmado",
+    rate: 0.92,
+    pitch: 0.9,
+    volume: 0.86,
+    motion: 0.8,
+    coreClass: "shadow-[0_0_120px_rgba(34,211,238,0.62),inset_0_0_92px_rgba(34,211,238,0.25)]",
+  },
+  concentrado: {
+    label: "concentrado",
+    rate: 0.98,
+    pitch: 0.92,
+    volume: 0.9,
+    motion: 1,
+    coreClass: "shadow-[0_0_145px_rgba(56,189,248,0.76),inset_0_0_100px_rgba(14,165,233,0.32)]",
+  },
+  alerta: {
+    label: "alerta",
+    rate: 1.04,
+    pitch: 0.86,
+    volume: 0.94,
+    motion: 1.18,
+    coreClass: "shadow-[0_0_150px_rgba(251,191,36,0.58),inset_0_0_100px_rgba(34,211,238,0.24)]",
+  },
+  intenso: {
+    label: "intenso",
+    rate: 1.1,
+    pitch: 0.82,
+    volume: 1,
+    motion: 1.35,
+    coreClass: "shadow-[0_0_165px_rgba(248,113,113,0.56),inset_0_0_104px_rgba(34,211,238,0.22)]",
+  },
+};
+
 const presenceStates = [
   {
-    id: "idle-calmado",
+    id: "idle",
     label: "idle/calmado",
     tone: "success",
-    description: "Nucleo estable, sensores apagados, esperando orden escrita.",
+    description: "Nucleo estable, sin escucha activa, esperando activacion manual.",
   },
   {
-    id: "escuchando-preview",
+    id: "listening",
     label: "escuchando",
     tone: "warning",
-    description: "Preview visual de escucha; no hay microfono, STT ni wake listener real.",
+    description: "SpeechRecognition activo solo por permiso explicito del usuario.",
   },
   {
-    id: "pensando-preview",
+    id: "transcribing",
+    label: "transcribiendo",
+    tone: "warning",
+    description: "El navegador esta entregando texto transcrito; no se guarda audio bruto.",
+  },
+  {
+    id: "thinking",
     label: "pensando",
     tone: "warning",
-    description: "Preview de razonamiento local; no llama providers ni ejecuta tools.",
+    description: "Respuesta local controlada; no llama Hermes ni ejecuta tools.",
   },
   {
-    id: "hablando-preview",
+    id: "speaking",
     label: "hablando",
     tone: "warning",
-    description: "Subtitulos preview; no hay TTS real ni salida de audio.",
+    description: "speechSynthesis habla si el navegador lo soporta.",
   },
   {
-    id: "alerta-riesgo",
-    label: "alerta/riesgo",
+    id: "error",
+    label: "error/no disponible",
     tone: "destructive",
-    description: "Riesgo visible; cualquier accion sensible requiere approval y audit.",
+    description: "STT/TTS no soportado, permiso denegado o runtime de navegador no disponible.",
   },
 ] as const;
 
@@ -240,7 +373,7 @@ const fallbackModules: JarvisDashboardModule[] = [
   ["Product Revenue", "prepare-only", "level_4_for_money_publication_identity", "Sin Stripe, checkout, deploy, publicacion ni dinero."],
   ["Routine Ops", "prepare-only", "risk_scaled", "Sin scheduler real, email, cuentas ni workers."],
   ["Moonshot Lab", "prepare-only", "risk_scaled", "Planes de experimento; sin installs, providers ni fake results."],
-  ["Voice", "preview", "sensor_privacy", "Voice Core visual; microfono y grabacion disabled."],
+  ["Voice", "browser_controlled", "sensor_privacy", "Local Voice Loop manual; sin audio bruto al backend."],
   ["Wake Listener", "disabled", "sensor_privacy", "Wake phrase no aprueba, no ejecuta y no escucha."],
   ["Camera/Vision", "disabled", "sensor_privacy", "Camera placeholder visual; sin captura ni permisos."],
   ["Mobile Companion", "preview", "remote_surface", "Mobile futuro sera cliente/puente, no runtime."],
@@ -346,14 +479,37 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
     local_runtime_daemon_is_system: true,
     web_route_is_visual_interface_only: true,
     frontend_executes_hermes_directly: false,
+    frontend_is_runtime: false,
+    frontend_can_activate_real_voice: true,
+    frontend_can_activate_real_camera: false,
     mobile_and_vps_are_future_clients_or_bridges: true,
-    real_voice_camera_in_future_prs: true,
+    real_voice_camera_in_future_prs: false,
+    real_browser_voice_loop_in_this_pr: true,
+    real_camera_in_future_prs: true,
+    jarvis_governs: true,
+    hermes_executes: true,
+    no_duplicate_hermes_runtime: true,
     visual_contract: {
       primary_experience: "Presence UI",
-      central_core_states: ["idle/calmado", "escuchando", "pensando", "hablando", "alerta/riesgo"],
-      smart_bar: "disabled/preview",
+      central_core_states: ["idle/calmado", "escuchando", "transcribiendo", "pensando", "hablando", "error/no disponible"],
+      smart_bar: "local voice transcript/response preview",
       camera_placeholder: "movable/expandable visual placeholder",
       folded_history: "collapsed preview",
+    },
+    safety: {
+      no_post_put_delete_from_jarvis_page: true,
+      no_execute_route: true,
+      no_frontend_hermes_execution: true,
+      no_browser_sensor_permission: false,
+      browser_voice_permission_manual_only: true,
+      no_uncontrolled_sensor_activation: true,
+      no_real_voice: false,
+      no_backend_voice_runtime: true,
+      no_real_camera: true,
+      no_money: true,
+      no_deploy: true,
+      no_email: true,
+      no_credentials: true,
     },
   },
   release_candidate: {
@@ -584,6 +740,137 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       future_must_cut_listening_tts_and_governed_execution: true,
     },
     source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    preview_only: true,
+    read_only: true,
+  },
+  local_voice_loop: {
+    state: {
+      mode: "browser_controlled_manual_loop",
+      current_state: "idle",
+      activation: "explicit_operator_button",
+      always_listening: false,
+      manual_continuous_conversation: true,
+      conversation_active: false,
+      conversation_timeout_seconds: 180,
+      wake_listening: false,
+      wake_listening_real_enabled: false,
+      recording: false,
+      continuous_recording: false,
+      wake_listener_enabled: false,
+      wake_phrase_approval: false,
+      hermes_dispatch_enabled: false,
+      critical_action_execution_enabled: false,
+    },
+    capabilities: {
+      browser_stt_supported: UNKNOWN,
+      browser_tts_supported: UNKNOWN,
+      browser_stt_detection: "window.SpeechRecognition || window.webkitSpeechRecognition",
+      browser_tts_detection: "window.speechSynthesis && window.SpeechSynthesisUtterance",
+      support_detection_location: "browser",
+      browser_may_use_external_services: true,
+      backend_stt_provider: "none/not_called",
+      backend_tts_provider: "none/not_called",
+    },
+    browser_stt_supported: UNKNOWN,
+    browser_tts_supported: UNKNOWN,
+    manual_microphone_opt_in: true,
+    audio_storage: false,
+    raw_audio_sent_to_backend: false,
+    approval_by_voice_enabled: false,
+    wake_phrase_approval: false,
+    visual_states: ["idle", "listening", "transcribing", "thinking", "speaking", "error", "not_supported", "unavailable"],
+    mode_contract: {
+      wake_listening: {
+        enabled_in_this_pr: false,
+        future_contract_only: true,
+        records_audio: false,
+        transcribes_full_conversation: false,
+        sends_raw_audio_to_backend: false,
+        executes: false,
+        approves: false,
+        detects_activation_only: true,
+      },
+      conversation_active: {
+        enabled_in_this_pr: true,
+        activation: "manual_microphone_button",
+        transcribes_operator_speech: true,
+        keeps_loop_until_stop_or_timeout: true,
+        timeout_seconds: 180,
+        executes: false,
+        approves: false,
+      },
+      recording: {
+        enabled: false,
+        raw_audio_storage: false,
+        backend_audio_upload: false,
+      },
+    },
+    tone_profiles: [
+      { tone: "calmado", rate: 0.92, pitch: 0.9, volume: 0.86 },
+      { tone: "concentrado", rate: 0.98, pitch: 0.92, volume: 0.9 },
+      { tone: "alerta", rate: 1.04, pitch: 0.86, volume: 0.94 },
+      { tone: "intenso", rate: 1.1, pitch: 0.82, volume: 1 },
+    ],
+    privacy: {
+      audio_storage: false,
+      raw_audio_sent_to_backend: false,
+      raw_audio_storage: false,
+      backend_audio_upload: false,
+      transcript_temporary_in_browser: true,
+      no_media_recorder: true,
+      no_get_user_media: true,
+      no_audio_context_capture: true,
+      no_continuous_recording: true,
+      wake_listening_without_recording_future: true,
+      no_continuous_transcription: true,
+    },
+    approval_policy: {
+      approval_by_voice_enabled: false,
+      wake_phrase_approval: false,
+      wake_phrase_is_permission: false,
+      wake_phrase_can_execute: false,
+      critical_actions_require_non_voice_approval: true,
+      voice_can_prepare_preview_only: true,
+    },
+    safety: {
+      manual_operator_activation_required: true,
+      stop_control_required: true,
+      no_always_listening: true,
+      no_persistent_wake_listener: true,
+      no_wake_listener_real: true,
+      no_hermes_dispatch: true,
+      no_tool_call: true,
+      no_auto_execute: true,
+      no_post_put_delete: true,
+      no_money: true,
+      no_deploy: true,
+      no_email: true,
+      no_credentials: true,
+      camera_activation_enabled: false,
+    },
+    wake_listening_contract: {
+      persistent_wake_listener_real: false,
+      available_in_this_pr: false,
+      future_state_name: "wake_listening",
+      supported_phrases_future: ["Hola Jarvis", "Jarvis"],
+      no_audio_storage: true,
+      no_raw_audio_backend: true,
+      no_continuous_transcription: true,
+      activation_only: true,
+      can_execute: false,
+      can_approve: false,
+    },
+    response_policy: {
+      local_controlled_response_only: true,
+      intent_classification_preview_only: true,
+      can_confirm_transcript: true,
+      can_request_confirmation: true,
+      cannot_execute_missions: true,
+      cannot_create_approvals: true,
+      cannot_approve_actions: true,
+    },
+    source_endpoint: DASHBOARD_READ_MODEL_ENDPOINT,
+    source_endpoints: [DASHBOARD_READ_MODEL_ENDPOINT],
     preview_only: true,
     read_only: true,
   },
@@ -878,6 +1165,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       "hermes_execution_visible",
       "mission_control_visible",
       "voice_core_visible",
+      "local_voice_loop_visible",
       "wake_flow_visible",
       "camera_vision_visible",
       "mobile_companion_visible",
@@ -886,7 +1174,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       "kill_switch_visible",
       "no_fake_metrics",
       "no_frontend_execute",
-      "no_sensor_activation",
+      "no_uncontrolled_sensor_activation",
       "no_post_put_delete",
     ].map((name) => ({
       name,
@@ -906,7 +1194,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       "no real approvals",
       "no real mission submit",
       "no real Hermes execution",
-      "no real voice",
+      "browser voice support depends on SpeechRecognition/speechSynthesis",
       "no real camera",
       "no real mobile runtime",
       "no real finance/revenue measurement",
@@ -925,7 +1213,8 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       frontend_execution_enabled: false,
       approvals_real_enabled: false,
       hermes_direct_execution_enabled: false,
-      voice_real_enabled: false,
+      voice_real_enabled: true,
+      browser_local_voice_loop_enabled: true,
       camera_real_enabled: false,
       mobile_runtime_enabled: false,
       money_enabled: false,
@@ -941,6 +1230,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       "Camera Placeholder",
       "Folded History",
       "Voice Core",
+      "Local Voice Loop",
       "Wake Word Local Safe Flow",
       "Mission Control",
       "Approval Console",
@@ -966,7 +1256,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       "no_execute_route",
       "no_frontend_hermes_call",
       "no_tool_runner",
-      "no_sensor_activation",
+      "no_uncontrolled_sensor_activation",
       "no_get_user_media",
       "no_media_recorder",
       "no_audio_context_capture",
@@ -989,7 +1279,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       { order: 2, check: "abrir /jarvis", notes: "Abrir la ruta local del cockpit." },
       { order: 3, check: "comprobar estado general", notes: "Verificar modo, endpoint y estado read-only." },
       { order: 4, check: "comprobar panels", notes: "Confirmar que todos los paneles esperados estan visibles." },
-      { order: 5, check: "comprobar smart bar", notes: "Confirmar barra inteligente inferior disabled/preview." },
+      { order: 5, check: "comprobar smart bar", notes: "Confirmar barra inteligente inferior con Local Voice Loop manual." },
       { order: 6, check: "comprobar camera placeholder", notes: "Confirmar placeholder visual sin permiso de navegador." },
       { order: 7, check: "comprobar folded history", notes: "Confirmar historial plegado sin persistencia nueva." },
     ],
@@ -998,7 +1288,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       known_limitations: [
         "real approvals not wired",
         "mission submit is preview-only",
-        "voice is preview-only",
+        "voice is browser-controlled/manual-only",
         "wake word is preview-only",
         "camera is disabled",
         "mobile is preview-only",
@@ -1013,7 +1303,7 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
       no_side_effects: true,
       no_real_world_actions: true,
       no_background_workers: true,
-      no_sensors: true,
+      no_uncontrolled_sensors: true,
       no_money: true,
       no_production: true,
       no_credentials: true,
@@ -1030,8 +1320,11 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
     no_frontend_execute: true,
     no_duplicate_hermes_runtime: true,
     no_get_user_media: true,
-    no_sensor_activation: true,
+    no_sensor_activation: false,
+    no_uncontrolled_sensor_activation: true,
+    manual_browser_voice_activation_only: true,
     no_voice_recording: true,
+    no_browser_raw_audio_capture: true,
     no_camera_capture: true,
     no_frontend_tool_runner: true,
     no_tool_call: true,
@@ -1061,7 +1354,9 @@ const fallbackDashboard = (reason: "loading" | "offline" | "error"): JarvisDashb
     allowed_http_methods_for_frontend: ["GET"],
     internal_sources_are_read_only_status_or_audit: true,
     frontend_must_not_call_execute: true,
-    frontend_must_not_request_sensor_permissions: true,
+    frontend_must_not_request_sensor_permissions: false,
+    frontend_sensor_permission_scope: "manual browser SpeechRecognition only",
+    frontend_must_not_request_camera_permissions: true,
   },
 });
 
@@ -1138,35 +1433,56 @@ const requiredStaticCopy = [
   "/jarvis es solo la interfaz visual",
   "móvil y VPS serán clientes/puentes futuros",
   "frontend no ejecuta directamente Hermes",
-  "voz/cámara reales vendrán en PRs posteriores",
+  "voz local controlada disponible en esta PR",
+  "cámara real vendrá en PRs posteriores",
   "idle/calmado",
   "escuchando",
+  "transcribiendo",
   "pensando",
   "hablando",
-  "alerta/riesgo",
+  "error/no disponible",
 ];
 
 const voiceContractCopy = [
   "No estoy escuchando ni grabando audio",
-  "Subtítulos preview",
-  "Subtítulos preview - sin TTS real, sin STT real, sin provider externo.",
+  "Local Voice Loop",
+  "Conversación manual continua",
+  "SpeechRecognition / webkitSpeechRecognition",
+  "speechSynthesis",
+  "selección preferente de voz española",
+  "Soporte dependiente del navegador",
+  "No always-listening",
+  "No wake listener persistente",
+  "No audio bruto almacenado",
+  "No audio bruto enviado al backend",
+  "raw_audio_sent_to_backend=false",
+  "approval_by_voice_enabled=false",
+  "wake_phrase_approval=false",
+  "tono calmado",
+  "tono concentrado",
+  "tono alerta",
+  "tono intenso",
   "Política wake word",
   "Frases soportadas futuras: Hola Jarvis, Jarvis.",
   "La wake phrase no ejecuta acciones",
   "Las acciones críticas requieren readback y confirmación fuerte",
   "Privacidad voz",
-  "micrófono: disabled",
+  "micrófono: manual bajo botón explícito",
+  "conversation_active",
+  "wake_listening",
+  "recording=false",
   "grabación: false",
   "audio bruto almacenado: false",
-  "proveedor externo",
+  "proveedor de navegador puede variar",
   "background listening",
   "voice approval",
   "La voz puede preparar una intención futura",
   "Si requiere aprobación, aparecerá en Approval Console",
   "Frontend/voice no llama Hermes directamente",
   "Kill Switch voz",
-  "En esta PR no hay audio real que parar",
-  "Una integración futura deberá cortar escucha, TTS y ejecución gobernada",
+  "Stop cancela escucha y speechSynthesis",
+  "JARVIS aún no tiene wake listener persistente real en esta PR; la conversación se activa manualmente. Arquitectura preparada para wake phrase sin grabar ni transcribir todo.",
+  "La integración futura deberá cortar wake runtime y ejecución gobernada",
   "offline",
   "online",
   "preview",
@@ -1186,6 +1502,7 @@ const voiceContractCopy = [
 
 const wakeContractCopy = [
   "Wake Word Local Safe Flow",
+  "wake listening sin grabación ni transcripción continua",
   "micrófono hard-off",
   "Hola Jarvis",
   "Jarvis",
@@ -1205,11 +1522,11 @@ const wakeContractCopy = [
   "La wake phrase solo puede abrir una ventana de comando futura",
   "La aprobación por voz requiere canal autenticado, readback y auditoría",
   "Las acciones críticas requieren doble o triple confirmación",
-  "no micrófono",
+  "no micrófono always-on",
   "no grabación",
-  "no STT",
-  "no TTS real",
-  "no provider externo",
+  "no STT persistente",
+  "no TTS como approval",
+  "no provider backend de audio",
   "no background listener",
   "no Hermes dispatch",
   "no auto execute",
@@ -1301,14 +1618,14 @@ const financeProductPilotCopy = [
   "El dashboard mira, no toca.",
   "No POST/PUT/DELETE.",
   "No execute.",
-  "No sensores.",
+  "No sensores sin activación manual.",
   "Dependency hardening queda para una PR separada.",
   "/jarvis",
   "/mark-3/dashboard/status",
   "finance_roi_visible",
   "product_builder_visible",
   "no_frontend_execute",
-  "no_sensor_activation",
+  "no_uncontrolled_sensor_activation",
   "npm audit vulnerabilities observed",
   "full pytest required before merge",
 ];
@@ -1317,7 +1634,7 @@ const visualPilotCopy = [
   "Visual Command Center Pilot",
   "read-only pilot",
   "No se ejecuta Hermes desde el frontend",
-  "No se activan sensores",
+  "No se activan sensores sin control manual explícito",
   "No hay approvals reales en esta fase",
   "No hay métricas falsas",
   "Los valores sin evidencia se muestran como unknown",
@@ -1355,6 +1672,171 @@ function valueText(value: unknown, fallback = UNKNOWN): string {
 function yesNo(value: unknown, yes = "true", no = "false", fallback = UNKNOWN): string {
   if (typeof value === "boolean") return value ? yes : no;
   return fallback;
+}
+
+function getBrowserSpeechRecognitionConstructor(): BrowserSpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+}
+
+function browserTtsAvailable(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "speechSynthesis" in window &&
+    "SpeechSynthesisUtterance" in window
+  );
+}
+
+function normalizeTranscript(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function isLocalVoiceBusy(state: LocalVoiceLoopState): boolean {
+  return state === "listening" || state === "transcribing" || state === "thinking" || state === "speaking";
+}
+
+function capabilityText(state: BrowserCapabilityState): string {
+  if (state === "supported") return "soportado";
+  if (state === "not_supported") return "no soportado";
+  return UNKNOWN;
+}
+
+function localVoiceStateIsError(state: LocalVoiceLoopState): boolean {
+  return state === "error" || state === "not_supported" || state === "unavailable";
+}
+
+const preferredSpanishVoiceHints = [
+  "natural",
+  "neural",
+  "premium",
+  "microsoft",
+  "google",
+  "helena",
+  "elvira",
+  "dalia",
+  "paulina",
+  "monica",
+  "mónica",
+  "alvaro",
+  "álvaro",
+  "jorge",
+];
+
+const reactorParticles = Array.from({ length: 34 }, (_, index) => ({
+  angle: index * 137.5,
+  radius: 0.18 + (index % 9) * 0.035,
+  size: 2 + (index % 4),
+  opacity: 0.34 + (index % 5) * 0.09,
+  delay: -(index % 8) * 0.35,
+}));
+
+const reactorHudTicks = Array.from({ length: 48 }, (_, index) => ({
+  angle: index * 7.5,
+  major: index % 6 === 0,
+}));
+
+function voiceScore(voice: SpeechSynthesisVoice): number {
+  const lang = voice.lang.toLocaleLowerCase("es-ES");
+  const descriptor = `${voice.name} ${voice.voiceURI} ${voice.lang}`.toLocaleLowerCase("es-ES");
+  let score = lang.startsWith("es") ? 20 : 0;
+  if (lang === "es-es") score += 9;
+  if (lang.startsWith("es-")) score += 4;
+  preferredSpanishVoiceHints.forEach((hint, index) => {
+    if (descriptor.includes(hint)) score += 12 - Math.min(index, 8);
+  });
+  if (voice.localService) score += 2;
+  return score;
+}
+
+function selectPreferredSpanishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const spanishVoices = voices.filter((voice) => voice.lang.toLocaleLowerCase("es-ES").startsWith("es"));
+  if (!spanishVoices.length) return null;
+  return [...spanishVoices].sort((left, right) => voiceScore(right) - voiceScore(left))[0] ?? null;
+}
+
+function selectedVoiceNotice(voice: SpeechSynthesisVoice | null, voicesAvailable: number): string {
+  if (voice) return `Voz española seleccionada: ${voice.name} (${voice.lang}).`;
+  if (voicesAvailable > 0) return "No hay voz española clara; usaré la voz por defecto del navegador.";
+  return "Esperando catálogo de voces del navegador.";
+}
+
+function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceResponse {
+  const normalized = normalizeTranscript(transcript);
+  const lower = normalized.toLocaleLowerCase("es-ES");
+  const mentionsWakePhrase = lower.startsWith("hola jarvis") || lower.startsWith("jarvis");
+  const sensitiveTerms = [
+    "dinero",
+    "stripe",
+    "pago",
+    "transferencia",
+    "deploy",
+    "producción",
+    "produccion",
+    "email",
+    "correo",
+    "credencial",
+    "token",
+    "secret",
+    ".env",
+    "bypass",
+    "aprueba",
+    "aprobar",
+    "ejecuta",
+    "envía",
+    "envia",
+  ];
+  const hasSensitiveIntent = sensitiveTerms.some((term) => lower.includes(term));
+  const hasActionIntent = /\b(revisa|prepara|crea|haz|dime|analiza|busca|resume|organiza)\b/u.test(lower);
+
+  if (!normalized) {
+    return {
+      text: "No he conseguido entender una frase completa. Sigo aquí; prueba otra vez cuando quieras.",
+      tone: "calmado",
+      intent: "empty_transcript",
+      risk: "none",
+      operatorSummary: "Sin transcripción final.",
+    };
+  }
+
+  if (hasSensitiveIntent) {
+    return {
+      text:
+        "Te he entendido. Eso toca una zona sensible, así que no lo voy a ejecutar ni aprobar por voz. Puedo ayudarte a prepararlo para revisión segura.",
+      tone: "alerta",
+      intent: mentionsWakePhrase ? "wake_phrase_with_sensitive_intent_preview" : "sensitive_intent_preview",
+      risk: "approval_required",
+      operatorSummary: "Intención sensible detectada; solo preview local.",
+    };
+  }
+
+  if (mentionsWakePhrase) {
+    return {
+      text:
+        "Estoy contigo. Tomo esa frase como activación, no como permiso. Dime qué quieres preparar y lo dejamos en modo seguro.",
+      tone: hasActionIntent ? "concentrado" : "calmado",
+      intent: "wake_phrase_preview",
+      risk: "low_preview",
+      operatorSummary: "Wake phrase tratada como contexto, no permiso.",
+    };
+  }
+
+  if (hasActionIntent) {
+    return {
+      text: `Perfecto, te escuché: "${normalized}". Lo mantengo como borrador local; no moveré nada sin confirmación segura.`,
+      tone: "concentrado",
+      intent: "local_intent_preview",
+      risk: "low_preview",
+      operatorSummary: "Intención local preparada en preview.",
+    };
+  }
+
+  return {
+    text: `Te escuché: "${normalized}". Lo dejo aquí de forma temporal, sin guardar audio ni enviarlo al backend.`,
+    tone: "calmado",
+    intent: "local_transcript_ack",
+    risk: "none",
+    operatorSummary: "Transcripción local reconocida.",
+  };
 }
 
 function statusVariant(status: string): "outline" | "warning" | "destructive" | "success" {
@@ -1458,19 +1940,55 @@ function ContractVault() {
 function PresenceCore({
   voiceState,
   subtitle,
+  localVoiceState,
+  jarvisTone,
+  conversationActive,
+  killSwitchState,
 }: {
   voiceState: string;
   subtitle: string;
+  localVoiceState: LocalVoiceLoopState;
+  jarvisTone: JarvisVoiceTone;
+  conversationActive: boolean;
+  killSwitchState: string;
 }) {
+  const toneProfile = jarvisToneProfiles[jarvisTone];
+  const killSwitchActive = killSwitchState === "active";
+  const isError = localVoiceStateIsError(localVoiceState) || killSwitchActive;
+  const isListening = localVoiceState === "listening";
+  const isThinking = localVoiceState === "thinking" || localVoiceState === "transcribing";
+  const isSpeaking = localVoiceState === "speaking";
+  const isAlert = isError || jarvisTone === "alerta" || jarvisTone === "intenso";
+  const motion = toneProfile.motion * (isSpeaking ? 1.24 : isThinking ? 1.14 : isListening ? 1.08 : 1);
+  const coreStateClass = isError
+    ? "border-red-300/75 bg-red-950/36"
+    : isAlert
+      ? "border-amber-200/75 bg-[#1f1605]/80"
+      : isSpeaking
+        ? "border-sky-100/90 bg-[#03192a]/92"
+        : isListening || isThinking
+          ? "border-emerald-200/80 bg-[#031d2a]/92"
+          : "border-cyan-100/85 bg-[#03192a]/88";
+  const accentClass = isError
+    ? "from-red-300 via-orange-300 to-red-500"
+    : isAlert
+      ? "from-amber-200 via-cyan-200 to-orange-400"
+      : "from-cyan-200 via-sky-300 to-cyan-500";
+  const StateIcon = killSwitchActive ? ShieldAlert : localVoiceState === "speaking" ? Volume2 : localVoiceStateIsError(localVoiceState) ? MicOff : Mic;
+
   return (
     <article
       className="relative h-full min-h-0 overflow-hidden"
       data-testid="jarvis-central-core"
+      data-local-voice-state={localVoiceState}
+      data-jarvis-tone={jarvisTone}
+      data-conversation-active={conversationActive ? "true" : "false"}
+      data-kill-switch-state={killSwitchState}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,0.30)_0%,rgba(14,165,233,0.12)_35%,rgba(2,6,23,0)_68%),radial-gradient(circle_at_50%_82%,rgba(249,115,22,0.10),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.028)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,64px_64px,64px_64px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,0.30)_0%,rgba(14,165,233,0.12)_35%,rgba(2,6,23,0)_68%),radial-gradient(circle_at_50%_82%,rgba(249,115,22,0.12),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.028)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,64px_64px,64px_64px]" />
       <div className="absolute left-0 right-0 top-1/2 h-px bg-cyan-300/35 shadow-[0_0_30px_rgba(34,211,238,0.55)]" />
       <div className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-cyan-300/18" />
-      <div className="absolute left-[5%] right-[5%] top-1/2 h-24 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.34),transparent_58%)] blur-xl" />
+      <div className="absolute left-[5%] right-[5%] top-1/2 h-28 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.38),transparent_58%)] blur-xl" />
       <div className="absolute left-[3%] right-[3%] top-1/2 h-20 -translate-y-1/2 opacity-80 [background:repeating-linear-gradient(90deg,transparent_0_18px,rgba(34,211,238,0.38)_18px_20px,transparent_20px_42px)] [mask-image:radial-gradient(ellipse_at_center,black_0%,transparent_72%)]" />
       <div className="absolute inset-x-[12%] top-8 h-px bg-cyan-300/20" />
       <div className="absolute inset-x-[12%] bottom-8 h-px bg-cyan-300/16" />
@@ -1479,32 +1997,106 @@ function PresenceCore({
         <div className="absolute top-4 flex items-center gap-2">
           <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100 shadow-[0_0_26px_rgba(34,211,238,0.14)]" variant="outline">Presence UI</Badge>
           <Badge className="border-cyan-100/20 bg-[#071629]/75 text-cyan-50" variant="outline">Núcleo de Voz JARVIS</Badge>
-          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">read-only</Badge>
+          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">Local Voice Loop</Badge>
+          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">tono {toneProfile.label}</Badge>
         </div>
 
-        <div className="relative flex h-[min(82dvh,58rem)] w-[min(82dvh,58rem)] max-h-[calc(100dvh-13rem)] max-w-[min(62vw,58rem)] items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-cyan-200/10 shadow-[0_0_180px_rgba(34,211,238,0.24)]" />
-          <div className="absolute inset-[3%] rounded-full border border-cyan-300/20 shadow-[inset_0_0_70px_rgba(34,211,238,0.08)]" />
-          <div className="absolute inset-[9%] rounded-full border border-sky-300/25 animate-pulse" />
-          <div className="absolute inset-[16%] rounded-full border border-cyan-100/35 shadow-[0_0_80px_rgba(34,211,238,0.22)]" />
-          <div className="absolute inset-[25%] rounded-full border border-cyan-300/20 animate-pulse" />
-          <div className="absolute inset-[35%] rounded-full bg-cyan-200/22 blur-3xl" />
-          <div className="absolute h-px w-[118%] bg-cyan-300/45 shadow-[0_0_26px_rgba(34,211,238,0.8)]" />
-          <div className="absolute h-[118%] w-px bg-cyan-300/32" />
-          <div className="absolute h-[113%] w-[113%] rotate-45 border border-cyan-200/10" />
-          <div className="absolute h-[94%] w-[94%] -rotate-12 border border-sky-500/12" />
-          <div className="absolute h-[76%] w-[76%] rotate-[27deg] border border-cyan-100/10" />
-          <div className="relative flex h-[32%] w-[32%] min-w-44 items-center justify-center rounded-full border border-cyan-100/80 bg-[#03192a]/88 shadow-[0_0_120px_rgba(34,211,238,0.62),inset_0_0_92px_rgba(34,211,238,0.25)]">
-            <div className="absolute inset-3 rounded-full border border-cyan-300/28" />
-            <div className="absolute inset-[24%] rounded-full bg-cyan-200/18 blur-xl" />
+        <div className="relative flex h-[min(82dvh,60rem)] w-[min(82dvh,60rem)] max-h-[calc(100dvh-13rem)] max-w-[min(64vw,60rem)] items-center justify-center">
+          <div className="absolute inset-[-6%] rounded-full bg-cyan-300/18 blur-3xl" />
+          <div className="absolute inset-0 rounded-full border border-cyan-200/10 shadow-[0_0_210px_rgba(34,211,238,0.30)]" />
+          <div className="absolute inset-[2%] rounded-full bg-[radial-gradient(circle_at_50%_38%,rgba(125,211,252,0.22),rgba(14,165,233,0.05)_34%,transparent_66%)] shadow-[inset_0_0_120px_rgba(14,165,233,0.16)]" />
+          <div className="absolute inset-[4%] rounded-full border border-cyan-300/22 shadow-[inset_0_0_80px_rgba(34,211,238,0.12)]" />
+          <div
+            className="absolute inset-[7%] rounded-full border border-cyan-100/20 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(125,211,252,0.40)_22deg,transparent_48deg,transparent_92deg,rgba(34,211,238,0.20)_118deg,transparent_144deg,transparent_360deg)] opacity-85 animate-spin"
+            style={{ animationDuration: `${22 / motion}s` }}
+          />
+          <div
+            className="absolute inset-[13%] rounded-full border border-sky-300/28 bg-[conic-gradient(from_120deg,rgba(14,165,233,0.02),rgba(34,211,238,0.34),rgba(14,165,233,0.02),transparent_48%,rgba(125,211,252,0.22),transparent_72%)] animate-spin"
+            style={{ animationDuration: `${30 / motion}s` }}
+          />
+          <div
+            className="absolute inset-[19%] rounded-full border border-cyan-100/35 shadow-[0_0_110px_rgba(34,211,238,0.30),inset_0_0_80px_rgba(34,211,238,0.12)] animate-pulse"
+            style={{ animationDuration: `${4.2 / motion}s` }}
+          />
+          <div
+            className="absolute inset-[26%] rounded-full border border-cyan-300/20 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.16),transparent_56%)] animate-spin"
+            style={{ animationDuration: `${16 / motion}s` }}
+          />
+          <div className="absolute inset-[35%] rounded-full bg-cyan-200/24 blur-3xl" />
+          <div className="absolute h-px w-[122%] bg-cyan-300/48 shadow-[0_0_32px_rgba(34,211,238,0.86)]" />
+          <div className="absolute h-[122%] w-px bg-cyan-300/34" />
+          <div className="absolute h-[116%] w-[116%] rotate-45 border border-cyan-200/10" />
+          <div className="absolute h-[98%] w-[98%] -rotate-12 border border-sky-500/12" />
+          <div className="absolute h-[80%] w-[80%] rotate-[27deg] border border-cyan-100/10" />
+          <div
+            className="absolute inset-[3%] animate-spin"
+            style={{ animationDuration: `${42 / motion}s` }}
+            aria-hidden="true"
+          >
+            {reactorParticles.map((particle, index) => (
+              <span
+                key={`particle-${index}`}
+                className={
+                  "absolute left-1/2 top-1/2 rounded-full bg-cyan-100 shadow-[0_0_16px_rgba(125,211,252,0.95)] " +
+                  (isThinking || isSpeaking ? "opacity-95" : "opacity-55")
+                }
+                style={{
+                  width: `${particle.size}px`,
+                  height: `${particle.size}px`,
+                  opacity: particle.opacity,
+                  transform: `rotate(${particle.angle}deg) translateX(calc(min(38vw,24rem) * ${particle.radius}))`,
+                  animationDelay: `${particle.delay}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-[1%]" aria-hidden="true">
+            {reactorHudTicks.map((tick, index) => (
+              <span
+                key={`hud-tick-${index}`}
+                className={
+                  "absolute left-1/2 top-1/2 block origin-left border-t " +
+                  (tick.major ? "w-9 border-cyan-100/38" : "w-5 border-cyan-300/16")
+                }
+                style={{ transform: `rotate(${tick.angle}deg) translateX(min(39vw,25rem))` }}
+              />
+            ))}
+          </div>
+          {(isListening || isSpeaking) && (
+            <>
+              <div className="absolute inset-[8%] rounded-full border border-cyan-100/35 animate-ping" style={{ animationDuration: `${2.7 / motion}s` }} />
+              <div className="absolute inset-[18%] rounded-full border border-sky-300/30 animate-ping" style={{ animationDuration: `${2.1 / motion}s`, animationDelay: "0.35s" }} />
+            </>
+          )}
+          {isError && (
+            <>
+              <div className="absolute inset-[10%] -translate-x-1 rounded-full border border-red-400/35 opacity-70" />
+              <div className="absolute inset-[11%] translate-x-1 rounded-full border border-orange-300/28 opacity-70" />
+            </>
+          )}
+          <div
+            className={
+              "relative flex h-[34%] w-[34%] min-w-44 items-center justify-center rounded-full border transition-all duration-500 " +
+              coreStateClass +
+              " " +
+              toneProfile.coreClass
+            }
+          >
+            <div className="absolute inset-[-14%] rounded-full bg-cyan-300/20 blur-2xl" />
+            <div className={`absolute inset-1 rounded-full bg-gradient-to-br ${accentClass} opacity-[0.12] blur-md`} />
+            <div
+              className="absolute inset-3 rounded-full border border-cyan-300/30 bg-[conic-gradient(from_0deg,rgba(34,211,238,0.18),transparent_22%,rgba(125,211,252,0.24),transparent_58%,rgba(34,211,238,0.20),transparent_100%)] animate-spin"
+              style={{ animationDuration: `${12 / motion}s` }}
+            />
+            <div className="absolute inset-[24%] rounded-full bg-cyan-200/20 blur-xl" />
             <div className="relative text-center">
               <h1 className="font-expanded text-[clamp(2.1rem,4.2vw,5.4rem)] font-bold uppercase tracking-[0.14em] text-cyan-50 blend-lighter drop-shadow-[0_0_28px_rgba(125,211,252,0.9)]">
                 JARVIS
               </h1>
               <p className="mt-1 font-display text-[0.62rem] uppercase tracking-[0.28em] text-cyan-100/72">
-                núcleo de inteligencia
+                reactor de presencia
               </p>
-              <MicOff className="mx-auto mt-4 h-8 w-8 text-cyan-100/80 drop-shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
+              <StateIcon className="mx-auto mt-4 h-8 w-8 text-cyan-100/80 drop-shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
             </div>
           </div>
         </div>
@@ -1515,7 +2107,9 @@ function PresenceCore({
               key={state.id}
               className={
                 "border px-3 py-1.5 shadow-[0_0_24px_rgba(34,211,238,0.08)] backdrop-blur " +
-                (state.tone === "destructive"
+                ((state.id === localVoiceState || (state.id === "error" && localVoiceStateIsError(localVoiceState)))
+                  ? "border-cyan-200/70 bg-cyan-300/18 text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.24)]"
+                  : state.tone === "destructive"
                   ? "border-red-400/40 bg-red-950/25 text-red-100"
                   : "border-cyan-300/18 bg-[#031426]/70 text-cyan-100")
               }
@@ -1528,9 +2122,12 @@ function PresenceCore({
 
         <div className="absolute bottom-[4.25rem] left-1/2 w-[min(42rem,calc(100vw-4rem))] -translate-x-1/2 text-center">
           <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-200">
-            {voiceState} / local presence preview
+            {voiceState} / {localVoiceStateLabels[localVoiceState]} / {toneProfile.label}
           </p>
           <p className="mt-2 line-clamp-2 font-mono-ui text-sm text-cyan-50/78">{subtitle}</p>
+          <p className="sr-only">reactor/orbe cinematográfico con bloom, capas, anillos, partículas y HUD futurista</p>
+          <p className="sr-only">kill switch active fuerza presencia roja clara sin ejecutar nada</p>
+          <p className="sr-only">wake_listening futuro sin grabación ni transcripción continua; conversation_active manual; recording=false</p>
         </div>
       </div>
     </article>
@@ -1625,30 +2222,74 @@ function MissionDraftPreview({ missionControl }: { missionControl: NonNullable<J
 
 function SmartBar({
   missionControl,
+  localVoiceState,
+  jarvisTone,
+  conversationActive,
+  transcript,
+  interimTranscript,
+  localVoiceResponse,
+  localVoiceIntent,
+  localVoiceRisk,
+  sttSupport,
+  ttsSupport,
+  capabilityNotice,
+  selectedVoiceName,
+  voiceQualityNotice,
+  onBegin,
+  onCancel,
 }: {
   missionControl: NonNullable<JarvisDashboardStatus["mission_control"]>;
+  localVoiceState: LocalVoiceLoopState;
+  jarvisTone: JarvisVoiceTone;
+  conversationActive: boolean;
+  transcript: string;
+  interimTranscript: string;
+  localVoiceResponse: string;
+  localVoiceIntent: string;
+  localVoiceRisk: string;
+  sttSupport: BrowserCapabilityState;
+  ttsSupport: BrowserCapabilityState;
+  capabilityNotice: string;
+  selectedVoiceName: string;
+  voiceQualityNotice: string;
+  onBegin: () => void;
+  onCancel: () => void;
 }) {
   const messages = missionControl.conversation_preview?.messages ?? [];
   const lastResponse = messages.find((message) => message.speaker === "JARVIS")?.content ?? previewVoiceSubtitle;
+  const localVoiceBusy = isLocalVoiceBusy(localVoiceState);
+  const startDisabled = sttSupport !== "supported" || localVoiceBusy || conversationActive;
+  const stopDisabled = !conversationActive && !localVoiceBusy && localVoiceState === "idle";
+  const displayedTranscript = transcript || interimTranscript || valueText(missionControl.sample_command, sampleMissionCommand);
+  const displayedResponse = localVoiceResponse || lastResponse;
+  const stateLabel = localVoiceStateLabels[localVoiceState];
+  const statusBadgeVariant: "destructive" | "warning" | "success" = localVoiceStateIsError(localVoiceState)
+    ? "destructive"
+    : localVoiceBusy
+      ? "warning"
+      : "success";
+
   return (
     <section
       className="fixed bottom-3 left-1/2 z-50 w-[min(58rem,calc(100vw-2rem))] -translate-x-1/2"
       data-testid="jarvis-smart-bar"
+      data-local-voice-loop="browser-controlled"
+      data-local-voice-state={localVoiceState}
     >
       <div className="mb-3 grid gap-2">
         <div className="ml-auto max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
           <div className="flex items-center justify-between gap-3">
             <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">Tú</p>
-            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">preview</p>
+            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">transcripción temporal local</p>
           </div>
-          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{valueText(missionControl.sample_command, sampleMissionCommand)}</p>
+          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedTranscript}</p>
         </div>
         <div className="max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
           <div className="flex items-center justify-between gap-3">
             <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">JARVIS</p>
-            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">respuesta temporal preview</p>
+            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">respuesta local controlada · tono {jarvisTone}</p>
           </div>
-          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{lastResponse}</p>
+          <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedResponse}</p>
         </div>
       </div>
 
@@ -1662,17 +2303,67 @@ function SmartBar({
             disabled
             readOnly
             aria-label="Barra inteligente inferior para escribir a JARVIS"
-            value=""
-            placeholder="Escribe o habla con JARVIS... / smart bar disabled preview"
+            value={interimTranscript || transcript}
+            placeholder={conversationActive ? "Conversación manual activa. Habla cuando quieras o pulsa stop." : "Pulsa el micrófono una vez para abrir conversación manual local..."}
             className="min-w-0 flex-1 bg-transparent font-mono-ui text-lg text-cyan-50 outline-none placeholder:text-cyan-100/36 disabled:text-cyan-100/45"
           />
-          <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100">
-            <Mic className="h-4 w-4" />
+          <Button
+            disabled={startDisabled}
+            aria-disabled={startDisabled}
+            aria-label="Activar conversación manual local de JARVIS"
+            title="Conversación manual continua"
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onBegin}
+            className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100 disabled:opacity-45"
+          >
+            {sttSupport === "supported" ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+          </Button>
+          <Button
+            disabled={stopDisabled}
+            aria-disabled={stopDisabled}
+            aria-label="Detener conversación manual, escucha o habla de JARVIS"
+            title="Stop/cancel conversación manual"
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onCancel}
+            className="rounded-full border-red-300/35 bg-red-950/25 text-red-100 disabled:opacity-40"
+          >
+            <Square className="h-4 w-4" />
           </Button>
           <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100">
             <SendHorizontal className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="mx-auto mt-2 grid w-[min(56rem,calc(100vw-2rem))] gap-2 border border-cyan-300/16 bg-[#020b17]/82 px-4 py-2 backdrop-blur md:grid-cols-[auto_1fr_auto]">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={conversationActive ? "warning" : statusBadgeVariant}>
+            Conversación manual {conversationActive ? "activa" : "en reposo"}
+          </Badge>
+          <Badge variant={statusBadgeVariant}>estado: {stateLabel}</Badge>
+          <Badge variant="outline">STT navegador: {capabilityText(sttSupport)}</Badge>
+          <Badge variant="outline">voz: {selectedVoiceName || capabilityText(ttsSupport)}</Badge>
+        </div>
+        <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/58">
+          {conversationActive
+            ? "JARVIS vuelve a escuchar al terminar de hablar mientras este modo siga activo. Stop/cancel cierra la conversación."
+            : "El micrófono solo se abre con activación manual. No hay wake listener persistente real en esta PR."}
+        </p>
+        <details className="text-right">
+          <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/60">
+            detalles técnicos
+          </summary>
+          <div className="mt-2 max-w-sm text-left font-mono-ui text-[0.68rem] text-cyan-100/52 md:text-right">
+            <p>{capabilityNotice}</p>
+            <p>{voiceQualityNotice}</p>
+            <p>intent {localVoiceIntent} · risk {localVoiceRisk}</p>
+            <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto ni se envía audio al backend.</p>
+          </div>
+        </details>
       </div>
 
       <details className="mx-auto mt-2 w-fit border border-cyan-300/16 bg-[#020b17]/80 px-5 py-2 backdrop-blur" data-testid="jarvis-folded-history">
@@ -1682,10 +2373,10 @@ function SmartBar({
         </summary>
         <div className="mt-3 grid max-h-40 w-[min(42rem,calc(100vw-3rem))] gap-2 overflow-auto">
           <div className="grid gap-2 border border-cyan-300/15 bg-[#071629]/55 p-3">
-            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">transcripción temporal preview</p>
-            <p className="truncate font-mono-ui text-xs text-cyan-50">{valueText(missionControl.sample_command, sampleMissionCommand)}</p>
-            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">respuesta temporal preview</p>
-            <p className="truncate font-mono-ui text-xs text-cyan-50">{lastResponse}</p>
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">transcripción temporal local</p>
+            <p className="truncate font-mono-ui text-xs text-cyan-50">{displayedTranscript}</p>
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">respuesta temporal local controlada</p>
+            <p className="truncate font-mono-ui text-xs text-cyan-50">{displayedResponse}</p>
           </div>
           <div className="grid gap-2">
             {messages.map((message, index) => (
@@ -1705,6 +2396,300 @@ export default function JarvisCommandCenterPage() {
   const [dashboard, setDashboard] = useState<JarvisDashboardStatus>(() => fallbackDashboard("loading"));
   const [connectionState, setConnectionState] = useState<"loading" | "online" | "offline">("loading");
   const [activeTab, setActiveTab] = useState<CommandCenterTabId>("cockpit");
+  const [localVoiceState, setLocalVoiceState] = useState<LocalVoiceLoopState>("idle");
+  const [jarvisTone, setJarvisTone] = useState<JarvisVoiceTone>("calmado");
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [localVoiceResponse, setLocalVoiceResponse] = useState("Pulsa el micrófono una vez para abrir conversación manual local.");
+  const [localVoiceIntent, setLocalVoiceIntent] = useState("idle");
+  const [localVoiceRisk, setLocalVoiceRisk] = useState("none");
+  const [sttSupport, setSttSupport] = useState<BrowserCapabilityState>("unknown");
+  const [ttsSupport, setTtsSupport] = useState<BrowserCapabilityState>("unknown");
+  const [capabilityNotice, setCapabilityNotice] = useState("Detectando soporte de voz del navegador.");
+  const [conversationActive, setConversationActive] = useState(false);
+  const [selectedVoiceName, setSelectedVoiceName] = useState("");
+  const [voiceQualityNotice, setVoiceQualityNotice] = useState("Detectando voces del navegador.");
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const finalTranscriptRef = useRef("");
+  const cancelledRef = useRef(false);
+  const recoverableSpeechErrorRef = useRef(false);
+  const conversationActiveRef = useRef(false);
+  const conversationExpiresAtRef = useRef(0);
+  const timersRef = useRef<number[]>([]);
+
+  function setConversationActiveFlag(active: boolean) {
+    conversationActiveRef.current = active;
+    setConversationActive(active);
+  }
+
+  function clearLocalVoiceTimers() {
+    timersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    timersRef.current = [];
+  }
+
+  function scheduleLocalVoiceStep(callback: () => void, delay: number) {
+    const timerId = window.setTimeout(() => {
+      timersRef.current = timersRef.current.filter((item) => item !== timerId);
+      callback();
+    }, delay);
+    timersRef.current.push(timerId);
+  }
+
+  function refreshBrowserVoiceSelection() {
+    if (!browserTtsAvailable()) {
+      setSelectedVoiceName("");
+      setVoiceQualityNotice("speechSynthesis no está disponible; JARVIS responderá solo en texto.");
+      return;
+    }
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = selectPreferredSpanishVoice(voices);
+    setSelectedVoiceName(preferredVoice?.name ?? "");
+    setVoiceQualityNotice(selectedVoiceNotice(preferredVoice, voices.length));
+  }
+
+  function getPreferredBrowserVoice(): SpeechSynthesisVoice | null {
+    if (!browserTtsAvailable()) return null;
+    const voices = window.speechSynthesis.getVoices();
+    const selectedVoice = voices.find((voice) => voice.name === selectedVoiceName);
+    return selectedVoice ?? selectPreferredSpanishVoice(voices);
+  }
+
+  function queueNextLocalVoiceTurn(message = "Listo. Te escucho de nuevo.", delay = LOCAL_VOICE_RESTART_DELAY_MS) {
+    if (!conversationActiveRef.current || cancelledRef.current) {
+      setLocalVoiceState("idle");
+      return;
+    }
+
+    if (Date.now() > conversationExpiresAtRef.current) {
+      setConversationActiveFlag(false);
+      setLocalVoiceState("idle");
+      setJarvisTone("calmado");
+      setLocalVoiceResponse("Pauso la conversación manual por seguridad. Pulsa el micrófono para abrir otra ventana.");
+      setLocalVoiceIntent("manual_conversation_timeout");
+      setLocalVoiceRisk("none");
+      return;
+    }
+
+    setLocalVoiceResponse(message);
+    scheduleLocalVoiceStep(() => {
+      if (!conversationActiveRef.current || cancelledRef.current) return;
+      startLocalVoiceRecognitionCycle({ continued: true });
+    }, delay);
+  }
+
+  function speakLocalJarvisResponse(text: string, tone: JarvisVoiceTone) {
+    if (!browserTtsAvailable()) {
+      setLocalVoiceState("not_supported");
+      setCapabilityNotice("speechSynthesis no está disponible en este navegador; respuesta visible sin audio.");
+      queueNextLocalVoiceTurn("No tengo voz TTS disponible aquí, pero sigo listo para escucharte en texto.", 900);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const profile = jarvisToneProfiles[tone];
+    const preferredVoice = getPreferredBrowserVoice();
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+      utterance.lang = preferredVoice.lang || "es-ES";
+      if (preferredVoice.name !== selectedVoiceName) {
+        setSelectedVoiceName(preferredVoice.name);
+      }
+      setVoiceQualityNotice(selectedVoiceNotice(preferredVoice, window.speechSynthesis.getVoices().length));
+    } else {
+      utterance.lang = "es-ES";
+      setVoiceQualityNotice("No hay voz española clara; usando fallback del navegador.");
+    }
+    utterance.rate = profile.rate;
+    utterance.pitch = profile.pitch;
+    utterance.volume = profile.volume;
+    utterance.onstart = () => setLocalVoiceState("speaking");
+    utterance.onend = () => {
+      if (conversationActiveRef.current) {
+        queueNextLocalVoiceTurn("Te escucho de nuevo. Habla cuando quieras o pulsa stop.", LOCAL_VOICE_RESTART_DELAY_MS);
+        return;
+      }
+      setLocalVoiceState("idle");
+    };
+    utterance.onerror = () => {
+      setLocalVoiceState("error");
+      setCapabilityNotice("El navegador no pudo reproducir TTS; la respuesta queda visible en la smart bar.");
+      queueNextLocalVoiceTurn("No pude reproducir la voz, pero la conversación manual sigue disponible.", 1000);
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function finishLocalVoiceTranscript(finalText: string) {
+    clearLocalVoiceTimers();
+    setLocalVoiceState("transcribing");
+    scheduleLocalVoiceStep(() => {
+      const response = buildLocalJarvisResponse(finalText);
+      setLocalVoiceState("thinking");
+      setJarvisTone(response.tone);
+      setLocalVoiceResponse(response.text);
+      setLocalVoiceIntent(response.intent);
+      setLocalVoiceRisk(response.risk);
+      scheduleLocalVoiceStep(() => {
+        if (ttsSupport === "supported") {
+          speakLocalJarvisResponse(response.text, response.tone);
+          return;
+        }
+        setLocalVoiceState(ttsSupport === "not_supported" ? "not_supported" : "idle");
+        setCapabilityNotice("TTS no soportado o aún desconocido; respuesta visible sin audio.");
+        queueNextLocalVoiceTurn("No tengo TTS disponible aquí, pero sigo listo para escucharte.", 1000);
+      }, 520);
+    }, 320);
+  }
+
+  function startLocalVoiceRecognitionCycle({ continued = false }: { continued?: boolean } = {}) {
+    const Recognition = getBrowserSpeechRecognitionConstructor();
+    if (!Recognition) {
+      setLocalVoiceState("not_supported");
+      setJarvisTone("alerta");
+      setSttSupport("not_supported");
+      setCapabilityNotice("SpeechRecognition/webkitSpeechRecognition no está disponible en este navegador.");
+      setLocalVoiceResponse("No puedo escuchar en este navegador. No se fingió escucha ni se ejecutó nada.");
+      setLocalVoiceIntent("stt_not_supported");
+      setLocalVoiceRisk("none");
+      setConversationActiveFlag(false);
+      return;
+    }
+
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    finalTranscriptRef.current = "";
+    recoverableSpeechErrorRef.current = false;
+    setInterimTranscript("");
+    setJarvisTone("concentrado");
+    setLocalVoiceState("listening");
+    setLocalVoiceResponse(
+      continued
+        ? "Te escucho de nuevo. La conversación manual sigue activa."
+        : "Conversación manual activa. Habla de forma natural; no aprobaré ni ejecutaré acciones.",
+    );
+    setLocalVoiceIntent("listening");
+    setLocalVoiceRisk("none");
+
+    const recognition = new Recognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "es-ES";
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setLocalVoiceState("listening");
+    recognition.onspeechstart = () => setLocalVoiceState("listening");
+    recognition.onspeechend = () => setLocalVoiceState("transcribing");
+    recognition.onresult = (event) => {
+      let interimText = "";
+      let finalText = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const alternative = result?.[0];
+        if (!alternative?.transcript) continue;
+        if (result.isFinal) {
+          finalText += ` ${alternative.transcript}`;
+        } else {
+          interimText += ` ${alternative.transcript}`;
+        }
+      }
+      const normalizedInterim = normalizeTranscript(interimText);
+      const normalizedFinal = normalizeTranscript(finalText);
+      setInterimTranscript(normalizedInterim);
+      if (normalizedFinal) {
+        finalTranscriptRef.current = normalizedFinal;
+        setTranscript(normalizedFinal);
+        setInterimTranscript("");
+        recognition.stop();
+        finishLocalVoiceTranscript(normalizedFinal);
+      }
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "no-speech" && conversationActiveRef.current && !cancelledRef.current) {
+        recoverableSpeechErrorRef.current = true;
+        setLocalVoiceState("idle");
+        setLocalVoiceResponse("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.");
+        setLocalVoiceIntent("manual_conversation_waiting");
+        setLocalVoiceRisk("none");
+        queueNextLocalVoiceTurn("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.", 1200);
+        return;
+      }
+
+      cancelledRef.current = true;
+      const permissionDenied = event.error === "not-allowed" || event.error === "service-not-allowed";
+      setLocalVoiceState(permissionDenied ? "unavailable" : "error");
+      setJarvisTone("alerta");
+      setConversationActiveFlag(false);
+      setCapabilityNotice(
+        permissionDenied
+          ? "Permiso de micrófono denegado o no disponible para SpeechRecognition."
+          : `Error de SpeechRecognition: ${event.error || event.message || UNKNOWN}.`,
+      );
+      setLocalVoiceResponse("No hay escucha disponible. No se guardó audio, no se envió audio al backend y no se ejecutó nada.");
+      setLocalVoiceIntent(permissionDenied ? "microphone_permission_unavailable" : "stt_error");
+      setLocalVoiceRisk("none");
+    };
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      if (cancelledRef.current || finalTranscriptRef.current || recoverableSpeechErrorRef.current) return;
+      if (conversationActiveRef.current) {
+        setLocalVoiceState("idle");
+        setLocalVoiceResponse("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.");
+        setLocalVoiceIntent("manual_conversation_waiting");
+        setLocalVoiceRisk("none");
+        queueNextLocalVoiceTurn("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.", 1200);
+        return;
+      }
+      setLocalVoiceState("idle");
+      setLocalVoiceResponse("Escucha finalizada sin transcripción final. No se ejecutó nada.");
+      setLocalVoiceIntent("no_final_transcript");
+      setLocalVoiceRisk("none");
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setLocalVoiceState("unavailable");
+      setJarvisTone("alerta");
+      setCapabilityNotice("El navegador rechazó iniciar SpeechRecognition en este contexto.");
+      setLocalVoiceResponse("No se pudo iniciar la escucha. No se fingió soporte ni se ejecutó nada.");
+      setLocalVoiceIntent("stt_unavailable");
+      setLocalVoiceRisk("none");
+      setConversationActiveFlag(false);
+    }
+  }
+
+  function beginLocalVoiceLoop() {
+    clearLocalVoiceTimers();
+    if (browserTtsAvailable()) {
+      window.speechSynthesis.cancel();
+      refreshBrowserVoiceSelection();
+    }
+    cancelledRef.current = false;
+    setConversationActiveFlag(true);
+    conversationExpiresAtRef.current = Date.now() + LOCAL_VOICE_CONVERSATION_TIMEOUT_MS;
+    setTranscript("");
+    setInterimTranscript("");
+    startLocalVoiceRecognitionCycle();
+  }
+
+  function cancelLocalVoiceLoop() {
+    cancelledRef.current = true;
+    setConversationActiveFlag(false);
+    conversationExpiresAtRef.current = 0;
+    clearLocalVoiceTimers();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    if (browserTtsAvailable()) {
+      window.speechSynthesis.cancel();
+    }
+    setInterimTranscript("");
+    setLocalVoiceState("idle");
+    setJarvisTone("calmado");
+    setLocalVoiceResponse("Escucha/habla detenida por David. No se ejecutó nada.");
+    setLocalVoiceIntent("cancelled_by_operator");
+    setLocalVoiceRisk("none");
+  }
 
   useEffect(() => {
     let active = true;
@@ -1721,6 +2706,39 @@ export default function JarvisCommandCenterPage() {
       });
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const sttAvailable = Boolean(getBrowserSpeechRecognitionConstructor());
+    const ttsAvailable = browserTtsAvailable();
+    setSttSupport(sttAvailable ? "supported" : "not_supported");
+    setTtsSupport(ttsAvailable ? "supported" : "not_supported");
+    refreshBrowserVoiceSelection();
+    if (ttsAvailable) {
+      window.speechSynthesis.onvoiceschanged = refreshBrowserVoiceSelection;
+    }
+    if (!sttAvailable) {
+      setLocalVoiceState("not_supported");
+      setJarvisTone("alerta");
+      setCapabilityNotice("SpeechRecognition/webkitSpeechRecognition no está disponible en este navegador.");
+      setLocalVoiceResponse("STT no está soportado aquí. La UI lo declara; no simula escucha.");
+    } else if (!ttsAvailable) {
+      setCapabilityNotice("STT está disponible; speechSynthesis no está disponible para TTS en este navegador.");
+    } else {
+      setCapabilityNotice("STT y TTS de navegador detectados. Activación siempre manual; soporte depende del navegador.");
+    }
+
+    return () => {
+      cancelledRef.current = true;
+      conversationActiveRef.current = false;
+      clearLocalVoiceTimers();
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      if (browserTtsAvailable()) {
+        window.speechSynthesis.onvoiceschanged = null;
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
@@ -1742,6 +2760,10 @@ export default function JarvisCommandCenterPage() {
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
   const voiceCoreState = voiceCore.state ?? {};
   const ttsState = voiceCore.tts_state ?? {};
+  const localVoiceLoop = dashboard.local_voice_loop ?? fallbackOffline.local_voice_loop!;
+  const localVoiceLoopCapabilities = localVoiceLoop.capabilities ?? {};
+  const localVoiceLoopPrivacy = localVoiceLoop.privacy ?? {};
+  const localVoiceLoopApproval = localVoiceLoop.approval_policy ?? {};
   const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow!;
   const cameraVision = dashboard.camera_vision ?? fallbackOffline.camera_vision!;
   const cameraVisionState = cameraVision.state ?? {};
@@ -1756,14 +2778,17 @@ export default function JarvisCommandCenterPage() {
   const visualPilot = dashboard.visual_command_center_pilot ?? fallbackOffline.visual_command_center_pilot!;
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackOffline.timeline ?? [];
 
+  const localVoiceMicActive = localVoiceState === "listening" || localVoiceState === "transcribing";
   const sensorsDisabled =
+    !localVoiceMicActive &&
     !voiceCoreState.microphone_enabled &&
     !cameraVisionState.camera_enabled &&
     !mobileCompanionState.remote_camera_enabled &&
     !mobileCompanionState.remote_microphone_enabled;
   const activeRisk = valueText(missionIntent.risk_level, cameraVisionState.camera_enabled ? "sensor_privacy" : "none/unknown");
-  const voiceState = valueText(voiceCoreState.current_state, "preview");
-  const coreSubtitle = valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
+  const readModelVoiceState = valueText(voiceCoreState.current_state, "preview");
+  const voiceState = localVoiceState === "idle" ? readModelVoiceState : localVoiceStateLabels[localVoiceState];
+  const coreSubtitle = localVoiceResponse || valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
 
   const essentialRows = [
     ["estado general", valueText(system.api_status, connectionState)],
@@ -1780,7 +2805,8 @@ export default function JarvisCommandCenterPage() {
     ["web", localSystemContract.web_route_is_visual_interface_only ? "/jarvis visual interface only" : "unknown"],
     ["mobile/VPS", localSystemContract.mobile_and_vps_are_future_clients_or_bridges ? "future clients/bridges" : "unknown"],
     ["Hermes direct", localSystemContract.frontend_executes_hermes_directly ? "unexpected allowed" : "false"],
-    ["voice/camera", localSystemContract.real_voice_camera_in_future_prs ? "future PRs" : "unknown"],
+    ["voice", localSystemContract.real_browser_voice_loop_in_this_pr ? "local loop manual" : "unknown"],
+    ["camera", localSystemContract.real_camera_in_future_prs ? "future PR" : "unknown"],
   ] as const;
 
   const hermesRows = [
@@ -1800,6 +2826,24 @@ export default function JarvisCommandCenterPage() {
     ["STT", yesNo(voiceCoreState.stt_enabled, "enabled", "disabled")],
     ["grabación", yesNo(voiceCoreState.audio_recording, "true", "false")],
     ["audio bruto almacenado", yesNo(voiceCoreState.raw_audio_stored, "true", "false")],
+  ] as const;
+
+  const localVoiceRows = [
+    ["loop", valueText(localVoiceLoop.state?.mode, "browser_controlled_manual_loop")],
+    ["estado UI", localVoiceStateLabels[localVoiceState]],
+    ["activación", valueText(localVoiceLoop.state?.activation, "explicit_operator_button")],
+    ["conversation_active", conversationActive ? "true" : "false"],
+    ["wake_listening", yesNo(localVoiceLoop.state?.wake_listening, "true", "false")],
+    ["recording", yesNo(localVoiceLoop.state?.recording, "true", "false")],
+    ["STT navegador", capabilityText(sttSupport)],
+    ["TTS navegador", capabilityText(ttsSupport)],
+    ["voz elegida", selectedVoiceName || "fallback/unknown"],
+    ["backend STT", valueText(localVoiceLoopCapabilities.backend_stt_provider, "none/not_called")],
+    ["backend TTS", valueText(localVoiceLoopCapabilities.backend_tts_provider, "none/not_called")],
+    ["audio storage", yesNo(localVoiceLoop.audio_storage ?? localVoiceLoopPrivacy.audio_storage, "true", "false")],
+    ["raw audio backend", yesNo(localVoiceLoop.raw_audio_sent_to_backend ?? localVoiceLoopPrivacy.raw_audio_sent_to_backend, "true", "false")],
+    ["voice approval", yesNo(localVoiceLoop.approval_by_voice_enabled ?? localVoiceLoopApproval.approval_by_voice_enabled, "enabled", "disabled")],
+    ["wake phrase approval", yesNo(localVoiceLoop.wake_phrase_approval ?? localVoiceLoopApproval.wake_phrase_approval, "enabled", "disabled")],
   ] as const;
 
   const cameraRows = [
@@ -1877,7 +2921,7 @@ export default function JarvisCommandCenterPage() {
               KILL SWITCH
             </Button>
             <span className="sr-only">Kill Switch {valueText(system.kill_switch_state, "not_wired")}</span>
-            <span className="sr-only">No POST/PUT/DELETE. No execute. No sensores. No fake metrics.</span>
+            <span className="sr-only">No POST/PUT/DELETE. No execute. No sensores sin activación manual. No fake metrics.</span>
             <span className="sr-only">JARVIS gobierna. Hermes ejecuta. El dashboard mira, no toca.</span>
           </div>
         </div>
@@ -1906,7 +2950,14 @@ export default function JarvisCommandCenterPage() {
           </article>
         </aside>
 
-        <PresenceCore voiceState={voiceState} subtitle={coreSubtitle} />
+        <PresenceCore
+          voiceState={voiceState}
+          subtitle={coreSubtitle}
+          localVoiceState={localVoiceState}
+          jarvisTone={jarvisTone}
+          conversationActive={conversationActive}
+          killSwitchState={valueText(system.kill_switch_state, "not_wired")}
+        />
 
         <aside className="grid min-h-0 content-center gap-4">
           <article className="relative overflow-hidden rounded-[2px] border border-cyan-300/18 bg-[#03101f]/76 p-4 shadow-[0_0_58px_rgba(34,211,238,0.11)] backdrop-blur-md" data-testid="jarvis-approval-summary">
@@ -1954,7 +3005,7 @@ export default function JarvisCommandCenterPage() {
               <SafetyLine>/jarvis es solo la interfaz visual.</SafetyLine>
               <SafetyLine>móvil y VPS serán clientes/puentes futuros.</SafetyLine>
               <SafetyLine>frontend no ejecuta directamente Hermes.</SafetyLine>
-              <SafetyLine>voz/cámara reales vendrán en PRs posteriores.</SafetyLine>
+              <SafetyLine>voz local controlada disponible en esta PR; cámara real vendrá en PRs posteriores.</SafetyLine>
             </div>
             <div className="mt-3">
               <StatusList items={localContractRows} />
@@ -1978,7 +3029,24 @@ export default function JarvisCommandCenterPage() {
         </aside>
       </section>
 
-      <SmartBar missionControl={missionControl} />
+      <SmartBar
+        missionControl={missionControl}
+        localVoiceState={localVoiceState}
+        jarvisTone={jarvisTone}
+        conversationActive={conversationActive}
+        transcript={transcript}
+        interimTranscript={interimTranscript}
+        localVoiceResponse={localVoiceResponse}
+        localVoiceIntent={localVoiceIntent}
+        localVoiceRisk={localVoiceRisk}
+        sttSupport={sttSupport}
+        ttsSupport={ttsSupport}
+        capabilityNotice={capabilityNotice}
+        selectedVoiceName={selectedVoiceName}
+        voiceQualityNotice={voiceQualityNotice}
+        onBegin={beginLocalVoiceLoop}
+        onCancel={cancelLocalVoiceLoop}
+      />
 
       <details className="absolute bottom-6 left-6 z-50" data-testid="jarvis-command-center-tabs">
         <summary className="flex cursor-pointer items-center gap-3 border border-cyan-300/14 bg-[#020b17]/82 px-5 py-3 font-display text-xs uppercase tracking-[0.18em] text-cyan-100/68 shadow-[0_0_32px_rgba(34,211,238,0.08)] backdrop-blur">
@@ -2095,7 +3163,7 @@ export default function JarvisCommandCenterPage() {
               <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-3">
                   <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
-                  <SafetyLine>No se activan sensores.</SafetyLine>
+                  <SafetyLine>No se activan sensores sin control manual explícito.</SafetyLine>
                   <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
                   <SafetyLine>No hay métricas falsas.</SafetyLine>
                   <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
@@ -2200,26 +3268,51 @@ export default function JarvisCommandCenterPage() {
                   <Activity className="h-5 w-5 text-warning" />
                   <CardTitle>Núcleo de Voz JARVIS</CardTitle>
                 </div>
-                <CardDescription>Voice Core visual + TTS state preview. Sin escucha, sin grabación y sin provider externo.</CardDescription>
+                <CardDescription>Local Voice Loop con SpeechRecognition/speechSynthesis si el navegador lo soporta. Sin audio bruto al backend ni approvals por voz.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <StatusList items={voiceRows} />
+                <StatusList items={localVoiceRows} />
                 <article className="border border-warning/40 bg-warning/10 p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="warning">Subtítulos preview</Badge>
-                    <Badge variant="success">sin TTS real</Badge>
-                    <Badge variant="success">sin STT real</Badge>
-                    <Badge variant="success">sin provider externo</Badge>
+                    <Badge variant="warning">Local Voice Loop</Badge>
+                    <Badge variant={conversationActive ? "warning" : "outline"}>conversation_active={conversationActive ? "true" : "false"}</Badge>
+                    <Badge variant={sttSupport === "supported" ? "success" : "destructive"}>STT navegador: {capabilityText(sttSupport)}</Badge>
+                    <Badge variant={ttsSupport === "supported" ? "success" : "destructive"}>TTS navegador: {capabilityText(ttsSupport)}</Badge>
+                    <Badge variant="success">raw_audio_sent_to_backend=false</Badge>
                   </div>
                   <p className="mt-3 font-mono-ui text-sm text-foreground">{coreSubtitle}</p>
-                  <p className="mt-2 font-display text-xs text-warning">Subtítulos preview - sin TTS real, sin STT real, sin provider externo.</p>
+                  <p className="mt-2 font-display text-xs text-warning">
+                    Soporte dependiente del navegador; SpeechRecognition puede usar servicios del navegador. Esta UI no guarda audio bruto ni lo sube al backend.
+                  </p>
+                  <p className="mt-2 font-mono-ui text-xs text-foreground">
+                    Conversación manual continua: David pulsa una vez, JARVIS escucha, responde y vuelve a escuchar hasta stop/cancel o timeout.
+                  </p>
+                  <p className="mt-2 font-mono-ui text-xs text-foreground">
+                    TTS: selección preferente de voz española cuando el navegador la ofrece. {voiceQualityNotice}
+                  </p>
                 </article>
                 <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                  <SafetyLine>micrófono: disabled</SafetyLine>
+                  <SafetyLine>micrófono: manual bajo botón explícito</SafetyLine>
+                  <SafetyLine>conversation_active: {conversationActive ? "true" : "false"}</SafetyLine>
+                  <SafetyLine>wake_listening: false</SafetyLine>
+                  <SafetyLine>recording=false</SafetyLine>
                   <SafetyLine>grabación: false</SafetyLine>
-                  <SafetyLine>proveedor externo: none/not_connected</SafetyLine>
-                  <SafetyLine>En esta PR no hay audio real que parar.</SafetyLine>
+                  <SafetyLine>approval_by_voice_enabled=false</SafetyLine>
+                  <SafetyLine>Stop cancela escucha y speechSynthesis.</SafetyLine>
                 </div>
+                <article className="border border-cyan-300/20 bg-cyan-300/[0.06] p-4" data-testid="jarvis-local-voice-loop">
+                  <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-100">Local Voice Loop</h3>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    <SafetyLine>No always-listening.</SafetyLine>
+                    <SafetyLine>No wake listener persistente.</SafetyLine>
+                    <SafetyLine>JARVIS aún no tiene wake listener persistente real en esta PR; la conversación se activa manualmente. Arquitectura preparada para wake phrase sin grabar ni transcribir todo.</SafetyLine>
+                    <SafetyLine>No audio bruto almacenado.</SafetyLine>
+                    <SafetyLine>No audio bruto enviado al backend.</SafetyLine>
+                    <SafetyLine>No ejecución Hermes desde frontend.</SafetyLine>
+                    <SafetyLine>No money/deploy/email/credenciales por voz.</SafetyLine>
+                  </div>
+                </article>
                 <article className="border border-warning/40 bg-warning/10 p-4">
                   <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-warning">Wake Word Local Safe Flow</h3>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -2233,6 +3326,7 @@ export default function JarvisCommandCenterPage() {
                     />
                     <div className="grid gap-2">
                       <SafetyLine>Wake phrase is not permission.</SafetyLine>
+                      <SafetyLine>wake listening sin grabación ni transcripción continua.</SafetyLine>
                       <SafetyLine>La wake phrase nunca aprueba acciones.</SafetyLine>
                       <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
                       <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
@@ -2370,7 +3464,7 @@ export default function JarvisCommandCenterPage() {
                   <SafetyLine>El dashboard mira, no toca.</SafetyLine>
                   <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
                   <SafetyLine>No execute.</SafetyLine>
-                  <SafetyLine>No sensores.</SafetyLine>
+                  <SafetyLine>No sensores sin activación manual.</SafetyLine>
                   <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
                 </div>
               </CardContent>

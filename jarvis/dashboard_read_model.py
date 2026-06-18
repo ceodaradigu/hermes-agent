@@ -161,6 +161,8 @@ def build_mark_3_dashboard_status(
     voice_core_timeline = _voice_core_timeline_events()
     wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
     wake_word_flow_timeline = _wake_word_flow_timeline_events()
+    local_voice_loop = _local_voice_loop_projection()
+    local_voice_loop_timeline = _local_voice_loop_timeline_events()
     camera_vision = _camera_vision_projection(camera_control=camera_control)
     camera_vision_timeline = _camera_vision_timeline_events()
     mobile_companion = _mobile_companion_projection(
@@ -255,10 +257,10 @@ def build_mark_3_dashboard_status(
             ),
             _module(
                 "Voice",
-                "preview" if voice_runtime.get("voice_runtime_available") else "not_connected",
-                "/voice-runtime/status",
+                "browser_controlled",
+                "/mark-3/dashboard/status",
                 "sensor_privacy",
-                "Voice status is a control-plane preview; microphone and recording are disabled.",
+                "Local browser voice loop is available only after manual operator activation; no backend audio upload.",
             ),
             _module(
                 "Wake Listener",
@@ -323,6 +325,7 @@ def build_mark_3_dashboard_status(
         "mission_control": mission_control,
         "hermes_execution": hermes_execution,
         "voice_core": voice_core,
+        "local_voice_loop": local_voice_loop,
         "wake_word_flow": wake_word_flow,
         "voice_wake": {
             "microphone_state": "disabled" if voice_core["state"]["microphone_enabled"] is False else UNKNOWN,
@@ -330,8 +333,12 @@ def build_mark_3_dashboard_status(
             "wake_phrases": voice_core["wake_word_policy"]["supported_phrases"],
             "wake_phrase_can_approve": False,
             "wake_phrase_can_execute": False,
+            "local_voice_loop": "browser_controlled_manual_only",
+            "browser_stt_supported": UNKNOWN,
+            "browser_tts_supported": UNKNOWN,
             "audio_recording": False,
             "raw_audio_stored": False,
+            "raw_audio_sent_to_backend": False,
             "external_provider_called": False,
             "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
         },
@@ -379,8 +386,11 @@ def build_mark_3_dashboard_status(
             "no_frontend_execute": True,
             "no_duplicate_hermes_runtime": True,
             "no_get_user_media": True,
-            "no_sensor_activation": True,
+            "no_sensor_activation": False,
+            "no_uncontrolled_sensor_activation": True,
+            "manual_browser_voice_activation_only": True,
             "no_voice_recording": True,
+            "no_browser_raw_audio_capture": True,
             "no_camera_capture": True,
             "no_frontend_tool_runner": True,
             "no_tool_call": True,
@@ -406,6 +416,7 @@ def build_mark_3_dashboard_status(
         + mission_control_timeline
         + voice_core_timeline
         + wake_word_flow_timeline
+        + local_voice_loop_timeline
         + camera_vision_timeline
         + mobile_companion_timeline
         + finance_roi_timeline
@@ -451,7 +462,9 @@ def build_mark_3_dashboard_status(
             "allowed_http_methods_for_frontend": ["GET"],
             "internal_sources_are_read_only_status_or_audit": True,
             "frontend_must_not_call_execute": True,
-            "frontend_must_not_request_sensor_permissions": True,
+            "frontend_must_not_request_sensor_permissions": False,
+            "frontend_sensor_permission_scope": "manual browser SpeechRecognition only",
+            "frontend_must_not_request_camera_permissions": True,
             "frontend_is_not_runtime": True,
             "web_route_is_visual_interface_only": True,
             "local_runtime_daemon_is_system": True,
@@ -470,10 +483,12 @@ def _local_system_contract_projection() -> Dict[str, Any]:
         "web_route_is_visual_interface_only": True,
         "frontend_executes_hermes_directly": False,
         "frontend_is_runtime": False,
-        "frontend_can_activate_real_voice": False,
+        "frontend_can_activate_real_voice": True,
         "frontend_can_activate_real_camera": False,
         "mobile_and_vps_are_future_clients_or_bridges": True,
-        "real_voice_camera_in_future_prs": True,
+        "real_voice_camera_in_future_prs": False,
+        "real_browser_voice_loop_in_this_pr": True,
+        "real_camera_in_future_prs": True,
         "jarvis_governs": True,
         "hermes_executes": True,
         "no_duplicate_hermes_runtime": True,
@@ -482,26 +497,30 @@ def _local_system_contract_projection() -> Dict[str, Any]:
             "central_core_states": [
                 "idle/calmado",
                 "escuchando",
+                "transcribiendo",
                 "pensando",
                 "hablando",
-                "alerta/riesgo",
+                "error/no disponible",
             ],
-            "smart_bar": "disabled/preview",
+            "smart_bar": "local voice transcript/response preview",
             "camera_placeholder": "movable/expandable visual placeholder",
             "folded_history": "collapsed preview",
         },
         "future_bridges": {
             "mobile": "future client/bridge",
             "vps": "future secure bridge",
-            "voice_runtime": "future PR",
+            "voice_runtime": "future daemon/wake/always-on work; this PR is browser manual only",
             "camera_runtime": "future PR",
         },
         "safety": {
             "no_post_put_delete_from_jarvis_page": True,
             "no_execute_route": True,
             "no_frontend_hermes_execution": True,
-            "no_browser_sensor_permission": True,
-            "no_real_voice": True,
+            "no_browser_sensor_permission": False,
+            "browser_voice_permission_manual_only": True,
+            "no_uncontrolled_sensor_activation": True,
+            "no_real_voice": False,
+            "no_backend_voice_runtime": True,
             "no_real_camera": True,
             "no_money": True,
             "no_deploy": True,
@@ -549,6 +568,190 @@ def _local_system_contract_timeline_events() -> List[Dict[str, Any]]:
     ]
 
 
+def _local_voice_loop_projection() -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "browser_controlled_manual_loop",
+            "current_state": "idle",
+            "activation": "explicit_operator_button",
+            "always_listening": False,
+            "manual_continuous_conversation": True,
+            "conversation_active": False,
+            "conversation_timeout_seconds": 180,
+            "wake_listening": False,
+            "wake_listening_real_enabled": False,
+            "recording": False,
+            "continuous_recording": False,
+            "wake_listener_enabled": False,
+            "wake_phrase_approval": False,
+            "hermes_dispatch_enabled": False,
+            "critical_action_execution_enabled": False,
+        },
+        "capabilities": {
+            "browser_stt_supported": UNKNOWN,
+            "browser_tts_supported": UNKNOWN,
+            "browser_stt_detection": "window.SpeechRecognition || window.webkitSpeechRecognition",
+            "browser_tts_detection": "window.speechSynthesis && window.SpeechSynthesisUtterance",
+            "support_detection_location": "browser",
+            "browser_may_use_external_services": True,
+            "backend_stt_provider": "none/not_called",
+            "backend_tts_provider": "none/not_called",
+        },
+        "browser_stt_supported": UNKNOWN,
+        "browser_tts_supported": UNKNOWN,
+        "manual_microphone_opt_in": True,
+        "audio_storage": False,
+        "raw_audio_sent_to_backend": False,
+        "approval_by_voice_enabled": False,
+        "wake_phrase_approval": False,
+        "visual_states": [
+            "idle",
+            "listening",
+            "transcribing",
+            "thinking",
+            "speaking",
+            "error",
+            "not_supported",
+            "unavailable",
+        ],
+        "mode_contract": {
+            "wake_listening": {
+                "enabled_in_this_pr": False,
+                "future_contract_only": True,
+                "records_audio": False,
+                "transcribes_full_conversation": False,
+                "sends_raw_audio_to_backend": False,
+                "executes": False,
+                "approves": False,
+                "detects_activation_only": True,
+            },
+            "conversation_active": {
+                "enabled_in_this_pr": True,
+                "activation": "manual_microphone_button",
+                "transcribes_operator_speech": True,
+                "keeps_loop_until_stop_or_timeout": True,
+                "timeout_seconds": 180,
+                "executes": False,
+                "approves": False,
+            },
+            "recording": {
+                "enabled": False,
+                "raw_audio_storage": False,
+                "backend_audio_upload": False,
+            },
+        },
+        "tone_profiles": [
+            {"tone": "calmado", "rate": 0.92, "pitch": 0.9, "volume": 0.86},
+            {"tone": "concentrado", "rate": 0.98, "pitch": 0.92, "volume": 0.9},
+            {"tone": "alerta", "rate": 1.04, "pitch": 0.86, "volume": 0.94},
+            {"tone": "intenso", "rate": 1.1, "pitch": 0.82, "volume": 1.0},
+        ],
+        "privacy": {
+            "audio_storage": False,
+            "raw_audio_sent_to_backend": False,
+            "raw_audio_storage": False,
+            "backend_audio_upload": False,
+            "transcript_temporary_in_browser": True,
+            "no_media_recorder": True,
+            "no_get_user_media": True,
+            "no_audio_context_capture": True,
+            "no_continuous_recording": True,
+            "wake_listening_without_recording_future": True,
+            "no_continuous_transcription": True,
+        },
+        "approval_policy": {
+            "approval_by_voice_enabled": False,
+            "wake_phrase_approval": False,
+            "wake_phrase_is_permission": False,
+            "wake_phrase_can_execute": False,
+            "critical_actions_require_non_voice_approval": True,
+            "voice_can_prepare_preview_only": True,
+        },
+        "safety": {
+            "manual_operator_activation_required": True,
+            "stop_control_required": True,
+            "no_always_listening": True,
+            "no_persistent_wake_listener": True,
+            "no_wake_listener_real": True,
+            "no_hermes_dispatch": True,
+            "no_tool_call": True,
+            "no_auto_execute": True,
+            "no_post_put_delete": True,
+            "no_money": True,
+            "no_deploy": True,
+            "no_email": True,
+            "no_credentials": True,
+            "camera_activation_enabled": False,
+        },
+        "wake_listening_contract": {
+            "persistent_wake_listener_real": False,
+            "available_in_this_pr": False,
+            "future_state_name": "wake_listening",
+            "supported_phrases_future": ["Hola Jarvis", "Jarvis"],
+            "no_audio_storage": True,
+            "no_raw_audio_backend": True,
+            "no_continuous_transcription": True,
+            "activation_only": True,
+            "can_execute": False,
+            "can_approve": False,
+        },
+        "response_policy": {
+            "local_controlled_response_only": True,
+            "intent_classification_preview_only": True,
+            "can_confirm_transcript": True,
+            "can_request_confirmation": True,
+            "cannot_execute_missions": True,
+            "cannot_create_approvals": True,
+            "cannot_approve_actions": True,
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "source_endpoints": ["/mark-3/dashboard/status"],
+        "preview_only": True,
+        "read_only": True,
+    }
+
+
+def _local_voice_loop_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Local Voice Loop declared",
+            "source": "/mark-3/dashboard/status",
+            "status": "browser_controlled_manual_only",
+            "read_only": True,
+        },
+        {
+            "event": "Manual continuous conversation declared",
+            "source": "/mark-3/dashboard/status",
+            "status": "manual_opt_in_until_stop_or_timeout",
+            "read_only": True,
+        },
+        {
+            "event": "Browser STT/TTS support is unknown until /jarvis loads",
+            "source": "/mark-3/dashboard/status",
+            "status": UNKNOWN,
+            "read_only": True,
+        },
+        {
+            "event": "Future wake_listening contract declared without real listener",
+            "source": "/mark-3/dashboard/status",
+            "status": "future_contract_only",
+            "read_only": True,
+        },
+        {
+            "event": "Raw audio backend upload disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Voice approval disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "blocked",
+            "read_only": True,
+        },
+    ]
+
+
 def _visual_pilot_panel(name: str, source: str, status: str, notes: str) -> Dict[str, Any]:
     return {
         "name": name,
@@ -587,7 +790,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             "frontend_execution_enabled": False,
             "approvals_real_enabled": False,
             "hermes_direct_execution_enabled": False,
-            "voice_real_enabled": False,
+            "voice_real_enabled": True,
+            "browser_local_voice_loop_enabled": True,
             "camera_real_enabled": False,
             "mobile_runtime_enabled": False,
             "money_enabled": False,
@@ -616,9 +820,9 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             ),
             _visual_pilot_panel(
                 "Smart Bar",
-                "local_system_contract.visual_contract.smart_bar",
+                "local_voice_loop + local_system_contract.visual_contract.smart_bar",
                 "preview",
-                "Bottom smart bar is disabled/preview for text, temporary transcript and temporary response.",
+                "Bottom smart bar shows temporary browser transcript and controlled local response.",
             ),
             _visual_pilot_panel(
                 "Camera Placeholder",
@@ -634,9 +838,15 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             ),
             _visual_pilot_panel(
                 "Voice Core",
-                "voice_core",
+                "voice_core + local_voice_loop",
                 "preview",
-                "Visual state only; microphone, STT, TTS and providers remain disabled.",
+                "Browser STT/TTS may run only after explicit operator activation; backend voice runtime remains disabled.",
+            ),
+            _visual_pilot_panel(
+                "Local Voice Loop",
+                "local_voice_loop",
+                "preview",
+                "Manual browser-controlled STT/TTS loop; no raw audio storage, backend upload or voice approval.",
             ),
             _visual_pilot_panel(
                 "Wake Word Local Safe Flow",
@@ -737,16 +947,16 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "No browser-side tool runner is represented by the dashboard read model.",
             ),
             _visual_pilot_check(
-                "no_sensor_activation",
+                "no_uncontrolled_sensor_activation",
                 "passed",
-                "safety.no_sensor_activation=true",
-                "Voice, wake, camera and mobile panels expose status only.",
+                "safety.no_uncontrolled_sensor_activation=true",
+                "Only manual browser SpeechRecognition can request microphone access; no camera or background listener.",
             ),
             _visual_pilot_check(
                 "no_get_user_media",
                 "passed",
                 "safety.no_get_user_media=true",
-                "Browser media permission requests remain outside this pilot.",
+                "The page does not call getUserMedia, MediaRecorder or AudioContext capture APIs.",
             ),
             _visual_pilot_check(
                 "no_media_recorder",
@@ -815,8 +1025,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             _visual_pilot_step(3, "comprobar estado general", "Confirm mode and endpoint show read-only pilot status."),
             _visual_pilot_step(4, "comprobar panels", "Verify all required panels are visible."),
             _visual_pilot_step(5, "comprobar unknown/disabled", "Confirm unavailable evidence remains unknown, disabled, not_connected, preview or future_gated."),
-            _visual_pilot_step(6, "comprobar que botones criticos estan disabled", "Mission, approval, kill switch, voice, camera, money and deploy controls must be disabled."),
-            _visual_pilot_step(7, "comprobar que no hay permisos de navegador", "The browser must not request microphone, camera, notifications or media permissions."),
+            _visual_pilot_step(6, "comprobar stop/cancel de voz", "Voice may start only from the explicit microphone button and must expose a stop control."),
+            _visual_pilot_step(7, "comprobar permisos acotados", "Only manual browser SpeechRecognition may request microphone access; camera, notifications and media capture remain disabled."),
             _visual_pilot_step(8, "comprobar que no hay ejecucion Hermes", "No frontend path may invoke Hermes execution."),
             _visual_pilot_step(9, "comprobar que finance/ROI no inventa datos", "Finance values without evidence must remain unknown."),
             _visual_pilot_step(10, "comprobar timeline read-only", "Timeline events must describe reads/checks only, not execution."),
@@ -826,7 +1036,7 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             "known_limitations": [
                 "real approvals not wired",
                 "mission submit is preview-only",
-                "voice is preview-only",
+                "voice is browser-controlled/manual-only",
                 "wake word is preview-only",
                 "camera is disabled",
                 "mobile is preview-only",
@@ -841,7 +1051,7 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             "no_side_effects": True,
             "no_real_world_actions": True,
             "no_background_workers": True,
-            "no_sensors": True,
+            "no_uncontrolled_sensors": True,
             "no_money": True,
             "no_production": True,
             "no_credentials": True,
@@ -1197,8 +1407,8 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             _frontend_readiness_check(
                 "smart_bar_visible",
                 "passed",
-                "smart bar disabled/preview",
-                "The bottom bar supports future text/voice/transcript/response flow without wiring real execution.",
+                "smart bar local voice transcript/response",
+                "The bottom bar shows temporary browser transcript and controlled local response without execution.",
             ),
             _frontend_readiness_check(
                 "camera_placeholder_visible",
@@ -1240,7 +1450,13 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "voice_core_visible",
                 "passed",
                 "voice_core projection present",
-                "Voice core is visual preview only.",
+                "Voice core can reflect manual browser STT/TTS loop states.",
+            ),
+            _frontend_readiness_check(
+                "local_voice_loop_visible",
+                "passed",
+                "local_voice_loop projection present",
+                "The read model declares browser-dependent support, audio privacy limits and no voice approval.",
             ),
             _frontend_readiness_check(
                 "wake_flow_visible",
@@ -1291,10 +1507,10 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "Frontend is a read-only pilot surface.",
             ),
             _frontend_readiness_check(
-                "no_sensor_activation",
+                "no_uncontrolled_sensor_activation",
                 "passed",
-                "frontend_can_activate_sensors=false",
-                "No microphone, camera or browser permission path is exposed.",
+                "manual_browser_voice_activation_only=true",
+                "Only explicit operator button activation may start browser SpeechRecognition.",
             ),
             _frontend_readiness_check(
                 "no_post_put_delete",
@@ -1315,7 +1531,7 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             "no real approvals",
             "no real mission submit",
             "no real Hermes execution",
-            "no real voice",
+            "browser voice support depends on SpeechRecognition/speechSynthesis",
             "no real camera",
             "no real mobile runtime",
             "no real finance/revenue measurement",

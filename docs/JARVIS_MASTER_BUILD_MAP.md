@@ -1450,6 +1450,97 @@ JARVIS gobierna.
 Hermes ejecuta.
 ```
 
+## Local Voice Loop
+
+PR #156 añade una prueba real y controlada de voz en `/jarvis`, sin convertir
+la Presence UI en runtime operativo ni duplicar Hermes. La mejora actual añade
+conversacion manual continua y refuerza el nucleo central como reactor/orbe
+cinematografico: capas, anillos, bloom, particulas sutiles, HUD y movimiento
+segun estado/tone.
+
+Backend/read model:
+
+- `GET /mark-3/dashboard/status` expone `local_voice_loop`.
+- `local_voice_loop.state.mode=browser_controlled_manual_loop`.
+- `activation=explicit_operator_button`.
+- `always_listening=false`.
+- `manual_continuous_conversation=true`.
+- `conversation_active=false` como estado inicial del read model.
+- `conversation_timeout_seconds=180`.
+- `wake_listening=false`.
+- `wake_listening_real_enabled=false`.
+- `recording=false`.
+- `continuous_recording=false`.
+- `wake_listener_enabled=false`.
+- `browser_stt_supported=unknown`.
+- `browser_tts_supported=unknown`.
+- `audio_storage=false`.
+- `raw_audio_sent_to_backend=false`.
+- `approval_by_voice_enabled=false`.
+- `wake_phrase_approval=false`.
+- `browser_may_use_external_services=true`, porque SpeechRecognition/TTS
+  dependen del navegador.
+
+Frontend `/jarvis`:
+
+- boton de microfono para iniciar conversacion manual continua solo con accion
+  manual;
+- `SpeechRecognition` / `webkitSpeechRecognition` si el navegador lo soporta;
+- `speechSynthesis` para TTS si el navegador lo soporta;
+- seleccion preferente de voz en espanol si el navegador la ofrece, con
+  fallback visible si no existe una voz buena;
+- smart bar con transcripcion temporal local y respuesta local controlada;
+- respuesta local mas humana; intent/risk tecnico queda secundario/plegado;
+- al terminar de hablar, JARVIS vuelve a escuchar mientras `conversation_active`
+  siga activo;
+- stop/cancel para cortar escucha, habla y cerrar la conversacion manual;
+- estados visuales del nucleo: `idle/calmado`, `escuchando`,
+  `transcribiendo`, `pensando`, `hablando`, `error/no disponible`;
+- tonos `calmado`, `concentrado`, `alerta`, `intenso` reflejados en clase
+  visual y parametros basicos TTS (`rate`, `pitch`, `volume`).
+- nucleo visual tipo reactor/orbe con profundidad, glow azul/cian, bloom,
+  anillos, particulas y HUD; `alerta/intenso/error` empujan acentos
+  naranja/rojo.
+
+Contrato de wake futuro:
+
+- `wake_listening` significa escucha minima para activacion, sin grabacion ni
+  transcripcion continua.
+- En esta PR `wake_listening=false` y no hay listener persistente real.
+- `conversation_active` empieza por activacion manual; aqui si puede haber STT
+  de la frase de David para la smart bar.
+- `recording=false` sigue significando que no se guarda audio bruto.
+- Texto de UI/docs: "JARVIS aun no tiene wake listener persistente real en esta
+  PR; la conversacion se activa manualmente. Arquitectura preparada para wake
+  phrase sin grabar ni transcribir todo."
+
+No implementa:
+
+- always-listening;
+- wake listener persistente;
+- wake listening real;
+- wake phrase como approval;
+- approvals criticos por voz;
+- ejecucion Hermes directa desde frontend;
+- POST/PUT/DELETE desde `/jarvis`;
+- endpoint `/execute`;
+- subida o almacenamiento de audio bruto;
+- `getUserMedia`, `MediaRecorder` o `AudioContext` para capturar audio bruto;
+- dinero, deploy, email, credenciales, Stripe, produccion;
+- camara real.
+
+Cómo probar:
+
+- abrir `/jarvis` en navegador compatible;
+- pulsar el microfono en la smart bar;
+- conceder permiso si el navegador lo solicita;
+- dictar una orden corta;
+- verificar transcripcion, respuesta local, TTS si disponible y estados
+  visuales;
+- probar stop/cancel;
+- en navegador sin STT/TTS, verificar estado `not_supported` o `unavailable`
+  visible sin simular exito.
+
 PR #151 conserva la separación:
 
 ```text

@@ -460,6 +460,66 @@ export interface JarvisVoiceCore {
   read_only?: boolean;
 }
 
+export interface JarvisLocalVoiceToneProfile {
+  tone: "calmado" | "concentrado" | "alerta" | "intenso" | string;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+}
+
+export interface JarvisLocalVoiceLoop {
+  state?: {
+    mode?: string;
+    current_state?: string;
+    activation?: string;
+    always_listening?: boolean;
+    manual_continuous_conversation?: boolean;
+    conversation_active?: boolean;
+    conversation_timeout_seconds?: number;
+    wake_listening?: boolean;
+    wake_listening_real_enabled?: boolean;
+    recording?: boolean;
+    continuous_recording?: boolean;
+    wake_listener_enabled?: boolean;
+    wake_phrase_approval?: boolean;
+    hermes_dispatch_enabled?: boolean;
+    critical_action_execution_enabled?: boolean;
+  };
+  capabilities?: {
+    browser_stt_supported?: boolean | string;
+    browser_tts_supported?: boolean | string;
+    browser_stt_detection?: string;
+    browser_tts_detection?: string;
+    support_detection_location?: string;
+    browser_may_use_external_services?: boolean;
+    backend_stt_provider?: string;
+    backend_tts_provider?: string;
+  };
+  browser_stt_supported?: boolean | string;
+  browser_tts_supported?: boolean | string;
+  manual_microphone_opt_in?: boolean;
+  audio_storage?: boolean;
+  raw_audio_sent_to_backend?: boolean;
+  approval_by_voice_enabled?: boolean;
+  wake_phrase_approval?: boolean;
+  visual_states?: string[];
+  mode_contract?: {
+    wake_listening?: Record<string, boolean | string | number | string[]>;
+    conversation_active?: Record<string, boolean | string | number | string[]>;
+    recording?: Record<string, boolean | string | number | string[]>;
+  };
+  tone_profiles?: JarvisLocalVoiceToneProfile[];
+  privacy?: Record<string, boolean>;
+  approval_policy?: Record<string, boolean>;
+  safety?: Record<string, boolean>;
+  wake_listening_contract?: Record<string, boolean | string | string[]>;
+  response_policy?: Record<string, boolean>;
+  source_endpoint?: string;
+  source_endpoints?: string[];
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisWakeWordFlow {
   state?: {
     mode?: string;
@@ -746,6 +806,7 @@ export interface JarvisVisualCommandCenterPilot {
     approvals_real_enabled?: boolean;
     hermes_direct_execution_enabled?: boolean;
     voice_real_enabled?: boolean;
+    browser_local_voice_loop_enabled?: boolean;
     camera_real_enabled?: boolean;
     mobile_runtime_enabled?: boolean;
     money_enabled?: boolean;
@@ -767,6 +828,7 @@ export interface JarvisVisualCommandCenterPilot {
     no_real_world_actions?: boolean;
     no_background_workers?: boolean;
     no_sensors?: boolean;
+    no_uncontrolled_sensors?: boolean;
     no_money?: boolean;
     no_production?: boolean;
     no_credentials?: boolean;
@@ -790,6 +852,8 @@ export interface JarvisLocalSystemContract {
   frontend_can_activate_real_camera?: boolean;
   mobile_and_vps_are_future_clients_or_bridges?: boolean;
   real_voice_camera_in_future_prs?: boolean;
+  real_browser_voice_loop_in_this_pr?: boolean;
+  real_camera_in_future_prs?: boolean;
   jarvis_governs?: boolean;
   hermes_executes?: boolean;
   no_duplicate_hermes_runtime?: boolean;
@@ -861,6 +925,7 @@ export interface JarvisDashboardStatus {
   };
   hermes_execution?: JarvisHermesExecution;
   voice_core?: JarvisVoiceCore;
+  local_voice_loop?: JarvisLocalVoiceLoop;
   wake_word_flow?: JarvisWakeWordFlow;
   voice_wake?: {
     microphone_state?: string;
@@ -911,6 +976,8 @@ export interface JarvisDashboardStatus {
     internal_sources_are_read_only_status_or_audit?: boolean;
     frontend_must_not_call_execute?: boolean;
     frontend_must_not_request_sensor_permissions?: boolean;
+    frontend_sensor_permission_scope?: string;
+    frontend_must_not_request_camera_permissions?: boolean;
   };
 }
 
