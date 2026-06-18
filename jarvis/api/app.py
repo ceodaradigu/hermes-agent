@@ -6,6 +6,10 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
+from jarvis.asyncio_compat import ensure_asyncio_self_pipe_compat
+
+ensure_asyncio_self_pipe_compat()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
@@ -51,6 +55,7 @@ from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.conversational_brain_bridge import ConversationalBrainBridge
+from jarvis.conversational_intake import ConversationalIntakePipeline
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
 from jarvis.dashboard_event_stream import build_jarvis_event_snapshot, encode_sse_event
 from jarvis.dashboard_read_model import build_local_doctor_status, build_mark_3_dashboard_status
@@ -112,6 +117,7 @@ from jarvis.future_moonshot.foundation import (
     RoboticsDroneSafetyReviewPreview,
     SmartGlassesIntegrationPreview,
 )
+from jarvis.llm_brain_adapter import LLMBrainAdapter
 from jarvis.mission_control import MissionControl
 from jarvis.marketing_distribution.foundation import (
     AudienceSegmentPreview,
@@ -1954,6 +1960,10 @@ def create_app(
     app.state.personal_os_control = PersonalOSControlPlane()
     app.state.scheduler_control = SchedulerControlPlane()
     app.state.conversational_brain_bridge = ConversationalBrainBridge()
+    app.state.conversational_intake_pipeline = ConversationalIntakePipeline()
+    app.state.llm_brain_adapter = LLMBrainAdapter(
+        intake_pipeline=app.state.conversational_intake_pipeline,
+    )
     app.state.wake_voice_runtime = WakeVoiceRuntime()
     app.state.voice_session_control = VoiceSessionControl(
         wake_runtime=app.state.wake_voice_runtime,
@@ -2307,6 +2317,14 @@ def create_app(
     @app.get("/mark-3/conversational-brain/status")
     def mark_3_conversational_brain_status() -> dict:
         return app.state.conversational_brain_bridge.status()
+
+    @app.get("/mark-3/conversational-intake/status")
+    def mark_3_conversational_intake_status() -> dict:
+        return app.state.conversational_intake_pipeline.status()
+
+    @app.get("/mark-3/brain-adapter/status")
+    def mark_3_brain_adapter_status() -> dict:
+        return app.state.llm_brain_adapter.status()
 
     @app.get("/mark-3/dashboard/status")
     def mark_3_dashboard_status() -> dict:

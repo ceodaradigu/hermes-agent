@@ -196,6 +196,29 @@ Actualización #157 / Subfase Conversational Brain Bridge + vídeo local:
   sesiones del navegador sin POST de media al backend, audio bruto, frames ni
   secretos.
 
+Actualización #159 / Fase 1 Conversational Intake + LLM Brain Adapter:
+
+- Existe `ConversationalIntakePipeline` en `jarvis/conversational_intake.py`.
+  Normaliza texto escrito, transcripción de voz, comando futuro tras wake phrase
+  e input remoto futuro en un `ConversationalIntake` serializable.
+- El intake separa recibir texto, normalizar, detectar wake phrase, detectar
+  material sensible, clasificar intención/riesgo, preparar preview y declarar
+  `safe_to_dispatch_to_hermes=false`.
+- Existe `LLMBrainAdapter` en `jarvis/llm_brain_adapter.py` con contratos
+  `BrainRequest`, `BrainResponse` y `BrainProviderStatus`.
+- Provider actual por defecto: `deterministic_local`, usando el bridge local
+  existente. Provider externo visible: `disabled_external_llm`, deshabilitado
+  por defecto.
+- No hay LLM externo real, no hay red, no se lee `.env`, no se leen variables
+  secretas, no se guardan prompts privados y no se despacha Hermes.
+- `/mark-3/dashboard/status` expone `conversational_intake` y `brain_adapter`.
+  `/mark-3/dashboard/events` y `/stream` exponen `intake_state` y
+  `brain_adapter_state` solo con metadata segura.
+- `/jarvis` muestra provider actual, external called false y riesgo de intake
+  de forma compacta; los detalles técnicos quedan plegados.
+- Local Voice Loop puede usar la respuesta del intake/brain en modo
+  prepare-only sin perder el bloqueo de credenciales introducido en #158.
+
 Estado alineado de las fases maestras:
 
 | Fase maestra | Estado actual |

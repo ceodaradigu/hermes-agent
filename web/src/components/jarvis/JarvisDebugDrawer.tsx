@@ -53,6 +53,14 @@ export function JarvisDebugDrawer({
   const missionConversation = missionControl.conversation_preview ?? {};
   const conversationalBrain = dashboard.conversational_brain ?? fallbackOffline.conversational_brain!;
   const brainPreview = conversationalBrain.sample_analysis;
+  const conversationalIntake = dashboard.conversational_intake ?? fallbackOffline.conversational_intake!;
+  const intakeSample = conversationalIntake.sample ?? {};
+  const intakePreview = intakeSample.classification ?? {};
+  const brainAdapter = dashboard.brain_adapter ?? fallbackOffline.brain_adapter!;
+  const brainAdapterState = brainAdapter.state ?? {};
+  const localBrainProvider = brainAdapter.providers?.deterministic_local;
+  const externalBrainProvider = brainAdapter.providers?.disabled_external_llm;
+  const brainResponse = brainAdapter.sample?.brain_response ?? {};
   const hermes = dashboard.hermes_execution ?? {};
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
@@ -190,6 +198,36 @@ export function JarvisDebugDrawer({
     ["confidence", valueText(brainPreview?.confidence)],
     ["risk", valueText(brainPreview?.risk_level)],
     ["approval", valueText(brainPreview?.approval_level)],
+  ] as const;
+
+  const conversationalIntakeRows = [
+    ["modo", valueText(conversationalIntake.state?.mode, "prepare_only_conversational_intake")],
+    ["source", valueText(intakeSample.intake?.source, "typed_text")],
+    ["language", valueText(intakeSample.intake?.language, "unknown")],
+    ["wake detected", yesNo(intakeSample.intake?.wake_phrase_detected, "true", "false")],
+    ["sensitive request", yesNo(intakeSample.intake?.contains_sensitive_request, "true", "false")],
+    ["clarification", yesNo(intakeSample.intake?.requires_clarification, "true", "false")],
+    ["safe classify", yesNo(intakeSample.intake?.safe_to_classify, "true", "false")],
+    ["safe preview", yesNo(intakeSample.intake?.safe_to_prepare_preview, "true", "false")],
+    ["Hermes dispatch", yesNo(intakeSample.intake?.safe_to_dispatch_to_hermes, "allowed", "false")],
+    ["intent", valueText(intakePreview.intent_detected)],
+    ["risk", valueText(intakePreview.risk_level)],
+    ["next", valueText(intakePreview.next_safe_action)],
+  ] as const;
+
+  const brainAdapterRows = [
+    ["modo", valueText(brainAdapterState.mode, "safe_brain_adapter_prepare_only")],
+    ["provider", valueText(brainAdapterState.current_provider, "deterministic_local")],
+    ["provider mode", valueText(localBrainProvider?.provider_mode, "local_deterministic_prepare_only")],
+    ["external enabled", yesNo(brainAdapterState.external_llm_enabled, "true", "false")],
+    ["external called", yesNo(brainAdapterState.external_provider_called, "true", "false")],
+    ["reads env", yesNo(brainAdapterState.reads_env, "true", "false")],
+    ["network", yesNo(brainAdapterState.network_allowed, "true", "false")],
+    ["Hermes dispatch", yesNo(brainAdapterState.hermes_dispatch_allowed, "allowed", "false")],
+    ["disabled external", valueText(externalBrainProvider?.honest_status, "disabled_by_default_not_configured_not_called")],
+    ["response intent", valueText(brainResponse.intent_detected)],
+    ["response risk", valueText(brainResponse.risk_level)],
+    ["response next", valueText(brainResponse.suggested_next_action)],
   ] as const;
 
   const doctorRows = [
@@ -570,6 +608,30 @@ export function JarvisDebugDrawer({
                           <SafetyLine>No LLM real declarado si no se llama a un LLM.</SafetyLine>
                           <SafetyLine>No memoria automática.</SafetyLine>
                           <SafetyLine>No Hermes dispatch desde este bridge.</SafetyLine>
+                        </div>
+                      </div>
+                    </article>
+                    <article className="border border-cyan-300/15 bg-[#061526]/50 p-4">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-100">Conversational Intake Pipeline</h3>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <StatusList items={conversationalIntakeRows} />
+                        <div className="grid gap-2">
+                          <SafetyLine>Normaliza texto escrito, transcripción de voz, wake phrase y canales futuros.</SafetyLine>
+                          <SafetyLine>Detecta wake phrase, baja confianza, ambigüedad y material sensible antes de preview.</SafetyLine>
+                          <SafetyLine>safe_to_dispatch_to_hermes=false.</SafetyLine>
+                          <SafetyLine>Approval no es ejecución.</SafetyLine>
+                        </div>
+                      </div>
+                    </article>
+                    <article className="border border-cyan-300/15 bg-[#061526]/50 p-4">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-100">LLM Brain Adapter</h3>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <StatusList items={brainAdapterRows} />
+                        <div className="grid gap-2">
+                          <SafetyLine>Provider actual: deterministic_local.</SafetyLine>
+                          <SafetyLine>External LLM disabled; external_provider_called=false.</SafetyLine>
+                          <SafetyLine>No lee entorno, no usa red, no persiste prompts privados.</SafetyLine>
+                          <SafetyLine>No prepara Hermes dispatch; solo respuesta humana y preview candidato.</SafetyLine>
                         </div>
                       </div>
                     </article>

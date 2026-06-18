@@ -78,6 +78,8 @@ export function JarvisPresenceShell({
   const approvalCards = approvals.cards?.length ? approvals.cards : fallbackApprovalCards;
   const missionControl = dashboard.mission_control ?? fallbackOffline.mission_control!;
   const missionIntent = missionControl.intent_preview ?? {};
+  const conversationalIntake = dashboard.conversational_intake ?? fallbackOffline.conversational_intake!;
+  const brainAdapter = dashboard.brain_adapter ?? fallbackOffline.brain_adapter!;
   const hermes = dashboard.hermes_execution ?? {};
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
@@ -102,6 +104,9 @@ export function JarvisPresenceShell({
   const readModelVoiceState = valueText(voiceCoreState.current_state, "preview");
   const voiceState = localVoice.localVoiceState === "idle" ? readModelVoiceState : localVoice.localVoiceState;
   const coreSubtitle = localVoice.localVoiceResponse || valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
+  const brainProvider = valueText(brainAdapter.state?.current_provider, "deterministic_local");
+  const externalBrainCalled = brainAdapter.state?.external_provider_called === true;
+  const intakeRisk = valueText(conversationalIntake.sample?.classification?.risk_level, "unknown");
   const latestWakeEvent = events.find((event) => event.event_type === "wake_state");
   const approvalsPending = typeof approvals.pending_count === "number" ? approvals.pending_count > 0 : false;
   const orbVisualState: JarvisOrbVisualState =
@@ -157,6 +162,9 @@ export function JarvisPresenceShell({
               {connectionState === "online" ? "conectado" : valueText(system.api_status, connectionState)}
             </Badge>
             <Badge className="border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70" variant="outline">event bus {eventConnectionState}</Badge>
+            <Badge className={externalBrainCalled ? "border-red-300/40 bg-red-950/40 text-red-100" : "border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70"} variant="outline">
+              brain {brainProvider} · ext {externalBrainCalled ? "true" : "false"} · risk {intakeRisk}
+            </Badge>
             <Badge className="border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70" variant="outline">modo preview/read-only</Badge>
             <Badge className="border-cyan-300/22 bg-[#061526]/70 text-cyan-100/70" variant="outline">read-only</Badge>
             <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-400/40 bg-red-950/35 px-3 text-red-100" data-testid="jarvis-header-kill-switch">

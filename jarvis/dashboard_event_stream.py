@@ -8,6 +8,8 @@ from uuid import NAMESPACE_URL, uuid5
 EVENT_STREAM_SCHEMA_VERSION = "jarvis.dashboard.events.v1"
 
 ALLOWED_EVENT_TYPES = (
+    "intake_state",
+    "brain_adapter_state",
     "brain_state",
     "voice_state",
     "voice_session_state",
@@ -39,6 +41,52 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
     """
 
     events = [
+        _event(
+            generated_at,
+            "intake_state",
+            "/mark-3/conversational-intake/status",
+            _get(dashboard_status, "conversational_intake.state.mode", "prepare_only_conversational_intake"),
+            {
+                "schema_version": _get(dashboard_status, "conversational_intake.schema_version", "jarvis.conversational_intake.v1"),
+                "source": _get(dashboard_status, "conversational_intake.sample.intake.source", "typed_text"),
+                "language": _get(dashboard_status, "conversational_intake.sample.intake.language", "unknown"),
+                "wake_phrase_detected": _bool(_get(dashboard_status, "conversational_intake.sample.intake.wake_phrase_detected", False)),
+                "contains_sensitive_request": _bool(_get(dashboard_status, "conversational_intake.sample.intake.contains_sensitive_request", False)),
+                "requires_clarification": _bool(_get(dashboard_status, "conversational_intake.sample.intake.requires_clarification", False)),
+                "safe_to_classify": _bool(_get(dashboard_status, "conversational_intake.sample.intake.safe_to_classify", False)),
+                "safe_to_prepare_preview": _bool(_get(dashboard_status, "conversational_intake.sample.intake.safe_to_prepare_preview", False)),
+                "safe_to_dispatch_to_hermes": False,
+                "classified_intent": _get(dashboard_status, "conversational_intake.sample.classification.intent_detected", "unknown"),
+                "classified_risk": _get(dashboard_status, "conversational_intake.sample.classification.risk_level", "unknown"),
+                "next_safe_action": _get(dashboard_status, "conversational_intake.sample.classification.next_safe_action", "unknown"),
+                "hermes_dispatch_allowed": False,
+                "external_provider_called": False,
+                "raw_text_omitted": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "brain_adapter_state",
+            "/mark-3/brain-adapter/status",
+            _get(dashboard_status, "brain_adapter.state.mode", "safe_brain_adapter_prepare_only"),
+            {
+                "schema_version": _get(dashboard_status, "brain_adapter.schema_version", "jarvis.llm_brain_adapter.v1"),
+                "default_provider": _get(dashboard_status, "brain_adapter.state.default_provider", "deterministic_local"),
+                "current_provider": _get(dashboard_status, "brain_adapter.state.current_provider", "deterministic_local"),
+                "provider_mode": _get(dashboard_status, "brain_adapter.providers.deterministic_local.provider_mode", "local_deterministic_prepare_only"),
+                "external_llm_enabled": False,
+                "external_provider_called": False,
+                "provider_configuration_required": False,
+                "provider_configuration_loaded": False,
+                "reads_env": False,
+                "network_allowed": False,
+                "hermes_dispatch_allowed": False,
+                "sample_intent": _get(dashboard_status, "brain_adapter.sample.brain_response.intent_detected", "unknown"),
+                "sample_risk_level": _get(dashboard_status, "brain_adapter.sample.brain_response.risk_level", "unknown"),
+                "sample_next_action": _get(dashboard_status, "brain_adapter.sample.brain_response.suggested_next_action", "unknown"),
+                "disabled_external_provider": _get(dashboard_status, "brain_adapter.providers.disabled_external_llm.honest_status", "disabled_by_default_not_configured_not_called"),
+            },
+        ),
         _event(
             generated_at,
             "brain_state",
@@ -526,6 +574,8 @@ def _stable_event_id(generated_at: str, event_type: str, source: str, payload: D
 
 
 def _risk_level_for_event(event_type: str) -> str:
+    if event_type in {"intake_state", "brain_adapter_state"}:
+        return "intent_risk_preview"
     if event_type in {"camera_state", "recording_state", "voice_state", "voice_session_state", "wake_state", "tts_state", "sensor_ledger_state"}:
         return "sensor_privacy"
     if event_type == "brain_state":
