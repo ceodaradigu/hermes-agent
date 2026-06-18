@@ -99,6 +99,8 @@ declare global {
 }
 
 export type JarvisEventType =
+  | "intake_state"
+  | "brain_adapter_state"
   | "brain_state"
   | "voice_state"
   | "voice_session_state"

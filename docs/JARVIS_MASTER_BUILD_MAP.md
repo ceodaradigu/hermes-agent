@@ -107,6 +107,20 @@ Piezas relevantes ya documentadas:
   estados visuales `idle`/`wake_listening`/`listening`/`transcribing`/
   `thinking`/`speaking`/`alert`/`error`/`stopped`/`executing`, performance budget
   y fallback visible sin WebGL/canvas.
+- Conversational Intake Pipeline de PR #159: normaliza texto escrito,
+  transcripción de voz, comando futuro tras wake phrase e input remoto futuro en
+  `ConversationalIntake`; detecta wake phrase, material sensible, baja
+  confianza y ambigüedad; clasifica intención/riesgo; prepara preview cuando es
+  seguro; siempre declara `safe_to_dispatch_to_hermes=false`.
+- LLM Brain Adapter de PR #159: contratos `BrainRequest`, `BrainResponse` y
+  `BrainProviderStatus`; provider por defecto `deterministic_local` apoyado en
+  el bridge local existente; provider externo `disabled_external_llm` visible y
+  deshabilitado por defecto. No llama APIs externas, no lee `.env`, no lee
+  variables secretas, no persiste prompts y no despacha Hermes.
+- Dashboard/Event Stream de PR #159: `/mark-3/dashboard/status` expone
+  `conversational_intake` y `brain_adapter`; `/mark-3/dashboard/events` y
+  `/stream` exponen `intake_state` y `brain_adapter_state` con metadata segura,
+  sin raw text sensible, audio bruto, frames ni comandos ejecutables.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

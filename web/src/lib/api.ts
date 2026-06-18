@@ -421,6 +421,110 @@ export interface JarvisConversationalBrain {
   read_only?: boolean;
 }
 
+export interface JarvisConversationalIntake {
+  schema_version?: string;
+  state?: Record<string, string | boolean | number | string[]>;
+  sample?: {
+    intake?: {
+      schema_version?: string;
+      intake_id?: string;
+      created_at?: string;
+      source?: string;
+      raw_text?: string;
+      normalized_text?: string;
+      language?: string;
+      wake_phrase_detected?: boolean;
+      wake_phrase_used?: string | null;
+      remaining_command?: string;
+      operator?: string;
+      session_id?: string | null;
+      voice_session_state?: string;
+      transcript_confidence?: number;
+      contains_sensitive_request?: boolean;
+      sensitive_reasons?: string[];
+      requires_clarification?: boolean;
+      safe_to_classify?: boolean;
+      safe_to_prepare_preview?: boolean;
+      safe_to_dispatch_to_hermes?: boolean;
+    };
+    classification?: {
+      intent_detected?: string;
+      confidence?: number;
+      risk_level?: string;
+      approval_level?: string;
+      requires_approval?: boolean;
+      can_prepare_preview?: boolean;
+      requires_clarification?: boolean;
+      denied?: boolean;
+      blocked_reasons?: string[];
+      sensitive_reasons?: string[];
+      next_safe_action?: string;
+      safe_to_dispatch_to_hermes?: boolean;
+    };
+    preview_candidate?: Record<string, unknown> | null;
+  };
+  output_contract?: string[];
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisBrainProviderStatus {
+  schema_version?: string;
+  provider_name?: string;
+  provider_mode?: string;
+  available?: boolean;
+  default_provider?: string;
+  external_llm_enabled?: boolean;
+  external_provider_called?: boolean;
+  api_key_required?: boolean;
+  api_key_loaded?: boolean;
+  reads_env?: boolean;
+  network_allowed?: boolean;
+  honest_status?: string;
+  missing_configuration?: string[];
+  safety?: Record<string, boolean>;
+}
+
+export interface JarvisBrainAdapter {
+  schema_version?: string;
+  state?: Record<string, string | boolean | number>;
+  providers?: Record<string, JarvisBrainProviderStatus>;
+  sample?: {
+    brain_request?: Record<string, unknown>;
+    brain_response?: {
+      human_response?: string;
+      intent_detected?: string;
+      confidence?: number;
+      risk_level?: string;
+      approval_level?: string;
+      requires_approval?: boolean;
+      can_prepare_preview?: boolean;
+      preview_candidate?: Record<string, unknown> | null;
+      cannot_execute_reason?: string;
+      suggested_next_action?: string;
+      clarification_question?: string | null;
+      memory_write_proposal?: Record<string, unknown> | null;
+      hermes_candidate?: Record<string, unknown> | null;
+      hermes_dispatch_allowed?: boolean;
+      external_provider_called?: boolean;
+      provider_name?: string;
+      provider_mode?: string;
+      evidence?: string[];
+      uncertainty?: string[];
+      audit_summary?: Record<string, unknown>;
+    };
+    provider_status?: JarvisBrainProviderStatus;
+    disabled_external_provider_status?: JarvisBrainProviderStatus;
+  };
+  contracts?: Record<string, string | boolean>;
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisVoiceSession {
   schema_version?: string;
   current_state?: string;
@@ -1073,6 +1177,8 @@ export interface JarvisDashboardStatus {
   };
   hermes_execution?: JarvisHermesExecution;
   conversational_brain?: JarvisConversationalBrain;
+  conversational_intake?: JarvisConversationalIntake;
+  brain_adapter?: JarvisBrainAdapter;
   voice_session?: JarvisVoiceSession;
   wake_architecture?: Record<string, unknown>;
   voice_core?: JarvisVoiceCore;

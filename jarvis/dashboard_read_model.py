@@ -127,6 +127,16 @@ def build_mark_3_dashboard_status(
         lambda: app_state.conversational_brain_bridge.status(),
         timeline,
     )
+    conversational_intake = _source(
+        "/mark-3/conversational-intake/status",
+        lambda: app_state.conversational_intake_pipeline.status(),
+        timeline,
+    )
+    brain_adapter = _source(
+        "/mark-3/brain-adapter/status",
+        lambda: app_state.llm_brain_adapter.status(),
+        timeline,
+    )
     voice_runtime = _source(
         "/voice-runtime/status",
         lambda: app_state.wake_voice_runtime.status(),
@@ -180,6 +190,8 @@ def build_mark_3_dashboard_status(
     mission_control = _mission_control_projection()
     mission_control_timeline = _mission_control_timeline_events()
     conversational_brain_timeline = _conversational_brain_timeline_events(conversational_brain)
+    conversational_intake_timeline = _conversational_intake_timeline_events(conversational_intake)
+    brain_adapter_timeline = _brain_adapter_timeline_events(brain_adapter)
     voice_core = _voice_core_projection(voice_runtime=voice_runtime, wake_listener=wake_listener)
     voice_core_timeline = _voice_core_timeline_events()
     wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
@@ -309,6 +321,20 @@ def build_mark_3_dashboard_status(
                 "Local deterministic bridge only; no LLM, no memory autosave, no Hermes dispatch.",
             ),
             _module(
+                "Conversational Intake",
+                "preview",
+                "/mark-3/conversational-intake/status",
+                "intent_risk_preview",
+                "Normalizes typed, voice, wake and future remote input into safe intake; never executes.",
+            ),
+            _module(
+                "Brain Adapter",
+                "preview",
+                "/mark-3/brain-adapter/status",
+                "llm_provider_disabled_by_default",
+                "Default provider is deterministic_local; external LLM provider is disabled and not called.",
+            ),
+            _module(
                 "Voice",
                 "browser_controlled",
                 "/voice-runtime/session-status",
@@ -392,6 +418,8 @@ def build_mark_3_dashboard_status(
         "mission_control": mission_control,
         "hermes_execution": hermes_execution,
         "conversational_brain": conversational_brain,
+        "conversational_intake": conversational_intake,
+        "brain_adapter": brain_adapter,
         "voice_session": voice_session,
         "wake_architecture": voice_session.get("wake_architecture", {}),
         "voice_core": voice_core,
@@ -460,6 +488,9 @@ def build_mark_3_dashboard_status(
             "schema_version": "jarvis.dashboard.events.v1",
             "allowed_methods": ["GET"],
             "event_types": [
+                "intake_state",
+                "brain_adapter_state",
+                "brain_state",
                 "voice_state",
                 "wake_state",
                 "tts_state",
@@ -541,6 +572,8 @@ def build_mark_3_dashboard_status(
         + hermes_timeline
         + mission_control_timeline
         + conversational_brain_timeline
+        + conversational_intake_timeline
+        + brain_adapter_timeline
         + list(voice_session.get("timeline", []))
         + voice_core_timeline
         + wake_word_flow_timeline
@@ -759,6 +792,8 @@ def build_local_doctor_status(
             "event_snapshot_endpoint": _route_exists(route_path_set, "/mark-3/dashboard/events"),
             "event_stream_endpoint": _route_exists(route_path_set, "/mark-3/dashboard/events/stream"),
             "event_stream_available": _route_exists(route_path_set, "/mark-3/dashboard/events/stream"),
+            "conversational_intake_endpoint": _route_exists(route_path_set, "/mark-3/conversational-intake/status"),
+            "brain_adapter_endpoint": _route_exists(route_path_set, "/mark-3/brain-adapter/status"),
             "hermes_status_endpoint": _route_exists(route_path_set, "/mark-3/hermes-runtime/status"),
             "hermes_status": "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
             "local_doctor_endpoint": _route_exists(route_path_set, "/mark-3/local-doctor/status"),
@@ -778,6 +813,16 @@ def build_local_doctor_status(
                 "event_stream",
                 "ok" if _route_exists(route_path_set, "/mark-3/dashboard/events/stream") else "missing",
                 "GET /mark-3/dashboard/events/stream",
+            ),
+            _doctor_check(
+                "conversational_intake",
+                "ok" if _route_exists(route_path_set, "/mark-3/conversational-intake/status") else "missing",
+                "GET /mark-3/conversational-intake/status",
+            ),
+            _doctor_check(
+                "brain_adapter",
+                "ok" if _route_exists(route_path_set, "/mark-3/brain-adapter/status") else "missing",
+                "GET /mark-3/brain-adapter/status",
             ),
             _doctor_check(
                 "hermes_status",
@@ -3136,6 +3181,52 @@ def _conversational_brain_timeline_events(conversational_brain: Dict[str, Any]) 
             "event": "Conversational brain Hermes dispatch disabled",
             "source": "/mark-3/conversational-brain/status",
             "status": "disabled",
+            "read_only": True,
+        },
+    ]
+
+
+def _conversational_intake_timeline_events(conversational_intake: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Conversational Intake status read",
+            "source": "/mark-3/conversational-intake/status",
+            "status": conversational_intake.get("state", {}).get("mode", "prepare_only_conversational_intake"),
+            "read_only": True,
+        },
+        {
+            "event": "Conversational Intake Hermes dispatch disabled",
+            "source": "/mark-3/conversational-intake/status",
+            "status": "safe_to_dispatch_to_hermes_false",
+            "read_only": True,
+        },
+        {
+            "event": "Conversational Intake credential material gate active",
+            "source": "/mark-3/conversational-intake/status",
+            "status": "credential_material_blocked",
+            "read_only": True,
+        },
+    ]
+
+
+def _brain_adapter_timeline_events(brain_adapter: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "LLM Brain Adapter status read",
+            "source": "/mark-3/brain-adapter/status",
+            "status": brain_adapter.get("state", {}).get("mode", "safe_brain_adapter_prepare_only"),
+            "read_only": True,
+        },
+        {
+            "event": "Brain default provider deterministic_local",
+            "source": "/mark-3/brain-adapter/status",
+            "status": brain_adapter.get("state", {}).get("default_provider", "deterministic_local"),
+            "read_only": True,
+        },
+        {
+            "event": "External LLM provider disabled",
+            "source": "/mark-3/brain-adapter/status",
+            "status": "external_provider_called_false",
             "read_only": True,
         },
     ]
