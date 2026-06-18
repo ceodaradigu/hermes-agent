@@ -1605,6 +1605,55 @@ State rules:
 - `hermes_executing` only applies to actual governed Hermes sessions.
 - Mic and camera states must be visible independently from mission state.
 
+### PR #156 Local Voice Loop states
+
+`/jarvis` now includes a browser-controlled Local Voice Loop for manual tests.
+The current PR keeps activation manual but makes the conversation continuous
+inside that manual window: David presses the microphone once, JARVIS listens,
+answers, and returns to listening until stop/cancel or timeout.
+
+- `idle/calmado`: no active browser STT/TTS session.
+- `escuchando`: `SpeechRecognition` or `webkitSpeechRecognition` has been
+  started by an explicit microphone-button action.
+- `transcribiendo`: browser STT has produced interim/final text for the smart
+  bar.
+- `pensando`: JARVIS is generating a local controlled response only.
+- `hablando`: `speechSynthesis` is speaking the controlled response.
+- `error/no disponible`: STT/TTS is unsupported, permission is unavailable or
+  browser speech runtime failed.
+- `conversation_active`: browser-only UI state after the manual mic button is
+  pressed; STT can transcribe David's phrase for the smart bar while this mode
+  stays open.
+- `wake_listening`: future contract only in this PR; no real persistent wake
+  listener is enabled.
+- `recording`: remains false; no raw audio is stored.
+
+Truth rules for this loop:
+
+- Support is browser-dependent and must be displayed honestly.
+- Do not claim 100% local speech processing; browsers may use their own
+  services internally.
+- Do not store raw audio.
+- Do not upload raw audio to the backend.
+- Do not call Hermes directly.
+- Do not approve critical actions by voice.
+- Wake phrase is context only, never permission.
+- Stop/cancel must stop listening and speech output where active.
+- Do not call manual continuous conversation "always recording" or "always
+  transcribing"; it is an opt-in browser conversation window.
+- Future `wake_listening` must mean activation-only listening without recording
+  and without continuous transcription.
+
+Visual presence rules added in PR #156:
+
+- The central presence should read as a cinematic reactor/orb, not a flat admin
+  widget.
+- Idle/calmado uses slow breathing.
+- Listening uses outward waves.
+- Thinking tightens rotation, layers and particles.
+- Speaking pulses while TTS is active.
+- Alert/intenso/error add orange/red pressure without enabling execution.
+
 ## 8. Data truth rules
 
 The UI must label data as:
@@ -1645,7 +1694,7 @@ Rules:
 
 ## 10. Recommended next PR
 
-Recommended next PR after PR #151:
+Historical recommendation after PR #151:
 
 ```text
 PR #152 - Product Finance Pilot Hardening
@@ -1673,3 +1722,18 @@ Why:
   Stripe live, checkout, product creation, deploy, fake metrics or frontend
   execution.
 - It keeps the central rule intact: JARVIS governs, Hermes executes.
+
+Current voice milestone:
+
+- PR #156 implements the first real browser-controlled local voice test in
+  `/jarvis`, then improves it with manual continuous conversation and a deeper
+  reactor/orb presence.
+- This is not a daemon/wake runtime and not free autonomy.
+- Browser STT/TTS support remains capability-detected in the client.
+- The read model declares `local_voice_loop` with `audio_storage=false`,
+  `raw_audio_sent_to_backend=false`, `approval_by_voice_enabled=false` and
+  `wake_phrase_approval=false`.
+- The read model also declares `wake_listening=false`,
+  `wake_listening_real_enabled=false`, `recording=false` and a future
+  `wake_listening` contract: activation only, no raw audio storage, no raw
+  backend upload, no execution and no approval.

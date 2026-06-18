@@ -847,6 +847,92 @@ getUserMedia, captura, streaming, sensores, grabacion, ejecucion Hermes,
 misiones reales, approvals reales, movil real, VPS real, dinero, deploy, email
 ni credenciales.
 
+PR #156 es **Local Voice Loop + Presence Reactor**. Convierte la smart bar
+inferior de `/jarvis` en una prueba real, local/browser-controlled y segura de
+voz manual, y refuerza el nucleo central con presencia visual tipo
+reactor/orbe cinematografico. El usuario debe pulsar el boton de microfono una
+vez para abrir una conversacion manual; JARVIS escucha, responde y vuelve a
+escuchar hasta stop/cancel o timeout. No hay always-listening autonomo, no wake
+listener persistente real y la wake phrase nunca concede permiso.
+
+Funciona realmente cuando el navegador lo soporta:
+
+- STT via `SpeechRecognition` o `webkitSpeechRecognition`.
+- TTS via `speechSynthesis`.
+- conversacion manual continua hasta stop/cancel o timeout;
+- seleccion preferente de voz en espanol si el navegador ofrece una voz mejor;
+- transcripcion temporal visible en la smart bar;
+- respuesta local/controlada de JARVIS, preview-only y con texto visible mas
+  humano; los IDs tecnicos de intent/risk quedan secundarios;
+- tono visual/TTS basico: `calmado`, `concentrado`, `alerta`, `intenso`;
+- estados visuales del nucleo: `idle/calmado`, `escuchando`,
+  `transcribiendo`, `pensando`, `hablando`, `error/no disponible`;
+- control stop/cancel para cortar escucha y habla.
+- nucleo central con capas, anillos, bloom, particulas sutiles y HUD; el
+  movimiento responde al estado/tone de voz.
+
+Dependencias y verdad de soporte:
+
+- El soporte de STT/TTS depende del navegador.
+- No se afirma que sea 100% local: el navegador puede usar servicios propios
+  para SpeechRecognition/speechSynthesis.
+- Si no hay soporte, `/jarvis` muestra `not_supported`/`unavailable` y no
+  simula escucha.
+- No se usa `getUserMedia`, `MediaRecorder` ni `AudioContext` para capturar
+  audio bruto desde la UI.
+
+Read model:
+
+- `GET /mark-3/dashboard/status` expone `local_voice_loop`.
+- `browser_stt_supported=unknown` y `browser_tts_supported=unknown`, porque el
+  backend no puede saber las capacidades reales del navegador hasta que carga
+  `/jarvis`.
+- `manual_continuous_conversation=true`.
+- `conversation_active=false` en el read model inicial; el estado real vive en
+  el navegador cuando David activa el modo manual.
+- `wake_listening=false` y `wake_listening_real_enabled=false`.
+- `recording=false`.
+- `audio_storage=false`.
+- `raw_audio_sent_to_backend=false`.
+- `approval_by_voice_enabled=false`.
+- `wake_phrase_approval=false`.
+
+Distincion futura de wake:
+
+- `wake_listening` queda como contrato futuro: escucha minima de activacion sin
+  grabacion, sin transcripcion continua, sin backend raw audio, sin ejecutar y
+  sin aprobar.
+- `conversation_active` empieza por activacion manual en esta PR; aqui si se
+  transcribe lo que David dice para mostrarlo en smart bar y responder con TTS.
+- `recording` sigue siendo `false`; no se guarda audio bruto.
+- Texto operativo: "JARVIS aun no tiene wake listener persistente real en esta
+  PR; la conversacion se activa manualmente. Arquitectura preparada para wake
+  phrase sin grabar ni transcribir todo."
+
+Seguridad que sigue bloqueada:
+
+- no POST/PUT/DELETE desde `/jarvis`;
+- no endpoint `/execute`;
+- no Hermes directo desde frontend/voz;
+- no misiones reales;
+- no approvals criticos por voz;
+- no dinero, deploy, email, credenciales, Stripe ni produccion;
+- no camara real ni permisos de camara;
+- no grabacion continua ni almacenamiento de audio bruto.
+
+Como probar localmente:
+
+1. Arrancar backend local para que `GET /mark-3/dashboard/status` responda.
+2. Arrancar la app web y abrir `/jarvis`.
+3. Usar un navegador con `SpeechRecognition`/`webkitSpeechRecognition` para
+   probar STT; Chrome/Edge suelen ser los candidatos practicos.
+4. Pulsar el boton de microfono en la smart bar, conceder permiso si el
+   navegador lo pide, dictar una frase corta y verificar transcripcion,
+   respuesta local, TTS si existe, reentrada automatica a escucha y cambio de
+   estado visual.
+5. Pulsar stop/cancel y verificar que escucha/habla se detienen y que no se
+   crea ninguna ejecucion ni approval real.
+
 ## 11. Cómo iniciar un hilo nuevo
 
 Bloque copiável:

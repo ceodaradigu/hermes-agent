@@ -234,6 +234,122 @@ def test_mark_3_dashboard_status_contains_voice_core_visual_tts_state_contract()
         assert safety[key] is True
 
 
+def test_mark_3_dashboard_status_contains_local_voice_loop_contract():
+    payload, _ = _payload()
+    loop = payload["local_voice_loop"]
+    state = loop["state"]
+    capabilities = loop["capabilities"]
+    privacy = loop["privacy"]
+    approval_policy = loop["approval_policy"]
+    safety = loop["safety"]
+    mode_contract = loop["mode_contract"]
+    wake_listening_contract = loop["wake_listening_contract"]
+
+    assert state["mode"] == "browser_controlled_manual_loop"
+    assert state["current_state"] == "idle"
+    assert state["activation"] == "explicit_operator_button"
+    assert state["always_listening"] is False
+    assert state["manual_continuous_conversation"] is True
+    assert state["conversation_active"] is False
+    assert state["conversation_timeout_seconds"] == 180
+    assert state["wake_listening"] is False
+    assert state["wake_listening_real_enabled"] is False
+    assert state["recording"] is False
+    assert state["continuous_recording"] is False
+    assert state["wake_listener_enabled"] is False
+    assert state["hermes_dispatch_enabled"] is False
+    assert state["critical_action_execution_enabled"] is False
+
+    assert capabilities["browser_stt_supported"] == "unknown"
+    assert capabilities["browser_tts_supported"] == "unknown"
+    assert capabilities["support_detection_location"] == "browser"
+    assert capabilities["browser_may_use_external_services"] is True
+    assert capabilities["backend_stt_provider"] == "none/not_called"
+    assert capabilities["backend_tts_provider"] == "none/not_called"
+    assert loop["browser_stt_supported"] == "unknown"
+    assert loop["browser_tts_supported"] == "unknown"
+    assert loop["manual_microphone_opt_in"] is True
+
+    assert loop["audio_storage"] is False
+    assert loop["raw_audio_sent_to_backend"] is False
+    assert loop["approval_by_voice_enabled"] is False
+    assert loop["wake_phrase_approval"] is False
+    assert loop["visual_states"] == [
+        "idle",
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "error",
+        "not_supported",
+        "unavailable",
+    ]
+    assert {item["tone"] for item in loop["tone_profiles"]} == {"calmado", "concentrado", "alerta", "intenso"}
+    assert mode_contract["wake_listening"]["enabled_in_this_pr"] is False
+    assert mode_contract["wake_listening"]["future_contract_only"] is True
+    assert mode_contract["wake_listening"]["records_audio"] is False
+    assert mode_contract["wake_listening"]["transcribes_full_conversation"] is False
+    assert mode_contract["wake_listening"]["sends_raw_audio_to_backend"] is False
+    assert mode_contract["wake_listening"]["executes"] is False
+    assert mode_contract["wake_listening"]["approves"] is False
+    assert mode_contract["wake_listening"]["detects_activation_only"] is True
+    assert mode_contract["conversation_active"]["enabled_in_this_pr"] is True
+    assert mode_contract["conversation_active"]["activation"] == "manual_microphone_button"
+    assert mode_contract["conversation_active"]["keeps_loop_until_stop_or_timeout"] is True
+    assert mode_contract["conversation_active"]["executes"] is False
+    assert mode_contract["conversation_active"]["approves"] is False
+    assert mode_contract["recording"]["enabled"] is False
+    assert mode_contract["recording"]["raw_audio_storage"] is False
+    assert mode_contract["recording"]["backend_audio_upload"] is False
+
+    assert privacy["audio_storage"] is False
+    assert privacy["raw_audio_sent_to_backend"] is False
+    assert privacy["raw_audio_storage"] is False
+    assert privacy["backend_audio_upload"] is False
+    assert privacy["transcript_temporary_in_browser"] is True
+    assert privacy["no_media_recorder"] is True
+    assert privacy["no_get_user_media"] is True
+    assert privacy["no_audio_context_capture"] is True
+    assert privacy["no_continuous_recording"] is True
+    assert privacy["wake_listening_without_recording_future"] is True
+    assert privacy["no_continuous_transcription"] is True
+
+    assert approval_policy["approval_by_voice_enabled"] is False
+    assert approval_policy["wake_phrase_approval"] is False
+    assert approval_policy["wake_phrase_is_permission"] is False
+    assert approval_policy["wake_phrase_can_execute"] is False
+    assert approval_policy["critical_actions_require_non_voice_approval"] is True
+    assert approval_policy["voice_can_prepare_preview_only"] is True
+
+    for key in (
+        "manual_operator_activation_required",
+        "stop_control_required",
+        "no_always_listening",
+        "no_persistent_wake_listener",
+        "no_wake_listener_real",
+        "no_hermes_dispatch",
+        "no_tool_call",
+        "no_auto_execute",
+        "no_post_put_delete",
+        "no_money",
+        "no_deploy",
+        "no_email",
+        "no_credentials",
+    ):
+        assert safety[key] is True
+    assert safety["camera_activation_enabled"] is False
+    assert wake_listening_contract["persistent_wake_listener_real"] is False
+    assert wake_listening_contract["available_in_this_pr"] is False
+    assert wake_listening_contract["future_state_name"] == "wake_listening"
+    assert wake_listening_contract["supported_phrases_future"] == ["Hola Jarvis", "Jarvis"]
+    assert wake_listening_contract["no_audio_storage"] is True
+    assert wake_listening_contract["no_raw_audio_backend"] is True
+    assert wake_listening_contract["no_continuous_transcription"] is True
+    assert wake_listening_contract["activation_only"] is True
+    assert wake_listening_contract["can_execute"] is False
+    assert wake_listening_contract["can_approve"] is False
+
+
 def test_mark_3_dashboard_status_contains_wake_word_local_safe_flow_contract():
     payload, _ = _payload()
     flow = payload["wake_word_flow"]
@@ -586,9 +702,11 @@ def test_mark_3_dashboard_status_mission_control_safety_keeps_everything_preview
         "no_tool_call",
         "no_file_write",
         "no_network_call",
-        "no_sensor_activation",
+        "no_uncontrolled_sensor_activation",
+        "manual_browser_voice_activation_only",
     ):
         assert global_safety[key] is True
+    assert global_safety["no_sensor_activation"] is False
 
 
 def test_mark_3_dashboard_status_hermes_capabilities_are_governed_and_not_frontend_executable():
@@ -889,6 +1007,7 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "hermes_execution_visible",
         "mission_control_visible",
         "voice_core_visible",
+        "local_voice_loop_visible",
         "wake_flow_visible",
         "camera_vision_visible",
         "mobile_companion_visible",
@@ -897,7 +1016,7 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "kill_switch_visible",
         "no_fake_metrics",
         "no_frontend_execute",
-        "no_sensor_activation",
+        "no_uncontrolled_sensor_activation",
         "no_post_put_delete",
     ):
         assert name in checks
@@ -915,7 +1034,7 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "no real approvals",
         "no real mission submit",
         "no real Hermes execution",
-        "no real voice",
+        "browser voice support depends on SpeechRecognition/speechSynthesis",
         "no real camera",
         "no real mobile runtime",
         "no real finance/revenue measurement",
@@ -937,8 +1056,12 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
     assert contract["web_route_is_visual_interface_only"] is True
     assert contract["frontend_executes_hermes_directly"] is False
     assert contract["frontend_is_runtime"] is False
+    assert contract["frontend_can_activate_real_voice"] is True
+    assert contract["frontend_can_activate_real_camera"] is False
     assert contract["mobile_and_vps_are_future_clients_or_bridges"] is True
-    assert contract["real_voice_camera_in_future_prs"] is True
+    assert contract["real_voice_camera_in_future_prs"] is False
+    assert contract["real_browser_voice_loop_in_this_pr"] is True
+    assert contract["real_camera_in_future_prs"] is True
     assert contract["jarvis_governs"] is True
     assert contract["hermes_executes"] is True
     assert contract["no_duplicate_hermes_runtime"] is True
@@ -947,11 +1070,12 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
     assert visual["central_core_states"] == [
         "idle/calmado",
         "escuchando",
+        "transcribiendo",
         "pensando",
         "hablando",
-        "alerta/riesgo",
+        "error/no disponible",
     ]
-    assert visual["smart_bar"] == "disabled/preview"
+    assert visual["smart_bar"] == "local voice transcript/response preview"
     assert visual["camera_placeholder"] == "movable/expandable visual placeholder"
     assert visual["folded_history"] == "collapsed preview"
 
@@ -959,8 +1083,9 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
         "no_post_put_delete_from_jarvis_page",
         "no_execute_route",
         "no_frontend_hermes_execution",
-        "no_browser_sensor_permission",
-        "no_real_voice",
+        "browser_voice_permission_manual_only",
+        "no_uncontrolled_sensor_activation",
+        "no_backend_voice_runtime",
         "no_real_camera",
         "no_money",
         "no_deploy",
@@ -968,6 +1093,8 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
         "no_credentials",
     ):
         assert safety[key] is True
+    assert safety["no_browser_sensor_permission"] is False
+    assert safety["no_real_voice"] is False
 
 
 def test_mark_3_dashboard_status_declares_safety_boundaries():
@@ -980,8 +1107,11 @@ def test_mark_3_dashboard_status_declares_safety_boundaries():
     assert safety["no_frontend_execute"] is True
     assert safety["no_duplicate_hermes_runtime"] is True
     assert safety["no_get_user_media"] is True
-    assert safety["no_sensor_activation"] is True
+    assert safety["no_sensor_activation"] is False
+    assert safety["no_uncontrolled_sensor_activation"] is True
+    assert safety["manual_browser_voice_activation_only"] is True
     assert safety["no_frontend_tool_runner"] is True
+    assert safety["no_browser_raw_audio_capture"] is True
     assert safety["no_direct_hermes_call_from_mobile"] is True
     assert safety["no_direct_hermes_call_from_voice"] is True
     assert safety["no_direct_hermes_call_from_camera"] is True
@@ -1072,6 +1202,9 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
 
     assert payload["read_only_contract"]["allowed_http_methods_for_frontend"] == ["GET"]
     assert payload["read_only_contract"]["internal_sources_are_read_only_status_or_audit"] is True
+    assert payload["read_only_contract"]["frontend_must_not_request_sensor_permissions"] is False
+    assert payload["read_only_contract"]["frontend_sensor_permission_scope"] == "manual browser SpeechRecognition only"
+    assert payload["read_only_contract"]["frontend_must_not_request_camera_permissions"] is True
 
 
 def test_mark_3_dashboard_status_does_not_call_execution_sensors_or_money(monkeypatch):
@@ -1106,7 +1239,8 @@ def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract()
     assert state["frontend_execution_enabled"] is False
     assert state["approvals_real_enabled"] is False
     assert state["hermes_direct_execution_enabled"] is False
-    assert state["voice_real_enabled"] is False
+    assert state["voice_real_enabled"] is True
+    assert state["browser_local_voice_loop_enabled"] is True
     assert state["camera_real_enabled"] is False
     assert state["mobile_runtime_enabled"] is False
     assert state["money_enabled"] is False
@@ -1119,7 +1253,7 @@ def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract()
     assert safety["no_side_effects"] is True
     assert safety["no_real_world_actions"] is True
     assert safety["no_background_workers"] is True
-    assert safety["no_sensors"] is True
+    assert safety["no_uncontrolled_sensors"] is True
     assert safety["no_money"] is True
     assert safety["no_production"] is True
     assert safety["no_credentials"] is True
@@ -1138,6 +1272,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_required_panels_are
         "Camera Placeholder",
         "Folded History",
         "Voice Core",
+        "Local Voice Loop",
         "Wake Word Local Safe Flow",
         "Mission Control",
         "Approval Console",
@@ -1181,7 +1316,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_read_only_checks_an
     for name in (
         "no_frontend_hermes_call",
         "no_tool_runner",
-        "no_sensor_activation",
+        "no_uncontrolled_sensor_activation",
         "no_media_recorder",
         "no_audio_context_capture",
         "no_camera_capture",
