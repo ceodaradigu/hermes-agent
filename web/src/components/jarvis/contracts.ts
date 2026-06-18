@@ -54,6 +54,7 @@ export const presenceStates = [
   ["transcribing", "transcribiendo", "Texto temporal del navegador; sin audio bruto."],
   ["thinking", "pensando", "Respuesta local controlada; sin Hermes."],
   ["speaking", "hablando", "speechSynthesis si el navegador lo soporta."],
+  ["approval_required", "approval required", "JARVIS espera confirmación humana; wake phrase no aprueba."],
   ["alert", "alerta", "Riesgo o approval pendiente; no ejecuta por sí mismo."],
   ["error", "error/no disponible", "STT/TTS no soportado o permiso denegado."],
   ["stopped", "stopped", "Stop/cancel o kill switch visible."],
@@ -273,7 +274,7 @@ export function fallbackDashboard(reason: "loading" | "offline" | "error"): Jarv
       no_duplicate_hermes_runtime: true,
       visual_contract: {
         primary_experience: "Presence UI",
-        central_core_states: ["idle/calmado", "escuchando", "transcribiendo", "pensando", "hablando", "error/no disponible"],
+        central_core_states: ["idle/calmado", "wake_listening", "escuchando", "transcribiendo", "pensando", "hablando", "approval_required", "alert", "error/no disponible", "stopped", "executing"],
         smart_bar: "local voice transcript/response preview",
         camera_placeholder: "manual opt-in local camera preview panel",
         raw_audio_recorder: "manual opt-in local MediaRecorder panel",

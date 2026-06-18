@@ -121,6 +121,13 @@ Piezas relevantes ya documentadas:
   `conversational_intake` y `brain_adapter`; `/mark-3/dashboard/events` y
   `/stream` exponen `intake_state` y `brain_adapter_state` con metadata segura,
   sin raw text sensible, audio bruto, frames ni comandos ejecutables.
+- Presence UI de PR #160: `/jarvis` queda reorientado a una experiencia
+  orb-first, menos dashboard/admin console y mas presencia viva. Header, rails,
+  smart bar, camara lateral y detalles tecnicos fueron compactados/plegados.
+  `JarvisOrb3D` mantiene WebGL manual sin dependencias nuevas, añade
+  `approval_required`, fallback visible, `prefers-reduced-motion`, pixel ratio
+  limitado y performance budget. No añade Hermes dispatch, `/execute`,
+  approve/reject real, sensores auto-start ni providers externos.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

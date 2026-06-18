@@ -219,6 +219,25 @@ Actualización #159 / Fase 1 Conversational Intake + LLM Brain Adapter:
 - Local Voice Loop puede usar la respuesta del intake/brain en modo
   prepare-only sin perder el bloqueo de credenciales introducido en #158.
 
+Actualización #160 / Fase 1 Presence UI real + 3D Orb/HUD adoption:
+
+- `/jarvis` pasa a Presence UI orb-first: header reducido, nucleo central
+  dominante, laterales minimos, panel derecho contextual, smart bar inferior y
+  detalles tecnicos plegados en `Sistemas`/`details`.
+- `JarvisOrb3D` sigue en WebGL manual, sin dependencias nuevas. Añade estado
+  `approval_required`, marcas de performance budget, anillos/glow extra,
+  `motion-reduce`, fallback visible sin WebGL/canvas y pixel ratio limitado.
+- Smart bar acepta borrador local de texto, muestra transcripcion/respuesta
+  humana corta y deja intent/risk/debug plegado. El boton enviar sigue
+  deshabilitado; no hay POST, `/execute` ni Hermes dispatch.
+- Camara lateral queda como modulo premium opt-in y ampliable. No arranca al
+  cargar, no sube video, no envia frames y no añade vision analysis.
+- Repos externas revisadas y documentadas en
+  `docs/jarvis-pr-160-presence-ui-real-3d-orb-hud-adoption.md`; todo lo tomado
+  fue reimplementacion visual/conceptual, no copia de runtimes.
+- Siguiente PR recomendada: #161 Presence verification and visual QA con
+  screenshots/browser checks, canvas no blanco y medicion de frame budget.
+
 Estado alineado de las fases maestras:
 
 | Fase maestra | Estado actual |

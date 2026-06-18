@@ -39,25 +39,46 @@ export function JarvisSideRail({
   ] as const;
 
   return (
-    <aside className="grid min-h-0 content-center gap-5">
-      <article className="relative border-l border-cyan-300/22 bg-gradient-to-r from-[#03111f]/78 to-transparent py-2 pl-5 pr-2" data-testid="jarvis-essential-status">
-        <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-cyan-300/18 bg-cyan-300/[0.055] shadow-[0_0_28px_rgba(34,211,238,0.13)]">
+    <aside className="hidden min-h-0 content-center gap-4 lg:grid">
+      <article className="relative border-l border-cyan-300/22 bg-gradient-to-r from-[#03111f]/66 to-transparent py-2 pl-4 pr-1" data-testid="jarvis-essential-status">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-cyan-300/18 bg-cyan-300/[0.055] shadow-[0_0_28px_rgba(34,211,238,0.13)]">
             <Activity className="h-5 w-5 text-cyan-200" />
           </div>
           <div>
             <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-200/65">Estado general</p>
-            <p className="font-expanded text-xl font-bold uppercase tracking-[0.08em] text-cyan-200">Óptimo</p>
+            <p className="font-expanded text-lg font-bold uppercase tracking-[0.08em] text-cyan-200">
+              {valueText(system.api_status, UNKNOWN) === "offline" ? "fallback" : "presente"}
+            </p>
           </div>
         </div>
-        <StatusList items={essentialRows} />
-        <div className="mt-5 grid gap-3">
+        <div className="grid gap-2">
+          <div>
+            <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">JARVIS ahora</p>
+            <p className="font-mono-ui text-xs text-cyan-50/76">{voiceState}</p>
+          </div>
+          <div>
+            <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">Puede hacer</p>
+            <p className="font-mono-ui text-xs text-cyan-50/76">responder, preparar preview, pedir approval</p>
+          </div>
+          <div>
+            <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">Gates</p>
+            <p className="font-mono-ui text-xs text-cyan-50/76">Hermes gated · wake no aprueba · sensores opt-in</p>
+          </div>
+        </div>
+        <details className="mt-4 border-t border-cyan-300/12 pt-3">
+          <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/54">estado técnico plegado</summary>
+          <div className="mt-3">
+            <StatusList items={essentialRows} />
+          </div>
+        </details>
+        <div className="mt-4 grid gap-2">
           <SafetyLine>JARVIS gobierna. Hermes ejecuta.</SafetyLine>
           <SafetyLine>El dashboard mira, no toca.</SafetyLine>
         </div>
       </article>
 
-      <details className="border border-cyan-300/14 bg-[#03101f]/58 p-3 backdrop-blur" data-testid="jarvis-local-system-contract">
+      <details className="border border-cyan-300/12 bg-[#03101f]/46 p-3 backdrop-blur" data-testid="jarvis-local-system-contract">
         <summary className="flex cursor-pointer items-center gap-2 font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/76">
           <Lock className="h-4 w-4 text-cyan-200" />
           Local System Contract

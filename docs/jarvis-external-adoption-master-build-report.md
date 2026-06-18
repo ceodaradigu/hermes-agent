@@ -2,6 +2,33 @@
 
 Fecha: 2026-06-18
 
+## Actualización PR #160 - Presence UI real + 3D Orb/HUD adoption
+
+Implementado en esta rama:
+
+- `/jarvis` deja de priorizar la sensacion de dashboard/admin console y pasa a
+  una Presence UI orb-first: nucleo central dominante, header reducido, rails
+  minimos, smart bar inferior humana, camara lateral opt-in ampliable y detalles
+  tecnicos plegados.
+- `JarvisOrb3D` se mantiene en WebGL manual sin dependencias nuevas. Se refuerza
+  con estado `approval_required`, anillos/glow extra, fallback visible sin WebGL,
+  `motion-reduce`, pixel ratio limitado y budget declarativo de frames y
+  particulas.
+- Smart bar acepta borrador local de texto y muestra respuesta humana corta,
+  sin enviar nada al backend. El debug de `intent_detected`, `risk_level`,
+  approval y credenciales queda plegado.
+- Camara sigue siendo opt-in: no hay auto-start, no upload, no frames event
+  stream, no vision analysis y no permisos nuevos.
+- Repos revisadas: `jincocodev/openclaw-jarvis-ui` (ISC),
+  `Suryansh777777/Jarvis-CV` (licencia no visible),
+  `zoharbarzilai/Generative-3D-Audio-Visualizer` (licencia no visible),
+  `harsh-raj00/my-jarvis` (MIT), `TheStack-ai/jarvis-orb` (MIT),
+  `chevgan/react-ai-voice-visualizer` (MIT), `ethanplusai/jarvis`
+  (personal/non-commercial visible), `pmndrs/react-three-fiber`/`drei`/
+  `react-postprocessing` (MIT).
+- No se copio codigo externo ni runtimes. Todo lo adoptado fue
+  reimplementacion visual/conceptual sobre los componentes existentes.
+
 ## Actualización Fase 1 - Base operativa local
 
 Implementado en esta rama:

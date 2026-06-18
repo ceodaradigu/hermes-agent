@@ -18,7 +18,8 @@ export function useJarvisOrbState({
   const killSwitchActive = killSwitchState === "active";
   const isStopped = visualState === "stopped" || killSwitchActive;
   const isError = visualState === "error" || localVoiceStateIsError(localVoiceState);
-  const isAlert = visualState === "alert";
+  const isApprovalRequired = visualState === "approval_required";
+  const isAlert = visualState === "alert" || isApprovalRequired;
   const isExecuting = visualState === "executing";
   const isListening = visualState === "listening" || visualState === "wake_listening";
   const isTranscribing = visualState === "transcribing";
@@ -32,7 +33,7 @@ export function useJarvisOrbState({
     : isError
       ? "#f87171"
       : isAlert
-        ? "#fb923c"
+      ? isApprovalRequired ? "#facc15" : "#fb923c"
         : isExecuting
           ? "#38bdf8"
           : profile.accent;
@@ -41,7 +42,7 @@ export function useJarvisOrbState({
     : isError
       ? "rgba(248,113,113,0.46)"
       : isAlert
-        ? "rgba(251,146,60,0.46)"
+      ? isApprovalRequired ? "rgba(250,204,21,0.50)" : "rgba(251,146,60,0.46)"
         : "rgba(34,211,238,0.48)";
   const pulse =
     isStopped ? 0.72 : isError ? 1.08 : isAlert ? 1.22 : isExecuting ? 1.26 : isSpeaking ? 1.28 : isThinking ? 1.18 : isTranscribing ? 1.13 : isListening ? 1.12 : isActive ? 1.04 : 0.88;
@@ -61,6 +62,7 @@ export function useJarvisOrbState({
     targetFrameMs: isStopped ? 90 : isActive ? 16 : 50,
     particleBudget: isStopped ? 620 : isActive ? 1320 : 880,
     isError,
+    isApprovalRequired,
     isStopped,
     isAlert,
     isExecuting,
