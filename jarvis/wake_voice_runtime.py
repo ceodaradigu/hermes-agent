@@ -18,7 +18,17 @@ class WakePhraseConfig:
     background_listening_allowed: bool = False
     push_to_talk_fallback: bool = True
     stop_phrases: List[str] = field(
-        default_factory=lambda: ["no escuches", "para", "cállate", "stop", "detente"]
+        default_factory=lambda: [
+            "para",
+            "cancela",
+            "detente",
+            "silencio",
+            "cancelar misión",
+            "apaga escucha",
+            "no escuches",
+            "cállate",
+            "stop",
+        ]
     )
 
     def __post_init__(self) -> None:
@@ -30,7 +40,21 @@ class WakePhraseConfig:
         object.__setattr__(self, "external_audio_processing_enabled", False)
         object.__setattr__(self, "background_listening_allowed", False)
         object.__setattr__(self, "push_to_talk_fallback", True)
-        object.__setattr__(self, "stop_phrases", ["no escuches", "para", "cállate", "stop", "detente"])
+        object.__setattr__(
+            self,
+            "stop_phrases",
+            [
+                "para",
+                "cancela",
+                "detente",
+                "silencio",
+                "cancelar misión",
+                "apaga escucha",
+                "no escuches",
+                "cállate",
+                "stop",
+            ],
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -82,6 +106,12 @@ class VoiceCameraSafetyStatus:
     approval_gates_enforced: bool = True
     strong_approval_enforced: bool = True
     wake_phrase_is_not_permission: bool = True
+    wake_phrase_can_approve: bool = False
+    wake_phrase_can_execute: bool = False
+    raw_audio_sent_to_backend: bool = False
+    transcript_before_valid_activation_enabled: bool = False
+    auto_start_enabled: bool = False
+    activation_endpoint_enabled: bool = False
     prepare_only: bool = True
 
     def __post_init__(self) -> None:
@@ -107,6 +137,12 @@ class VoiceCameraSafetyStatus:
             "external_video_enabled",
             "execution_enabled",
             "side_effects_enabled",
+            "wake_phrase_can_approve",
+            "wake_phrase_can_execute",
+            "raw_audio_sent_to_backend",
+            "transcript_before_valid_activation_enabled",
+            "auto_start_enabled",
+            "activation_endpoint_enabled",
         ):
             object.__setattr__(self, name, False)
         object.__setattr__(self, "wake_phrases", ["Hola Jarvis", "Jarvis"])

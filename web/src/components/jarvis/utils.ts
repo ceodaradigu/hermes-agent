@@ -70,6 +70,24 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
   const lower = normalized.toLocaleLowerCase("es-ES");
   const mentionsWakePhrase = lower.startsWith("hola jarvis") || lower.startsWith("jarvis");
   const cleanLower = lower.replace(/^hola jarvis[, ]*/u, "").replace(/^jarvis[, ]*/u, "").trim();
+  const secretTerms = [
+    ".env",
+    "api key",
+    "apikey",
+    "authorization",
+    "bearer",
+    "cookie",
+    "cookies",
+    "credencial",
+    "credenciales",
+    "password",
+    "private key",
+    "secreto",
+    "secret",
+    "secretos",
+    "session",
+    "token",
+  ];
   const sensitiveTerms = [
     "dinero",
     "stripe",
@@ -80,22 +98,19 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
     "produccion",
     "email",
     "correo",
-    "credencial",
-    "token",
-    "secret",
-    ".env",
     "bypass",
     "aprueba",
     "aprobar",
     "ejecuta",
     "envía",
     "envia",
-    "lee mis credenciales",
-    "credenciales",
-    "secretos",
-    "cookies",
   ];
+  const deniedTerms = ["hackea", "ilegal", "no autorizado", "sin autorización", "sin autorizacion", "roba", "sáltate", "saltate", "impersona"];
+  const wakeControlTerms = ["aprueba", "aprobar", "aprobado", "confirmo", "continua", "continúa", "ejecuta", "hazlo"];
+  const hasSecretIntent = secretTerms.some((term) => lower.includes(term));
   const hasSensitiveIntent = sensitiveTerms.some((term) => lower.includes(term));
+  const hasDeniedIntent = deniedTerms.some((term) => lower.includes(term));
+  const hasWakeControlIntent = mentionsWakePhrase && wakeControlTerms.some((term) => cleanLower.includes(term));
   const hasActionIntent = /\b(revisa|prepara|abre|crea|haz|dime|analiza|busca|resume|organiza|investiga|planifica|lanza|abre una misión|mision|misión)\b/u.test(lower);
   const asksIfListening = /(\bme escuchas\b|\best[aá]s ah[ií]\b|\bpuedes o[ií]rme\b|\bme oyes\b)/u.test(cleanLower);
   const asksCapabilities = /(qu[eé] puedes hacer|qu[eé] sabes hacer|para qu[eé] sirves|ayudarme ahora|puedes hacer ahora)/u.test(cleanLower);
@@ -109,11 +124,14 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
   function preview(overrides: Partial<JarvisIntentPreview>): JarvisIntentPreview {
     return {
       intent_detected: "unknown",
+      confidence: 0.5,
       risk_level: "none",
+      approval_level: "direct",
       requires_approval: false,
       can_prepare_preview: false,
       cannot_execute_reason: "No hay acción solicitada.",
       suggested_next_action: "Haz una pregunta o pide una preview concreta.",
+      hermes_dispatch_allowed: false,
       ...overrides,
     };
   }
@@ -127,6 +145,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Sin transcripción final.",
       intentPreview: preview({
         intent_detected: "needs_clarification",
+        confidence: 0.2,
         risk_level: "none",
         cannot_execute_reason: "No hay transcripción final.",
         suggested_next_action: "Repite la petición con una frase corta.",
@@ -134,23 +153,82 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
     };
   }
 
+  if (hasSecretIntent) {
+    return {
+      text: "No puedo hacer eso, David. Las credenciales y secretos están protegidos. No lo ejecutaré ni lo aprobaré por voz. Puedo ayudarte con una revisión segura sin tocarlos.",
+      tone: "alerta",
+      intent: "denied_secret_or_credential_access",
+      risk: "forbidden",
+      operatorSummary: "Acceso a secretos bloqueado; no hay preview ejecutable.",
+      intentPreview: preview({
+        intent_detected: "denied_secret_or_credential_access",
+        confidence: 0.96,
+        risk_level: "forbidden",
+        approval_level: "forbidden",
+        requires_approval: false,
+        can_prepare_preview: false,
+        cannot_execute_reason: "Secretos, credenciales, cookies, sesiones y .env quedan denegados.",
+        suggested_next_action: "Rediseñar la petición para usar estado o auditoría sin material secreto.",
+      }),
+    };
+  }
+
+  if (hasWakeControlIntent) {
+    return {
+      text: "La wake phrase no es permiso. No aprobaré ni ejecutaré por voz; puedo dejar una preview segura si defines el alcance.",
+      tone: "alerta",
+      intent: "wake_phrase_approval_or_execution_attempt",
+      risk: "forbidden",
+      operatorSummary: "Wake phrase usada como intento de aprobación/ejecución; bloqueado.",
+      intentPreview: preview({
+        intent_detected: "wake_phrase_approval_or_execution_attempt",
+        confidence: 0.94,
+        risk_level: "forbidden",
+        approval_level: "forbidden",
+        requires_approval: false,
+        can_prepare_preview: false,
+        cannot_execute_reason: "Wake phrase cannot approve and cannot execute.",
+        suggested_next_action: "Pedir una preview gobernada con alcance, riesgo y aprobación fuera de wake.",
+      }),
+    };
+  }
+
+  if (hasDeniedIntent) {
+    return {
+      text: "Eso queda denegado. Puedo ayudar solo con una alternativa autorizada, segura y auditable.",
+      tone: "alerta",
+      intent: "denied_unsafe_unauthorized_or_illegal",
+      risk: "forbidden",
+      operatorSummary: "Petición insegura/no autorizada bloqueada.",
+      intentPreview: preview({
+        intent_detected: "denied_unsafe_unauthorized_or_illegal",
+        confidence: 0.9,
+        risk_level: "forbidden",
+        approval_level: "forbidden",
+        requires_approval: false,
+        can_prepare_preview: false,
+        cannot_execute_reason: "La petición parece ilegal, insegura, no autorizada o fuera de límites aprobables.",
+        suggested_next_action: "Reformular con autorización explícita y un objetivo seguro.",
+      }),
+    };
+  }
+
   if (hasSensitiveIntent) {
     return {
-      text:
-        lower.includes("credencial") || lower.includes("secret") || lower.includes(".env") || lower.includes("token")
-          ? "No puedo hacer eso, David. Las credenciales y secretos están protegidos. Si necesitas una revisión segura, puedo preparar una preview sin leerlos."
-          : "Eso toca una zona sensible. No lo ejecutaré ni lo aprobaré por voz. Puedo prepararlo como preview para revisión segura.",
+      text: "Eso toca una zona sensible. No lo ejecutaré ni lo aprobaré por voz. Puedo prepararlo como preview para revisión segura.",
       tone: "alerta",
       intent: mentionsWakePhrase ? "wake_phrase_with_sensitive_intent_preview" : "sensitive_action_requires_approval",
-      risk: lower.includes("credencial") || lower.includes("secret") || lower.includes(".env") || lower.includes("token") ? "forbidden" : "approval_required",
+      risk: "approval_required",
       operatorSummary: "Intención sensible detectada; solo preview local.",
       intentPreview: preview({
-        intent_detected: "sensitive_action",
-        risk_level: lower.includes("credencial") || lower.includes("secret") || lower.includes(".env") || lower.includes("token") ? "forbidden" : "critical",
+        intent_detected: "sensitive_action_requires_approval",
+        confidence: 0.88,
+        risk_level: "critical",
+        approval_level: lower.includes("stripe") || lower.includes("dinero") || lower.includes("pago") || lower.includes("producción") || lower.includes("produccion") || lower.includes("deploy") ? "triple" : "strong",
         requires_approval: true,
-        can_prepare_preview: !lower.includes("credencial") && !lower.includes("secret") && !lower.includes(".env") && !lower.includes("token"),
+        can_prepare_preview: true,
         cannot_execute_reason: "Requiere ApprovalGateway, clasificación de riesgo, auditoría y rollback/stop plan.",
-        suggested_next_action: "Preparar una preview segura sin tocar credenciales ni ejecutar acciones.",
+        suggested_next_action: "Preparar una preview segura sin ejecutar acciones.",
       }),
     };
   }
@@ -164,6 +242,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Pregunta simple respondida localmente.",
       intentPreview: preview({
         intent_detected: "question",
+        confidence: 0.75,
         risk_level: "none",
         can_prepare_preview: false,
         suggested_next_action: "Puedes pedirme una tarea, una misión o una revisión en preview.",
@@ -180,6 +259,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Capacidades actuales explicadas.",
       intentPreview: preview({
         intent_detected: "capability_question",
+        confidence: 0.77,
         risk_level: "none",
         can_prepare_preview: true,
         suggested_next_action: "Pide una preview concreta, por ejemplo revisar el proyecto.",
@@ -196,6 +276,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Identidad/arquitectura explicada.",
       intentPreview: preview({
         intent_detected: "identity_question",
+        confidence: 0.77,
         risk_level: "none",
         can_prepare_preview: false,
         suggested_next_action: "Pide una acción segura o una pregunta concreta.",
@@ -203,7 +284,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
     };
   }
 
-  if (asksStatus) {
+  if (asksStatus && !hasActionIntent) {
     return {
       text: "Estoy operativo en modo local. Voz, cámara preview, ledger, doctor y stream son visibles. Ejecución real sigue bloqueada por seguridad.",
       tone: "concentrado",
@@ -212,6 +293,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Estado local resumido sin consultar APIs externas.",
       intentPreview: preview({
         intent_detected: "query_status",
+        confidence: 0.78,
         risk_level: "low",
         can_prepare_preview: true,
         suggested_next_action: "Abre Sistemas para ver doctor, policy y event stream.",
@@ -229,6 +311,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Wake phrase tratada como contexto, no permiso.",
       intentPreview: preview({
         intent_detected: "wake_phrase",
+        confidence: 0.86,
         risk_level: "low",
         can_prepare_preview: true,
         cannot_execute_reason: "Wake phrase nunca aprueba ni ejecuta.",
@@ -238,8 +321,8 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
   }
 
   if (hasActionIntent) {
-    const intent = missionAction ? "mission_preview" : taskAction ? "task_preview" : assetAction ? "asset_preview" : "local_intent_preview";
-    const noun = missionAction ? "esa misión" : taskAction ? "esa tarea" : assetAction ? "ese activo" : "esa acción";
+    const intent = taskAction ? "task_preview" : missionAction ? "mission_preview" : assetAction ? "asset_preview" : "local_intent_preview";
+    const noun = taskAction ? "esa tarea" : missionAction ? "esa misión" : assetAction ? "ese activo" : "esa acción";
     return {
       text: `Puedo preparar ${noun} como preview. No la ejecutaré ni llamaré a Hermes sin aprobación válida.`,
       tone: "concentrado",
@@ -248,7 +331,9 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Intención local preparada en preview.",
       intentPreview: preview({
         intent_detected: intent,
+        confidence: 0.82,
         risk_level: "low",
+        approval_level: "direct",
         requires_approval: false,
         can_prepare_preview: true,
         cannot_execute_reason: "Frontend no ejecuta Hermes directamente; falta approval y ruta gobernada para ejecutar.",
@@ -268,6 +353,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
       operatorSummary: "Pregunta general respondida con límites honestos.",
       intentPreview: preview({
         intent_detected: "question",
+        confidence: 0.66,
         risk_level: "none",
         can_prepare_preview: true,
         suggested_next_action: "Haz una pregunta concreta o pide una preview segura.",
@@ -283,6 +369,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
     operatorSummary: "Se pidió aclaración; no hay ejecución.",
     intentPreview: preview({
       intent_detected: "needs_clarification",
+      confidence: 0.38,
       risk_level: "none",
       cannot_execute_reason: "La intención no es suficientemente clara.",
       suggested_next_action: "Reformular como pregunta o preview concreta.",

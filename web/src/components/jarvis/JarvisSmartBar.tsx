@@ -8,6 +8,8 @@ import { capabilityText, isLocalVoiceBusy, localVoiceStateIsError, valueText } f
 
 interface JarvisSmartBarProps {
   missionControl: NonNullable<JarvisDashboardStatus["mission_control"]>;
+  voiceSession?: JarvisDashboardStatus["voice_session"];
+  wakeWordFlow?: JarvisDashboardStatus["wake_word_flow"];
   localVoiceState: LocalVoiceLoopState;
   jarvisTone: JarvisVoiceTone;
   conversationActive: boolean;
@@ -28,6 +30,8 @@ interface JarvisSmartBarProps {
 
 export function JarvisSmartBar({
   missionControl,
+  voiceSession,
+  wakeWordFlow,
   localVoiceState,
   jarvisTone,
   conversationActive,
@@ -53,6 +57,10 @@ export function JarvisSmartBar({
   const displayedTranscript = transcript || interimTranscript || valueText(missionControl.sample_command, sampleMissionCommand);
   const displayedResponse = localVoiceResponse || lastResponse;
   const stateLabel = localVoiceStateLabels[localVoiceState];
+  const voiceSessionState = valueText(voiceSession?.state?.current_state ?? voiceSession?.current_state, "idle");
+  const wakeListeningState = valueText(voiceSession?.state?.wake_listening_state ?? voiceSession?.wake_listening_state, "wake_listening_disabled");
+  const wakeAvailable = wakeListeningState === "wake_listening_available";
+  const wakeRuntimeEnabled = wakeWordFlow?.state?.wake_runtime_enabled === true;
   const statusBadgeVariant: "destructive" | "warning" | "success" = localVoiceStateIsError(localVoiceState)
     ? "destructive"
     : localVoiceBusy
@@ -134,6 +142,8 @@ export function JarvisSmartBar({
           <Badge variant={conversationActive ? "warning" : statusBadgeVariant}>
             Conversación manual {conversationActive ? "activa" : "en reposo"}
           </Badge>
+          <Badge variant={conversationActive ? "warning" : "outline"}>sesión voz: {conversationActive ? "conversation_active" : voiceSessionState}</Badge>
+          <Badge variant={wakeAvailable ? "success" : "outline"}>wake: {wakeListeningState}</Badge>
           <Badge variant={statusBadgeVariant}>estado: {stateLabel}</Badge>
           <Badge variant="outline">STT navegador: {capabilityText(sttSupport)}</Badge>
           <Badge variant="outline">voz: {selectedVoiceName || capabilityText(ttsSupport)}</Badge>
@@ -141,7 +151,7 @@ export function JarvisSmartBar({
         <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/58">
           {conversationActive
             ? "JARVIS vuelve a escuchar al terminar de hablar mientras este modo siga activo. Stop/cancel cierra la conversación."
-            : "El micrófono solo se abre con activación manual. No hay wake listener persistente real en esta PR."}
+            : `Wake ${wakeAvailable ? "disponible por dependencia" : "desactivado/no disponible"} no equivale a conversación activa. Micrófono manual; no hay transcripción continua ni Hermes directo.`}
         </p>
         <details className="text-right">
           <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/60">
@@ -149,15 +159,19 @@ export function JarvisSmartBar({
           </summary>
           <div className="mt-2 max-w-sm text-left font-mono-ui text-[0.68rem] text-cyan-100/52 md:text-right">
             <p>intent_detected {intentPreview.intent_detected}</p>
+            <p>confidence {valueText(intentPreview.confidence)}</p>
             <p>risk_level {intentPreview.risk_level}</p>
+            <p>approval_level {valueText(intentPreview.approval_level, "direct")}</p>
             <p>requires_approval {intentPreview.requires_approval ? "true" : "false"}</p>
             <p>can_prepare_preview {intentPreview.can_prepare_preview ? "true" : "false"}</p>
+            <p>hermes_dispatch_allowed {intentPreview.hermes_dispatch_allowed === true ? "true" : "false"}</p>
             <p>cannot_execute_reason {intentPreview.cannot_execute_reason}</p>
             <p>suggested_next_action {intentPreview.suggested_next_action}</p>
             <p>{capabilityNotice}</p>
             <p>{voiceQualityNotice}</p>
             <p>intent {localVoiceIntent} · risk {localVoiceRisk}</p>
-            <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto ni se envía audio al backend.</p>
+            <p>wake_runtime_enabled {wakeRuntimeEnabled ? "true" : "false"} · wake no aprueba · wake no ejecuta · voice approval disabled unless authenticated/gated/audited.</p>
+            <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto, no se envía audio al backend y no se transcribe todo.</p>
           </div>
         </details>
       </div>

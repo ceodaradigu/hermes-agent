@@ -390,6 +390,55 @@ export interface JarvisMissionControl {
   read_only?: boolean;
 }
 
+export interface JarvisConversationalBrainResult {
+  human_response?: string;
+  intent_detected?: string;
+  confidence?: number | string;
+  risk_level?: string;
+  approval_level?: string;
+  requires_approval?: boolean;
+  can_prepare_preview?: boolean;
+  cannot_execute_reason?: string;
+  suggested_next_action?: string;
+  hermes_dispatch_allowed?: boolean;
+  external_provider_called?: boolean;
+  llm_called?: boolean;
+  memory_read?: boolean;
+  memory_write?: boolean;
+  transcript_persistence?: boolean;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisConversationalBrain {
+  schema_version?: string;
+  state?: Record<string, string | boolean | number>;
+  sample_analysis?: JarvisConversationalBrainResult;
+  output_contract?: string[];
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisVoiceSession {
+  schema_version?: string;
+  current_state?: string;
+  wake_listening_state?: string;
+  supported_states?: string[];
+  state?: Record<string, string | boolean | number>;
+  separation?: Record<string, Record<string, string | boolean | number>>;
+  privacy?: Record<string, boolean>;
+  approval_policy?: Record<string, boolean>;
+  safety?: Record<string, boolean>;
+  wake_architecture?: Record<string, unknown>;
+  timeline?: JarvisDashboardTimelineEvent[];
+  source_endpoint?: string;
+  source_endpoints?: string[];
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisVoiceCoreVisualState {
   state: string;
   label: string;
@@ -1023,6 +1072,9 @@ export interface JarvisDashboardStatus {
     readback_policy?: Record<string, boolean>;
   };
   hermes_execution?: JarvisHermesExecution;
+  conversational_brain?: JarvisConversationalBrain;
+  voice_session?: JarvisVoiceSession;
+  wake_architecture?: Record<string, unknown>;
   voice_core?: JarvisVoiceCore;
   local_voice_loop?: JarvisLocalVoiceLoop;
   wake_word_flow?: JarvisWakeWordFlow;

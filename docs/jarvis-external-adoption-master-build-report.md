@@ -365,3 +365,46 @@ Bloqueadas:
    formalmente mantener WebGL manual.
 5. Preparar ejecución Hermes candidata desde UI solo cuando el flujo de approval
    completo esté probado end-to-end.
+## PR #158 — Conversational Brain + Voice Session/Wake Architecture
+
+PR #158 construye una base segura para conversación y voz sin activar sensores
+always-on ni ejecución:
+
+- `ConversationalBrainBridge` v2 local/determinista:
+  - no LLM real si no se llama a un LLM;
+  - no red ni APIs externas;
+  - no memoria automática;
+  - no Hermes dispatch;
+  - bloqueo de secretos/credenciales/`.env`;
+  - respuesta humana breve con detalles técnicos separados.
+- `VoiceSessionControl.status()` formaliza el control-plane de voz:
+  - estados mínimos completos;
+  - wake listening separado de active conversation;
+  - push-to-talk, STT, TTS, raw recording, voice approval y Hermes execution
+    como capacidades distintas;
+  - `raw_audio_sent_to_backend=false`,
+    `transcript_persistence=false`, `background_transcription=false`,
+    `always_on_stt=false`, `microphone_auto_start=false`.
+- Wake Architecture:
+  - provider contract `openWakeWord`;
+  - dependency detection honesta;
+  - `auto_start=false`;
+  - `activation_endpoint_enabled=false`;
+  - frases `Hola Jarvis` y `Jarvis`;
+  - stop phrases `para`, `cancela`, `detente`, `silencio`,
+    `cancelar misión`, `apaga escucha`;
+  - buffer efímero en memoria, sin persistencia de audio, sin transcripción
+    hasta activación válida, sin approval y sin execution.
+- Dashboard/event stream:
+  - `/mark-3/dashboard/status` incluye `conversational_brain`,
+    `voice_session`, `wake_architecture`;
+  - `/mark-3/dashboard/events` y `/stream` incluyen `brain_state` y
+    `voice_session_state` metadata-only.
+- `/jarvis`:
+  - muestra respuesta humana corta;
+  - diferencia wake disponible/deshabilitado de conversación activa;
+  - mantiene detalles técnicos plegados;
+  - no añade POST/PUT/DELETE, `/execute`, Hermes directo, approvals reales ni
+    `getUserMedia` automático.
+
+Documento de cierre: `docs/jarvis-pr-158-conversational-brain-voice-session-wake-architecture.md`.

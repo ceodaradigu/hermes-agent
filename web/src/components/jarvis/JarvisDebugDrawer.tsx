@@ -51,9 +51,12 @@ export function JarvisDebugDrawer({
   const missionIntent = missionControl.intent_preview ?? {};
   const missionSafety = missionControl.safety ?? {};
   const missionConversation = missionControl.conversation_preview ?? {};
+  const conversationalBrain = dashboard.conversational_brain ?? fallbackOffline.conversational_brain!;
+  const brainPreview = conversationalBrain.sample_analysis;
   const hermes = dashboard.hermes_execution ?? {};
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
+  const voiceSession = dashboard.voice_session ?? fallbackOffline.voice_session!;
   const voiceCoreState = voiceCore.state ?? {};
   const localVoiceLoop = dashboard.local_voice_loop ?? fallbackOffline.local_voice_loop!;
   const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow!;
@@ -114,6 +117,19 @@ export function JarvisDebugDrawer({
     ["wake phrase approval", yesNo(localVoiceLoop.wake_phrase_approval ?? localVoiceLoop.approval_policy?.wake_phrase_approval, "enabled", "disabled")],
   ] as const;
 
+  const voiceSessionRows = [
+    ["voice session", valueText(voiceSession.state?.current_state ?? voiceSession.current_state, "idle")],
+    ["wake listening", valueText(voiceSession.state?.wake_listening_state ?? voiceSession.wake_listening_state, "wake_listening_disabled")],
+    ["conversation active", yesNo(voiceSession.state?.conversation_active, "true", "false")],
+    ["manual PTT", yesNo(voiceSession.state?.manual_push_to_talk_active, "active", "idle")],
+    ["raw audio backend", yesNo(voiceSession.privacy?.raw_audio_sent_to_backend, "true", "false")],
+    ["transcript persistence", yesNo(voiceSession.privacy?.transcript_persistence, "true", "false")],
+    ["background transcription", yesNo(voiceSession.privacy?.background_transcription, "true", "false")],
+    ["always-on STT", yesNo(voiceSession.privacy?.always_on_stt, "true", "false")],
+    ["microphone auto-start", yesNo(voiceSession.privacy?.microphone_auto_start, "true", "false")],
+    ["Hermes dispatch", yesNo(voiceSession.separation?.hermes_execution?.dispatch_allowed, "allowed", "false")],
+  ] as const;
+
   const cameraRows = [
     ["Estado actual", valueText(cameraVisionState.mode, "preview")],
     ["cámara", cameraVisionState.camera_enabled ? "enabled" : "off/disabled"],
@@ -162,6 +178,18 @@ export function JarvisDebugDrawer({
     ["contradicciones", valueText(memoryBrain.contradictions?.length, "0")],
     ["compactación", valueText(memoryBrain.compaction?.status, "contract_only")],
     ["forget/delete", valueText(memoryBrain.forget_delete?.status, "future_gated")],
+  ] as const;
+
+  const conversationalBrainRows = [
+    ["modo", valueText(conversationalBrain.state?.mode, "local_deterministic_bridge")],
+    ["LLM", yesNo(conversationalBrain.state?.llm_called, "called", "none")],
+    ["provider externo", yesNo(conversationalBrain.state?.external_provider_called, "called", "false")],
+    ["memoria autosave", yesNo(conversationalBrain.state?.memory_autosave_enabled, "enabled", "false")],
+    ["Hermes dispatch", yesNo(conversationalBrain.state?.hermes_dispatch_allowed, "allowed", "false")],
+    ["intent", valueText(brainPreview?.intent_detected)],
+    ["confidence", valueText(brainPreview?.confidence)],
+    ["risk", valueText(brainPreview?.risk_level)],
+    ["approval", valueText(brainPreview?.approval_level)],
   ] as const;
 
   const doctorRows = [
@@ -515,6 +543,7 @@ export function JarvisDebugDrawer({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList items={voiceRows} />
+                    <StatusList items={voiceSessionRows} />
                     <StatusList items={localVoiceRows} />
                     <article className="border border-warning/40 bg-warning/10 p-4">
                       <div className="flex flex-wrap items-center gap-2">
@@ -531,6 +560,18 @@ export function JarvisDebugDrawer({
                       <p className="mt-2 font-mono-ui text-xs text-foreground">
                         Conversación manual continua: David pulsa una vez, JARVIS escucha, responde y vuelve a escuchar hasta stop/cancel o timeout.
                       </p>
+                    </article>
+                    <article className="border border-cyan-300/15 bg-[#061526]/50 p-4">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-100">Conversational Brain Bridge v2</h3>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <StatusList items={conversationalBrainRows} />
+                        <div className="grid gap-2">
+                          <SafetyLine>Respuesta humana breve; detalles técnicos plegados.</SafetyLine>
+                          <SafetyLine>No LLM real declarado si no se llama a un LLM.</SafetyLine>
+                          <SafetyLine>No memoria automática.</SafetyLine>
+                          <SafetyLine>No Hermes dispatch desde este bridge.</SafetyLine>
+                        </div>
+                      </div>
                     </article>
                     <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                       <SafetyLine>micrófono: manual bajo botón explícito</SafetyLine>
