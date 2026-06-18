@@ -17,6 +17,7 @@ export type JarvisOrbVisualState =
   | "transcribing"
   | "thinking"
   | "speaking"
+  | "approval_required"
   | "alert"
   | "error"
   | "stopped"

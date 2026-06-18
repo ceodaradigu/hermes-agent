@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { History, MessageSquare, Mic, MicOff, SendHorizontal, Square } from "lucide-react";
 import type { JarvisDashboardStatus } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -49,12 +50,13 @@ export function JarvisSmartBar({
   onBegin,
   onCancel,
 }: JarvisSmartBarProps) {
+  const [localDraft, setLocalDraft] = useState("");
   const messages = missionControl.conversation_preview?.messages ?? [];
   const lastResponse = messages.find((message) => message.speaker === "JARVIS")?.content ?? previewVoiceSubtitle;
   const localVoiceBusy = isLocalVoiceBusy(localVoiceState);
   const startDisabled = sttSupport !== "supported" || localVoiceBusy || conversationActive;
   const stopDisabled = !conversationActive && !localVoiceBusy && localVoiceState === "idle";
-  const displayedTranscript = transcript || interimTranscript || valueText(missionControl.sample_command, sampleMissionCommand);
+  const displayedTranscript = localDraft || transcript || interimTranscript || valueText(missionControl.sample_command, sampleMissionCommand);
   const displayedResponse = localVoiceResponse || lastResponse;
   const stateLabel = localVoiceStateLabels[localVoiceState];
   const voiceSessionState = valueText(voiceSession?.state?.current_state ?? voiceSession?.current_state, "idle");
@@ -69,25 +71,21 @@ export function JarvisSmartBar({
 
   return (
     <section
-      className="fixed bottom-3 left-1/2 z-50 w-[min(58rem,calc(100vw-2rem))] -translate-x-1/2"
+      className="fixed bottom-3 left-1/2 z-50 w-[min(64rem,calc(100vw-1.25rem))] -translate-x-1/2"
       data-testid="jarvis-smart-bar"
       data-local-voice-loop="browser-controlled"
       data-local-voice-state={localVoiceState}
+      data-smart-bar-mode="local-draft-and-manual-voice"
     >
-      <div className="mb-3 grid gap-2">
-        <div className="ml-auto max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">Tú</p>
-            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">transcripción temporal local</p>
-          </div>
+      <div className="mx-auto mb-2 grid w-[min(58rem,calc(100vw-1.5rem))] gap-2 md:grid-cols-[0.9fr_1.1fr]">
+        <div className="min-w-0 border border-cyan-300/16 bg-[#031426]/70 px-3 py-2 shadow-[0_0_24px_rgba(34,211,238,0.08)] backdrop-blur">
+          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-cyan-200/62">Tú · transcripción temporal local</p>
           <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedTranscript}</p>
         </div>
-        <div className="max-w-[82%] rounded-[2px] border border-cyan-300/24 bg-[#031426]/82 px-4 py-2 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-cyan-200">JARVIS</p>
-            <p className="font-mono-ui text-[0.68rem] text-cyan-100/50">respuesta temporal local controlada · tono {jarvisTone}</p>
-          </div>
+        <div className="min-w-0 border border-cyan-300/22 bg-[#031426]/82 px-3 py-2 shadow-[0_0_32px_rgba(34,211,238,0.12)] backdrop-blur">
+          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-cyan-200/62">JARVIS · respuesta humana corta</p>
           <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedResponse}</p>
+          <p className="sr-only">respuesta temporal local controlada · tono {jarvisTone}</p>
         </div>
       </div>
 
@@ -98,12 +96,11 @@ export function JarvisSmartBar({
             <MessageSquare className="h-5 w-5 text-cyan-100" />
           </div>
           <input
-            disabled
-            readOnly
             aria-label="Barra inteligente inferior para escribir a JARVIS"
-            value={interimTranscript || transcript}
-            placeholder={conversationActive ? "Conversación manual activa. Habla cuando quieras o pulsa stop." : "Pulsa el micrófono una vez para abrir conversación manual local..."}
-            className="min-w-0 flex-1 bg-transparent font-mono-ui text-lg text-cyan-50 outline-none placeholder:text-cyan-100/36 disabled:text-cyan-100/45"
+            value={localDraft || interimTranscript || transcript}
+            onChange={(event) => setLocalDraft(event.target.value)}
+            placeholder={conversationActive ? "Conversación manual activa. Habla cuando quieras o pulsa stop." : "Escribe un borrador local o pulsa el micrófono una vez..."}
+            className="min-w-0 flex-1 bg-transparent font-mono-ui text-base text-cyan-50 outline-none placeholder:text-cyan-100/36 sm:text-lg"
           />
           <Button
             disabled={startDisabled}
@@ -137,16 +134,13 @@ export function JarvisSmartBar({
         </div>
       </div>
 
-      <div className="mx-auto mt-2 grid w-[min(56rem,calc(100vw-2rem))] gap-2 border border-cyan-300/16 bg-[#020b17]/82 px-4 py-2 backdrop-blur md:grid-cols-[auto_1fr_auto]">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mx-auto mt-2 grid w-[min(60rem,calc(100vw-1.5rem))] gap-2 border border-cyan-300/14 bg-[#020b17]/76 px-4 py-2 backdrop-blur md:grid-cols-[auto_1fr_auto]">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant={conversationActive ? "warning" : statusBadgeVariant}>
             Conversación manual {conversationActive ? "activa" : "en reposo"}
           </Badge>
-          <Badge variant={conversationActive ? "warning" : "outline"}>sesión voz: {conversationActive ? "conversation_active" : voiceSessionState}</Badge>
-          <Badge variant={wakeAvailable ? "success" : "outline"}>wake: {wakeListeningState}</Badge>
           <Badge variant={statusBadgeVariant}>estado: {stateLabel}</Badge>
-          <Badge variant="outline">STT navegador: {capabilityText(sttSupport)}</Badge>
-          <Badge variant="outline">voz: {selectedVoiceName || capabilityText(ttsSupport)}</Badge>
+          <Badge variant={wakeAvailable ? "success" : "outline"}>wake gated</Badge>
         </div>
         <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/58">
           {conversationActive
@@ -155,9 +149,13 @@ export function JarvisSmartBar({
         </p>
         <details className="text-right">
           <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/60">
-            intent preview
+            detalles
           </summary>
           <div className="mt-2 max-w-sm text-left font-mono-ui text-[0.68rem] text-cyan-100/52 md:text-right">
+            <p>sesión voz {conversationActive ? "conversation_active" : voiceSessionState}</p>
+            <p>wake {wakeListeningState}</p>
+            <p>STT navegador {capabilityText(sttSupport)}</p>
+            <p>voz {selectedVoiceName || capabilityText(ttsSupport)}</p>
             <p>intent_detected {intentPreview.intent_detected}</p>
             <p>confidence {valueText(intentPreview.confidence)}</p>
             <p>risk_level {intentPreview.risk_level}</p>
@@ -170,6 +168,8 @@ export function JarvisSmartBar({
             <p>{capabilityNotice}</p>
             <p>{voiceQualityNotice}</p>
             <p>intent {localVoiceIntent} · risk {localVoiceRisk}</p>
+            <p>borrador local {localDraft ? "presente/no enviado" : "vacío"}</p>
+            <p>No puedo hacer eso, David. Las credenciales y secretos están protegidos.</p>
             <p>wake_runtime_enabled {wakeRuntimeEnabled ? "true" : "false"} · wake no aprueba · wake no ejecuta · voice approval disabled unless authenticated/gated/audited.</p>
             <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto, no se envía audio al backend y no se transcribe todo.</p>
           </div>

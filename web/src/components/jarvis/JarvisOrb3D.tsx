@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, MicOff, ShieldAlert, Volume2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { jarvisToneProfiles, localVoiceStateLabels, presenceStates } from "./contracts";
 import type { JarvisOrbVisualState, JarvisVoiceTone, LocalVoiceLoopState } from "./types";
 import { localVoiceStateIsError } from "./utils";
@@ -267,6 +266,7 @@ export function JarvisOrb3D({
   const orbRef = useRef(orb);
   orbRef.current = orb;
   const profile = jarvisToneProfiles[jarvisTone];
+  const currentPresence = presenceStates.find(([id]) => id === visualState) ?? presenceStates[0];
   const StateIcon = killSwitchState === "active" ? ShieldAlert : localVoiceState === "speaking" ? Volume2 : localVoiceStateIsError(localVoiceState) ? MicOff : Mic;
 
   useEffect(() => {
@@ -403,27 +403,32 @@ export function JarvisOrb3D({
       data-jarvis-tone={jarvisTone}
       data-conversation-active={conversationActive ? "true" : "false"}
       data-kill-switch-state={killSwitchState}
+      data-read-model-voice-state={voiceState}
+      data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.75`}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,0.22)_0%,rgba(14,165,233,0.08)_35%,rgba(2,6,23,0)_68%),radial-gradient(circle_at_50%_82%,rgba(249,115,22,0.10),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.028)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,64px_64px,64px_64px]" />
       <div className="absolute left-0 right-0 top-1/2 h-px bg-cyan-300/35 shadow-[0_0_30px_rgba(34,211,238,0.55)]" />
       <div className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-cyan-300/18" />
       <div className="relative flex h-full min-h-0 flex-col items-center justify-center">
-        <div className="absolute top-4 flex flex-wrap items-center justify-center gap-2 px-4">
-          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">Presence UI</Badge>
-          <Badge className="border-cyan-100/20 bg-[#071629]/75 text-cyan-50" variant="outline">Núcleo de Voz JARVIS</Badge>
-          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">orbe 3D real / HUD cinematográfico</Badge>
-          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">tono {profile.label}</Badge>
-          <Badge className="border-cyan-300/35 bg-cyan-300/10 text-cyan-100" variant="outline">estado {visualState}</Badge>
+        <div className="absolute top-4 flex items-center gap-2 border border-cyan-300/16 bg-[#031426]/52 px-3 py-2 backdrop-blur">
+          <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
+          <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/72">{currentPresence[1]}</p>
+          <span className="sr-only">Presence UI</span>
+          <span className="sr-only">Núcleo de Voz JARVIS</span>
+          <span className="sr-only">orbe 3D real / HUD cinematográfico</span>
+          <span className="sr-only">tono {profile.label}</span>
+          <span className="sr-only">estado {visualState}</span>
         </div>
 
         <div className="relative flex aspect-square w-[min(84dvh,62rem)] max-h-[calc(100dvh-12rem)] max-w-[min(92vw,62rem)] items-center justify-center xl:max-w-[min(66vw,62rem)]" data-testid="jarvis-cinematic-orb-hud">
           <div className="absolute inset-[-10%] rounded-full blur-3xl" style={{ backgroundColor: orb.glow }} />
           <div className="absolute inset-[-6%] rounded-full border border-cyan-200/8 shadow-[0_0_240px_rgba(34,211,238,0.34),inset_0_0_110px_rgba(14,165,233,0.10)]" />
           <div className="absolute inset-0 rounded-full border border-cyan-200/12 bg-[radial-gradient(circle_at_48%_38%,rgba(125,211,252,0.16),transparent_22%),radial-gradient(circle_at_52%_58%,rgba(14,165,233,0.12),transparent_42%)] shadow-[0_0_210px_rgba(34,211,238,0.30)]" />
-          <div className="absolute inset-[4%] rounded-full border border-cyan-100/20 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(125,211,252,0.34)_18deg,transparent_42deg,transparent_84deg,rgba(34,211,238,0.18)_112deg,transparent_138deg,transparent_360deg)] opacity-85 animate-spin" style={{ animationDuration: `${24 / orb.motion}s` }} />
-          <div className="absolute inset-[11%] rounded-full border border-cyan-100/16 bg-[conic-gradient(from_90deg,transparent_0deg,rgba(56,189,248,0.28)_12deg,transparent_28deg,transparent_152deg,rgba(125,211,252,0.22)_166deg,transparent_188deg,transparent_360deg)] opacity-70 animate-spin" style={{ animationDuration: `${31 / orb.motion}s`, animationDirection: "reverse" }} />
+          <div className="absolute inset-[4%] rounded-full border border-cyan-100/20 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(125,211,252,0.34)_18deg,transparent_42deg,transparent_84deg,rgba(34,211,238,0.18)_112deg,transparent_138deg,transparent_360deg)] opacity-85 animate-spin motion-reduce:animate-none" style={{ animationDuration: `${24 / orb.motion}s` }} />
+          <div className="absolute inset-[11%] rounded-full border border-cyan-100/16 bg-[conic-gradient(from_90deg,transparent_0deg,rgba(56,189,248,0.28)_12deg,transparent_28deg,transparent_152deg,rgba(125,211,252,0.22)_166deg,transparent_188deg,transparent_360deg)] opacity-70 animate-spin motion-reduce:animate-none" style={{ animationDuration: `${31 / orb.motion}s`, animationDirection: "reverse" }} />
           <div className="absolute inset-[20%] rounded-full border border-cyan-100/30 shadow-[0_0_120px_rgba(34,211,238,0.30),inset_0_0_92px_rgba(34,211,238,0.14)]" />
           <div className="absolute inset-[28%] rounded-full border border-sky-200/18 opacity-75 shadow-[inset_0_0_50px_rgba(125,211,252,0.12)]" />
+          <div className="absolute inset-[34%] rounded-full border border-cyan-100/35 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.18),transparent_62%)] shadow-[0_0_86px_rgba(125,211,252,0.34),inset_0_0_64px_rgba(125,211,252,0.10)]" />
           <div className="absolute inset-[2%] rounded-full" data-testid="jarvis-holographic-radial-marks">
             {hudTicks.map((tick) => (
               <span
@@ -452,12 +457,12 @@ export function JarvisOrb3D({
           <canvas
             ref={canvasRef}
             aria-label="reactor/orbe cinematográfico WebGL con bloom, profundidad, partículas, anillos y HUD futurista"
-            className="absolute inset-[2%] h-[96%] w-[96%] rounded-full opacity-95 [filter:drop-shadow(0_0_40px_rgba(34,211,238,0.78))]"
+            className="absolute inset-[2%] h-[96%] w-[96%] rounded-full bg-[#01050d]/10 opacity-95 [filter:drop-shadow(0_0_40px_rgba(34,211,238,0.78))]"
           />
           {!webglReady && (
             <div className="absolute inset-[8%] rounded-full border border-cyan-300/35 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.36),rgba(14,165,233,0.10)_42%,transparent_68%)] shadow-[0_0_140px_rgba(34,211,238,0.46)]" data-testid="jarvis-orb-webgl-fallback">
-              <div className="absolute inset-[8%] rounded-full border border-cyan-100/30 animate-spin" />
-              <div className="absolute inset-[18%] rounded-full border border-sky-300/24 animate-ping" />
+              <div className="absolute inset-[8%] rounded-full border border-cyan-100/30 animate-spin motion-reduce:animate-none" />
+              <div className="absolute inset-[18%] rounded-full border border-sky-300/24 animate-ping motion-reduce:animate-none" />
               <div className="absolute inset-[32%] grid place-items-center rounded-full border border-cyan-200/30 bg-[#03192a]/84 text-center">
                 <p className="px-4 font-display text-xs uppercase tracking-[0.18em] text-cyan-50">Fallback visual seguro sin WebGL</p>
                 <p className="mt-2 px-6 font-mono-ui text-[0.68rem] text-cyan-100/58">{webglError || "Canvas no disponible; no se activan sensores."}</p>
@@ -468,7 +473,7 @@ export function JarvisOrb3D({
           <div className="absolute h-[122%] w-px bg-cyan-300/24" />
           <div className="relative flex h-[34%] min-h-44 w-[34%] min-w-44 items-center justify-center rounded-full border border-cyan-100/65 bg-[#03192a]/88 shadow-[0_0_130px_rgba(34,211,238,0.56),inset_0_0_90px_rgba(34,211,238,0.23)]">
             <div className="absolute inset-[-14%] rounded-full blur-2xl" style={{ backgroundColor: orb.glow }} />
-            <div className="absolute inset-3 rounded-full border border-cyan-300/30 bg-[conic-gradient(from_0deg,rgba(34,211,238,0.18),transparent_22%,rgba(125,211,252,0.24),transparent_58%,rgba(34,211,238,0.20),transparent_100%)] animate-spin" style={{ animationDuration: `${12 / orb.motion}s` }} />
+            <div className="absolute inset-3 rounded-full border border-cyan-300/30 bg-[conic-gradient(from_0deg,rgba(34,211,238,0.18),transparent_22%,rgba(125,211,252,0.24),transparent_58%,rgba(34,211,238,0.20),transparent_100%)] animate-spin motion-reduce:animate-none" style={{ animationDuration: `${12 / orb.motion}s` }} />
             <div className="relative text-center">
               <h1 className="font-expanded text-[clamp(2.1rem,4.2vw,5.4rem)] font-bold uppercase tracking-[0.14em] text-cyan-50 blend-lighter drop-shadow-[0_0_28px_rgba(125,211,252,0.9)]">
                 JARVIS
@@ -481,31 +486,25 @@ export function JarvisOrb3D({
           </div>
         </div>
 
-        <div className="absolute bottom-4 left-1/2 flex w-[min(52rem,calc(100vw-3rem))] -translate-x-1/2 flex-wrap justify-center gap-2">
-          {presenceStates.map(([id, label, description]) => (
-            <div
-              key={id}
-              className={
-                "border px-3 py-1.5 shadow-[0_0_24px_rgba(34,211,238,0.08)] backdrop-blur " +
-                (id === visualState || (id === "error" && localVoiceStateIsError(localVoiceState))
-                  ? "border-cyan-200/70 bg-cyan-300/18 text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.24)]"
-                  : "border-cyan-300/18 bg-[#031426]/70 text-cyan-100")
-              }
-              title={description}
-            >
-              <p className="font-display text-[0.68rem] uppercase tracking-[0.14em]">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="absolute bottom-[4.25rem] left-1/2 w-[min(42rem,calc(100vw-4rem))] -translate-x-1/2 text-center">
+        <div className="absolute bottom-4 left-1/2 w-[min(42rem,calc(100vw-3rem))] -translate-x-1/2 text-center">
           <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-200">
-            {voiceState} / visual {visualState} / {localVoiceStateLabels[localVoiceState]} / {profile.label}
+            {localVoiceStateLabels[localVoiceState]} · {currentPresence[2]}
           </p>
           <p className="mt-2 line-clamp-2 font-mono-ui text-sm text-cyan-50/78">{subtitle}</p>
+          <details className="mx-auto mt-3 w-fit border border-cyan-300/12 bg-[#031426]/54 px-3 py-1 text-left backdrop-blur">
+            <summary className="cursor-pointer font-display text-[0.62rem] uppercase tracking-[0.14em] text-cyan-100/54">state map</summary>
+            <div className="mt-2 grid max-h-28 gap-1 overflow-auto pr-1">
+              {presenceStates.map(([id, label, description]) => (
+                <p key={id} className="font-mono-ui text-[0.64rem] text-cyan-100/50">
+                  {id === visualState ? ">" : "-"} {label}: {description}
+                </p>
+              ))}
+            </div>
+          </details>
           <p className="sr-only">reactor/orbe cinematográfico con bloom/glow simulado, profundidad, capas, anillos radiales, marcas holográficas, partículas orbitando y HUD agresivo futurista</p>
           <p className="sr-only">fallback sin WebGL, fallback si canvas falla, FPS budget, particle budget y power save se controlan sin bloquear UI</p>
           <p className="sr-only">idle wake_listening listening transcribing thinking speaking alert error stopped executing</p>
+          <p className="sr-only">idle wake_listening listening transcribing thinking speaking approval_required alert error stopped executing</p>
           <p className="sr-only">wake_listening futuro sin grabación ni transcripción continua; conversation_active manual; recording=false; no captura Web Audio; no sensores nuevos</p>
         </div>
       </div>

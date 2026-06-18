@@ -1,5 +1,5 @@
-import type { RefObject } from "react";
-import { Camera, Download, Grip, Play, Square, Trash2, Video } from "lucide-react";
+import { useState, type RefObject } from "react";
+import { Camera, Download, Grip, Maximize2, Minimize2, Play, Square, Trash2, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { JarvisCameraAuditEvent, JarvisCameraState, JarvisLocalVideoRecording, JarvisVideoRecordingState } from "@/hooks/jarvis/useJarvisCameraControl";
@@ -34,6 +34,7 @@ export function JarvisCameraPanel({
   onStopVideoRecording: () => void;
   onDeleteVideoRecording: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const cameraEnabled = cameraState === "active";
   const videoRecordingActive = videoRecordingState === "recording";
   const startDisabled = cameraEnabled || cameraState === "permission_requested" || cameraState === "not_supported";
@@ -43,14 +44,29 @@ export function JarvisCameraPanel({
 
   return (
     <article
-      className="relative overflow-hidden rounded-[2px] border border-cyan-300/45 bg-[#03101f]/78 p-3 shadow-[0_0_70px_rgba(34,211,238,0.18)] backdrop-blur-md"
+      className={
+        "relative overflow-hidden rounded-[2px] border border-cyan-300/45 bg-[#03101f]/78 p-3 shadow-[0_0_70px_rgba(34,211,238,0.18)] backdrop-blur-md " +
+        (expanded ? "xl:fixed xl:bottom-32 xl:right-6 xl:top-24 xl:z-[60] xl:w-[min(36rem,calc(100vw-3rem))] xl:resize-y xl:overflow-auto" : "")
+      }
       data-testid="jarvis-camera-preview-panel"
+      data-camera-panel-mode={expanded ? "expanded-local-preview" : "side-dock-local-preview"}
     >
       <div className="mb-2 flex items-center justify-between gap-2 border-b border-cyan-300/18 pb-2">
         <div className="flex items-center gap-2">
           <Grip className="h-4 w-4 text-cyan-200/55" />
           <h2 className="font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-50">Cámara · Preview local</h2>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={expanded ? "Contraer cámara lateral" : "Ampliar cámara lateral"}
+          title={expanded ? "Contraer cámara lateral" : "Ampliar cámara lateral"}
+          onClick={() => setExpanded((value) => !value)}
+          className="h-7 w-7 border-cyan-300/20 bg-cyan-300/[0.04] text-cyan-100"
+        >
+          {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        </Button>
         <Badge className={cameraEnabled ? "" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"} variant={cameraEnabled ? "destructive" : "outline"}>
           {cameraEnabled ? "active" : cameraState}
         </Badge>
@@ -74,6 +90,11 @@ export function JarvisCameraPanel({
           <Badge className="border-cyan-300/25 bg-[#041728]/80 text-cyan-100" variant="outline">local only</Badge>
           <Badge className="border-cyan-300/25 bg-cyan-300/10 text-cyan-100" variant="outline">{videoRecordingActive ? "grabando vídeo local" : "sin análisis"}</Badge>
         </div>
+        {!cameraEnabled && (
+          <div className="absolute left-4 right-4 top-4 border border-cyan-300/18 bg-[#010816]/72 px-3 py-2 font-mono-ui text-[0.68rem] text-cyan-100/58">
+            cámara apagada · permiso requerido · no backend upload · no frames event stream
+          </div>
+        )}
         {videoRecordingActive && (
           <div className="absolute right-4 top-4 flex items-center gap-2 border border-red-300/35 bg-red-950/55 px-2 py-1 font-mono-ui text-[0.65rem] uppercase tracking-[0.12em] text-red-100">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-300" />
@@ -122,8 +143,9 @@ export function JarvisCameraPanel({
         </div>
       )}
       <details className="mt-3 border border-cyan-300/10 bg-[#071629]/45 p-2">
-        <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/70">privacidad cámara</summary>
+        <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/70">Privacidad cámara</summary>
         <div className="mt-2 grid gap-2">
+          <SafetyLine>Módulo lateral premium ampliable; no mueve runtime ni permisos.</SafetyLine>
           <SafetyLine>La cámara no graba por defecto.</SafetyLine>
           <SafetyLine>Grabar vídeo requiere botón explícito separado.</SafetyLine>
           <SafetyLine>La grabación de vídeo es local, descargable y borrable.</SafetyLine>
