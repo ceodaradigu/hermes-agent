@@ -1591,3 +1591,27 @@ PR #151 conserva la separación:
 JARVIS gobierna.
 Hermes ejecuta.
 ```
+## PR #158 — Conversational Brain + Voice Session/Wake Architecture
+
+PR #158 formaliza la siguiente base segura:
+
+- Conversational Brain Bridge v2 local/determinista, sin LLM real declarado,
+  sin APIs externas, sin memoria automática y sin Hermes dispatch.
+- Voice Session Manager read-only con estados mínimos:
+  `idle`, `wake_listening_available`, `wake_listening_disabled`,
+  `conversation_active`, `listening`, `transcribing`, `thinking`, `speaking`,
+  `approval_required`, `cancelled`, `stopped`, `error`.
+- Wake Architecture para `openWakeWord` o equivalente, disabled by default,
+  `auto_start=false`, `activation_endpoint_enabled=false`, buffer efímero en
+  memoria, sin persistencia de audio, sin transcripción previa a activación
+  válida, sin approval y sin execution.
+- `/mark-3/dashboard/status` expone `conversational_brain`, `voice_session` y
+  `wake_architecture`; el event stream agrega `brain_state` y
+  `voice_session_state`, metadata-only.
+- `/jarvis` muestra respuesta humana breve y estado de sesión de voz/wake, con
+  detalles técnicos plegados. No añade mutaciones, `/execute`, approvals reales,
+  Hermes directo ni `getUserMedia` automático.
+
+Sigue fuera de alcance: wake listener persistente real, always-on STT, STT/TTS
+local backend serio, aprobación real por voz, ejecución Hermes end-to-end y
+lectura de secretos/credenciales.

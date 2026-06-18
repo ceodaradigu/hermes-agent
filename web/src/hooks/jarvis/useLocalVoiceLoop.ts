@@ -23,11 +23,14 @@ import {
 export function useLocalVoiceLoop(): LocalVoiceLoopController {
   const defaultIntentPreview: JarvisIntentPreview = {
     intent_detected: "idle",
+    confidence: 0,
     risk_level: "none",
+    approval_level: "direct",
     requires_approval: false,
     can_prepare_preview: false,
     cannot_execute_reason: "Sin petición activa.",
     suggested_next_action: "Pulsa el micrófono y pregunta algo concreto.",
+    hermes_dispatch_allowed: false,
   };
   const [localVoiceState, setLocalVoiceState] = useState<LocalVoiceLoopState>("idle");
   const [jarvisTone, setJarvisTone] = useState<JarvisVoiceTone>("calmado");

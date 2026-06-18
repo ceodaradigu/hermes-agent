@@ -50,6 +50,7 @@ from jarvis.approval_execution_semantics import GlobalApprovalExecutionSemantics
 from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
+from jarvis.conversational_brain_bridge import ConversationalBrainBridge
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
 from jarvis.dashboard_event_stream import build_jarvis_event_snapshot, encode_sse_event
 from jarvis.dashboard_read_model import build_local_doctor_status, build_mark_3_dashboard_status
@@ -1952,6 +1953,7 @@ def create_app(
     )
     app.state.personal_os_control = PersonalOSControlPlane()
     app.state.scheduler_control = SchedulerControlPlane()
+    app.state.conversational_brain_bridge = ConversationalBrainBridge()
     app.state.wake_voice_runtime = WakeVoiceRuntime()
     app.state.voice_session_control = VoiceSessionControl(
         wake_runtime=app.state.wake_voice_runtime,
@@ -2301,6 +2303,10 @@ def create_app(
     @app.get("/mark-3/release-candidate/next-steps")
     def mark_3_release_candidate_next_steps() -> dict:
         return Mark3NextSteps().to_dict()
+
+    @app.get("/mark-3/conversational-brain/status")
+    def mark_3_conversational_brain_status() -> dict:
+        return app.state.conversational_brain_bridge.status()
 
     @app.get("/mark-3/dashboard/status")
     def mark_3_dashboard_status() -> dict:
@@ -2764,6 +2770,12 @@ def create_app(
     @app.get("/voice-runtime/policy")
     def wake_voice_policy() -> dict:
         return app.state.wake_voice_runtime.policy()
+
+    @app.get("/voice-runtime/session-status")
+    def wake_voice_session_status() -> dict:
+        return app.state.voice_session_control.status(
+            wake_listener_status=app.state.real_wake_listener.status(),
+        )
 
     @app.post("/voice-runtime/preview-wake-parse")
     def wake_voice_preview_parse(payload: WakeVoicePreviewRequest) -> dict:

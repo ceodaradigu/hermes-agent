@@ -35,11 +35,14 @@ export interface LocalJarvisVoiceResponse {
 
 export interface JarvisIntentPreview {
   intent_detected: string;
+  confidence?: number | string;
   risk_level: string;
+  approval_level?: string;
   requires_approval: boolean;
   can_prepare_preview: boolean;
   cannot_execute_reason: string;
   suggested_next_action: string;
+  hermes_dispatch_allowed?: boolean;
 }
 
 export interface BrowserSpeechRecognitionAlternative {
@@ -96,7 +99,9 @@ declare global {
 }
 
 export type JarvisEventType =
+  | "brain_state"
   | "voice_state"
+  | "voice_session_state"
   | "wake_state"
   | "tts_state"
   | "hermes_state"

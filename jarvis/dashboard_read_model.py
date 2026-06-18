@@ -122,6 +122,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.personal_memory_control.status(),
         timeline,
     )
+    conversational_brain = _source(
+        "/mark-3/conversational-brain/status",
+        lambda: app_state.conversational_brain_bridge.status(),
+        timeline,
+    )
     voice_runtime = _source(
         "/voice-runtime/status",
         lambda: app_state.wake_voice_runtime.status(),
@@ -130,6 +135,11 @@ def build_mark_3_dashboard_status(
     wake_listener = _source(
         "/mark-2/wake-listener/status",
         lambda: app_state.real_wake_listener.status(),
+        timeline,
+    )
+    voice_session = _source(
+        "/voice-runtime/session-status",
+        lambda: app_state.voice_session_control.status(wake_listener_status=wake_listener),
         timeline,
     )
     camera_control = _source(
@@ -169,6 +179,7 @@ def build_mark_3_dashboard_status(
     hermes_timeline = _hermes_timeline_events(hermes_execution)
     mission_control = _mission_control_projection()
     mission_control_timeline = _mission_control_timeline_events()
+    conversational_brain_timeline = _conversational_brain_timeline_events(conversational_brain)
     voice_core = _voice_core_projection(voice_runtime=voice_runtime, wake_listener=wake_listener)
     voice_core_timeline = _voice_core_timeline_events()
     wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
@@ -291,11 +302,18 @@ def build_mark_3_dashboard_status(
                 "Research and experiment plans are prepare-only; no installs, providers, deploy, money, or fake results.",
             ),
             _module(
+                "Conversational Brain",
+                "preview",
+                "/mark-3/conversational-brain/status",
+                "intent_risk_preview",
+                "Local deterministic bridge only; no LLM, no memory autosave, no Hermes dispatch.",
+            ),
+            _module(
                 "Voice",
                 "browser_controlled",
-                "/mark-3/dashboard/status",
+                "/voice-runtime/session-status",
                 "sensor_privacy",
-                "Local browser voice loop is available only after manual operator activation; no backend audio upload.",
+                "Voice session manager separates wake, conversation, STT, TTS, recording, approval, and Hermes execution.",
             ),
             _module(
                 "Wake Listener",
@@ -373,6 +391,9 @@ def build_mark_3_dashboard_status(
         },
         "mission_control": mission_control,
         "hermes_execution": hermes_execution,
+        "conversational_brain": conversational_brain,
+        "voice_session": voice_session,
+        "wake_architecture": voice_session.get("wake_architecture", {}),
         "voice_core": voice_core,
         "local_voice_loop": local_voice_loop,
         "wake_word_flow": wake_word_flow,
@@ -519,6 +540,8 @@ def build_mark_3_dashboard_status(
         "timeline": timeline
         + hermes_timeline
         + mission_control_timeline
+        + conversational_brain_timeline
+        + list(voice_session.get("timeline", []))
         + voice_core_timeline
         + wake_word_flow_timeline
         + local_voice_loop_timeline
@@ -2748,6 +2771,17 @@ def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, An
             "status": wake_listener.get("implementation_status", "adapter_contract_only"),
             "test_plan": _list(wake_listener.get("test_plan")),
         },
+        "ephemeral_buffer_contract": wake_listener.get(
+            "ephemeral_buffer_contract",
+            {
+                "in_memory_only": True,
+                "persisted": False,
+                "sent_to_backend": False,
+                "transcribed_before_valid_activation": False,
+                "cleared_after_activation_or_timeout": True,
+                "no_audio_retention": True,
+            },
+        ),
         "safety": {
             "no_microphone_activation": True,
             "no_get_user_media": True,
@@ -2755,6 +2789,8 @@ def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, An
             "no_audio_context_capture": True,
             "no_background_listening": True,
             "no_raw_audio_storage": True,
+            "no_audio_persistence": True,
+            "no_transcription_until_valid_activation": True,
             "no_external_stt": True,
             "no_external_tts": True,
             "no_hermes_dispatch": True,
@@ -3077,6 +3113,29 @@ def _voice_core_timeline_events() -> List[Dict[str, Any]]:
             "event": "No audio recording performed",
             "source": "/mark-3/dashboard/status",
             "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _conversational_brain_timeline_events(conversational_brain: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Conversational Brain Bridge v2 read",
+            "source": "/mark-3/conversational-brain/status",
+            "status": conversational_brain.get("state", {}).get("mode", "local_deterministic_bridge"),
+            "read_only": True,
+        },
+        {
+            "event": "Conversational brain LLM disabled",
+            "source": "/mark-3/conversational-brain/status",
+            "status": "no_llm_no_external_api",
+            "read_only": True,
+        },
+        {
+            "event": "Conversational brain Hermes dispatch disabled",
+            "source": "/mark-3/conversational-brain/status",
+            "status": "disabled",
             "read_only": True,
         },
     ]

@@ -81,6 +81,8 @@ export function JarvisPresenceShell({
   const hermes = dashboard.hermes_execution ?? {};
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
+  const voiceSession = dashboard.voice_session ?? fallbackOffline.voice_session;
+  const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow;
   const voiceCoreState = voiceCore.state ?? {};
   const ttsState = voiceCore.tts_state ?? {};
   const cameraVision = dashboard.camera_vision ?? fallbackOffline.camera_vision!;
@@ -236,6 +238,8 @@ export function JarvisPresenceShell({
 
       <JarvisSmartBar
         missionControl={missionControl}
+        voiceSession={voiceSession}
+        wakeWordFlow={wakeWordFlow}
         localVoiceState={localVoice.localVoiceState}
         jarvisTone={localVoice.jarvisTone}
         conversationActive={localVoice.conversationActive}

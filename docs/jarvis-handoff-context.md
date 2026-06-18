@@ -1004,3 +1004,31 @@ Bloque copiável:
 ```text
 Lee docs/jarvis-handoff-context.md, docs/jarvis-north-star.md, docs/jarvis-architecture.md y docs/integrations/jarvis-local-memory-quickstart.md. Mantén la forma de trabajo por PR/worktree, prompts cerrados, validación con venv bueno, sin autoejecución, sin autoload y con PolicyEngine/sensitive boundary siempre por encima.
 ```
+## PR #158 — Conversational Brain + Voice Session/Wake Architecture
+
+PR #158 añade la base read-only para un cerebro conversacional determinista y
+una arquitectura formal de Voice Session/Wake sin activar sensores always-on ni
+ejecución. El contrato mantiene: JARVIS gobierna, Hermes ejecuta, el frontend no
+despacha Hermes directamente y la wake phrase nunca aprueba.
+
+- `jarvis/conversational_brain_bridge.py` expone un bridge v2 local/determinista
+  que devuelve respuesta humana, intención, confianza, riesgo, nivel de
+  aprobación, `requires_approval`, `can_prepare_preview`,
+  `cannot_execute_reason`, `suggested_next_action` y
+  `hermes_dispatch_allowed=false`.
+- `jarvis/voice_session_control.py` añade el read model `jarvis.voice_session_manager.v1`
+  con estados `idle`, `wake_listening_available`,
+  `wake_listening_disabled`, `conversation_active`, `listening`,
+  `transcribing`, `thinking`, `speaking`, `approval_required`, `cancelled`,
+  `stopped` y `error`.
+- `/mark-3/dashboard/status` agrega `conversational_brain`, `voice_session` y
+  `wake_architecture`; `/mark-3/dashboard/events` y `/stream` agregan
+  `brain_state` y `voice_session_state` metadata-only.
+- `/jarvis` muestra la respuesta humana breve, diferencia wake disponible de
+  conversación activa y deja claro que no hay transcripción continua, approval
+  por wake ni Hermes directo.
+- Documento de cierre: `docs/jarvis-pr-158-conversational-brain-voice-session-wake-architecture.md`.
+
+No implementa wake real always-on, STT/TTS local backend serio, aprobación real
+desde voz/frontend, dispatch Hermes end-to-end, lectura de secretos ni memoria
+automática.

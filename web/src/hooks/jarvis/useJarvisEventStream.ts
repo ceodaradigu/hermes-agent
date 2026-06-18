@@ -30,6 +30,9 @@ export interface LocalJarvisSensorState {
 function buildLocalSnapshot(status: JarvisDashboardStatus): JarvisEventSnapshot {
   const generatedAt = new Date().toISOString();
   const voiceState = status.voice_core?.state ?? {};
+  const voiceSessionState = status.voice_session?.state ?? {};
+  const brainState = status.conversational_brain?.state ?? {};
+  const brainPreview = status.conversational_brain?.sample_analysis;
   const ttsState = status.voice_core?.tts_state ?? {};
   const wakeState = status.wake_word_flow?.state ?? {};
   const cameraState = status.camera_vision?.state ?? {};
@@ -91,10 +94,31 @@ function buildLocalSnapshot(status: JarvisDashboardStatus): JarvisEventSnapshot 
       can_execute: false,
     }),
     events: [
+      event("brain_state", "/mark-3/conversational-brain/status", valueText(brainState.mode, "local_deterministic_bridge"), {
+        llm_called: brainState.llm_called === true,
+        external_provider_called: brainState.external_provider_called === true,
+        memory_write: false,
+        transcript_persistence: false,
+        hermes_dispatch_allowed: false,
+        sample_intent: valueText(brainPreview?.intent_detected),
+        sample_risk_level: valueText(brainPreview?.risk_level),
+      }),
       event("voice_state", "/voice-runtime/status", valueText(voiceState.current_state, "preview"), {
         microphone_enabled: voiceState.microphone_enabled === true,
         command_listening_enabled: voiceState.command_listening_enabled === true,
         approval_by_voice_enabled: voiceState.voice_approval_enabled === true,
+      }),
+      event("voice_session_state", "/voice-runtime/session-status", valueText(voiceSessionState.current_state, "idle"), {
+        current_state: valueText(voiceSessionState.current_state, "idle"),
+        wake_listening_state: valueText(voiceSessionState.wake_listening_state, "wake_listening_disabled"),
+        conversation_active: voiceSessionState.conversation_active === true,
+        raw_audio_sent_to_backend: false,
+        transcript_persistence: false,
+        background_transcription: false,
+        always_on_stt: false,
+        microphone_auto_start: false,
+        voice_approval_enabled: false,
+        hermes_dispatch_allowed: false,
       }),
       event("wake_state", "/mark-2/wake-listener/status", valueText(wakeState.mode, "preview"), {
         wake_runtime_enabled: wakeState.wake_runtime_enabled === true,

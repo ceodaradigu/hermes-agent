@@ -16,7 +16,18 @@ class RealWakeListenerPlan:
     wake_phrase_is_permission: bool = False
     wake_phrase_starts_session: bool = True
     wake_phrase_plus_command_supported: bool = True
-    stop_phrases: List[str] = field(default_factory=lambda: ["no escuches", "para", "cállate", "stop", "detente"])
+    stop_phrases: List[str] = field(
+        default_factory=lambda: [
+            "para",
+            "cancela",
+            "detente",
+            "silencio",
+            "cancelar misión",
+            "apaga escucha",
+            "no escuches",
+            "stop",
+        ]
+    )
     noise_or_unclear_input_policy: str = "Do not approve or execute; request a clear repeat."
     false_positive_policy: str = "Close or ignore the preview session without granting permission."
     visible_listening_indicator_required: bool = True
@@ -32,6 +43,23 @@ class RealWakeListenerPlan:
     activation_endpoint_enabled: bool = False
     requires_operator_start: bool = True
     implementation_status: str = "adapter_contract_only"
+    raw_audio_persistence_enabled: bool = False
+    raw_audio_sent_to_backend: bool = False
+    transcript_before_valid_activation_enabled: bool = False
+    wake_phrase_can_approve: bool = False
+    wake_phrase_can_execute: bool = False
+    visible_indicator_required_in_ui: bool = True
+    stop_cancel_required: bool = True
+    ephemeral_buffer_contract: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "in_memory_only": True,
+            "persisted": False,
+            "sent_to_backend": False,
+            "transcribed_before_valid_activation": False,
+            "cleared_after_activation_or_timeout": True,
+            "no_audio_retention": True,
+        }
+    )
     test_plan: List[str] = field(
         default_factory=lambda: [
             "install openwakeword in the local runtime environment",

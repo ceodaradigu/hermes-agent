@@ -8,7 +8,9 @@ from uuid import NAMESPACE_URL, uuid5
 EVENT_STREAM_SCHEMA_VERSION = "jarvis.dashboard.events.v1"
 
 ALLOWED_EVENT_TYPES = (
+    "brain_state",
     "voice_state",
+    "voice_session_state",
     "wake_state",
     "tts_state",
     "hermes_state",
@@ -39,6 +41,25 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
     events = [
         _event(
             generated_at,
+            "brain_state",
+            "/mark-3/conversational-brain/status",
+            _get(dashboard_status, "conversational_brain.state.mode", "local_deterministic_bridge"),
+            {
+                "schema_version": _get(dashboard_status, "conversational_brain.schema_version", "jarvis.conversational_brain_bridge.v2"),
+                "llm_called": False,
+                "external_provider_called": False,
+                "memory_write": False,
+                "transcript_persistence": False,
+                "hermes_dispatch_allowed": False,
+                "sample_intent": _get(dashboard_status, "conversational_brain.sample_analysis.intent_detected", "unknown"),
+                "sample_risk_level": _get(dashboard_status, "conversational_brain.sample_analysis.risk_level", "unknown"),
+                "sample_approval_level": _get(dashboard_status, "conversational_brain.sample_analysis.approval_level", "unknown"),
+                "requires_approval": _bool(_get(dashboard_status, "conversational_brain.sample_analysis.requires_approval", False)),
+                "can_prepare_preview": _bool(_get(dashboard_status, "conversational_brain.sample_analysis.can_prepare_preview", False)),
+            },
+        ),
+        _event(
+            generated_at,
             "voice_state",
             "/voice-runtime/status",
             _get(dashboard_status, "voice_core.state.current_state", "preview"),
@@ -48,6 +69,26 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "command_listening_enabled": _bool(_get(dashboard_status, "voice_core.state.command_listening_enabled", False)),
                 "voice_approval_enabled": False,
                 "manual_browser_voice_only": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "voice_session_state",
+            "/voice-runtime/session-status",
+            _get(dashboard_status, "voice_session.state.current_state", "idle"),
+            {
+                "schema_version": _get(dashboard_status, "voice_session.schema_version", "jarvis.voice_session_manager.v1"),
+                "current_state": _get(dashboard_status, "voice_session.state.current_state", "idle"),
+                "wake_listening_state": _get(dashboard_status, "voice_session.state.wake_listening_state", "wake_listening_disabled"),
+                "conversation_active": _bool(_get(dashboard_status, "voice_session.state.conversation_active", False)),
+                "manual_push_to_talk_active": _bool(_get(dashboard_status, "voice_session.state.manual_push_to_talk_active", False)),
+                "raw_audio_sent_to_backend": False,
+                "transcript_persistence": False,
+                "background_transcription": False,
+                "always_on_stt": False,
+                "microphone_auto_start": False,
+                "voice_approval_enabled": False,
+                "hermes_dispatch_allowed": False,
             },
         ),
         _event(
@@ -121,7 +162,7 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "execution_enabled": False,
                 "hermes_dispatch_enabled": False,
                 "approval_creation_enabled": False,
-                "sample_command": _get(dashboard_status, "mission_control.sample_command", "unknown"),
+                "sample_request_omitted_from_stream": True,
             },
         ),
         _event(
@@ -485,8 +526,10 @@ def _stable_event_id(generated_at: str, event_type: str, source: str, payload: D
 
 
 def _risk_level_for_event(event_type: str) -> str:
-    if event_type in {"camera_state", "recording_state", "voice_state", "wake_state", "tts_state", "sensor_ledger_state"}:
+    if event_type in {"camera_state", "recording_state", "voice_state", "voice_session_state", "wake_state", "tts_state", "sensor_ledger_state"}:
         return "sensor_privacy"
+    if event_type == "brain_state":
+        return "intent_risk_preview"
     if event_type in {"approval_state", "risk_state", "execution_state", "policy_state"}:
         return "approval_gate"
     if event_type == "remote_state":
