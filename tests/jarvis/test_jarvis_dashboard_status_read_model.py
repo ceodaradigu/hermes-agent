@@ -1,9 +1,12 @@
+import json
+
 import pytest
 
 fastapi = pytest.importorskip("fastapi")
 pytest.importorskip("starlette")
 
 from jarvis.api.app import create_app
+from jarvis.sensor_ledger import SENSOR_EVENT_TYPES, SENSOR_TYPES, SensorLedger
 
 
 class FailingAdapter:
@@ -163,6 +166,12 @@ def test_mark_3_dashboard_status_contains_voice_core_visual_tts_state_contract()
     assert state["audio_recording"] is False
     assert state["raw_audio_stored"] is False
     assert state["external_provider_called"] is False
+    assert state["provider_adapter"] == "openWakeWord"
+    assert state["provider_adapter_ready"] in {True, False}
+    assert state["openwakeword_dependency_installed"] in {True, False}
+    assert state["auto_start_enabled"] is False
+    assert state["activation_endpoint_enabled"] is False
+    assert state["implementation_status"] == "adapter_contract_only"
     assert state["voice_approval_enabled"] is False
     assert state["wake_phrase_can_approve"] is False
     assert state["wake_phrase_can_execute"] is False
@@ -402,6 +411,12 @@ def test_mark_3_dashboard_status_contains_wake_word_local_safe_flow_contract():
     assert approval_policy["sensitive_actions_require_readback"] is True
     assert approval_policy["critical_actions_require_double_or_triple_confirmation"] is True
     assert approval_policy["approval_events_must_be_audited"] is True
+    assert flow["adapter_contract"]["provider"] == "openWakeWord"
+    assert flow["adapter_contract"]["dependency_installed"] in {True, False}
+    assert flow["adapter_contract"]["auto_start_enabled"] is False
+    assert flow["adapter_contract"]["activation_endpoint_enabled"] is False
+    assert flow["adapter_contract"]["requires_operator_start"] is True
+    assert flow["adapter_contract"]["test_plan"]
 
     for key in (
         "no_microphone_activation",
@@ -429,11 +444,16 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
 
     assert camera_vision["preview_only"] is True
     assert camera_vision["read_only"] is True
-    assert state["mode"] == "preview"
+    assert state["mode"] == "browser_opt_in_preview_available"
     assert state["camera_enabled"] is False
     assert state["camera_permission_requested"] is False
-    assert state["preview_enabled"] is False
+    assert state["preview_enabled"] == "manual_opt_in_available"
     assert state["recording"] is False
+    assert state["video_recording_available"] == "browser_local_opt_in"
+    assert state["video_recording_active"] is False
+    assert state["video_recording_permission_requested"] is False
+    assert state["video_recording_blob_ready"] is False
+    assert state["raw_video_sent_to_backend"] is False
     assert state["streaming"] is False
     assert state["snapshot_capture_enabled"] is False
     assert state["vision_analysis_enabled"] is False
@@ -444,7 +464,7 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
     assert state["background_camera_access"] is False
 
     assert camera_vision["camera_state"] == "disabled"
-    assert camera_vision["preview_state"] == "disabled"
+    assert camera_vision["preview_state"] == "manual_opt_in_available"
     assert camera_vision["recording"] is False
     assert camera_vision["streaming"] is False
     assert camera_vision["snapshot"] == "disabled"
@@ -453,10 +473,15 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
     assert camera_vision["provider"] == "none/not_connected"
 
     for key in (
-        "no_camera_activation",
-        "no_get_user_media",
-        "no_media_stream",
+        "no_camera_activation_on_load",
+        "manual_operator_activation_only",
+        "get_user_media_button_gated",
+        "no_backend_media_stream",
         "no_recording",
+        "video_recording_manual_opt_in_only",
+        "video_recording_inactive_on_load",
+        "video_recording_local_download_delete_only",
+        "no_video_backend_upload",
         "no_snapshot_capture",
         "no_image_storage",
         "no_video_storage",
@@ -470,7 +495,7 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
     expected_states = [
         "camera_off",
         "camera_available_future",
-        "preview_disabled",
+        "camera_preview_available",
         "permission_required",
         "analyzing_future",
         "recording_disabled",
@@ -492,9 +517,27 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
     assert scope_policy["future_analysis_must_not_infer_sensitive_identity"] is True
     assert scope_policy["future_analysis_must_not_store_without_permission"] is True
 
+    video_recorder = camera_vision["video_recorder"]
+    assert video_recorder["mode"] == "browser_local_video_recorder"
+    assert video_recorder["activation"] == "explicit_operator_record_video_button"
+    assert video_recorder["recording_active"] is False
+    assert video_recorder["permission_requested"] is False
+    assert video_recorder["stop_control_required"] is True
+    assert video_recorder["download_available_after_stop"] is True
+    assert video_recorder["delete_available_after_stop"] is True
+    assert video_recorder["backend_upload_enabled"] is False
+    assert video_recorder["external_streaming_enabled"] is False
+    assert video_recorder["person_identity_analysis_enabled"] is False
+    assert video_recorder["raw_video_sent_to_backend"] is False
+    assert video_recorder["frames_stored"] is False
+    assert video_recorder["sensor_ledger_metadata_only"] is True
+
     for event in (
         "Camera/Vision privacy status read",
-        "Camera disabled",
+        "Camera inactive by default",
+        "Manual camera preview available",
+        "Local video recorder surface declared",
+        "Video recorder inactive by default",
         "Recording disabled",
         "Vision analysis disabled",
         "No image or video captured",
@@ -505,13 +548,170 @@ def test_mark_3_dashboard_status_contains_camera_vision_preview_privacy_contract
     serialized = " ".join(timeline_events).lower()
     for forbidden in (
         "camera started",
-        "camera enabled",
         "image captured and stored",
         "video recorded",
         "stream started",
         "external vision analysis completed",
     ):
         assert forbidden not in serialized
+
+
+def test_mark_3_dashboard_status_contains_raw_audio_recording_local_opt_in_contract():
+    payload, _ = _payload()
+    recording = payload["raw_audio_recording"]
+    state = recording["state"]
+    retention = recording["retention"]
+    privacy = recording["privacy"]
+
+    assert state["mode"] == "browser_local_recorder"
+    assert state["activation"] == "explicit_operator_record_button"
+    assert state["recording_active"] is False
+    assert state["stop_control_required"] is True
+    assert state["download_available_after_stop"] is True
+    assert state["delete_available_after_stop"] is True
+    assert state["backend_upload_enabled"] is False
+    assert state["hidden_recording_enabled"] is False
+    assert retention["storage"] == "browser_memory_blob_until_download_or_delete"
+    assert retention["auto_upload"] is False
+    assert retention["auto_persist"] is False
+    assert retention["delete_revokes_object_url"] is True
+    assert privacy["manual_opt_in_required"] is True
+    assert privacy["visible_indicator_required"] is True
+    assert privacy["no_backend_upload"] is True
+    assert privacy["no_provider_call"] is True
+    assert privacy["no_transcription"] is True
+    assert privacy["no_hidden_recording"] is True
+
+
+def test_mark_3_dashboard_status_contains_sensor_ledger_metadata_only_contract():
+    payload, _ = _payload()
+    ledger = payload["sensor_ledger"]
+
+    assert ledger["schema_version"] == "jarvis.sensor_ledger.v1"
+    assert ledger["state"]["mode"] == "read_only_sensor_metadata_ledger"
+    assert ledger["state"]["supported_sensors"] == list(SENSOR_TYPES)
+    assert ledger["state"]["supported_events"] == list(SENSOR_EVENT_TYPES)
+    assert ledger["state"]["supported_recording_modalities"] == ["audio_metadata", "video_metadata"]
+    assert ledger["state"]["read_only_from_jarvis"] is True
+    assert ledger["retention"]["storage"] == "metadata_only_in_memory"
+    assert ledger["retention"]["stores_raw_audio"] is False
+    assert ledger["retention"]["stores_frames"] is False
+    assert ledger["retention"]["stores_credential_material"] is False
+    assert ledger["safety"]["metadata_only"] is True
+    assert ledger["safety"]["no_raw_audio"] is True
+    assert ledger["safety"]["no_camera_frames"] is True
+    assert ledger["safety"]["no_video_frames"] is True
+    assert ledger["safety"]["no_credential_material"] is True
+    assert ledger["safety"]["sensors_require_opt_in"] is True
+    assert ledger["safety"]["visible_indicator_required"] is True
+    assert ledger["safety"]["stop_cancel_required"] is True
+    assert ledger["read_only"] is True
+    recording_contract = next(item for item in ledger["contracts"] if item["sensor_type"] == "recording")
+    assert recording_contract["safe_metadata_modalities"] == ["audio_metadata", "video_metadata"]
+    assert recording_contract["backend_media_upload_allowed"] is False
+
+
+def test_sensor_ledger_records_only_safe_metadata_and_drops_media_and_credentials():
+    ledger = SensorLedger()
+    event = ledger.record(
+        sensor_type="recording",
+        event_type="started",
+        source="/jarvis/browser-audio-recorder",
+        metadata={
+            "duration_ms": 10,
+            "raw_audio_bytes": "RIFF-not-allowed",
+            "video_blob": "video-not-allowed",
+            "frame": "frame-not-allowed",
+            "secret_token": "secret-not-allowed",
+            "nested": {"credential": "credential-not-allowed", "safe": "ok"},
+        },
+        created_at="2026-06-18T00:00:00+00:00",
+    )
+
+    serialized = json.dumps(event, sort_keys=True)
+    assert event["schema_version"] == "jarvis.sensor_ledger.v1"
+    assert event["sensor_type"] == "recording"
+    assert event["event_type"] == "started"
+    assert event["stores_raw_audio"] is False
+    assert event["stores_frames"] is False
+    assert event["stores_credential_material"] is False
+    assert event["blocked_field_count"] == 5
+    assert "RIFF-not-allowed" not in serialized
+    assert "video-not-allowed" not in serialized
+    assert "frame-not-allowed" not in serialized
+    assert "secret-not-allowed" not in serialized
+    assert "credential-not-allowed" not in serialized
+    assert event["metadata"]["duration_ms"] == 10
+    assert event["metadata"]["nested"]["safe"] == "ok"
+
+
+def test_mark_3_dashboard_status_contains_visible_memory_brain_read_model():
+    payload, _ = _payload()
+    brain = payload["memory_brain"]
+
+    assert brain["state"]["mode"] == "visible_read_only_brain"
+    assert brain["state"]["memory_autoload_enabled"] is False
+    assert brain["state"]["memory_grants_permission"] is False
+    assert brain["entities"] == []
+    assert brain["preferences"] == []
+    assert brain["decisions"] == []
+    assert brain["contradictions"] == []
+    assert brain["counts"]["outcomes"] == 0
+    assert brain["counts"]["learning_proposals"] == 0
+    assert brain["why_jarvis_remembers"]
+    assert brain["compaction"]["status"] == "contract_only"
+    assert brain["forget_delete"]["status"] == "future_gated"
+    assert brain["safety"]["sensitive_memory_requires_approval"] is True
+    assert brain["safety"]["no_sensitive_autosave"] is True
+    assert brain["safety"]["memory_is_not_permission"] is True
+    assert brain["safety"]["execution_enabled"] is False
+    assert "/personal-memory/status" in brain["source_endpoints"]
+
+
+def test_mark_3_dashboard_status_contains_local_doctor_read_only_status():
+    payload, app = _payload()
+    doctor = payload["local_doctor"]
+    routes = {
+        (route.path, method)
+        for route in app.routes
+        for method in getattr(route, "methods", set())
+    }
+
+    assert ("/mark-3/local-doctor/status", "GET") in routes
+    assert ("/personal-memory/status", "GET") in routes
+    assert doctor["state"]["mode"] == "read_only_local_doctor"
+    assert doctor["state"]["backend_reachable"] is True
+    assert doctor["state"]["frontend_route_expected"] == "/jarvis"
+    assert doctor["state"]["dashboard_status_endpoint"] is True
+    assert doctor["state"]["event_stream_endpoint"] is True
+    assert doctor["state"]["event_stream_available"] is True
+    assert doctor["state"]["hermes_status_endpoint"] is True
+    assert doctor["state"]["hermes_status"] in {"ok", "not_connected", "unknown"}
+    assert doctor["state"]["browser_stt"] == "client_side_unknown"
+    assert doctor["state"]["browser_tts"] == "client_side_unknown"
+    assert doctor["state"]["camera_support"] == "client_side_unknown"
+    assert doctor["state"]["webgl_support"] == "client_side_unknown"
+    assert "ffmpeg" in doctor["optional_dependencies"]
+    assert "openwakeword" in doctor["optional_dependencies"]
+    assert "psutil" in doctor["optional_dependencies"]
+    assert doctor["runtime"]["python_version"]
+    assert doctor["runtime"]["platform"]
+    assert doctor["runtime"]["process"]["pid"]
+    assert doctor["ports"]["expected"] == [
+        {"name": "backend", "port": 9119, "protocol": "http", "status": "expected"},
+        {"name": "frontend", "port": 5173, "protocol": "http", "status": "expected"},
+    ]
+    for capability in ("webgl", "camera", "mic", "stt", "tts"):
+        assert doctor["browser_only_capabilities"][capability]["status"] == "client_side_unknown"
+        assert doctor["browser_only_capabilities"][capability]["checked_by_backend"] is False
+    assert doctor["safety"]["read_only"] is True
+    assert doctor["safety"]["no_auto_install"] is True
+    assert doctor["safety"]["no_sensor_activation"] is True
+    assert doctor["safety"]["no_sensor_permission_request"] is True
+    assert doctor["safety"]["no_camera_probe"] is True
+    assert doctor["safety"]["no_microphone_probe"] is True
+    assert doctor["safety"]["no_secret_read"] is True
+    assert doctor["safety"]["no_hermes_execution"] is True
 
 
 def test_mark_3_dashboard_status_contains_mobile_companion_pwa_preview_contract():
@@ -825,6 +1025,39 @@ def test_mark_3_dashboard_status_critical_approvals_require_strong_gates_and_pla
         assert card["stop_plan"] != "unknown"
 
 
+def test_mark_3_dashboard_status_contains_visible_policy_status_contract():
+    payload, _ = _payload()
+    policy = payload["policy_status"]
+
+    assert policy["schema_version"] == "jarvis.policy_status.v1"
+    assert policy["state"]["mode"] == "read_only_policy_status"
+    assert policy["state"]["jarvis_governs"] is True
+    assert policy["state"]["hermes_executes"] is True
+    assert policy["state"]["frontend_executes_hermes_directly"] is False
+    assert policy["state"]["wake_phrase_never_approves"] is True
+    assert policy["state"]["sensors_require_opt_in"] is True
+    assert policy["state"]["dangerous_execution_requires_approval_gateway"] is True
+    assert policy["direct_allowed"]
+    assert policy["requires_simple_approval"]
+    assert policy["requires_strong_approval"]
+    assert policy["requires_double_approval"]
+    assert policy["requires_triple_approval"]
+    assert policy["denied"]
+
+    dangerous = policy["dangerous_execution_contract"]
+    assert dangerous["approval_gateway_required"] is True
+    assert dangerous["risk_classification_required"] is True
+    assert dangerous["audit_required"] is True
+    assert dangerous["rollback_or_stop_plan_required"] is True
+    assert dangerous["wake_phrase_never_approves"] is True
+    assert dangerous["frontend_never_executes_hermes_directly"] is True
+    assert dangerous["no_duplicate_hermes_runtime"] is True
+
+    denied = " ".join(item["capability"].lower() for item in policy["denied"])
+    assert "wake phrase approval" in denied
+    assert "frontend direct hermes execution" in denied
+
+
 def test_mark_3_dashboard_status_forbidden_credentials_card_is_blocked():
     payload, _ = _payload()
     cards = {card["id"]: card for card in payload["approvals"]["cards"]}
@@ -990,7 +1223,8 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
     assert state["backend_status_endpoint"] == "/mark-3/dashboard/status"
     assert state["frontend_can_execute"] is False
     assert state["frontend_can_approve"] is False
-    assert state["frontend_can_activate_sensors"] is False
+    assert state["frontend_can_activate_sensors"] is True
+    assert state["sensor_activation_scope"] == "explicit local voice, camera preview, local video recording and raw audio recording controls only"
     assert state["frontend_can_move_money"] is False
     assert state["frontend_can_deploy"] is False
     assert state["frontend_can_send_email"] is False
@@ -1035,7 +1269,8 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "no real mission submit",
         "no real Hermes execution",
         "browser voice support depends on SpeechRecognition/speechSynthesis",
-        "no real camera",
+        "browser camera preview is local-only and has no backend vision analysis",
+        "browser raw audio recorder is local-only and has no backend upload",
         "no real mobile runtime",
         "no real finance/revenue measurement",
         "no deploy/money/email/credentials",
@@ -1057,11 +1292,17 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
     assert contract["frontend_executes_hermes_directly"] is False
     assert contract["frontend_is_runtime"] is False
     assert contract["frontend_can_activate_real_voice"] is True
-    assert contract["frontend_can_activate_real_camera"] is False
+    assert contract["frontend_can_activate_real_camera"] is True
+    assert contract["frontend_can_record_raw_audio_locally"] is True
+    assert contract["frontend_can_record_video_locally"] is True
     assert contract["mobile_and_vps_are_future_clients_or_bridges"] is True
     assert contract["real_voice_camera_in_future_prs"] is False
     assert contract["real_browser_voice_loop_in_this_pr"] is True
-    assert contract["real_camera_in_future_prs"] is True
+    assert contract["real_browser_camera_preview_in_this_pr"] is True
+    assert contract["real_browser_raw_audio_recorder_in_this_pr"] is True
+    assert contract["real_browser_video_recorder_in_this_pr"] is True
+    assert contract["real_camera_in_future_prs"] is False
+    assert contract["real_vision_analysis_in_future_prs"] is True
     assert contract["jarvis_governs"] is True
     assert contract["hermes_executes"] is True
     assert contract["no_duplicate_hermes_runtime"] is True
@@ -1076,7 +1317,8 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
         "error/no disponible",
     ]
     assert visual["smart_bar"] == "local voice transcript/response preview"
-    assert visual["camera_placeholder"] == "movable/expandable visual placeholder"
+    assert visual["camera_placeholder"] == "manual opt-in local camera preview panel"
+    assert visual["raw_audio_recorder"] == "manual opt-in local MediaRecorder panel"
     assert visual["folded_history"] == "collapsed preview"
 
     for key in (
@@ -1084,9 +1326,13 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
         "no_execute_route",
         "no_frontend_hermes_execution",
         "browser_voice_permission_manual_only",
+        "browser_camera_permission_manual_only",
+        "browser_raw_audio_recording_manual_only",
         "no_uncontrolled_sensor_activation",
         "no_backend_voice_runtime",
-        "no_real_camera",
+        "no_backend_camera_runtime",
+        "no_backend_audio_upload",
+        "no_sensor_activation_on_load",
         "no_money",
         "no_deploy",
         "no_email",
@@ -1095,6 +1341,7 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
         assert safety[key] is True
     assert safety["no_browser_sensor_permission"] is False
     assert safety["no_real_voice"] is False
+    assert safety["no_real_camera"] is False
 
 
 def test_mark_3_dashboard_status_declares_safety_boundaries():
@@ -1106,12 +1353,20 @@ def test_mark_3_dashboard_status_declares_safety_boundaries():
     assert safety["frontend_can_approve"] is False
     assert safety["no_frontend_execute"] is True
     assert safety["no_duplicate_hermes_runtime"] is True
-    assert safety["no_get_user_media"] is True
+    assert safety["no_get_user_media"] is False
     assert safety["no_sensor_activation"] is False
     assert safety["no_uncontrolled_sensor_activation"] is True
+    assert safety["no_sensor_activation_on_load"] is True
     assert safety["manual_browser_voice_activation_only"] is True
+    assert safety["manual_browser_camera_activation_only"] is True
+    assert safety["manual_browser_raw_audio_recording_only"] is True
     assert safety["no_frontend_tool_runner"] is True
-    assert safety["no_browser_raw_audio_capture"] is True
+    assert safety["no_browser_raw_audio_capture"] is False
+    assert safety["no_raw_audio_backend_upload"] is True
+    assert safety["no_hidden_voice_recording"] is True
+    assert safety["no_camera_activation_on_load"] is True
+    assert safety["no_camera_snapshot_storage"] is True
+    assert safety["no_camera_streaming_to_backend"] is True
     assert safety["no_direct_hermes_call_from_mobile"] is True
     assert safety["no_direct_hermes_call_from_voice"] is True
     assert safety["no_direct_hermes_call_from_camera"] is True
@@ -1189,11 +1444,13 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
     source_endpoints.update(payload["wake_word_flow"]["source_endpoints"])
     source_endpoints.update(payload["voice_wake"]["source_endpoints"])
     source_endpoints.update(payload["camera_vision"]["source_endpoints"])
+    source_endpoints.update(payload["memory_brain"]["source_endpoints"])
     source_endpoints.update(payload["mobile_companion"]["source_endpoints"])
     source_endpoints.update(payload["mobile"]["source_endpoints"])
     source_endpoints.add(payload["approvals"]["source_endpoint"])
     source_endpoints.add(payload["camera_vision"]["source_endpoint"])
     source_endpoints.add(payload["hermes_execution"]["source_endpoint"])
+    source_endpoints.add(payload["local_doctor"]["source_endpoint"])
     source_endpoints.add(payload["system"]["source_endpoint"])
 
     for endpoint in source_endpoints:
@@ -1203,8 +1460,52 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
     assert payload["read_only_contract"]["allowed_http_methods_for_frontend"] == ["GET"]
     assert payload["read_only_contract"]["internal_sources_are_read_only_status_or_audit"] is True
     assert payload["read_only_contract"]["frontend_must_not_request_sensor_permissions"] is False
-    assert payload["read_only_contract"]["frontend_sensor_permission_scope"] == "manual browser SpeechRecognition only"
-    assert payload["read_only_contract"]["frontend_must_not_request_camera_permissions"] is True
+    assert payload["read_only_contract"]["frontend_sensor_permission_scope"] == "manual browser SpeechRecognition, manual camera preview, manual local raw audio recorder"
+    assert payload["read_only_contract"]["frontend_must_not_request_camera_permissions"] is False
+    assert payload["read_only_contract"]["frontend_camera_permission_scope"] == "manual preview only; no backend stream, no analysis, no storage"
+
+
+def test_mark_3_dashboard_status_declares_read_only_event_bus_contract():
+    payload, _app = _payload()
+
+    event_bus = payload["event_bus"]
+    assert event_bus["snapshot_endpoint"] == "/mark-3/dashboard/events"
+    assert event_bus["sse_endpoint"] == "/mark-3/dashboard/events/stream"
+    assert event_bus["schema_version"] == "jarvis.dashboard.events.v1"
+    assert event_bus["allowed_methods"] == ["GET"]
+    assert event_bus["required_event_fields"] == [
+        "schema_version",
+        "event_id",
+        "event_type",
+        "source",
+        "created_at",
+        "payload",
+    ]
+    assert event_bus["heartbeat_enabled"] is True
+    assert event_bus["disconnect_safe"] is True
+    assert event_bus["no_secrets"] is True
+    assert event_bus["no_raw_audio"] is True
+    assert event_bus["no_camera_frames"] is True
+    assert event_bus["frontend_can_execute"] is False
+    assert event_bus["stream_can_execute"] is False
+    for event_type in (
+        "voice_state",
+        "wake_state",
+        "tts_state",
+        "hermes_state",
+        "approval_state",
+        "mission_state",
+        "camera_state",
+        "recording_state",
+        "memory_state",
+        "risk_state",
+        "execution_state",
+        "audit_event",
+        "sensor_ledger_state",
+        "policy_state",
+        "heartbeat",
+    ):
+        assert event_type in event_bus["event_types"]
 
 
 def test_mark_3_dashboard_status_does_not_call_execution_sensors_or_money(monkeypatch):
@@ -1241,7 +1542,9 @@ def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract()
     assert state["hermes_direct_execution_enabled"] is False
     assert state["voice_real_enabled"] is True
     assert state["browser_local_voice_loop_enabled"] is True
-    assert state["camera_real_enabled"] is False
+    assert state["camera_real_enabled"] is True
+    assert state["raw_audio_recording_enabled"] is True
+    assert state["vision_analysis_enabled"] is False
     assert state["mobile_runtime_enabled"] is False
     assert state["money_enabled"] is False
     assert state["deploy_enabled"] is False
@@ -1269,7 +1572,8 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_required_panels_are
         "Presence UI",
         "Local System Contract",
         "Smart Bar",
-        "Camera Placeholder",
+        "Camera Preview",
+        "Raw Audio Recorder",
         "Folded History",
         "Voice Core",
         "Local Voice Loop",
@@ -1304,7 +1608,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_read_only_checks_an
     for name in (
         "no_post_put_delete",
         "no_execute_route",
-        "no_get_user_media",
+        "manual_get_user_media_only",
         "no_money_movement",
         "no_fake_metrics",
     ):
@@ -1317,7 +1621,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_read_only_checks_an
         "no_frontend_hermes_call",
         "no_tool_runner",
         "no_uncontrolled_sensor_activation",
-        "no_media_recorder",
+        "manual_media_recorder_only",
         "no_audio_context_capture",
         "no_camera_capture",
         "no_mobile_runtime",
@@ -1392,7 +1696,11 @@ def test_mark_3_dashboard_status_timeline_contains_only_read_model_events():
     assert any(item["event"] == "Wake phrase cannot execute" for item in events)
     assert any(item["event"] == "No background listener started" for item in events)
     assert any(item["event"] == "Camera/Vision privacy status read" for item in events)
-    assert any(item["event"] == "Camera disabled" for item in events)
+    assert any(item["event"] == "Camera inactive by default" for item in events)
+    assert any(item["event"] == "Manual camera preview available" for item in events)
+    assert any(item["event"] == "Raw audio recorder surface declared" for item in events)
+    assert any(item["event"] == "Memory brain read model generated" for item in events)
+    assert any(item["event"] == "Local doctor status generated" for item in events)
     assert any(item["event"] == "Recording disabled" for item in events)
     assert any(item["event"] == "Vision analysis disabled" for item in events)
     assert any(item["event"] == "No image or video captured" for item in events)

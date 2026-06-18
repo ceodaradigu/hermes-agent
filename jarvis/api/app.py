@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from jarvis.asset_factory.foundation import (
@@ -50,7 +51,8 @@ from jarvis.adaptive_saas_builder import AdaptiveSaaSBuilder
 from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
-from jarvis.dashboard_read_model import build_mark_3_dashboard_status
+from jarvis.dashboard_event_stream import build_jarvis_event_snapshot, encode_sse_event
+from jarvis.dashboard_read_model import build_local_doctor_status, build_mark_3_dashboard_status
 from jarvis.desktop_runtime import DesktopRuntime
 from jarvis.continuous_learning.foundation import (
     ApprovalWorkflowPreview,
@@ -258,6 +260,7 @@ from jarvis.sandbox_execution.foundation import (
     SandboxExecutionStatus,
     SandboxRollbackPreview,
 )
+from jarvis.sensor_ledger import SensorLedger
 from jarvis.tool_adoption.pipeline import (
     ToolAdoptionDecisionPreview,
     ToolAdoptionStatus,
@@ -1954,6 +1957,7 @@ def create_app(
         wake_runtime=app.state.wake_voice_runtime,
         policy_engine=app.state.policy_engine,
     )
+    app.state.sensor_ledger = SensorLedger()
     app.state.camera_control_runtime = CameraControlRuntime()
     app.state.local_daemon_control = LocalDaemonControl()
     app.state.desktop_runtime = DesktopRuntime()
@@ -2304,6 +2308,56 @@ def create_app(
             app_state=app.state,
             route_paths=(route.path for route in app.routes),
             generated_at=_now_iso(),
+        )
+
+    @app.get("/mark-3/dashboard/events")
+    def mark_3_dashboard_events() -> dict:
+        generated_at = _now_iso()
+        dashboard_status = build_mark_3_dashboard_status(
+            app_state=app.state,
+            route_paths=(route.path for route in app.routes),
+            generated_at=generated_at,
+        )
+        return build_jarvis_event_snapshot(
+            dashboard_status=dashboard_status,
+            generated_at=generated_at,
+        )
+
+    @app.get("/mark-3/dashboard/events/stream")
+    def mark_3_dashboard_events_stream() -> StreamingResponse:
+        generated_at = _now_iso()
+        dashboard_status = build_mark_3_dashboard_status(
+            app_state=app.state,
+            route_paths=(route.path for route in app.routes),
+            generated_at=generated_at,
+        )
+        snapshot = build_jarvis_event_snapshot(
+            dashboard_status=dashboard_status,
+            generated_at=generated_at,
+        )
+
+        def _stream():
+            yield encode_sse_event("jarvis_event_snapshot", snapshot)
+            yield encode_sse_event("heartbeat", snapshot["heartbeat"])
+            yield ": JARVIS read-only event stream heartbeat; no secrets, no raw audio, no camera frames\n\n"
+
+        return StreamingResponse(
+            _stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Jarvis-Read-Only": "true",
+            },
+        )
+
+    @app.get("/mark-3/local-doctor/status")
+    def mark_3_local_doctor_status() -> dict:
+        return build_local_doctor_status(
+            app_state=app.state,
+            route_paths=(route.path for route in app.routes),
+            generated_at=_now_iso(),
+            health={"status": "ok"},
+            hermes_runtime=app.state.mark_3_hermes_runtime_bridge.status(),
         )
 
     @app.get("/mark-3/planning/status")
@@ -2965,6 +3019,10 @@ def create_app(
         values["tags"] = values["tags"] or []
         values["blocked_reasons"] = values["blocked_reasons"] or []
         return app.state.personal_memory_control.preview_record(**values)
+
+    @app.get("/personal-memory/status")
+    def personal_memory_status() -> dict:
+        return app.state.personal_memory_control.status()
 
     @app.post("/memory/preview-record")
     def memory_preview_record(payload: MemoryRecordPreviewRequest) -> dict:

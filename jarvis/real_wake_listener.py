@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List
 
@@ -24,6 +25,22 @@ class RealWakeListenerPlan:
     audio_streaming_enabled: bool = False
     external_speech_api_enabled: bool = False
     local_provider_required: bool = True
+    provider_adapter: str = "openWakeWord"
+    provider_adapter_ready: bool = False
+    openwakeword_dependency_installed: bool = False
+    auto_start_enabled: bool = False
+    activation_endpoint_enabled: bool = False
+    requires_operator_start: bool = True
+    implementation_status: str = "adapter_contract_only"
+    test_plan: List[str] = field(
+        default_factory=lambda: [
+            "install openwakeword in the local runtime environment",
+            "start adapter only from an explicit local daemon control",
+            "verify wake events contain metadata only",
+            "verify no raw audio is persisted or sent to providers",
+            "verify wake phrase opens command window only and never approves or executes",
+        ]
+    )
     no_microphone_access_in_tests: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
@@ -35,7 +52,11 @@ class RealWakeListener:
         self.session_control = session_control or VoiceSessionControl()
 
     def status(self) -> Dict[str, Any]:
-        return RealWakeListenerPlan().to_dict()
+        dependency_installed = importlib.util.find_spec("openwakeword") is not None
+        return RealWakeListenerPlan(
+            provider_adapter_ready=dependency_installed,
+            openwakeword_dependency_installed=dependency_installed,
+        ).to_dict()
 
     def preview_transcript(self, text: str, *, confidence: float = 1.0) -> Dict[str, Any]:
         session = self.session_control.preview_session(text, confidence=confidence).to_dict()
@@ -49,4 +70,3 @@ class RealWakeListener:
             "microphone_accessed": False,
             "would_execute": False,
         }
-

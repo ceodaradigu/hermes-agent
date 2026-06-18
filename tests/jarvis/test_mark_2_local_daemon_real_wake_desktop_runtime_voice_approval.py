@@ -88,6 +88,14 @@ def test_real_wake_listener_plan_and_transcripts_never_grant_permission():
     assert plan["wake_phrase_is_permission"] is False and plan["wake_phrase_starts_session"] is True
     for name in ("audio_recording_enabled", "audio_streaming_enabled", "external_speech_api_enabled"):
         assert plan[name] is False
+    assert plan["provider_adapter"] == "openWakeWord"
+    assert plan["provider_adapter_ready"] is False
+    assert plan["openwakeword_dependency_installed"] is False
+    assert plan["auto_start_enabled"] is False
+    assert plan["activation_endpoint_enabled"] is False
+    assert plan["requires_operator_start"] is True
+    assert plan["implementation_status"] == "adapter_contract_only"
+    assert plan["test_plan"]
     assert plan["no_microphone_access_in_tests"] is True
     assert wake_only["session_started"] is True and wake_only["approval_granted"] is False
     assert command["command_extracted"] is True and command["approval_required"] is True

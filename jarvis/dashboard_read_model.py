@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+import os
+import platform
+import shutil
+import sys
 from typing import Any, Callable, Dict, Iterable, List
 
 from jarvis.mark_3_approval_path_audit import Mark3ApprovalPathAudit
@@ -8,6 +13,7 @@ from jarvis.mark_3_e2e_readiness import Mark3E2EReadinessSmoke
 from jarvis.mark_3_pilot_plan import Mark3ControlledPilotPlan
 from jarvis.mark_3_release_candidate import Mark3CapabilityMatrix, Mark3ReadinessMatrix, Mark3ReleaseCandidateStatus
 from jarvis.mobile.companion import MobileCompanionPermissionPolicy, MobileCompanionStatus
+from jarvis.sensor_ledger import build_sensor_ledger_status
 
 
 UNKNOWN = "unknown"
@@ -27,6 +33,7 @@ def build_mark_3_dashboard_status(
     """
 
     timeline: List[Dict[str, Any]] = []
+    route_path_list = list(route_paths)
 
     health = _source("/health", lambda: {"status": "ok"}, timeline)
     release_status = _source(
@@ -46,7 +53,7 @@ def build_mark_3_dashboard_status(
     )
     dangerous_route_audit = _source(
         "/mark-3/release-candidate/dangerous-route-audit",
-        lambda: Mark3DangerousRouteAudit().audit(route_paths),
+        lambda: Mark3DangerousRouteAudit().audit(route_path_list),
         timeline,
     )
     approval_path_audit = _source(
@@ -110,6 +117,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.mark_3_learning_proposals.status(),
         timeline,
     )
+    personal_memory_status = _source(
+        "/personal-memory/status",
+        lambda: app_state.personal_memory_control.status(),
+        timeline,
+    )
     voice_runtime = _source(
         "/voice-runtime/status",
         lambda: app_state.wake_voice_runtime.status(),
@@ -165,6 +177,14 @@ def build_mark_3_dashboard_status(
     local_voice_loop_timeline = _local_voice_loop_timeline_events()
     camera_vision = _camera_vision_projection(camera_control=camera_control)
     camera_vision_timeline = _camera_vision_timeline_events()
+    raw_audio_recording = _raw_audio_recording_projection()
+    raw_audio_recording_timeline = _raw_audio_recording_timeline_events()
+    memory_brain = _memory_brain_projection(
+        memory_status=memory_status,
+        learning_status=learning_status,
+        personal_memory_status=personal_memory_status,
+    )
+    memory_brain_timeline = _memory_brain_timeline_events(memory_brain)
     mobile_companion = _mobile_companion_projection(
         mobile_status=mobile_status,
         mobile_permissions=mobile_permissions,
@@ -180,6 +200,21 @@ def build_mark_3_dashboard_status(
     visual_command_center_pilot_timeline = _visual_command_center_pilot_timeline_events()
     local_system_contract = _local_system_contract_projection()
     local_system_contract_timeline = _local_system_contract_timeline_events()
+    local_doctor = build_local_doctor_status(
+        app_state=app_state,
+        route_paths=route_path_list,
+        generated_at=generated_at,
+        health=health,
+        hermes_runtime=hermes_runtime,
+    )
+    local_doctor_timeline = _local_doctor_timeline_events(local_doctor)
+    sensor_ledger = build_sensor_ledger_status(
+        ledger=getattr(app_state, "sensor_ledger", None),
+        generated_at=generated_at,
+    )
+    sensor_ledger_timeline = _sensor_ledger_timeline_events(sensor_ledger)
+    policy_status = _policy_status_projection()
+    policy_status_timeline = _policy_status_timeline_events()
 
     payload = {
         "system": {
@@ -291,6 +326,20 @@ def build_mark_3_dashboard_status(
                 "Outcome/failure memory and learning proposals are in-memory and never authorize execution.",
             ),
             _module(
+                "Sensor Ledger",
+                "ready",
+                "/mark-3/dashboard/status",
+                "sensor_privacy",
+                "Metadata-only local sensor/session ledger; no raw audio, frames, or credential material.",
+            ),
+            _module(
+                "Policy Status",
+                "ready",
+                "/mark-3/dashboard/status",
+                "approval_boundary",
+                "Read-only policy projection for direct, approval-gated, strong-gated, and denied actions.",
+            ),
+            _module(
                 "Hermes",
                 "gated" if hermes_runtime.get("available") else "not_connected",
                 "/mark-3/hermes-runtime/status",
@@ -343,6 +392,10 @@ def build_mark_3_dashboard_status(
             "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
         },
         "camera_vision": camera_vision,
+        "raw_audio_recording": raw_audio_recording,
+        "sensor_ledger": sensor_ledger,
+        "policy_status": policy_status,
+        "memory_brain": memory_brain,
         "mobile_companion": mobile_companion,
         "mobile": {
             "companion_state": mobile_companion["state"]["pwa_baseline"],
@@ -379,19 +432,71 @@ def build_mark_3_dashboard_status(
         },
         "frontend_pilot": frontend_pilot,
         "visual_command_center_pilot": visual_command_center_pilot,
+        "event_bus": {
+            "snapshot_endpoint": "/mark-3/dashboard/events",
+            "sse_endpoint": "/mark-3/dashboard/events/stream",
+            "mode": "read_only_event_projection",
+            "schema_version": "jarvis.dashboard.events.v1",
+            "allowed_methods": ["GET"],
+            "event_types": [
+                "voice_state",
+                "wake_state",
+                "tts_state",
+                "hermes_state",
+                "approval_state",
+                "mission_state",
+                "camera_state",
+                "recording_state",
+                "memory_state",
+                "risk_state",
+                "execution_state",
+                "audit_event",
+                "remote_state",
+                "doctor_state",
+                "performance_state",
+                "sensor_ledger_state",
+                "policy_state",
+                "heartbeat",
+            ],
+            "required_event_fields": [
+                "schema_version",
+                "event_id",
+                "event_type",
+                "source",
+                "created_at",
+                "payload",
+            ],
+            "heartbeat_enabled": True,
+            "disconnect_safe": True,
+            "no_secrets": True,
+            "no_raw_audio": True,
+            "no_camera_frames": True,
+            "frontend_can_execute": False,
+            "stream_can_execute": False,
+            "preview_only": True,
+            "read_only": True,
+        },
         "safety": {
             "frontend_can_execute": False,
             "frontend_can_approve": False,
             "no_auto_execute": True,
             "no_frontend_execute": True,
             "no_duplicate_hermes_runtime": True,
-            "no_get_user_media": True,
+            "no_get_user_media": False,
             "no_sensor_activation": False,
             "no_uncontrolled_sensor_activation": True,
+            "no_sensor_activation_on_load": True,
             "manual_browser_voice_activation_only": True,
-            "no_voice_recording": True,
-            "no_browser_raw_audio_capture": True,
-            "no_camera_capture": True,
+            "manual_browser_camera_activation_only": True,
+            "manual_browser_raw_audio_recording_only": True,
+            "no_hidden_voice_recording": True,
+            "no_voice_recording": False,
+            "no_browser_raw_audio_capture": False,
+            "no_raw_audio_backend_upload": True,
+            "no_camera_capture": False,
+            "no_camera_activation_on_load": True,
+            "no_camera_snapshot_storage": True,
+            "no_camera_streaming_to_backend": True,
             "no_frontend_tool_runner": True,
             "no_tool_call": True,
             "no_file_write": True,
@@ -418,12 +523,17 @@ def build_mark_3_dashboard_status(
         + wake_word_flow_timeline
         + local_voice_loop_timeline
         + camera_vision_timeline
+        + raw_audio_recording_timeline
+        + memory_brain_timeline
         + mobile_companion_timeline
         + finance_roi_timeline
         + adaptive_product_builder_timeline
         + frontend_pilot_timeline
         + visual_command_center_pilot_timeline
         + local_system_contract_timeline
+        + local_doctor_timeline
+        + sensor_ledger_timeline
+        + policy_status_timeline
         + [
             {
                 "event": "dashboard read model generated",
@@ -463,13 +573,15 @@ def build_mark_3_dashboard_status(
             "internal_sources_are_read_only_status_or_audit": True,
             "frontend_must_not_call_execute": True,
             "frontend_must_not_request_sensor_permissions": False,
-            "frontend_sensor_permission_scope": "manual browser SpeechRecognition only",
-            "frontend_must_not_request_camera_permissions": True,
+            "frontend_sensor_permission_scope": "manual browser SpeechRecognition, manual camera preview, manual local raw audio recorder",
+            "frontend_must_not_request_camera_permissions": False,
+            "frontend_camera_permission_scope": "manual preview only; no backend stream, no analysis, no storage",
             "frontend_is_not_runtime": True,
             "web_route_is_visual_interface_only": True,
             "local_runtime_daemon_is_system": True,
             "mobile_and_vps_are_future_clients_or_bridges": True,
         },
+        "local_doctor": local_doctor,
     }
     return payload
 
@@ -484,11 +596,17 @@ def _local_system_contract_projection() -> Dict[str, Any]:
         "frontend_executes_hermes_directly": False,
         "frontend_is_runtime": False,
         "frontend_can_activate_real_voice": True,
-        "frontend_can_activate_real_camera": False,
+        "frontend_can_activate_real_camera": True,
+        "frontend_can_record_raw_audio_locally": True,
+        "frontend_can_record_video_locally": True,
         "mobile_and_vps_are_future_clients_or_bridges": True,
         "real_voice_camera_in_future_prs": False,
         "real_browser_voice_loop_in_this_pr": True,
-        "real_camera_in_future_prs": True,
+        "real_browser_camera_preview_in_this_pr": True,
+        "real_browser_raw_audio_recorder_in_this_pr": True,
+        "real_browser_video_recorder_in_this_pr": True,
+        "real_camera_in_future_prs": False,
+        "real_vision_analysis_in_future_prs": True,
         "jarvis_governs": True,
         "hermes_executes": True,
         "no_duplicate_hermes_runtime": True,
@@ -503,14 +621,15 @@ def _local_system_contract_projection() -> Dict[str, Any]:
                 "error/no disponible",
             ],
             "smart_bar": "local voice transcript/response preview",
-            "camera_placeholder": "movable/expandable visual placeholder",
+            "camera_placeholder": "manual opt-in local camera preview panel",
+            "raw_audio_recorder": "manual opt-in local MediaRecorder panel",
             "folded_history": "collapsed preview",
         },
         "future_bridges": {
             "mobile": "future client/bridge",
             "vps": "future secure bridge",
             "voice_runtime": "future daemon/wake/always-on work; this PR is browser manual only",
-            "camera_runtime": "future PR",
+            "camera_runtime": "future daemon/vision analysis PR; browser preview is local-only now",
         },
         "safety": {
             "no_post_put_delete_from_jarvis_page": True,
@@ -518,10 +637,15 @@ def _local_system_contract_projection() -> Dict[str, Any]:
             "no_frontend_hermes_execution": True,
             "no_browser_sensor_permission": False,
             "browser_voice_permission_manual_only": True,
+            "browser_camera_permission_manual_only": True,
+            "browser_raw_audio_recording_manual_only": True,
             "no_uncontrolled_sensor_activation": True,
             "no_real_voice": False,
+            "no_real_camera": False,
             "no_backend_voice_runtime": True,
-            "no_real_camera": True,
+            "no_backend_camera_runtime": True,
+            "no_backend_audio_upload": True,
+            "no_sensor_activation_on_load": True,
             "no_money": True,
             "no_deploy": True,
             "no_email": True,
@@ -554,9 +678,21 @@ def _local_system_contract_timeline_events() -> List[Dict[str, Any]]:
             "read_only": True,
         },
         {
+            "event": "Manual camera preview panel rendered",
+            "source": "/jarvis",
+            "status": "manual_opt_in_local_only",
+            "read_only": True,
+        },
+        {
             "event": "Camera placeholder rendered",
             "source": "/jarvis",
-            "status": "visual_placeholder_only",
+            "status": "manual_opt_in_local_only",
+            "read_only": True,
+        },
+        {
+            "event": "Manual raw audio recorder panel rendered",
+            "source": "/jarvis",
+            "status": "manual_opt_in_local_only",
             "read_only": True,
         },
         {
@@ -566,6 +702,397 @@ def _local_system_contract_timeline_events() -> List[Dict[str, Any]]:
             "read_only": True,
         },
     ]
+
+
+def build_local_doctor_status(
+    *,
+    app_state: Any,
+    route_paths: Iterable[str],
+    generated_at: str,
+    health: Dict[str, Any] | None = None,
+    hermes_runtime: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    route_path_set = set(route_paths)
+    health_status = dict(health or {"status": UNKNOWN})
+    hermes_status = dict(hermes_runtime or {})
+    psutil_status = _psutil_status()
+    process_info = _process_info(psutil_status)
+    browser_capabilities = {
+        "webgl": {"status": "client_side_unknown", "activation_required": False, "checked_by_backend": False},
+        "camera": {"status": "client_side_unknown", "activation_required": True, "checked_by_backend": False},
+        "mic": {"status": "client_side_unknown", "activation_required": True, "checked_by_backend": False},
+        "stt": {"status": "client_side_unknown", "activation_required": True, "checked_by_backend": False},
+        "tts": {"status": "client_side_unknown", "activation_required": False, "checked_by_backend": False},
+    }
+    return {
+        "state": {
+            "mode": "read_only_local_doctor",
+            "generated_at": generated_at,
+            "backend_reachable": health_status.get("status") == "ok",
+            "frontend_build_status": "external_validation_required",
+            "frontend_route_expected": "/jarvis",
+            "dashboard_status_endpoint": _route_exists(route_path_set, "/mark-3/dashboard/status"),
+            "frontend_route_status": "expected_by_vite",
+            "event_snapshot_endpoint": _route_exists(route_path_set, "/mark-3/dashboard/events"),
+            "event_stream_endpoint": _route_exists(route_path_set, "/mark-3/dashboard/events/stream"),
+            "event_stream_available": _route_exists(route_path_set, "/mark-3/dashboard/events/stream"),
+            "hermes_status_endpoint": _route_exists(route_path_set, "/mark-3/hermes-runtime/status"),
+            "hermes_status": "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
+            "local_doctor_endpoint": _route_exists(route_path_set, "/mark-3/local-doctor/status"),
+            "browser_stt": "client_side_unknown",
+            "browser_tts": "client_side_unknown",
+            "camera_support": "client_side_unknown",
+            "webgl_support": "client_side_unknown",
+        },
+        "checks": [
+            _doctor_check("backend", "ok" if health_status.get("status") == "ok" else UNKNOWN, "GET /health"),
+            _doctor_check(
+                "dashboard_read_model",
+                "ok" if _route_exists(route_path_set, "/mark-3/dashboard/status") else "missing",
+                "GET /mark-3/dashboard/status",
+            ),
+            _doctor_check(
+                "event_stream",
+                "ok" if _route_exists(route_path_set, "/mark-3/dashboard/events/stream") else "missing",
+                "GET /mark-3/dashboard/events/stream",
+            ),
+            _doctor_check(
+                "hermes_status",
+                "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
+                "/mark-3/hermes-runtime/status",
+            ),
+            _doctor_check("browser_stt", "client_side_unknown", "window.SpeechRecognition || window.webkitSpeechRecognition"),
+            _doctor_check("browser_tts", "client_side_unknown", "window.speechSynthesis"),
+            _doctor_check("camera", "client_side_unknown", "navigator.mediaDevices.getUserMedia checked in browser only"),
+            _doctor_check("microphone", "client_side_unknown", "navigator.mediaDevices.getUserMedia checked in browser only"),
+            _doctor_check("webgl", "client_side_unknown", "canvas.getContext('webgl') checked in browser only"),
+            _doctor_check("python_version", platform.python_version(), "sys.version_info"),
+            _doctor_check("platform", platform.platform(), "platform.platform()"),
+            _doctor_check("process", process_info["status"], "os.getpid plus psutil when installed"),
+        ],
+        "optional_dependencies": {
+            "ffmpeg": _binary_status("ffmpeg"),
+            "openwakeword": _python_dependency_status("openwakeword"),
+            "faster_whisper": _python_dependency_status("faster_whisper"),
+            "piper": _python_dependency_status("piper"),
+            "sounddevice": _python_dependency_status("sounddevice"),
+            "torch": _python_dependency_status("torch"),
+            "psutil": psutil_status,
+        },
+        "runtime": {
+            "python_version": platform.python_version(),
+            "python_executable_name": sys.executable.rsplit("/", 1)[-1],
+            "platform": platform.platform(),
+            "system": platform.system(),
+            "machine": platform.machine(),
+            "process": process_info,
+        },
+        "ports": {
+            "backend_default": 9119,
+            "frontend_default": 5173,
+            "expected": [
+                {"name": "backend", "port": 9119, "protocol": "http", "status": "expected"},
+                {"name": "frontend", "port": 5173, "protocol": "http", "status": "expected"},
+            ],
+            "runtime_status": "not_checked_by_read_only_doctor",
+        },
+        "browser_checks": browser_capabilities,
+        "browser_only_capabilities": browser_capabilities,
+        "safety": {
+            "read_only": True,
+            "no_auto_install": True,
+            "no_sensor_activation": True,
+            "no_sensor_permission_request": True,
+            "no_camera_probe": True,
+            "no_microphone_probe": True,
+            "no_browser_api_probe_from_backend": True,
+            "no_secret_read": True,
+            "no_env_dump": True,
+            "no_hermes_execution": True,
+        },
+        "source_endpoint": "/mark-3/local-doctor/status",
+        "preview_only": False,
+        "read_only": True,
+        "source_status": {
+            "hermes": _status_summary(hermes_status),
+            "personal_memory": _status_summary(getattr(app_state, "personal_memory_control", object()).status() if hasattr(getattr(app_state, "personal_memory_control", None), "status") else {}),
+        },
+    }
+
+
+def _local_doctor_timeline_events(local_doctor: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Local doctor status generated",
+            "source": "/mark-3/local-doctor/status",
+            "status": local_doctor["state"]["mode"],
+            "read_only": True,
+        },
+        {
+            "event": "Browser capability checks remain client-side",
+            "source": "/mark-3/local-doctor/status",
+            "status": "client_side_unknown",
+            "read_only": True,
+        },
+        {
+            "event": "No dependency installation performed",
+            "source": "/mark-3/local-doctor/status",
+            "status": "read_only",
+            "read_only": True,
+        },
+    ]
+
+
+def _sensor_ledger_timeline_events(sensor_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Sensor Ledger status read",
+            "source": "/mark-3/dashboard/status",
+            "status": sensor_ledger["state"]["mode"],
+            "read_only": True,
+        },
+        {
+            "event": "Sensor Ledger stores metadata only",
+            "source": "/mark-3/dashboard/status",
+            "status": "metadata_only",
+            "read_only": True,
+        },
+        {
+            "event": "Sensor Ledger confirms no raw media storage",
+            "source": "/mark-3/dashboard/status",
+            "status": "no_raw_audio_no_frames",
+            "read_only": True,
+        },
+    ]
+
+
+def _policy_status_projection() -> Dict[str, Any]:
+    return {
+        "schema_version": "jarvis.policy_status.v1",
+        "state": {
+            "mode": "read_only_policy_status",
+            "jarvis_governs": True,
+            "hermes_executes": True,
+            "frontend_executes_hermes_directly": False,
+            "wake_phrase_never_approves": True,
+            "sensors_require_opt_in": True,
+            "dangerous_execution_requires_approval_gateway": True,
+        },
+        "direct_allowed": [
+            {
+                "capability": "render local dashboard/read models",
+                "risk_level": "low",
+                "approval_level": "direct",
+                "can_execute_from_frontend": False,
+                "notes": "Read-only status projection.",
+            },
+            {
+                "capability": "prepare local previews",
+                "risk_level": "low",
+                "approval_level": "direct",
+                "can_execute_from_frontend": False,
+                "notes": "Preview/intent summaries only; no Hermes dispatch.",
+            },
+            {
+                "capability": "read bounded local status/audit",
+                "risk_level": "low",
+                "approval_level": "direct",
+                "can_execute_from_frontend": False,
+                "notes": "Status endpoints and audit projections only.",
+            },
+        ],
+        "requires_simple_approval": [
+            {
+                "capability": "bounded local file/repo read outside dashboard status",
+                "risk_level": "medium",
+                "approval_level": "simple",
+                "requirements": ["exact scope", "read-only intent", "audit"],
+            },
+            {
+                "capability": "sensor session start",
+                "risk_level": "sensor_privacy",
+                "approval_level": "simple",
+                "requirements": ["operator opt-in", "visible indicator", "stop/cancel", "audit"],
+            },
+        ],
+        "requires_strong_approval": [
+            {
+                "capability": "filesystem write or persistent mutation",
+                "risk_level": "high",
+                "approval_level": "strong",
+                "requirements": ["ApprovalGateway", "risk classification", "audit", "rollback/stop plan"],
+            },
+            {
+                "capability": "external network action with side effects",
+                "risk_level": "high",
+                "approval_level": "strong",
+                "requirements": ["bounded target", "operator readback", "audit", "stop plan"],
+            },
+        ],
+        "requires_double_approval": [
+            {
+                "capability": "production deploy/domain/publication",
+                "risk_level": "critical",
+                "approval_level": "double",
+                "requirements": ["ApprovalGateway", "impact summary", "rollback plan", "operator confirmation"],
+            }
+        ],
+        "requires_triple_approval": [
+            {
+                "capability": "money movement/live Stripe/bulk email/credentials-impacting action",
+                "risk_level": "critical",
+                "approval_level": "triple",
+                "requirements": [
+                    "ApprovalGateway",
+                    "risk classification",
+                    "audit",
+                    "readback",
+                    "rollback/stop plan",
+                    "human confirmation",
+                ],
+            }
+        ],
+        "denied": [
+            {
+                "capability": "secret/token/cookie extraction or authorization bypass",
+                "risk_level": "forbidden",
+                "approval_level": "forbidden",
+                "reason": "Credential material and bypass are not approval-gated capabilities.",
+            },
+            {
+                "capability": "hidden sensor activation or background recording",
+                "risk_level": "forbidden",
+                "approval_level": "forbidden",
+                "reason": "Sensors require opt-in, visible indicator, stop/cancel, and audit.",
+            },
+            {
+                "capability": "frontend direct Hermes execution",
+                "risk_level": "forbidden",
+                "approval_level": "forbidden",
+                "reason": "JARVIS governs; Hermes executes only behind backend gates.",
+            },
+            {
+                "capability": "wake phrase approval",
+                "risk_level": "forbidden",
+                "approval_level": "forbidden",
+                "reason": "Wake phrase can open a command window but never approves.",
+            },
+        ],
+        "dangerous_execution_contract": {
+            "approval_gateway_required": True,
+            "risk_classification_required": True,
+            "audit_required": True,
+            "rollback_or_stop_plan_required": True,
+            "wake_phrase_never_approves": True,
+            "frontend_never_executes_hermes_directly": True,
+            "no_duplicate_hermes_runtime": True,
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "read_only": True,
+    }
+
+
+def _policy_status_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Policy status read",
+            "source": "/mark-3/dashboard/status",
+            "status": "read_only_policy_status",
+            "read_only": True,
+        },
+        {
+            "event": "JARVIS governs and Hermes executes policy confirmed",
+            "source": "/mark-3/dashboard/status",
+            "status": "governed",
+            "read_only": True,
+        },
+        {
+            "event": "Wake phrase never approves policy confirmed",
+            "source": "/mark-3/dashboard/status",
+            "status": "forbidden",
+            "read_only": True,
+        },
+    ]
+
+
+def _psutil_status() -> Dict[str, Any]:
+    if importlib.util.find_spec("psutil") is None:
+        return {
+            "available": False,
+            "source": "python_importlib",
+            "status": "unavailable",
+        }
+    try:
+        import psutil  # type: ignore
+
+        return {
+            "available": True,
+            "source": "python_importlib",
+            "status": "available",
+            "version": getattr(psutil, "__version__", UNKNOWN),
+        }
+    except Exception as exc:  # pragma: no cover - defensive optional dependency path
+        return {
+            "available": False,
+            "source": "python_importlib",
+            "status": "error",
+            "error": exc.__class__.__name__,
+        }
+
+
+def _process_info(psutil_status: Dict[str, Any]) -> Dict[str, Any]:
+    info: Dict[str, Any] = {
+        "status": "basic",
+        "pid": os.getpid(),
+        "ppid": os.getppid() if hasattr(os, "getppid") else UNKNOWN,
+        "psutil_available": bool(psutil_status.get("available")),
+    }
+    if not psutil_status.get("available"):
+        return info
+    try:
+        import psutil  # type: ignore
+
+        process = psutil.Process(os.getpid())
+        memory = process.memory_info()
+        info.update(
+            {
+                "status": "psutil",
+                "name": process.name(),
+                "num_threads": process.num_threads(),
+                "memory_rss_bytes": getattr(memory, "rss", UNKNOWN),
+                "memory_vms_bytes": getattr(memory, "vms", UNKNOWN),
+            }
+        )
+    except Exception as exc:  # pragma: no cover - defensive optional dependency path
+        info.update({"status": "psutil_error", "error": exc.__class__.__name__})
+    return info
+
+
+def _doctor_check(name: str, status: str, evidence: str) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "evidence": evidence,
+        "read_only": True,
+    }
+
+
+def _binary_status(name: str) -> Dict[str, Any]:
+    return {
+        "available": shutil.which(name) is not None,
+        "source": "PATH",
+    }
+
+
+def _python_dependency_status(module_name: str) -> Dict[str, Any]:
+    return {
+        "available": importlib.util.find_spec(module_name) is not None,
+        "source": "python_importlib",
+    }
+
+
+def _route_exists(route_paths: Iterable[str], path: str) -> bool:
+    return path in set(route_paths)
 
 
 def _local_voice_loop_projection() -> Dict[str, Any]:
@@ -792,7 +1319,9 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             "hermes_direct_execution_enabled": False,
             "voice_real_enabled": True,
             "browser_local_voice_loop_enabled": True,
-            "camera_real_enabled": False,
+            "camera_real_enabled": True,
+            "raw_audio_recording_enabled": True,
+            "vision_analysis_enabled": False,
             "mobile_runtime_enabled": False,
             "money_enabled": False,
             "deploy_enabled": False,
@@ -825,10 +1354,16 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "Bottom smart bar shows temporary browser transcript and controlled local response.",
             ),
             _visual_pilot_panel(
-                "Camera Placeholder",
+                "Camera Preview",
                 "local_system_contract.visual_contract.camera_placeholder",
-                "disabled",
-                "Movable/expandable visual camera placeholder; no browser camera permission or capture.",
+                "preview",
+                "Manual local camera preview; no backend stream, snapshot, storage or analysis.",
+            ),
+            _visual_pilot_panel(
+                "Raw Audio Recorder",
+                "raw_audio_recording",
+                "preview",
+                "Manual local raw audio recording with visible stop/download/delete; no backend upload.",
             ),
             _visual_pilot_panel(
                 "Folded History",
@@ -950,19 +1485,19 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "no_uncontrolled_sensor_activation",
                 "passed",
                 "safety.no_uncontrolled_sensor_activation=true",
-                "Only manual browser SpeechRecognition can request microphone access; no camera or background listener.",
+                "Only explicit browser controls can request microphone, camera preview or raw audio recorder access; no background listener.",
             ),
             _visual_pilot_check(
-                "no_get_user_media",
+                "manual_get_user_media_only",
                 "passed",
-                "safety.no_get_user_media=true",
-                "The page does not call getUserMedia, MediaRecorder or AudioContext capture APIs.",
+                "safety.no_sensor_activation_on_load=true",
+                "getUserMedia/MediaRecorder are available only inside explicit sensor hooks and never on load.",
             ),
             _visual_pilot_check(
-                "no_media_recorder",
+                "manual_media_recorder_only",
                 "passed",
-                "voice_core.safety.no_media_recorder=true",
-                "No recording surface is enabled.",
+                "raw_audio_recording.privacy.manual_opt_in_required=true",
+                "Raw audio recording is a separate local browser tool with visible stop/delete/download controls.",
             ),
             _visual_pilot_check(
                 "no_audio_context_capture",
@@ -974,7 +1509,7 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "no_camera_capture",
                 "passed",
                 "camera_vision.privacy.no_snapshot_capture=true",
-                "Camera capture, streaming and storage are disabled.",
+                "Camera preview is local only; snapshot capture, streaming and storage are disabled.",
             ),
             _visual_pilot_check(
                 "no_mobile_runtime",
@@ -1039,6 +1574,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
                 "voice is browser-controlled/manual-only",
                 "wake word is preview-only",
                 "camera is disabled",
+                "camera analysis remains disabled",
+                "raw audio backend audit is metadata-only/local in this phase",
                 "mobile is preview-only",
                 "finance is unknown without evidence",
                 "Product Builder is preview-only",
@@ -1380,10 +1917,11 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             "backend_status_endpoint": "/mark-3/dashboard/status",
             "frontend_can_execute": False,
             "frontend_can_approve": False,
-            "frontend_can_activate_sensors": False,
+            "frontend_can_activate_sensors": True,
             "frontend_can_move_money": False,
             "frontend_can_deploy": False,
             "frontend_can_send_email": False,
+            "sensor_activation_scope": "explicit local voice, camera preview, local video recording and raw audio recording controls only",
         },
         "readiness_checks": [
             _frontend_readiness_check(
@@ -1413,8 +1951,8 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             _frontend_readiness_check(
                 "camera_placeholder_visible",
                 "passed",
-                "camera placeholder",
-                "The visual camera panel is movable/expandable placeholder only.",
+                "camera preview panel",
+                "The camera panel can start a local browser preview only after explicit operator action.",
             ),
             _frontend_readiness_check(
                 "folded_history_visible",
@@ -1510,7 +2048,7 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "no_uncontrolled_sensor_activation",
                 "passed",
                 "manual_browser_voice_activation_only=true",
-                "Only explicit operator button activation may start browser SpeechRecognition.",
+                "Only explicit operator buttons may start browser SpeechRecognition, camera preview or local raw audio recording.",
             ),
             _frontend_readiness_check(
                 "no_post_put_delete",
@@ -1532,7 +2070,8 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             "no real mission submit",
             "no real Hermes execution",
             "browser voice support depends on SpeechRecognition/speechSynthesis",
-            "no real camera",
+            "browser camera preview is local-only and has no backend vision analysis",
+            "browser raw audio recorder is local-only and has no backend upload",
             "no real mobile runtime",
             "no real finance/revenue measurement",
             "no deploy/money/email/credentials",
@@ -1593,11 +2132,16 @@ def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, An
     local_vision_model_connected: bool | str = UNKNOWN
     return {
         "state": {
-            "mode": "preview",
+            "mode": "browser_opt_in_preview_available",
             "camera_enabled": False,
             "camera_permission_requested": False,
-            "preview_enabled": False,
+            "preview_enabled": "manual_opt_in_available",
             "recording": False,
+            "video_recording_available": "browser_local_opt_in",
+            "video_recording_active": False,
+            "video_recording_permission_requested": False,
+            "video_recording_blob_ready": False,
+            "raw_video_sent_to_backend": False,
             "streaming": False,
             "snapshot_capture_enabled": False,
             "vision_analysis_enabled": False,
@@ -1608,10 +2152,17 @@ def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, An
             "background_camera_access": False,
         },
         "privacy": {
-            "no_camera_activation": True,
-            "no_get_user_media": True,
-            "no_media_stream": True,
+            "no_camera_activation": False,
+            "no_camera_activation_on_load": True,
+            "manual_operator_activation_only": True,
+            "no_get_user_media": False,
+            "get_user_media_button_gated": True,
+            "no_backend_media_stream": True,
             "no_recording": True,
+            "video_recording_manual_opt_in_only": True,
+            "video_recording_inactive_on_load": True,
+            "video_recording_local_download_delete_only": True,
+            "no_video_backend_upload": True,
             "no_snapshot_capture": True,
             "no_image_storage": True,
             "no_video_storage": True,
@@ -1636,10 +2187,10 @@ def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, An
                 "sensor_privacy",
             ),
             _camera_vision_state(
-                "preview_disabled",
-                "Preview deshabilitado",
-                "No hay previsualización real de cámara en esta PR.",
-                False,
+                "camera_preview_available",
+                "Preview local disponible",
+                "El operador puede abrir preview local con botón explícito; no hay streaming, snapshot, storage ni análisis.",
+                "preview",
                 "sensor_privacy",
             ),
             _camera_vision_state(
@@ -1692,9 +2243,28 @@ def _camera_vision_projection(*, camera_control: Dict[str, Any]) -> Dict[str, An
             "future_analysis_must_not_infer_sensitive_identity": True,
             "future_analysis_must_not_store_without_permission": True,
         },
+        "video_recorder": {
+            "mode": "browser_local_video_recorder",
+            "available": "client_side_unknown_until_browser_loads",
+            "activation": "explicit_operator_record_video_button",
+            "recording_active": False,
+            "permission_requested": False,
+            "stop_control_required": True,
+            "visible_indicator_required": True,
+            "download_available_after_stop": True,
+            "delete_available_after_stop": True,
+            "delete_revokes_object_url": True,
+            "backend_upload_enabled": False,
+            "external_streaming_enabled": False,
+            "external_vision_provider_called": False,
+            "person_identity_analysis_enabled": False,
+            "raw_video_sent_to_backend": False,
+            "frames_stored": False,
+            "sensor_ledger_metadata_only": True,
+        },
         "timeline": _camera_vision_timeline_events(),
         "camera_state": "disabled" if camera_disabled else UNKNOWN,
-        "preview_state": "disabled",
+        "preview_state": "manual_opt_in_available",
         "recording": False,
         "streaming": False,
         "snapshot": "disabled",
@@ -1730,13 +2300,31 @@ def _camera_vision_timeline_events() -> List[Dict[str, Any]]:
         {
             "event": "Camera/Vision privacy status read",
             "source": "/mark-3/dashboard/status",
-            "status": "preview",
+            "status": "browser_opt_in_preview_available",
             "read_only": True,
         },
         {
-            "event": "Camera disabled",
+            "event": "Camera inactive by default",
             "source": "/camera-control/status",
             "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Manual camera preview available",
+            "source": "/jarvis/browser-camera",
+            "status": "manual_opt_in_local_only",
+            "read_only": True,
+        },
+        {
+            "event": "Local video recorder surface declared",
+            "source": "/jarvis/browser-camera",
+            "status": "manual_opt_in_local_only",
+            "read_only": True,
+        },
+        {
+            "event": "Video recorder inactive by default",
+            "source": "/jarvis/browser-camera",
+            "status": "idle",
             "read_only": True,
         },
         {
@@ -1761,6 +2349,178 @@ def _camera_vision_timeline_events() -> List[Dict[str, Any]]:
             "event": "No external vision provider called",
             "source": "/mark-3/dashboard/status",
             "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _raw_audio_recording_projection() -> Dict[str, Any]:
+    return {
+        "state": {
+            "mode": "browser_local_recorder",
+            "available": "client_side_unknown_until_browser_loads",
+            "recording_active": False,
+            "activation": "explicit_operator_record_button",
+            "stop_control_required": True,
+            "download_available_after_stop": True,
+            "delete_available_after_stop": True,
+            "backend_upload_enabled": False,
+            "external_streaming_enabled": False,
+            "hidden_recording_enabled": False,
+        },
+        "retention": {
+            "storage": "browser_memory_blob_until_download_or_delete",
+            "default_retention": "operator_controlled_current_page_session",
+            "auto_upload": False,
+            "auto_persist": False,
+            "delete_revokes_object_url": True,
+            "operator_must_download_explicitly": True,
+        },
+        "audit": {
+            "metadata_only": True,
+            "events": [
+                "recording_permission_requested",
+                "recording_started",
+                "recording_stopped",
+                "recording_deleted",
+            ],
+            "raw_audio_in_audit": False,
+            "backend_audit_complete": False,
+            "backend_audit_gap": "browser-only recorder keeps metadata locally in this phase",
+        },
+        "privacy": {
+            "manual_opt_in_required": True,
+            "visible_indicator_required": True,
+            "stop_control_required": True,
+            "no_backend_upload": True,
+            "no_provider_call": True,
+            "no_transcription": True,
+            "no_always_recording": True,
+            "no_hidden_recording": True,
+        },
+        "source_endpoint": "/mark-3/dashboard/status",
+        "browser_source": "/jarvis/browser-audio-recorder",
+        "preview_only": False,
+        "read_only": True,
+    }
+
+
+def _raw_audio_recording_timeline_events() -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Raw audio recorder surface declared",
+            "source": "/mark-3/dashboard/status",
+            "status": "browser_local_recorder",
+            "read_only": True,
+        },
+        {
+            "event": "Raw audio backend upload disabled",
+            "source": "/mark-3/dashboard/status",
+            "status": "disabled",
+            "read_only": True,
+        },
+        {
+            "event": "Raw audio recording inactive by default",
+            "source": "/jarvis/browser-audio-recorder",
+            "status": "idle",
+            "read_only": True,
+        },
+    ]
+
+
+def _memory_brain_projection(
+    *,
+    memory_status: Dict[str, Any],
+    learning_status: Dict[str, Any],
+    personal_memory_status: Dict[str, Any],
+) -> Dict[str, Any]:
+    outcome_count = _int(memory_status.get("outcome_count"), default=0) or 0
+    failure_count = _int(memory_status.get("failure_count"), default=0) or 0
+    proposal_count = _int(learning_status.get("proposal_count"), default=0) or 0
+    return {
+        "state": {
+            "mode": "visible_read_only_brain",
+            "outcome_memory_available": bool(memory_status.get("available", False)),
+            "learning_proposals_available": bool(learning_status.get("available", False)),
+            "personal_memory_control_available": bool(personal_memory_status.get("approved_memory_records_available", False)),
+            "in_memory_only": bool(memory_status.get("in_memory_only", False) and learning_status.get("in_memory_only", False)),
+            "compaction_available": False,
+            "forget_delete_available": "future_gated",
+            "memory_autoload_enabled": False,
+            "memory_grants_permission": False,
+        },
+        "entities": [],
+        "preferences": [],
+        "decisions": [],
+        "contradictions": [],
+        "counts": {
+            "outcomes": outcome_count,
+            "failures": failure_count,
+            "learning_proposals": proposal_count,
+            "audit_events": (_int(memory_status.get("audit_event_count"), default=0) or 0)
+            + (_int(learning_status.get("audit_event_count"), default=0) or 0),
+        },
+        "why_jarvis_remembers": [
+            "JARVIS muestra outcome/failure memory y learning proposals existentes para explicar aprendizaje operativo.",
+            "No hay entidades, preferencias o decisiones personales persistidas por defecto en este read model.",
+            "La memoria nunca concede permisos ni autoriza ejecución.",
+        ],
+        "compaction": {
+            "status": "contract_only",
+            "available_now": False,
+            "requires_policy": True,
+            "must_explain_source_records": True,
+            "must_preserve_contradictions": True,
+        },
+        "forget_delete": {
+            "status": "future_gated",
+            "available_now": False,
+            "requires_operator_review": True,
+            "audit_required": True,
+        },
+        "safety": {
+            "sensitive_memory_requires_approval": True,
+            "private_or_sensitive_persistent_memory_requires_strong_approval": True,
+            "no_sensitive_autosave": True,
+            "no_external_persistence": True,
+            "memory_is_not_permission": True,
+            "active_memory_does_not_authorize_sensitive_actions": True,
+            "execution_enabled": False,
+            "side_effects_enabled": False,
+        },
+        "source_endpoints": [
+            "/mark-3/outcomes",
+            "/mark-3/learning/proposals",
+            "/personal-memory/status",
+        ],
+        "source_status": {
+            "outcome_memory": _status_summary(memory_status),
+            "learning_proposals": _status_summary(learning_status),
+            "personal_memory": _status_summary(personal_memory_status),
+        },
+        "preview_only": False,
+        "read_only": True,
+    }
+
+
+def _memory_brain_timeline_events(memory_brain: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "event": "Memory brain read model generated",
+            "source": "/mark-3/dashboard/status",
+            "status": "visible_read_only_brain",
+            "read_only": True,
+        },
+        {
+            "event": "Outcome and learning memory counts read",
+            "source": "/mark-3/outcomes + /mark-3/learning/proposals",
+            "status": str(memory_brain.get("counts", {}).get("outcomes", UNKNOWN)),
+            "read_only": True,
+        },
+        {
+            "event": "Memory cannot authorize execution",
+            "source": "/personal-memory/status",
+            "status": "blocked",
             "read_only": True,
         },
     ]
@@ -1942,6 +2702,12 @@ def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, An
             "audio_recording": False,
             "raw_audio_stored": False,
             "external_provider_called": False,
+            "provider_adapter": wake_listener.get("provider_adapter", "openWakeWord"),
+            "provider_adapter_ready": bool(wake_listener.get("provider_adapter_ready", False)),
+            "openwakeword_dependency_installed": bool(wake_listener.get("openwakeword_dependency_installed", False)),
+            "auto_start_enabled": False,
+            "activation_endpoint_enabled": False,
+            "implementation_status": wake_listener.get("implementation_status", "adapter_contract_only"),
         },
         "supported_phrases": supported_phrases,
         "stop_phrases": stop_phrases,
@@ -1972,6 +2738,15 @@ def _wake_word_flow_projection(*, wake_listener: Dict[str, Any]) -> Dict[str, An
             "sensitive_actions_require_readback": True,
             "critical_actions_require_double_or_triple_confirmation": True,
             "approval_events_must_be_audited": True,
+        },
+        "adapter_contract": {
+            "provider": wake_listener.get("provider_adapter", "openWakeWord"),
+            "dependency_installed": bool(wake_listener.get("openwakeword_dependency_installed", False)),
+            "auto_start_enabled": False,
+            "activation_endpoint_enabled": False,
+            "requires_operator_start": True,
+            "status": wake_listener.get("implementation_status", "adapter_contract_only"),
+            "test_plan": _list(wake_listener.get("test_plan")),
         },
         "safety": {
             "no_microphone_activation": True,
@@ -2053,6 +2828,12 @@ def _voice_core_projection(*, voice_runtime: Dict[str, Any], wake_listener: Dict
             "audio_recording": False,
             "raw_audio_stored": False,
             "external_provider_called": False,
+            "provider_adapter": "openWakeWord",
+            "provider_adapter_ready": bool(wake_listener.get("provider_adapter_ready", False)),
+            "openwakeword_dependency_installed": bool(wake_listener.get("openwakeword_dependency_installed", False)),
+            "auto_start_enabled": False,
+            "activation_endpoint_enabled": False,
+            "implementation_status": "adapter_contract_only",
             "voice_approval_enabled": False,
             "wake_phrase_can_approve": False,
             "wake_phrase_can_execute": False,

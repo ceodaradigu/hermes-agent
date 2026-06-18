@@ -132,6 +132,70 @@ git status --short
 
 `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
 
+Actualización #157 / Fase 1 base operativa local:
+
+- `/mark-3/dashboard/status` expone `sensor_ledger`, `policy_status`,
+  `event_bus` robusto y `local_doctor` ampliado.
+- `/mark-3/dashboard/events` y `/mark-3/dashboard/events/stream` son GET
+  read-only con `schema_version`, `event_id`, `created_at`, `risk_level`,
+  payload seguro y heartbeat. No ejecutan, no aprueban y no transportan audio
+  bruto, frames ni secretos.
+- Sensor Ledger es metadata-only local/in-memory: soporta `camera`,
+  `recording`, `wake`, `voice_session`, `tts`, `stt` y eventos `requested`,
+  `started`, `stopped`, `cancelled`, `failed`, `deleted`,
+  `retention_updated`.
+- Doctor local declara backend/frontend esperado, stream, Hermes, deps
+  opcionales, Python, plataforma, proceso/psutil opcional, puertos esperados y
+  capacidades browser-only como `client_side_unknown`, sin activar sensores.
+- `/jarvis` muestra Sensor Ledger, Doctor Local, Event Stream Health y Policy
+  Status en el drawer `Sistemas`.
+- Sigue prohibido añadir `/execute`, frontend directo a Hermes, POST/PUT/DELETE
+  peligrosos, wake phrase como approval o sensores sin opt-in visible y
+  stop/cancel.
+
+Actualización #157 / Fase 2 orbe 3D real:
+
+- `/jarvis` tiene un orbe WebGL manual reforzado: partículas orbitando, anillos
+  radiales, marcas holográficas, profundidad, glow/bloom simulado, ondas por
+  estado y HUD cinematográfico.
+- Estados visuales soportados: `idle`, `wake_listening`, `listening`,
+  `transcribing`, `thinking`, `speaking`, `alert`, `error`, `stopped`,
+  `executing`.
+- Performance budget integrado: `targetFrameMs`, `particleBudget`,
+  `prefers-reduced-motion`, pixel ratio limitado y fallback visible si
+  WebGL/canvas falla.
+- No se añadieron dependencias frontend. No se activaron sensores nuevos, cámara
+  nueva, micrófono nuevo, grabación nueva, wake real, STT/TTS local, remoto ni
+  ejecución Hermes.
+- Si en una fase futura se migra a R3F/Three, debe mantenerse fallback,
+  screenshot/browser verification y no introducir APIs de sensor en el orbe.
+
+Actualización #157 / Subfase Conversational Brain Bridge + vídeo local:
+
+- `/jarvis` ya no responde sólo repitiendo la transcripción. El fallback local
+  `buildLocalJarvisResponse` clasifica intención básica y responde de forma
+  breve: preguntas simples, estado/capacidades, previews de misión/tarea/activo,
+  acciones sensibles y aclaración cuando no entiende.
+- No hay LLM externo ni API nueva. Es un bridge conversacional local y
+  determinista; la integración futura con LLM/Hermes debe entrar por ruta
+  gobernada, con risk classification, ApprovalGateway, audit y rollback/stop.
+- La smart bar muestra la respuesta humana en primer plano y deja el debug
+  plegado como `intent_detected`, `risk_level`, `requires_approval`,
+  `can_prepare_preview`, `cannot_execute_reason` y
+  `suggested_next_action`.
+- Acciones de credenciales/secretos se bloquean; wake phrase sigue sin aprobar;
+  frontend no ejecuta Hermes y no existe `/execute`.
+- Cámara local ahora incluye grabación de vídeo opt-in: botón separado
+  `Grabar vídeo`, permiso navegador, indicador `REC local`, stop, descarga de
+  blob local y borrado/revocación. No graba al cargar, no sube vídeo al backend,
+  no hace streaming externo, no captura snapshot automático y no analiza
+  personas/identidad.
+- Read model/event stream declaran `browser_local_video_recorder` inactivo por
+  defecto y metadata-only. Sensor Ledger/read model declara metadata segura de
+  audio/vídeo, y el event stream añade overlay local `sensor_ledger_state` para
+  sesiones del navegador sin POST de media al backend, audio bruto, frames ni
+  secretos.
+
 Estado alineado de las fases maestras:
 
 | Fase maestra | Estado actual |
