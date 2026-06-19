@@ -296,6 +296,7 @@ from jarvis.voice.mock_adapter import MockVoiceAdapter
 from jarvis.voice.runtime import VoiceRuntime, VoiceRuntimeState
 from jarvis.voice.storage import VoiceAudioStorage
 from jarvis.voice.understanding_feedback import UserUnderstandingAppliedFeedbackRule, UserUnderstandingFeedback
+from jarvis.voice_runtime_pack import VoiceRuntimePack
 from jarvis.voice_session_control import VoiceSessionControl
 from jarvis.voice_approval_channel import VoiceApprovalChannel
 from jarvis.visual_command_center import VisualCommandCenter
@@ -1969,6 +1970,7 @@ def create_app(
         wake_runtime=app.state.wake_voice_runtime,
         policy_engine=app.state.policy_engine,
     )
+    app.state.voice_runtime_pack = VoiceRuntimePack()
     app.state.sensor_ledger = SensorLedger()
     app.state.camera_control_runtime = CameraControlRuntime()
     app.state.local_daemon_control = LocalDaemonControl()
@@ -2325,6 +2327,17 @@ def create_app(
     @app.get("/mark-3/brain-adapter/status")
     def mark_3_brain_adapter_status() -> dict:
         return app.state.llm_brain_adapter.status()
+
+    @app.get("/mark-3/voice-runtime/status")
+    def mark_3_voice_runtime_status() -> dict:
+        wake_listener_status = app.state.real_wake_listener.status()
+        voice_session_status = app.state.voice_session_control.status(
+            wake_listener_status=wake_listener_status,
+        )
+        return app.state.voice_runtime_pack.status(
+            wake_listener_status=wake_listener_status,
+            voice_session_status=voice_session_status,
+        )
 
     @app.get("/mark-3/dashboard/status")
     def mark_3_dashboard_status() -> dict:

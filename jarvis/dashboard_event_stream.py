@@ -11,6 +11,7 @@ ALLOWED_EVENT_TYPES = (
     "intake_state",
     "brain_adapter_state",
     "brain_state",
+    "voice_runtime_state",
     "voice_state",
     "voice_session_state",
     "wake_state",
@@ -109,7 +110,7 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         _event(
             generated_at,
             "voice_state",
-            "/voice-runtime/status",
+            "/mark-3/voice-runtime/status",
             _get(dashboard_status, "voice_core.state.current_state", "preview"),
             {
                 "mode": _get(dashboard_status, "voice_core.state.mode", "preview"),
@@ -117,6 +118,38 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "command_listening_enabled": _bool(_get(dashboard_status, "voice_core.state.command_listening_enabled", False)),
                 "voice_approval_enabled": False,
                 "manual_browser_voice_only": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "voice_runtime_state",
+            "/mark-3/voice-runtime/status",
+            _get(dashboard_status, "voice_runtime_pack.current_state", "idle"),
+            {
+                "schema_version": _get(dashboard_status, "voice_runtime_pack.schema_version", "jarvis.voice_runtime_pack.v1"),
+                "runtime_id": _get(dashboard_status, "voice_runtime_pack.runtime_id", "jarvis-local-manual-voice-runtime-pack"),
+                "mode": _get(dashboard_status, "voice_runtime_pack.mode", "local_manual_browser_voice_control_plane"),
+                "enabled": _bool(_get(dashboard_status, "voice_runtime_pack.enabled", True)),
+                "manual_push_to_talk_enabled": _bool(_get(dashboard_status, "voice_runtime_pack.manual_push_to_talk_enabled", True)),
+                "browser_stt_available": _get(dashboard_status, "voice_runtime_pack.browser_stt_available", "client_side_unknown"),
+                "browser_tts_available": _get(dashboard_status, "voice_runtime_pack.browser_tts_available", "client_side_unknown"),
+                "local_stt_provider_status": _provider_status_summary(_get(dashboard_status, "voice_runtime_pack.local_stt_provider_status", {})),
+                "local_tts_provider_status": _provider_status_summary(_get(dashboard_status, "voice_runtime_pack.local_tts_provider_status", {})),
+                "wake_runtime_status": _get(dashboard_status, "voice_runtime_pack.wake_runtime_status.status", "wake_listening_disabled"),
+                "active_session": _bool(_get(dashboard_status, "voice_runtime_pack.active_session.active", False)),
+                "last_transcript_summary_available": _bool(_get(dashboard_status, "voice_runtime_pack.last_transcript_summary.available", False)),
+                "last_response_summary_available": _bool(_get(dashboard_status, "voice_runtime_pack.last_response_summary.available", False)),
+                "current_state": _get(dashboard_status, "voice_runtime_pack.current_state", "idle"),
+                "can_interrupt": _bool(_get(dashboard_status, "voice_runtime_pack.can_interrupt", True)),
+                "can_cancel": _bool(_get(dashboard_status, "voice_runtime_pack.can_cancel", True)),
+                "raw_audio_sent_to_backend": False,
+                "transcript_persistence": False,
+                "voice_approval_enabled": False,
+                "wake_phrase_can_approve": False,
+                "wake_phrase_can_execute": False,
+                "hermes_dispatch_allowed": False,
+                "raw_text_omitted": True,
+                "raw_audio_included": False,
             },
         ),
         _event(
@@ -512,6 +545,24 @@ def _bool(value: Any) -> bool:
     return bool(value) if isinstance(value, bool) else False
 
 
+def _provider_status_summary(providers: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(providers, dict):
+        return {}
+    summary: Dict[str, Dict[str, Any]] = {}
+    for name, value in providers.items():
+        if not isinstance(value, dict):
+            continue
+        summary[str(name)] = {
+            "status": _safe_scalar(value.get("status", "unknown")),
+            "enabled": _bool(value.get("enabled", False)),
+            "installed": value.get("installed", "unknown") if isinstance(value.get("installed", "unknown"), bool) else _safe_scalar(value.get("installed", "unknown")),
+            "local_only": _bool(value.get("local_only", True)),
+            "network_required": _bool(value.get("network_required", False)),
+            "external_provider": _bool(value.get("external_provider", False)),
+        }
+    return summary
+
+
 def _safe_scalar(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -576,7 +627,7 @@ def _stable_event_id(generated_at: str, event_type: str, source: str, payload: D
 def _risk_level_for_event(event_type: str) -> str:
     if event_type in {"intake_state", "brain_adapter_state"}:
         return "intent_risk_preview"
-    if event_type in {"camera_state", "recording_state", "voice_state", "voice_session_state", "wake_state", "tts_state", "sensor_ledger_state"}:
+    if event_type in {"camera_state", "recording_state", "voice_runtime_state", "voice_state", "voice_session_state", "wake_state", "tts_state", "sensor_ledger_state"}:
         return "sensor_privacy"
     if event_type == "brain_state":
         return "intent_risk_preview"

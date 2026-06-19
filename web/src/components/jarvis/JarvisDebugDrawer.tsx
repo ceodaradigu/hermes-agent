@@ -71,6 +71,7 @@ export function JarvisDebugDrawer({
   const brainResponse = brainAdapter.sample?.brain_response ?? {};
   const hermes = dashboard.hermes_execution ?? {};
   const hermesRuntime = hermes.runtime_status ?? hermes;
+  const voiceRuntimePack = dashboard.voice_runtime_pack ?? {};
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
   const voiceSession = dashboard.voice_session ?? fallbackOffline.voice_session!;
   const voiceCoreState = voiceCore.state ?? {};
@@ -131,6 +132,24 @@ export function JarvisDebugDrawer({
     ["raw audio backend", yesNo(localVoiceLoop.raw_audio_sent_to_backend ?? localVoiceLoop.privacy?.raw_audio_sent_to_backend, "true", "false")],
     ["voice approval", yesNo(localVoiceLoop.approval_by_voice_enabled ?? localVoiceLoop.approval_policy?.approval_by_voice_enabled, "enabled", "disabled")],
     ["wake phrase approval", yesNo(localVoiceLoop.wake_phrase_approval ?? localVoiceLoop.approval_policy?.wake_phrase_approval, "enabled", "disabled")],
+  ] as const;
+
+  const voiceRuntimePackRows = [
+    ["runtime pack", valueText(voiceRuntimePack.current_state, "idle")],
+    ["mode", valueText(voiceRuntimePack.mode, "local_manual_browser_voice_control_plane")],
+    ["manual PTT", yesNo(voiceRuntimePack.manual_push_to_talk_enabled, "enabled", "disabled")],
+    ["browser STT", valueText(voiceRuntimePack.browser_stt_available, "client_side_unknown")],
+    ["browser TTS", valueText(voiceRuntimePack.browser_tts_available, "client_side_unknown")],
+    ["faster-whisper", valueText(voiceRuntimePack.local_stt_provider_status?.faster_whisper_disabled_or_missing?.status, "missing")],
+    ["whisper.cpp", valueText(voiceRuntimePack.local_stt_provider_status?.whisper_cpp_disabled_or_missing?.status, "missing")],
+    ["Piper", valueText(voiceRuntimePack.local_tts_provider_status?.piper_local_disabled_or_missing?.status, "missing")],
+    ["wake runtime", valueText(voiceRuntimePack.wake_runtime_status?.status, "wake_listening_disabled")],
+    ["can interrupt", yesNo(voiceRuntimePack.can_interrupt, "true", "false")],
+    ["can cancel", yesNo(voiceRuntimePack.can_cancel, "true", "false")],
+    ["raw audio backend", yesNo(voiceRuntimePack.raw_audio_sent_to_backend, "true", "false")],
+    ["transcript persistence", yesNo(voiceRuntimePack.transcript_persistence, "true", "false")],
+    ["voice approval", yesNo(voiceRuntimePack.voice_approval_enabled, "enabled", "disabled")],
+    ["Hermes dispatch", yesNo(voiceRuntimePack.hermes_dispatch_allowed, "allowed", "false")],
   ] as const;
 
   const voiceSessionRows = [
@@ -637,6 +656,7 @@ export function JarvisDebugDrawer({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList items={voiceRows} />
+                    <StatusList items={voiceRuntimePackRows} />
                     <StatusList items={voiceSessionRows} />
                     <StatusList items={localVoiceRows} />
                     <article className="border border-warning/40 bg-warning/10 p-4">
@@ -644,6 +664,8 @@ export function JarvisDebugDrawer({
                         <Badge variant="warning">Local Voice Loop</Badge>
                         <Badge variant={conversationActive ? "warning" : "outline"}>conversation_active={conversationActive ? "true" : "false"}</Badge>
                         <Badge variant="success">raw_audio_sent_to_backend=false</Badge>
+                        <Badge variant="success">transcript_persistence=false</Badge>
+                        <Badge variant="outline">provider browser/manual</Badge>
                         <Badge variant="outline">recording={valueText(rawAudioRecording.state?.recording_active, "false")}</Badge>
                         <Badge variant="outline">raw recorder {valueText(rawAudioRecording.state?.mode, "browser_local_recorder")}</Badge>
                       </div>

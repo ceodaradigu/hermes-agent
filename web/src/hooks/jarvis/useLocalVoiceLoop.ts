@@ -55,6 +55,10 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
   const timersRef = useRef<number[]>([]);
   const selectedVoiceNameRef = useRef("");
   const ttsSupportRef = useRef<BrowserCapabilityState>("unknown");
+  const speakingRef = useRef(false);
+  const ttsQueueRef = useRef<Array<{ text: string; tone: JarvisVoiceTone }>>([]);
+  const ttsTurnRef = useRef(0);
+  const lastSpokenTextRef = useRef("");
 
   function setConversationActiveFlag(active: boolean) {
     conversationActiveRef.current = active;
@@ -72,6 +76,15 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       callback();
     }, delay);
     timersRef.current.push(timerId);
+  }
+
+  function cancelBrowserSpeechOutput() {
+    ttsQueueRef.current = [];
+    speakingRef.current = false;
+    ttsTurnRef.current += 1;
+    if (browserTtsAvailable()) {
+      window.speechSynthesis.cancel();
+    }
   }
 
   function refreshBrowserVoiceSelection() {
@@ -95,6 +108,14 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     return selectedVoice ?? selectPreferredSpanishVoice(voices);
   }
 
+  function isLikelyTtsEcho(candidate: string) {
+    const normalizedCandidate = candidate.replace(/\s+/g, " ").trim().toLocaleLowerCase("es-ES");
+    const normalizedLastSpoken = lastSpokenTextRef.current.replace(/\s+/g, " ").trim().toLocaleLowerCase("es-ES");
+    if (!normalizedCandidate || !normalizedLastSpoken) return false;
+    if (normalizedCandidate === normalizedLastSpoken) return true;
+    return normalizedLastSpoken.length > 32 && normalizedLastSpoken.includes(normalizedCandidate);
+  }
+
   function queueNextLocalVoiceTurn(message = "Listo. Te escucho de nuevo.", delay = LOCAL_VOICE_RESTART_DELAY_MS) {
     if (!conversationActiveRef.current || cancelledRef.current) {
       setLocalVoiceState("idle");
@@ -103,7 +124,7 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
 
     if (Date.now() > conversationExpiresAtRef.current) {
       setConversationActiveFlag(false);
-      setLocalVoiceState("idle");
+      setLocalVoiceState("stopped");
       setJarvisTone("calmado");
       setLocalVoiceResponse("Pauso la conversación manual por seguridad. Pulsa el micrófono para abrir otra ventana.");
       setLocalVoiceIntent("manual_conversation_timeout");
@@ -123,7 +144,8 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     }, delay);
   }
 
-  function speakLocalJarvisResponse(text: string, tone: JarvisVoiceTone) {
+  function drainLocalTtsQueue() {
+    if (speakingRef.current) return;
     if (!browserTtsAvailable()) {
       setLocalVoiceState("not_supported");
       setCapabilityNotice("speechSynthesis no está disponible en este navegador; respuesta visible sin audio.");
@@ -131,10 +153,15 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const profile = jarvisToneProfiles[tone];
+    const next = ttsQueueRef.current.shift();
+    if (!next) return;
+
+    const turnId = ttsTurnRef.current + 1;
+    ttsTurnRef.current = turnId;
+    const utterance = new SpeechSynthesisUtterance(next.text);
+    const profile = jarvisToneProfiles[next.tone];
     const preferredVoice = getPreferredBrowserVoice();
+    lastSpokenTextRef.current = next.text;
     if (preferredVoice) {
       utterance.voice = preferredVoice;
       utterance.lang = preferredVoice.lang || "es-ES";
@@ -148,8 +175,18 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     utterance.rate = profile.rate;
     utterance.pitch = profile.pitch;
     utterance.volume = profile.volume;
-    utterance.onstart = () => setLocalVoiceState("speaking");
+    utterance.onstart = () => {
+      if (turnId !== ttsTurnRef.current) return;
+      speakingRef.current = true;
+      setLocalVoiceState("speaking");
+    };
     utterance.onend = () => {
+      if (turnId !== ttsTurnRef.current) return;
+      speakingRef.current = false;
+      if (ttsQueueRef.current.length > 0) {
+        drainLocalTtsQueue();
+        return;
+      }
       if (conversationActiveRef.current) {
         queueNextLocalVoiceTurn("Te escucho de nuevo. Habla cuando quieras o pulsa stop.", LOCAL_VOICE_RESTART_DELAY_MS);
         return;
@@ -157,6 +194,8 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       setLocalVoiceState("idle");
     };
     utterance.onerror = () => {
+      if (turnId !== ttsTurnRef.current) return;
+      speakingRef.current = false;
       setLocalVoiceState("error");
       setCapabilityNotice("El navegador no pudo reproducir TTS; la respuesta queda visible en la smart bar.");
       queueNextLocalVoiceTurn("No pude reproducir la voz, pero la conversación manual sigue disponible.", 1000);
@@ -164,10 +203,32 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     window.speechSynthesis.speak(utterance);
   }
 
+  function speakLocalJarvisResponse(text: string, tone: JarvisVoiceTone) {
+    ttsQueueRef.current.push({ text, tone });
+    if (ttsQueueRef.current.length > 2) {
+      ttsQueueRef.current = ttsQueueRef.current.slice(-2);
+    }
+    drainLocalTtsQueue();
+  }
+
   function finishLocalVoiceTranscript(finalText: string) {
     clearLocalVoiceTimers();
+    if (isLikelyTtsEcho(finalText)) {
+      setLocalVoiceState("transcribing");
+      setLocalVoiceResponse("He ignorado un posible eco de mi propia voz. Te escucho de nuevo.");
+      setLocalVoiceIntent("ignored_possible_tts_echo");
+      setLocalVoiceRisk("none");
+      setIntentPreview({
+        ...defaultIntentPreview,
+        intent_detected: "ignored_possible_tts_echo",
+        suggested_next_action: "Repite tu petición si el navegador capturó la respuesta de JARVIS.",
+      });
+      queueNextLocalVoiceTurn("Te escucho de nuevo.", 700);
+      return;
+    }
     setLocalVoiceState("transcribing");
     scheduleLocalVoiceStep(() => {
+      if (cancelledRef.current) return;
       const response = buildLocalJarvisResponse(finalText);
       setLocalVoiceState("thinking");
       setJarvisTone(response.tone);
@@ -176,6 +237,7 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       setLocalVoiceRisk(response.risk);
       setIntentPreview(response.intentPreview);
       scheduleLocalVoiceStep(() => {
+        if (cancelledRef.current) return;
         if (ttsSupportRef.current === "supported") {
           speakLocalJarvisResponse(response.text, response.tone);
           return;
@@ -346,10 +408,8 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
 
   function beginLocalVoiceLoop() {
     clearLocalVoiceTimers();
-    if (browserTtsAvailable()) {
-      window.speechSynthesis.cancel();
-      refreshBrowserVoiceSelection();
-    }
+    cancelBrowserSpeechOutput();
+    refreshBrowserVoiceSelection();
     cancelledRef.current = false;
     setConversationActiveFlag(true);
     conversationExpiresAtRef.current = Date.now() + LOCAL_VOICE_CONVERSATION_TIMEOUT_MS;
@@ -365,13 +425,11 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     clearLocalVoiceTimers();
     recognitionRef.current?.abort();
     recognitionRef.current = null;
-    if (browserTtsAvailable()) {
-      window.speechSynthesis.cancel();
-    }
+    cancelBrowserSpeechOutput();
     setInterimTranscript("");
-    setLocalVoiceState("idle");
+    setLocalVoiceState("cancelled");
     setJarvisTone("calmado");
-    setLocalVoiceResponse("Escucha/habla detenida por David. No se ejecutó nada.");
+    setLocalVoiceResponse("Escucha y voz detenidas por David. No se ejecutó nada.");
     setLocalVoiceIntent("cancelled_by_operator");
     setLocalVoiceRisk("none");
     setIntentPreview({
@@ -415,8 +473,8 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       recognitionRef.current = null;
       if (browserTtsAvailable()) {
         window.speechSynthesis.onvoiceschanged = null;
-        window.speechSynthesis.cancel();
       }
+      cancelBrowserSpeechOutput();
     };
   }, []);
 
@@ -439,6 +497,8 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
     capabilityNotice,
     selectedVoiceName,
     voiceQualityNotice,
+    canInterrupt: localVoiceState === "speaking",
+    canCancel: conversationActive || localVoiceState === "listening" || localVoiceState === "transcribing" || localVoiceState === "thinking" || localVoiceState === "speaking",
     beginLocalVoiceLoop,
     cancelLocalVoiceLoop,
   };
