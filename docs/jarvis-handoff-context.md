@@ -132,6 +132,50 @@ git status --short
 
 `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
 
+Actualizacion PR #169 / Phase 4 Real Local Controller + Remote Pairing Readiness:
+
+- JARVIS convierte la readiness de Phase 3 en una macro-fase local mas realista
+  sin abrir ejecucion remota peligrosa. `Phase4LocalControllerRemotePairingControlPlane`
+  extiende Phase 3 y mantiene el contrato: JARVIS gobierna, Hermes ejecuta.
+- Local Controller opt-in queda modelado con `controller_id`,
+  `controller_status`, `controller_mode`, `local_only=true`,
+  `bind_host=127.0.0.1`, `bind_port`, `controller_url`, capacidades de status,
+  approvals, stop/cancel y toggles de voz/camara/grabacion. No hay autostart,
+  servicio de sistema, startup integration ni background capture.
+- Trusted Devices agrega identidad local: navegador local trusted para
+  normal/strong, terminal local con challenge `VERIFY TERMINAL CHANNEL`,
+  controlador local con registro/verificacion `VERIFY LOCAL CONTROLLER`, voz y
+  wake sin approval, remoto disabled/untrusted por defecto.
+- Triple approval ahora tiene envelope de tres pasos con separacion de canales,
+  challenge/frase por paso, readback por paso, expiry, anti-reuse, audit por
+  paso y recalculo de policy antes de finalizar. Critical sigue blocked si no
+  hay UI local + terminal local verificado + local controller verificado.
+- Remote pairing queda readiness-only: `remote_pairing_enabled=false`,
+  `remote_approval_allowed=false`, `remote_execution_allowed=false`, challenge
+  local efimero en memoria, sin token persistente, sin canal externo.
+- Telegram/Hermes bridge queda `disabled_not_configured`, token
+  `unknown_redacted`, sin leer env/token, sin API call, sin bot y sin webhook.
+- Stop/Rollback v2 expone reason, actor/channel, scope, deadline,
+  confirmation, cooperative stop signal, bridge attempt, observed result, final
+  state, rollback preconditions, dry-run mode y approval requirement. No ejecuta
+  rollback destructivo ni finge stop real del backend embebido.
+- Endpoints Phase 4: `/mark-3/phase-4/status`,
+  `/mark-3/local-controller/status`, `/mark-3/trusted-devices/status`,
+  `/mark-3/remote-pairing/status`, `/mark-3/telegram-bridge/status` y
+  `/mark-3/stop-rollback/status`, con POST gobernados para register/heartbeat,
+  open/stop local controller y prepare/cancel/revoke remote pairing.
+- `/jarvis` muestra Phase 4 en drawer: local controller, trusted devices,
+  triple readiness, remote pairing, Telegram bridge, stop/rollback v2 y pilot
+  checklist. La esfera calmada de #168, smart bar, approvals, voice loop,
+  memory, audit y daemon/tray drawer se preservan.
+- Sigue prohibido: `/execute`, shell libre, comandos arbitrarios, frontend
+  directo a Hermes, wake approval, voice approval, auto mic/camera/recording,
+  secretos, `.env`, tokens, cookies, passwords, Telegram real, webhook,
+  remote approval/execution, dinero, Stripe, deploy, email y publicacion.
+- Documentacion principal:
+  `docs/jarvis-pr-169-phase-4-real-local-controller-remote-pairing-readiness.md`
+  y `docs/jarvis-phase-4-local-controller-remote-pairing-pilot-report.md`.
+
 Actualización PR #166 / Phase 2 Local Assistant Runtime:
 
 - JARVIS pasa de base local gobernada a asistente local usable con runtime

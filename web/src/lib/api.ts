@@ -26,10 +26,16 @@ export const api = {
   getJarvisPhase1Status: () => fetchJSON<JarvisPhase1Status>("/mark-3/phase-1/status"),
   getJarvisPhase2Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-2/status"),
   getJarvisPhase3Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-3/status"),
+  getJarvisPhase4Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-4/status"),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
+  getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
   getJarvisLocalDoctorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-doctor/status"),
   getJarvisTrustedApprovalChannels: () => fetchJSON<Record<string, unknown>>("/mark-3/trusted-approval-channels/status"),
+  getJarvisTrustedDevices: () => fetchJSON<Record<string, unknown>>("/mark-3/trusted-devices/status"),
+  getJarvisRemotePairingStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/remote-pairing/status"),
+  getJarvisTelegramBridgeStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/telegram-bridge/status"),
+  getJarvisStopRollbackStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/stop-rollback/status"),
   getJarvisActionCatalog: () => fetchJSON<{ actions?: JarvisActionContract[] }>("/mark-3/execution/action-catalog"),
   getJarvisExecutionHistory: (limit = 25) =>
     fetchJSON<JarvisExecutionHistoryResponse>(`/mark-3/execution/history?limit=${limit}`),
@@ -617,6 +623,7 @@ export interface JarvisBrowserVerificationStatus {
   no_execute_route?: boolean;
   no_direct_hermes_frontend?: boolean;
   phase_3_pilot?: Record<string, unknown>;
+  phase_4_pilot?: Record<string, unknown>;
   source_endpoint?: string;
 }
 
@@ -1703,13 +1710,19 @@ export interface JarvisDashboardStatus {
   phase_1_completion?: JarvisPhase1Status;
   phase_2_status?: Record<string, unknown>;
   phase_3_status?: Record<string, unknown>;
+  phase_4_status?: Record<string, unknown>;
   action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
   execution_history?: JarvisExecutionHistoryResponse;
   stop_rollback_contracts?: Record<string, unknown>;
+  stop_rollback_v2?: Record<string, unknown>;
   local_runtime?: JarvisLocalRuntimeStatus;
   local_daemon?: Record<string, unknown>;
+  local_controller?: Record<string, unknown>;
   tray_readiness?: Record<string, unknown>;
   trusted_approval_channels?: Record<string, unknown>;
+  trusted_devices?: Record<string, unknown>;
+  remote_pairing?: Record<string, unknown>;
+  telegram_bridge?: Record<string, unknown>;
   browser_verification?: JarvisBrowserVerificationStatus;
   conversational_brain?: JarvisConversationalBrain;
   conversational_intake?: JarvisConversationalIntake;
