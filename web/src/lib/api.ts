@@ -22,6 +22,44 @@ async function getSessionToken(): Promise<string> {
 
 export const api = {
   getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status"),
+  getJarvisExecutionStatus: () => fetchJSON<JarvisGovernedExecutionStatus>("/mark-3/execution/status"),
+  getJarvisPhase1Status: () => fetchJSON<JarvisPhase1Status>("/mark-3/phase-1/status"),
+  createJarvisExecutionPreview: (payload: JarvisExecutionPreviewRequest) =>
+    fetchJSON<JarvisExecutionPreview>("/mark-3/execution/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  requestJarvisExecutionApproval: (payload: JarvisExecutionRequestApprovalRequest) =>
+    fetchJSON<JarvisExecutionApprovalEnvelope>("/mark-3/execution/request-approval", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  decideJarvisExecutionApproval: (payload: JarvisExecutionApprovalDecisionRequest) =>
+    fetchJSON<JarvisExecutionApprovalEnvelope>("/mark-3/execution/approval-decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  dispatchJarvisExecution: (payload: JarvisExecutionDispatchRequest) =>
+    fetchJSON<JarvisExecutionDispatchResult>("/mark-3/execution/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  cancelJarvisExecution: (payload: JarvisExecutionCancelRequest) =>
+    fetchJSON<JarvisExecutionPreview>("/mark-3/execution/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  stopJarvisExecution: (payload: JarvisExecutionStopRequest) =>
+    fetchJSON<JarvisExecutionStopResult>("/mark-3/execution/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   getStatus: () => fetchJSON<StatusResponse>("/api/status"),
   getSessions: (limit = 20, offset = 0) =>
     fetchJSON<PaginatedSessions>(`/api/sessions?limit=${limit}&offset=${offset}`),
@@ -249,6 +287,176 @@ export interface JarvisApprovalCard {
   audit_required?: boolean;
   preview_only?: boolean;
   read_only?: boolean;
+  source_endpoint?: string;
+}
+
+export interface JarvisExecutionPreviewRequest {
+  intent: string;
+  source?: "typed_text" | "voice_transcript" | "wake_phrase_command" | "remote_input" | "unknown" | string;
+  operator?: string;
+  session_id?: string | null;
+  target_path?: string | null;
+  command?: string | null;
+  requested_action_type?: string | null;
+  transcript_confidence?: number;
+  voice_session_state?: string;
+}
+
+export interface JarvisExecutionRequestApprovalRequest {
+  preview_id: string;
+  actor?: string;
+}
+
+export interface JarvisExecutionApprovalDecisionRequest {
+  approval_id: string;
+  decision: "approve" | "reject" | "cancel" | "request_clarification" | string;
+  actor?: string;
+  confirmation_phrase?: string | null;
+  readback_text?: string | null;
+  reason?: string;
+}
+
+export interface JarvisExecutionDispatchRequest {
+  preview_id: string;
+  approval_id?: string | null;
+  actor?: string;
+}
+
+export interface JarvisExecutionCancelRequest {
+  preview_id: string;
+  reason?: string;
+  actor?: string;
+}
+
+export interface JarvisExecutionStopRequest {
+  preview_id?: string | null;
+  session_id?: string | null;
+  reason?: string;
+}
+
+export interface JarvisExecutionApprovalEnvelope {
+  schema_version?: string;
+  approval_id: string;
+  preview_id: string;
+  correlation_id?: string;
+  created_at?: string;
+  expires_at?: string;
+  status: JarvisApprovalStatus | string;
+  action_type?: string;
+  risk_level?: JarvisRiskLevel;
+  approval_level?: JarvisApprovalLevel;
+  confirmation_level_required?: string;
+  confirmation_phrase?: string | null;
+  readback_required?: boolean;
+  readback_text?: string;
+  requires_strong_confirmation?: boolean;
+  requires_double_confirmation?: boolean;
+  requires_triple_confirmation?: boolean;
+  stronger_approval_configured?: boolean;
+  can_approve?: boolean;
+  can_dispatch_after_approval?: boolean;
+  requested_by?: string;
+  decision_reason?: string;
+}
+
+export interface JarvisExecutionPreview {
+  schema_version?: string;
+  preview_id: string;
+  correlation_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  state: string;
+  source?: string;
+  operator?: string;
+  decision: "allowed" | "requires_approval" | "denied" | "unsupported" | string;
+  risk_level: JarvisRiskLevel;
+  approval_level: JarvisApprovalLevel;
+  requires_approval: boolean;
+  action: {
+    title?: string;
+    summary?: string;
+    decision?: string;
+    action_type?: string;
+    risk_level?: string;
+    approval_level?: string;
+    requires_approval?: boolean;
+    requires_readback?: boolean;
+    requires_strong_confirmation?: boolean;
+    requires_double_confirmation?: boolean;
+    requires_triple_confirmation?: boolean;
+    denied_reason?: string;
+    unsupported_reason?: string;
+    target_path_display?: string;
+    target_path_fingerprint?: string;
+    scope?: string[];
+    will_do?: string[];
+    will_not_do?: string[];
+    rollback_plan?: string;
+    stop_plan?: string;
+    command_allowlisted?: boolean;
+  };
+  preview?: {
+    title?: string;
+    summary?: string;
+    will_do?: string[];
+    will_not_do?: string[];
+    rollback_plan?: string;
+    stop_plan?: string;
+    audit_destination?: string;
+    memory_influence?: Array<Record<string, unknown>>;
+  };
+  approval_envelope?: JarvisExecutionApprovalEnvelope | null;
+  dispatch?: Record<string, unknown> | null;
+  unsupported_reason?: string | null;
+  denied_reason?: string | null;
+  protected_message?: string;
+  hermes_dispatch_allowed?: boolean;
+  frontend_direct_hermes_allowed?: boolean;
+  memory_grants_permission?: boolean;
+}
+
+export interface JarvisExecutionDispatchResult {
+  schema_version?: string;
+  preview_id?: string;
+  state?: string;
+  decision?: string;
+  risk_level?: string;
+  approval_level?: string;
+  dispatch?: Record<string, unknown>;
+  hermes_dispatch_allowed?: boolean;
+  frontend_direct_hermes_allowed?: boolean;
+  memory_grants_permission?: boolean;
+}
+
+export interface JarvisExecutionStopResult {
+  status: string;
+  reason?: string;
+  preview_id?: string | null;
+  session_id?: string | null;
+  session?: Record<string, unknown>;
+}
+
+export interface JarvisGovernedExecutionStatus {
+  schema_version?: string;
+  state?: Record<string, unknown>;
+  counts?: Record<string, number | string>;
+  recent_previews?: JarvisExecutionPreview[];
+  recent_approval_envelopes?: JarvisExecutionApprovalEnvelope[];
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+}
+
+export interface JarvisPhase1Status {
+  schema_version?: string;
+  phase?: string;
+  status?: string;
+  flow?: string[];
+  capabilities?: Record<string, string>;
+  risks?: Record<string, string>;
+  known_limitations?: string[];
+  route_readiness?: Record<string, boolean>;
+  pilot_checklist?: Array<Record<string, unknown>>;
+  execution_status?: JarvisGovernedExecutionStatus;
   source_endpoint?: string;
 }
 
@@ -1027,6 +1235,7 @@ export interface JarvisVisualCommandCenterPilot {
     backend_read_model_connected?: boolean;
     frontend_execution_enabled?: boolean;
     approvals_real_enabled?: boolean;
+    governed_execution_enabled?: boolean;
     hermes_direct_execution_enabled?: boolean;
     voice_real_enabled?: boolean;
     browser_local_voice_loop_enabled?: boolean;
@@ -1276,6 +1485,8 @@ export interface JarvisDashboardStatus {
     readback_policy?: Record<string, boolean>;
   };
   hermes_execution?: JarvisHermesExecution;
+  governed_execution?: JarvisGovernedExecutionStatus;
+  phase_1_completion?: JarvisPhase1Status;
   conversational_brain?: JarvisConversationalBrain;
   conversational_intake?: JarvisConversationalIntake;
   brain_adapter?: JarvisBrainAdapter;

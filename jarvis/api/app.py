@@ -233,6 +233,7 @@ from jarvis.operator_console import (
 )
 from jarvis.personal_memory import PersonalMemoryControlPlane
 from jarvis.persistent_audit import PersistentAuditLedger
+from jarvis.phase_1_governed_execution import Phase1GovernedExecutionControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -548,6 +549,50 @@ class Mark3HermesRuntimeExecuteReadRequest(BaseModel):
 
 
 class Mark3HermesRuntimeStopRequest(BaseModel):
+    reason: str = "operator stop"
+
+
+class Mark3ExecutionPreviewRequest(BaseModel):
+    intent: str
+    source: str = "typed_text"
+    operator: str = "David"
+    session_id: Optional[str] = None
+    target_path: Optional[str] = None
+    command: Optional[str] = None
+    requested_action_type: Optional[str] = None
+    transcript_confidence: float = 1.0
+    voice_session_state: str = "idle"
+
+
+class Mark3ExecutionRequestApprovalRequest(BaseModel):
+    preview_id: str
+    actor: str = "David"
+
+
+class Mark3ExecutionApprovalDecisionRequest(BaseModel):
+    approval_id: str
+    decision: str
+    actor: str = "David"
+    confirmation_phrase: Optional[str] = None
+    readback_text: Optional[str] = None
+    reason: str = ""
+
+
+class Mark3ExecutionDispatchRequest(BaseModel):
+    preview_id: str
+    approval_id: Optional[str] = None
+    actor: str = "David"
+
+
+class Mark3ExecutionCancelRequest(BaseModel):
+    preview_id: str
+    reason: str = "operator cancel"
+    actor: str = "David"
+
+
+class Mark3ExecutionStopRequest(BaseModel):
+    preview_id: Optional[str] = None
+    session_id: Optional[str] = None
     reason: str = "operator stop"
 
 
@@ -2009,6 +2054,14 @@ def create_app(
         app.state.mark_3_mission_loop,
         adapter_factory=hermes_runtime_adapter_factory,
     )
+    app.state.phase_1_governed_execution = Phase1GovernedExecutionControlPlane(
+        intake_pipeline=app.state.conversational_intake_pipeline,
+        policy_engine=app.state.policy_engine,
+        mission_loop=app.state.mark_3_mission_loop,
+        hermes_runtime_bridge=app.state.mark_3_hermes_runtime_bridge,
+        persistent_audit_ledger=app.state.persistent_audit_ledger,
+        memory_brain_v2=app.state.memory_brain_v2,
+    )
 
     @app.get("/health")
     def health() -> dict:
@@ -2347,6 +2400,66 @@ def create_app(
     @app.get("/mark-3/memory-brain/preview")
     def mark_3_memory_brain_preview() -> dict:
         return app.state.memory_brain_v2.preview()
+
+    @app.get("/mark-3/execution/status")
+    def mark_3_execution_status() -> dict:
+        return app.state.phase_1_governed_execution.status()
+
+    @app.get("/mark-3/phase-1/status")
+    def mark_3_phase_1_status() -> dict:
+        return app.state.phase_1_governed_execution.phase_1_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
+    @app.post("/mark-3/execution/preview")
+    def mark_3_execution_preview(payload: Mark3ExecutionPreviewRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.preview(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/execution/request-approval")
+    def mark_3_execution_request_approval(payload: Mark3ExecutionRequestApprovalRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.request_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="preview not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/execution/approval-decision")
+    def mark_3_execution_approval_decision(payload: Mark3ExecutionApprovalDecisionRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.decide_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="approval not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/execution/dispatch")
+    def mark_3_execution_dispatch(payload: Mark3ExecutionDispatchRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.dispatch(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="preview not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/execution/cancel")
+    def mark_3_execution_cancel(payload: Mark3ExecutionCancelRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.cancel(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="preview not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/execution/stop")
+    def mark_3_execution_stop(payload: Mark3ExecutionStopRequest) -> dict:
+        try:
+            return app.state.phase_1_governed_execution.stop(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/mark-3/voice-runtime/status")
     def mark_3_voice_runtime_status() -> dict:

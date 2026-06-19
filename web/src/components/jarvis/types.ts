@@ -118,6 +118,7 @@ export type JarvisEventType =
   | "memory_state"
   | "risk_state"
   | "execution_state"
+  | "phase_1_state"
   | "audit_event"
   | "persistent_audit_state"
   | "memory_brain_v2_state"

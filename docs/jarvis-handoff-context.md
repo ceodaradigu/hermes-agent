@@ -1185,3 +1185,44 @@ externos, graph/vector DB obligatoria, cloud memory, dinero, deploy y email.
 
 Documento de cierre:
 `docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.
+
+## PR #165 — Phase 1 Completion: Governed Hermes Execution E2E + Pilot Hardening
+
+PR #165 cierra Phase 1 como piloto local gobernado. JARVIS ya puede completar el
+flujo intencion -> preview -> riesgo -> approval -> dispatch gobernado ->
+auditoria -> status/event stream para capacidades soportadas, sin crear otro
+Hermes y sin `/execute`.
+
+- `jarvis/phase_1_governed_execution.py` introduce
+  `Phase1GovernedExecutionControlPlane`.
+- Reutiliza `ConversationalIntakePipeline`, `PolicyEngine`,
+  `Mark3MissionLoop`, `Mark3HermesRuntimeBridge`, `PersistentAuditLedger` y
+  `MemoryBrainV2Store`.
+- Nuevos endpoints gobernados:
+  `/mark-3/execution/status`, `/mark-3/phase-1/status`,
+  `/mark-3/execution/preview`, `/mark-3/execution/request-approval`,
+  `/mark-3/execution/approval-decision`, `/mark-3/execution/dispatch`,
+  `/mark-3/execution/cancel` y `/mark-3/execution/stop`.
+- `/jarvis` tiene approval panel backend-gated real. El frontend no llama Hermes
+  directo, no ejecuta shell libre y no tiene `/execute`.
+- Acciones reales en Phase 1: estado local safe/read-only, prepare-only y
+  lectura exacta local no sensible mediante bridge Hermes existente con approval
+  valido.
+- `.env`, secretos, credenciales, tokens, passwords, cookies y session material
+  quedan denied con la frase exacta protegida:
+  `No puedo hacer eso, David. Las credenciales y secretos están protegidos.`
+- Deploy, dinero, Stripe, email, publicacion, borrado, modificaciones
+  destructivas y operaciones externas quedan denied/bloqueadas.
+- Critical sin double/triple approval configurado queda
+  `requires_stronger_approval_not_configured`.
+- Voz puede enviar intencion textual manual; voz y wake phrase no aprueban.
+- Persistent Audit recibe eventos reales metadata-only de intake, preview,
+  risk, approval, dispatch, stop/cancel, rollback, memory influence, voice text
+  intent y UI approval action.
+- Memory Brain v2 puede explicar influencia (`why_used`) pero nunca concede
+  permisos ni salta policy/approval.
+
+Documentos de cierre:
+
+- `docs/jarvis-pr-165-phase-1-completion-governed-execution-pilot.md`
+- `docs/jarvis-phase-1-completion-report.md`

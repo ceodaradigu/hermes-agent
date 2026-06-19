@@ -160,7 +160,7 @@ def test_pr_162_visual_qa_preview_is_local_safe_and_state_complete():
         'data-visual-qa-preview="local-front-end-only"',
         'data-visual-qa-no-hermes="true"',
         'data-visual-qa-no-sensors="true"',
-        'data-visual-qa-no-approval="true"',
+        'data-visual-qa-no-direct-approval="true"',
         'data-visual-qa-no-backend-execution="true"',
         'data-visual-qa-query-param="jarvisVisualPreview"',
         "onVisualPreviewStateChange(null)",

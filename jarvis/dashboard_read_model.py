@@ -137,6 +137,16 @@ def build_mark_3_dashboard_status(
         lambda: app_state.memory_brain_v2.preview(),
         timeline,
     )
+    execution_control = _source(
+        "/mark-3/execution/status",
+        lambda: app_state.phase_1_governed_execution.status(),
+        timeline,
+    )
+    phase_1_completion = _source(
+        "/mark-3/phase-1/status",
+        lambda: app_state.phase_1_governed_execution.phase_1_status(route_paths=route_path_list),
+        timeline,
+    )
     conversational_brain = _source(
         "/mark-3/conversational-brain/status",
         lambda: app_state.conversational_brain_bridge.status(),
@@ -198,6 +208,7 @@ def build_mark_3_dashboard_status(
 
     pending_count = _pending_approval_count(app_state)
     approval_cards = _approval_preview_cards(research_execution=research_execution)
+    approval_cards = _execution_approval_cards(execution_control) + approval_cards
     approval_summary = _approval_summary(pending_count, approval_cards)
     kill_switch_active = _bool(mission_loop, "kill_switch_active", default=None)
     kill_switch_state = "active" if kill_switch_active is True else "inactive" if kill_switch_active is False else "not_wired"
@@ -419,6 +430,20 @@ def build_mark_3_dashboard_status(
                 "Read-only policy projection for direct, approval-gated, strong-gated, and denied actions.",
             ),
             _module(
+                "Governed Execution",
+                "ready" if execution_control.get("state", {}).get("available") else UNKNOWN,
+                "/mark-3/execution/status",
+                "phase_1_governed_dispatch",
+                "Intent -> preview -> risk -> approval -> governed dispatch -> audit is wired through backend gates.",
+            ),
+            _module(
+                "Phase 1 Completion",
+                "ready",
+                "/mark-3/phase-1/status",
+                "pilot_hardening",
+                "Phase 1 completion checklist, limitations and local pilot status.",
+            ),
+            _module(
                 "Hermes",
                 "gated" if hermes_runtime.get("available") else "not_connected",
                 "/mark-3/hermes-runtime/status",
@@ -428,16 +453,26 @@ def build_mark_3_dashboard_status(
         ],
         "approvals": {
             **approval_summary,
-            "action_buttons_enabled": False,
-            "all_actions_read_only": True,
+            "action_buttons_enabled": True,
+            "all_actions_read_only": False,
             "wake_phrase_can_approve": False,
-            "frontend_can_approve": False,
-            "frontend_can_reject": False,
+            "frontend_can_approve": True,
+            "frontend_can_reject": True,
             "frontend_can_modify_scope": False,
             "critical_actions_require_strong_approval": True,
             "cards": approval_cards,
-            "cards_state": "preview/read-only",
-            "preview_only": True,
+            "cards_state": "governed/backend-gated",
+            "preview_only": False,
+            "governed_backend_only": True,
+            "frontend_direct_hermes_allowed": False,
+            "execution_endpoints": {
+                "preview": "/mark-3/execution/preview",
+                "request_approval": "/mark-3/execution/request-approval",
+                "approval_decision": "/mark-3/execution/approval-decision",
+                "dispatch": "/mark-3/execution/dispatch",
+                "cancel": "/mark-3/execution/cancel",
+                "stop": "/mark-3/execution/stop",
+            },
             "readback_policy": {
                 "wake_phrase_never_approves": True,
                 "voice_approval_requires_auth_gate_and_audit": True,
@@ -447,7 +482,7 @@ def build_mark_3_dashboard_status(
                 "critical_actions_require_rollback_and_stop_plan": True,
                 "audit_required": True,
             },
-            "source_endpoint": "/approvals/status",
+            "source_endpoint": "/mark-3/execution/status",
             "raw_status": _status_summary(approvals_status),
         },
         "mission_control": mission_control,
@@ -481,6 +516,8 @@ def build_mark_3_dashboard_status(
         "persistent_audit": persistent_audit,
         "sensor_ledger": sensor_ledger,
         "policy_status": policy_status,
+        "phase_1_completion": phase_1_completion,
+        "governed_execution": execution_control,
         "memory_brain_v2": memory_brain_v2_status,
         "memory_brain": memory_brain,
         "mobile_companion": mobile_companion,
@@ -572,7 +609,7 @@ def build_mark_3_dashboard_status(
         },
         "safety": {
             "frontend_can_execute": False,
-            "frontend_can_approve": False,
+            "frontend_can_approve": True,
             "no_auto_execute": True,
             "no_frontend_execute": True,
             "no_duplicate_hermes_runtime": True,
@@ -599,8 +636,10 @@ def build_mark_3_dashboard_status(
             "no_direct_hermes_call_from_voice": True,
             "no_direct_hermes_call_from_camera": True,
             "no_frontend_hermes_execution": True,
-            "no_hermes_dispatch": True,
-            "no_post_put_delete_from_jarvis_page": True,
+            "no_hermes_dispatch": False,
+            "no_direct_hermes_dispatch": True,
+            "no_post_put_delete_from_jarvis_page": False,
+            "governed_execution_post_only": True,
             "approval_required_before_execution": True,
             "wake_phrase_is_not_permission": True,
             "audit_required": True,
@@ -669,8 +708,16 @@ def build_mark_3_dashboard_status(
         },
         "read_only_contract": {
             "aggregated_endpoint": "/mark-3/dashboard/status",
-            "allowed_http_methods_for_frontend": ["GET"],
-            "internal_sources_are_read_only_status_or_audit": True,
+            "allowed_http_methods_for_frontend": ["GET", "POST /mark-3/execution/* governed only"],
+            "internal_sources_are_read_only_status_or_audit": False,
+            "governed_mutation_sources": [
+                "/mark-3/execution/preview",
+                "/mark-3/execution/request-approval",
+                "/mark-3/execution/approval-decision",
+                "/mark-3/execution/dispatch",
+                "/mark-3/execution/cancel",
+                "/mark-3/execution/stop",
+            ],
             "frontend_must_not_call_execute": True,
             "frontend_must_not_request_sensor_permissions": False,
             "frontend_sensor_permission_scope": "manual browser SpeechRecognition, manual camera preview, manual local raw audio recorder",
@@ -732,7 +779,8 @@ def _local_system_contract_projection() -> Dict[str, Any]:
             "camera_runtime": "future daemon/vision analysis PR; browser preview is local-only now",
         },
         "safety": {
-            "no_post_put_delete_from_jarvis_page": True,
+            "no_post_put_delete_from_jarvis_page": False,
+            "governed_execution_post_only": True,
             "no_execute_route": True,
             "no_frontend_hermes_execution": True,
             "no_browser_sensor_permission": False,
@@ -844,6 +892,12 @@ def build_local_doctor_status(
             "persistent_audit_endpoint": _route_exists(route_path_set, "/mark-3/audit/status"),
             "memory_brain_v2_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/status"),
             "memory_brain_v2_preview_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/preview"),
+            "governed_execution_status_endpoint": _route_exists(route_path_set, "/mark-3/execution/status"),
+            "phase_1_status_endpoint": _route_exists(route_path_set, "/mark-3/phase-1/status"),
+            "governed_execution_preview_endpoint": _route_exists(route_path_set, "/mark-3/execution/preview"),
+            "governed_execution_approval_endpoint": _route_exists(route_path_set, "/mark-3/execution/approval-decision"),
+            "governed_execution_dispatch_endpoint": _route_exists(route_path_set, "/mark-3/execution/dispatch"),
+            "governed_execution_stop_endpoint": _route_exists(route_path_set, "/mark-3/execution/stop"),
             "hermes_status_endpoint": _route_exists(route_path_set, "/mark-3/hermes-runtime/status"),
             "hermes_status": "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
             "local_doctor_endpoint": _route_exists(route_path_set, "/mark-3/local-doctor/status"),
@@ -888,6 +942,16 @@ def build_local_doctor_status(
                 "memory_brain_v2",
                 "ok" if _route_exists(route_path_set, "/mark-3/memory-brain/status") else "missing",
                 "GET /mark-3/memory-brain/status",
+            ),
+            _doctor_check(
+                "governed_execution",
+                "ok" if _route_exists(route_path_set, "/mark-3/execution/status") else "missing",
+                "GET /mark-3/execution/status",
+            ),
+            _doctor_check(
+                "phase_1_completion",
+                "ok" if _route_exists(route_path_set, "/mark-3/phase-1/status") else "missing",
+                "GET /mark-3/phase-1/status",
             ),
             _doctor_check(
                 "hermes_status",
@@ -1454,7 +1518,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             "status_endpoint": "/mark-3/dashboard/status",
             "backend_read_model_connected": True,
             "frontend_execution_enabled": False,
-            "approvals_real_enabled": False,
+            "approvals_real_enabled": True,
+            "governed_execution_enabled": True,
             "hermes_direct_execution_enabled": False,
             "voice_real_enabled": True,
             "browser_local_voice_loop_enabled": True,
@@ -1531,20 +1596,20 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             _visual_pilot_panel(
                 "Mission Control",
                 "mission_control",
-                "preview",
-                "Command intake is visual preview; no mission submit or Hermes dispatch.",
+                "gated",
+                "Command intake can create governed previews; Hermes dispatch remains backend gated.",
             ),
             _visual_pilot_panel(
                 "Approval Console",
                 "approvals",
-                "preview",
-                "Approval cards and buttons are visible but disabled/read-only.",
+                "gated",
+                "Approval buttons call backend JARVIS gates; frontend never approves by voice or wake.",
             ),
             _visual_pilot_panel(
                 "Hermes Execution",
                 "hermes_execution",
-                "preview",
-                "Execution visibility only; frontend cannot call Hermes directly.",
+                "gated",
+                "Exact local read dispatch is available only through governed backend /mark-3/execution/dispatch.",
             ),
             _visual_pilot_panel(
                 "Agent / Module Radar",
@@ -1599,8 +1664,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             _visual_pilot_check(
                 "no_post_put_delete",
                 "passed",
-                "read_only_contract.allowed_http_methods_for_frontend=[GET]",
-                "The dashboard may read the aggregate status endpoint only.",
+                "read_only_contract.allowed_http_methods_for_frontend=[GET, governed POST]",
+                "The dashboard may POST only to governed execution endpoints; no generic execute or direct Hermes call.",
             ),
             _visual_pilot_check(
                 "no_execute_route",
@@ -1701,15 +1766,15 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
             _visual_pilot_step(5, "comprobar unknown/disabled", "Confirm unavailable evidence remains unknown, disabled, not_connected, preview or future_gated."),
             _visual_pilot_step(6, "comprobar stop/cancel de voz", "Voice may start only from the explicit microphone button and must expose a stop control."),
             _visual_pilot_step(7, "comprobar permisos acotados", "Only manual browser SpeechRecognition may request microphone access; camera, notifications and media capture remain disabled."),
-            _visual_pilot_step(8, "comprobar que no hay ejecucion Hermes", "No frontend path may invoke Hermes execution."),
+            _visual_pilot_step(8, "comprobar dispatch gobernado", "Only /mark-3/execution/dispatch may invoke the backend governed Hermes bridge after valid approval."),
             _visual_pilot_step(9, "comprobar que finance/ROI no inventa datos", "Finance values without evidence must remain unknown."),
             _visual_pilot_step(10, "comprobar timeline read-only", "Timeline events must describe reads/checks only, not execution."),
         ],
         "pilot_findings": {
             "findings": [],
             "known_limitations": [
-                "real approvals not wired",
-                "mission submit is preview-only",
+                "critical double/triple approval is not configured and blocks execution",
+                "mission submit is governed preview/approval/dispatch only",
                 "voice is browser-controlled/manual-only",
                 "wake word is preview-only",
                 "camera is disabled",
@@ -1723,7 +1788,8 @@ def _visual_command_center_pilot_projection() -> Dict[str, Any]:
         },
         "safety": {
             "pilot_is_read_only": True,
-            "dashboard_may_read_status_only": True,
+            "dashboard_may_read_status_only": False,
+            "dashboard_may_call_governed_execution_endpoints": True,
             "no_side_effects": True,
             "no_real_world_actions": True,
             "no_background_workers": True,
@@ -2051,11 +2117,11 @@ def _adaptive_product_builder_timeline_events() -> List[Dict[str, Any]]:
 def _frontend_pilot_projection() -> Dict[str, Any]:
     return {
         "state": {
-            "mode": "read_only_pilot",
+            "mode": "governed_pilot",
             "dashboard_route": "/jarvis",
             "backend_status_endpoint": "/mark-3/dashboard/status",
             "frontend_can_execute": False,
-            "frontend_can_approve": False,
+            "frontend_can_approve": True,
             "frontend_can_activate_sensors": True,
             "frontend_can_move_money": False,
             "frontend_can_deploy": False,
@@ -2109,7 +2175,7 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "approval_console_visible",
                 "passed",
                 "approvals projection present",
-                "Approval controls are disabled preview affordances.",
+                "Approval controls call backend JARVIS gates and never call Hermes directly.",
             ),
             _frontend_readiness_check(
                 "hermes_execution_visible",
@@ -2121,7 +2187,7 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "mission_control_visible",
                 "passed",
                 "mission_control projection present",
-                "Mission Control remains preview-only with no Hermes dispatch.",
+                "Mission Control can create governed previews before approval and dispatch.",
             ),
             _frontend_readiness_check(
                 "voice_core_visible",
@@ -2181,7 +2247,7 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "no_frontend_execute",
                 "passed",
                 "frontend_can_execute=false",
-                "Frontend is a read-only pilot surface.",
+                "Frontend cannot execute; it can only call governed JARVIS execution endpoints.",
             ),
             _frontend_readiness_check(
                 "no_uncontrolled_sensor_activation",
@@ -2190,10 +2256,10 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
                 "Only explicit operator buttons may start browser SpeechRecognition, camera preview or local raw audio recording.",
             ),
             _frontend_readiness_check(
-                "no_post_put_delete",
+                "governed_post_only",
                 "passed",
-                "allowed_http_methods_for_frontend=[GET]",
-                "The /jarvis dashboard consumes only the read model.",
+                "allowed_http_methods_for_frontend=[GET, POST /mark-3/execution/* governed only]",
+                "The /jarvis dashboard can POST only to backend-gated execution endpoints.",
             ),
         ],
         "hardening_notes": {
@@ -2205,9 +2271,9 @@ def _frontend_pilot_projection() -> Dict[str, Any]:
             "full_pytest_required_before_merge": True,
         },
         "pilot_limitations": [
-            "no real approvals",
-            "no real mission submit",
-            "no real Hermes execution",
+            "critical double/triple approval is not configured",
+            "mission submit is limited to governed preview/approval/dispatch",
+            "Hermes execution is limited to exact local read via governed bridge",
             "browser voice support depends on SpeechRecognition/speechSynthesis",
             "browser camera preview is local-only and has no backend vision analysis",
             "browser raw audio recorder is local-only and has no backend upload",
@@ -3861,6 +3927,48 @@ def _pending_approval_count(app_state: Any) -> int | str:
         if value == "pending":
             count += 1
     return count
+
+
+def _execution_approval_cards(execution_control: Dict[str, Any]) -> List[Dict[str, Any]]:
+    cards: List[Dict[str, Any]] = []
+    previews = execution_control.get("recent_previews", [])
+    if not isinstance(previews, list):
+        return cards
+    for preview in previews[:3]:
+        if not isinstance(preview, dict):
+            continue
+        action = dict(preview.get("action") or {})
+        envelope = dict(preview.get("approval_envelope") or {})
+        cards.append({
+            "id": str(preview.get("preview_id", "governed-preview")),
+            "title": str(action.get("title") or "Governed execution preview"),
+            "action": str(action.get("summary") or action.get("action_type") or "governed action"),
+            "reason": str(preview.get("unsupported_reason") or preview.get("denied_reason") or action.get("summary") or "Backend-gated governed preview."),
+            "status": str(envelope.get("status") or preview.get("state") or preview.get("decision") or "preview"),
+            "risk_level": str(preview.get("risk_level") or action.get("risk_level") or UNKNOWN),
+            "approval_level": str(preview.get("approval_level") or action.get("approval_level") or UNKNOWN),
+            "touches": ["execution", str(action.get("action_type") or "preview")],
+            "estimated_cost": UNKNOWN,
+            "measured_cost": UNKNOWN,
+            "rollback_plan": str(action.get("rollback_plan") or "No mutation; rollback not applicable."),
+            "stop_plan": str(action.get("stop_plan") or "Cancel preview or stop governed session."),
+            "expires_at": str(envelope.get("expires_at") or UNKNOWN),
+            "scope_summary": ", ".join(action.get("scope") or []) or str(action.get("target_path_display") or "prepare-only"),
+            "evidence_summary": "Governed execution control plane recent preview.",
+            "disabled_reason": str(preview.get("unsupported_reason") or preview.get("denied_reason") or ""),
+            "recommended_operator_action": "Review preview, risk, readback and approval gate before dispatch.",
+            "requires_readback": bool(action.get("requires_readback")),
+            "strong_confirmation_required": bool(action.get("requires_strong_confirmation")),
+            "double_confirmation_required": bool(action.get("requires_double_confirmation")),
+            "triple_confirmation_required": bool(action.get("requires_triple_confirmation")),
+            "rollback_required": str(preview.get("risk_level")) in {"high", "critical"},
+            "stop_plan_required": True,
+            "audit_required": True,
+            "preview_only": False,
+            "read_only": False,
+            "source_endpoint": "/mark-3/execution/status",
+        })
+    return cards
 
 
 def _approval_preview_cards(*, research_execution: Dict[str, Any]) -> List[Dict[str, Any]]:

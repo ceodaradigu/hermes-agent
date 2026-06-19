@@ -86,9 +86,9 @@ def test_jarvis_dashboard_shell_contains_required_read_only_content():
         "Las acciones sensibles requieren aprobación humana",
         "Las acciones críticas requieren confirmación fuerte",
         "Hermes ejecuta solo bajo gates válidos",
-        "No hay ejecución real que detener desde este panel",
-        "No hay ejecución real que detener desde esta shell",
-        "Preview-only: approval execution is not wired in this PR",
+        "Stop/cancel pasan por /mark-3/execution/stop y /mark-3/execution/cancel",
+        "La shell no ejecuta Hermes directo; solicita dispatch gobernado",
+        "Backend-gated: approval execution is wired through /mark-3/execution",
         "Leyenda de riesgo",
         "Nivel 0-1",
         "Nivel 5",
@@ -444,10 +444,10 @@ def test_jarvis_dashboard_shell_contains_product_finance_pilot_hardening_contrac
         "Monetización",
         "Medición",
         "preview / future-gated / disabled",
-        "Pilot read-only",
+        "Pilot backend-gated",
         "Frontend Pilot / Hardening",
-        "El dashboard mira, no toca.",
-        "No POST/PUT/DELETE.",
+        "El dashboard no ejecuta Hermes directo.",
+        "POST solo a endpoints gobernados.",
         "No execute.",
         "No sensores sin activación manual.",
         "Dependency hardening queda para una PR separada.",
@@ -470,11 +470,11 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
         "Visual Command Center Pilot",
         "/jarvis",
         "/mark-3/dashboard/status",
-        "read-only pilot",
-        "El dashboard mira, no toca",
+        "governed pilot",
+        "El dashboard no ejecuta Hermes directo",
         "No se ejecuta Hermes desde el frontend",
         "No se activan sensores sin control manual explícito",
-        "No hay approvals reales en esta fase",
+        "Approvals reales pasan por backend gobernado",
         "No hay métricas falsas",
         "Los valores sin evidencia se muestran como unknown",
         "Dependency hardening queda para una PR separada",
@@ -521,13 +521,24 @@ def test_jarvis_dashboard_shell_contains_visual_command_center_pilot_contract():
         'data-testid="jarvis-cockpit-layout"',
         'data-testid="jarvis-command-center-header"',
         'data-testid="jarvis-tab-detail-panel"',
-        "modo preview/read-only",
+        "modo approval backend-gated",
         "max-h-[64vh] overflow-auto",
     ):
         assert text in content
 
+    api_content = _read(API)
+    assert 'method: "POST"' in api_content
+    for governed_endpoint in (
+        "/mark-3/execution/preview",
+        "/mark-3/execution/request-approval",
+        "/mark-3/execution/approval-decision",
+        "/mark-3/execution/dispatch",
+        "/mark-3/execution/cancel",
+        "/mark-3/execution/stop",
+    ):
+        assert governed_endpoint in api_content
+
     for forbidden in (
-        'method: "POST"',
         'method: "PUT"',
         'method: "DELETE"',
         '"/execute"',
@@ -733,35 +744,42 @@ def test_jarvis_mission_control_preview_has_no_submit_or_sensor_handler():
         assert forbidden not in content
 
 
-def test_approval_controls_are_preview_only_and_not_functional():
+def test_approval_controls_are_functional_but_backend_gated():
     content = _jarvis_sources()
+    api_content = _read(API)
 
     for label in (
+        "Crear preview",
+        "Pedir approval",
         "Aprobar",
         "Rechazar",
-        "Modificar alcance",
-        "Pedir explicación",
-        "preview-only",
-        'aria-disabled="true"',
+        "Cancelar",
+        "Aclarar",
+        "Stop",
+        "Dispatch gobernado",
+        "Backend-gated",
+        "no Hermes directo",
     ):
         assert label in content
 
     assert "onClick={() => onTabChange(tab.id)}" in content
-    for forbidden in (
-        "onClick={approve",
-        "onClick={reject",
-        "onClick={execute",
-        "onClick={dispatch",
-        "onClick={start",
-        "onClick={stop",
-        "onClick={() => approve",
-        "onClick={() => reject",
-        "onClick={() => execute",
-        "onClick={() => dispatch",
-        "onClick={() => start",
-        "onClick={() => stop",
+    for endpoint in (
+        "/mark-3/execution/preview",
+        "/mark-3/execution/request-approval",
+        "/mark-3/execution/approval-decision",
+        "/mark-3/execution/dispatch",
+        "/mark-3/execution/cancel",
+        "/mark-3/execution/stop",
     ):
-        assert forbidden not in content
+        assert endpoint in api_content
+    for forbidden in (
+        "mark_3_hermes_runtime_bridge.execute",
+        "HermesRuntimeAdapter",
+        "callHermes",
+        "dispatchHermes",
+        '"/execute"',
+    ):
+        assert forbidden not in content + api_content
     assert content.count("disabled") >= 5
 
 

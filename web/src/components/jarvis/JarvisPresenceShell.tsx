@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { ShieldAlert } from "lucide-react";
-import type { JarvisDashboardStatus } from "@/lib/api";
+import type {
+  JarvisDashboardStatus,
+  JarvisExecutionApprovalEnvelope,
+  JarvisExecutionDispatchResult,
+  JarvisExecutionPreview,
+} from "@/lib/api";
 import type { JarvisEvent, JarvisOrbVisualState, LocalVoiceLoopController } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +70,19 @@ interface JarvisPresenceShellProps {
   };
   events: JarvisEvent[];
   eventConnectionState: string;
+  executionPreview?: JarvisExecutionPreview | null;
+  executionApprovalEnvelope?: JarvisExecutionApprovalEnvelope | null;
+  executionDispatchResult?: JarvisExecutionDispatchResult | null;
+  executionBusy?: boolean;
+  executionError?: string;
+  onCreateExecutionPreview?: (payload: { intent: string; targetPath?: string }) => void;
+  onRequestExecutionApproval?: () => void;
+  onApproveExecution?: (payload: { confirmationPhrase?: string; readbackText?: string }) => void;
+  onRejectExecution?: (reason?: string) => void;
+  onCancelExecution?: (reason?: string) => void;
+  onStopExecution?: (reason?: string) => void;
+  onClarifyExecution?: (reason?: string) => void;
+  onDispatchExecution?: () => void;
 }
 
 export function JarvisPresenceShell({
@@ -77,6 +95,19 @@ export function JarvisPresenceShell({
   audioRecorder,
   events,
   eventConnectionState,
+  executionPreview,
+  executionApprovalEnvelope,
+  executionDispatchResult,
+  executionBusy,
+  executionError,
+  onCreateExecutionPreview,
+  onRequestExecutionApproval,
+  onApproveExecution,
+  onRejectExecution,
+  onCancelExecution,
+  onStopExecution,
+  onClarifyExecution,
+  onDispatchExecution,
 }: JarvisPresenceShellProps) {
   const fallbackOffline = useMemo(() => fallbackDashboard("offline"), []);
   const [smartBarTextPulse, setSmartBarTextPulse] = useState(false);
@@ -92,6 +123,7 @@ export function JarvisPresenceShell({
   const conversationalIntake = dashboard.conversational_intake ?? fallbackOffline.conversational_intake!;
   const brainAdapter = dashboard.brain_adapter ?? fallbackOffline.brain_adapter!;
   const hermes = dashboard.hermes_execution ?? {};
+  const governedExecution = dashboard.governed_execution;
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
   const voiceSession = dashboard.voice_session ?? fallbackOffline.voice_session;
@@ -163,7 +195,7 @@ export function JarvisPresenceShell({
       data-visual-qa-preview-state={visualQaPreviewState ?? "auto"}
       data-visual-qa-no-hermes="true"
       data-visual-qa-no-sensors="true"
-      data-visual-qa-no-approval="true"
+      data-visual-qa-approval="backend-gated"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,182,212,0.105),transparent_35%),radial-gradient(circle_at_68%_48%,rgba(248,113,113,0.045),transparent_24%),radial-gradient(circle_at_35%_75%,rgba(250,204,21,0.025),transparent_29%),linear-gradient(180deg,rgba(0,3,10,0.08),rgba(0,3,10,0.98))]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(103,232,249,0.016)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.012)_1px,transparent_1px)] bg-[length:128px_128px]" />
@@ -197,16 +229,16 @@ export function JarvisPresenceShell({
               {eventConnectionState}
             </Badge>
             <Badge className={approvalsPending ? "border-amber-300/40 bg-amber-400/12 text-amber-100" : "border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60"} variant="outline">
-              {approvalsPending ? "approval required" : "read-only"}
+              {approvalsPending ? "approval required" : "backend-gated"}
             </Badge>
             <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-300/34 bg-red-950/28 px-3 text-red-100" data-testid="jarvis-header-kill-switch">
               <ShieldAlert className="h-3.5 w-3.5" />
               KILL SWITCH
             </Button>
             <span className="sr-only">Kill Switch {valueText(system.kill_switch_state, "not_wired")}</span>
-            <span className="sr-only">brain {brainProvider} · ext {externalBrainCalled ? "true" : "false"} · risk {intakeRisk} · modo preview/read-only · read-only</span>
-            <span className="sr-only">No POST/PUT/DELETE. No execute. No sensores sin activación manual. No fake metrics.</span>
-            <span className="sr-only">JARVIS gobierna. Hermes ejecuta. El dashboard mira, no toca.</span>
+            <span className="sr-only">brain {brainProvider} · ext {externalBrainCalled ? "true" : "false"} · risk {intakeRisk} · modo approval backend-gated</span>
+            <span className="sr-only">POST solo a endpoints gobernados de execution. No execute. No sensores sin activación manual. No fake metrics.</span>
+            <span className="sr-only">JARVIS gobierna. Hermes ejecuta solo por dispatch gobernado. El frontend no llama Hermes directo.</span>
           </div>
         </div>
       </header>
@@ -238,7 +270,24 @@ export function JarvisPresenceShell({
         />
 
         <aside className="hidden min-h-0 content-start gap-3 overflow-auto pr-1 xl:grid" data-testid="jarvis-contextual-side-panel" data-side-panel-style="premium-quiet-not-dashboard">
-          <JarvisApprovalPanel cards={approvalCards} pendingCount={approvals.pending_count} />
+          <JarvisApprovalPanel
+            cards={approvalCards}
+            pendingCount={approvals.pending_count}
+            executionStatus={governedExecution}
+            activePreview={executionPreview}
+            activeEnvelope={executionApprovalEnvelope}
+            dispatchResult={executionDispatchResult}
+            busy={executionBusy}
+            error={executionError}
+            onCreatePreview={onCreateExecutionPreview}
+            onRequestApproval={onRequestExecutionApproval}
+            onApprove={onApproveExecution}
+            onReject={onRejectExecution}
+            onCancel={onCancelExecution}
+            onStop={onStopExecution}
+            onClarify={onClarifyExecution}
+            onDispatch={onDispatchExecution}
+          />
           <JarvisCameraPanel
             cameraState={cameraControl.cameraState}
             cameraError={cameraControl.cameraError}

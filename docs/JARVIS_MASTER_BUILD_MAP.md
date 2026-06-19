@@ -1697,3 +1697,67 @@ graph/vector DB obligatoria.
 Siguiente recomendado: PR #165 consola gobernada de review de memoria + rotacion/export auditado.
 
 Documento: `docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.
+
+## PR #165 — Phase 1 Completion: Governed Hermes Execution E2E + Pilot Hardening
+
+Estado: implementado como control-plane local gobernado y piloto de cierre de
+Phase 1.
+
+Incluye:
+
+- `Phase1GovernedExecutionControlPlane` en
+  `jarvis/phase_1_governed_execution.py`.
+- Pipeline real: intake, candidate action, preview, risk classification,
+  allowed/requires_approval/denied/unsupported, approval envelope, decision,
+  dispatch gobernado, audit persistente, status/event stream y stop/cancel
+  metadata.
+- Reutilizacion de Hermes/JARVIS existentes: `PolicyEngine`,
+  `ApprovalGateway`-compatible envelopes, `Mark3MissionLoop`,
+  `Mark3HermesRuntimeBridge`, `ConversationalIntakePipeline`,
+  `PersistentAuditLedger` y `MemoryBrainV2Store`.
+- Endpoints gobernados:
+  - `GET /mark-3/execution/status`
+  - `GET /mark-3/phase-1/status`
+  - `POST /mark-3/execution/preview`
+  - `POST /mark-3/execution/request-approval`
+  - `POST /mark-3/execution/approval-decision`
+  - `POST /mark-3/execution/dispatch`
+  - `POST /mark-3/execution/cancel`
+  - `POST /mark-3/execution/stop`
+- `/jarvis` muestra approval panel backend-gated real, risk badge, preview,
+  what-will/what-will-not, confirmation/readback, audit destination, memory
+  influence, stop/cancel y Phase 1 readiness.
+- Dashboard/event stream exponen `governed_execution`, `phase_1_completion` y
+  `phase_1_state`.
+- Persistent Audit queda conectado a eventos reales metadata-only.
+- Memory Brain v2 influye solo como contexto explicable, nunca como permiso.
+- Voice loop puede iniciar intencion textual manual, pero voz y wake phrase no
+  aprueban.
+
+Acciones reales soportadas en cierre Phase 1:
+
+- estado local safe/read-only;
+- prepare-only;
+- lectura exacta local no sensible mediante bridge Hermes existente con approval
+  valido.
+
+Sigue bloqueado o fuera de alcance:
+
+- `/execute`;
+- frontend directo a Hermes;
+- shell libre;
+- comandos arbitrarios;
+- `.env`, secretos, credenciales, tokens, passwords, cookies y session material;
+- deploy, dinero, Stripe, email, publicacion, dominios y operaciones externas;
+- critical double/triple approval configurable;
+- wake always-on real;
+- audio bruto backend, frames o transcripts completos sensibles.
+
+Recomendacion: Phase 2 debe continuar como macro-PR para Strong Approval v2,
+Hermes Action Bridge allowlisted, execution history, stop/rollback contracts y
+pilot local con evidencia.
+
+Documentos:
+
+- `docs/jarvis-pr-165-phase-1-completion-governed-execution-pilot.md`
+- `docs/jarvis-phase-1-completion-report.md`

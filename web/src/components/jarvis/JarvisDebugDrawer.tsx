@@ -355,7 +355,7 @@ export function JarvisDebugDrawer({
             data-visual-qa-preview="local-front-end-only"
             data-visual-qa-no-hermes="true"
             data-visual-qa-no-sensors="true"
-            data-visual-qa-no-approval="true"
+            data-visual-qa-no-direct-approval="true"
             data-visual-qa-no-backend-execution="true"
             data-visual-qa-query-param="jarvisVisualPreview"
           >
@@ -394,7 +394,7 @@ export function JarvisDebugDrawer({
               ))}
             </div>
             <div className="sr-only">
-              idle listening transcribing thinking speaking alert stopped visual QA preview states; no Hermes call, no sensor permission call, no real approval action, no execution route
+              idle listening transcribing thinking speaking alert stopped visual QA preview states; no Hermes call, no sensor permission call, no direct approval action, no generic execute route
             </div>
           </article>
           <article className="border border-cyan-300/12 bg-[#04101f]/60 p-4" data-testid="jarvis-hermes-timeline-summary">
@@ -490,13 +490,13 @@ export function JarvisDebugDrawer({
                 <Card>
                   <CardHeader>
                     <CardTitle>Visual Command Center Pilot</CardTitle>
-                    <CardDescription>read-only pilot · El dashboard mira, no toca.</CardDescription>
+                    <CardDescription>governed pilot · El dashboard no ejecuta Hermes directo.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-2 sm:grid-cols-2">
                       <SafetyLine>No se ejecuta Hermes desde el frontend.</SafetyLine>
                       <SafetyLine>No se activan sensores sin control manual explícito.</SafetyLine>
-                      <SafetyLine>No hay approvals reales en esta fase.</SafetyLine>
+                      <SafetyLine>Approvals reales pasan por backend gobernado; no hay aprobación directa de frontend.</SafetyLine>
                       <SafetyLine>No hay métricas falsas.</SafetyLine>
                       <SafetyLine>Los valores sin evidencia se muestran como unknown.</SafetyLine>
                       <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
@@ -694,7 +694,7 @@ export function JarvisDebugDrawer({
                   </div>
                   <div className="border border-border/70 bg-background/35 p-4">
                     <ZapOff className="mb-3 h-5 w-5 text-warning" />
-                    <p className="font-mono-ui text-sm">Esta pantalla no llama a Hermes, no aprueba y no ejecuta.</p>
+                    <p className="font-mono-ui text-sm">Esta pantalla pide approvals al backend gobernado; no llama a Hermes directo.</p>
                   </div>
                 </div>
               </div>
@@ -914,12 +914,12 @@ export function JarvisDebugDrawer({
                       <Cpu className="h-5 w-5 text-muted-foreground" />
                       <CardTitle>Frontend Pilot / Hardening</CardTitle>
                     </div>
-                    <CardDescription>Pilot read-only para /jarvis; El dashboard mira, no toca.</CardDescription>
+                    <CardDescription>Pilot backend-gated para /jarvis; el dashboard no ejecuta Hermes directo.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList
                       items={[
-                        ["mode", valueText(frontendPilot.state?.mode, "read_only_pilot")],
+                        ["mode", valueText(frontendPilot.state?.mode, "governed_pilot")],
                         ["route", valueText(frontendPilot.state?.dashboard_route, "/jarvis")],
                         ["endpoint", valueText(frontendPilot.state?.backend_status_endpoint, DASHBOARD_READ_MODEL_ENDPOINT)],
                         ["execute", yesNo(frontendPilot.state?.frontend_can_execute, "true", "false")],
@@ -929,9 +929,9 @@ export function JarvisDebugDrawer({
                       ]}
                     />
                     <div className="grid gap-2">
-                      <SafetyLine>Pilot read-only</SafetyLine>
-                      <SafetyLine>El dashboard mira, no toca.</SafetyLine>
-                      <SafetyLine>No POST/PUT/DELETE.</SafetyLine>
+                      <SafetyLine>Pilot backend-gated</SafetyLine>
+                      <SafetyLine>El dashboard no ejecuta Hermes directo.</SafetyLine>
+                      <SafetyLine>POST solo a endpoints gobernados.</SafetyLine>
                       <SafetyLine>No execute.</SafetyLine>
                       <SafetyLine>No sensores sin activación manual.</SafetyLine>
                       <SafetyLine>Dependency hardening queda para una PR separada.</SafetyLine>
