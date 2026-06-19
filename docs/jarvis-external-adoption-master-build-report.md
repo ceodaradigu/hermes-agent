@@ -2,6 +2,38 @@
 
 Fecha: 2026-06-18
 
+## Actualización PR #161 - Presence UI Visual Overhaul v2 + Audio-Reactive Orb
+
+Implementado en esta rama:
+
+- `/jarvis` recibe una correccion fuerte de direccion visual sobre #160:
+  fondo mucho mas oscuro, glow general reducido, nucleo azul-blanco
+  diferenciado, particulas frias separadas y alert/approval en canal cromatico
+  propio.
+- `JarvisOrb3D` mantiene WebGL manual sin dependencias nuevas. Añade
+  `stateReactiveEnergy`, `coreColor`, `coreGlow`, `outerGlow`, uniform
+  `u_reactivity`, respiracion CSS `jarvis-core-breathe` y contratos testeables
+  (`data-visual-layering`, `data-voice-reactive-mode`,
+  `data-orb-reactive-states`, `jarvis-distinct-core`).
+- La reactividad audio/voice es state-driven: idle, wake_listening, listening,
+  transcribing, thinking, speaking, approval_required, alert/error y stopped
+  cambian energia, particulas, ondas y glow sin Web Audio, sin amplitud real
+  nueva, sin auto-start y sin permisos adicionales.
+- Laterales, approvals, camara, audio bruto y finance se suavizan como paneles
+  premium/minimos. La smart bar sigue siendo centro humano de interaccion con
+  respuesta y transcripcion visibles, envio deshabilitado y detalles plegados.
+- Repos revisadas para #161: `jincocodev/openclaw-jarvis-ui` (ISC),
+  `Suryansh777777/Jarvis-CV` (licencia no visible),
+  `zoharbarzilai/Generative-3D-Audio-Visualizer` (licencia no visible),
+  `harsh-raj00/my-jarvis` (MIT), `TheStack-ai/jarvis-orb` (MIT),
+  `chevgan/react-ai-voice-visualizer` (MIT), `ethanplusai/jarvis`
+  (personal/non-commercial visible), `pmndrs/react-three-fiber`/`drei`/
+  `react-postprocessing` (MIT).
+- No se copio codigo externo, no se adopto runtime externo, no se instalaron
+  dependencias, no se abrieron sensores nuevos y se mantiene el contrato:
+  JARVIS gobierna; Hermes ejecuta.
+- Documentacion completa: `docs/jarvis-pr-161-presence-ui-visual-overhaul-v2-audio-reactive-orb.md`.
+
 ## Actualización PR #160 - Presence UI real + 3D Orb/HUD adoption
 
 Implementado en esta rama:

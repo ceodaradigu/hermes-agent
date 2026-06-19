@@ -44,15 +44,16 @@ export function JarvisRecordingPanel({
 
   return (
     <article
-      className="relative overflow-hidden rounded-[2px] border border-cyan-300/18 bg-[#04101f]/62 p-3"
+      className="relative overflow-hidden rounded-[2px] border border-cyan-100/10 bg-[#000711]/52 p-3 backdrop-blur"
       data-testid="jarvis-local-audio-recorder"
+      data-panel-style="folded-raw-audio-local-only"
     >
-      <div className="mb-2 flex items-center justify-between gap-2 border-b border-cyan-300/12 pb-2">
+      <div className="mb-2 flex items-center justify-between gap-2 border-b border-cyan-100/9 pb-2">
         <div className="flex items-center gap-2">
-          <Waves className="h-4 w-4 text-cyan-200/65" />
-          <h2 className="font-expanded text-xs font-bold uppercase tracking-[0.14em] text-cyan-50">Audio bruto local</h2>
+          <Waves className="h-4 w-4 text-[#e6fbff]/52" />
+          <h2 className="font-expanded text-xs font-bold uppercase tracking-[0.14em] text-cyan-50/80">Audio bruto local</h2>
         </div>
-        <Badge className={recordingActive ? "border-red-300/50 bg-red-500/15 text-red-100" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"} variant="outline">
+        <Badge className={recordingActive ? "border-red-300/50 bg-red-500/15 text-red-100" : "border-cyan-100/16 bg-[#e6fbff]/[0.04] text-cyan-100/70"} variant="outline">
           {recordingState}
         </Badge>
       </div>
@@ -65,7 +66,7 @@ export function JarvisRecordingPanel({
           variant="outline"
           size="sm"
           onClick={onStart}
-          className="border-cyan-300/30 bg-cyan-300/[0.06] text-cyan-50"
+          className="border-cyan-100/18 bg-[#e6fbff]/[0.035] text-cyan-50"
         >
           <Mic2 className="mr-2 h-3.5 w-3.5" />
           Grabar
@@ -94,7 +95,7 @@ export function JarvisRecordingPanel({
       {recordingError && <p className="mt-2 font-mono-ui text-xs text-red-100/80">{recordingError}</p>}
 
       {recording && (
-        <div className="mt-3 grid gap-2 border border-cyan-300/12 bg-[#071629]/45 p-2">
+        <div className="mt-3 grid gap-2 border border-cyan-100/9 bg-[#000711]/48 p-2">
           <div className="grid grid-cols-2 gap-2 font-mono-ui text-[0.7rem] text-cyan-100/60">
             <span>tamaño {formatBytes(recording.sizeBytes)}</span>
             <span>duración {formatDuration(recording.durationMs)}</span>
@@ -104,7 +105,7 @@ export function JarvisRecordingPanel({
             <a
               href={recording.url}
               download={recording.filename}
-              className="inline-flex h-8 items-center justify-center gap-2 border border-cyan-300/25 bg-cyan-300/[0.045] px-3 font-display text-[0.65rem] uppercase tracking-[0.1em] text-cyan-100 hover:bg-foreground/10"
+              className="inline-flex h-8 items-center justify-center gap-2 border border-cyan-100/18 bg-[#e6fbff]/[0.035] px-3 font-display text-[0.65rem] uppercase tracking-[0.1em] text-cyan-100 hover:bg-foreground/10"
             >
               <Download className="h-3.5 w-3.5" />
               Descargar
@@ -117,7 +118,7 @@ export function JarvisRecordingPanel({
         </div>
       )}
 
-      <details className="mt-3 border border-cyan-300/10 bg-[#071629]/45 p-2">
+      <details className="mt-3 border border-cyan-100/9 bg-[#000711]/44 p-2">
         <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/70">privacidad audio bruto</summary>
         <div className="mt-2 grid gap-2">
           <SafetyLine>Botón explícito separado de hablar con JARVIS.</SafetyLine>
@@ -127,7 +128,7 @@ export function JarvisRecordingPanel({
         </div>
       </details>
 
-      <div className="mt-2 max-h-16 overflow-auto border border-cyan-300/10 bg-[#020b17]/60 p-2">
+      <div className="mt-2 max-h-16 overflow-auto border border-cyan-100/8 bg-[#000711]/54 p-2">
         {(auditEvents.length ? auditEvents : [{ event: "recorder_idle", at: "local", metadata: { local_only: true } }]).slice(0, 4).map((event) => (
           <p key={`${event.event}-${event.at}`} className="font-mono-ui text-[0.64rem] text-cyan-100/42">
             {event.event} · {event.at}

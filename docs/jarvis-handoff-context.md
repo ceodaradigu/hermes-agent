@@ -235,8 +235,36 @@ Actualización #160 / Fase 1 Presence UI real + 3D Orb/HUD adoption:
 - Repos externas revisadas y documentadas en
   `docs/jarvis-pr-160-presence-ui-real-3d-orb-hud-adoption.md`; todo lo tomado
   fue reimplementacion visual/conceptual, no copia de runtimes.
-- Siguiente PR recomendada: #161 Presence verification and visual QA con
-  screenshots/browser checks, canvas no blanco y medicion de frame budget.
+- Recomendacion original posterior: Presence verification and visual QA con
+  screenshots/browser checks, canvas no blanco y medicion de frame budget. #161
+  se uso antes para la remodelacion visual v2; esa QA queda recomendada como
+  #162.
+
+Actualización #161 / Fase 1 Presence UI Visual Overhaul v2 + Audio-Reactive Orb:
+
+- #161 corrige la direccion visual de #160 porque el resultado anterior seguia
+  demasiado uniforme: fondo, halo, particulas y nucleo compartian demasiado cian
+  y los laterales seguian leyendo como dashboard.
+- `/jarvis` ahora usa fondo mucho mas oscuro (`#00030a`), halo exterior mas
+  contenido, particulas cian/turquesa frias y nucleo azul-blanco diferenciado
+  (`#e6fbff`) con `coreGlow`/`jarvis-core-breathe`.
+- `JarvisOrb3D` añade contrato visual testeable:
+  `data-visual-layering`, `data-voice-reactive-mode`,
+  `data-orb-reactive-states`, `data-testid="jarvis-distinct-core"`.
+- `useJarvisOrbState` añade `stateReactiveEnergy`, `coreColor`, `coreGlow` y
+  `outerGlow`; el shader WebGL usa `u_reactivity` para que idle/listening/
+  transcribing/thinking/speaking/approval/error/stopped se sientan distintos.
+- La reactividad es state-driven y usa señales ya disponibles. No abre Web
+  Audio, no captura amplitud nueva, no auto-activa micro/camara y no envia audio
+  ni frames.
+- Laterales, approvals, camara, audio bruto y finance quedan mas discretos y
+  premium mediante paneles plegados/minimos. Smart bar sigue siendo el centro de
+  interaccion humana, con respuesta/transcripcion visibles y detalles plegados.
+- No se añadieron dependencias. Se revisaron repos externas y se documento todo
+  en `docs/jarvis-pr-161-presence-ui-visual-overhaul-v2-audio-reactive-orb.md`.
+- Siguiente PR recomendada: #162 Presence Visual QA + Browser Verification con
+  screenshots desktop/mobile, canvas nonblank, fallback WebGL y medicion simple
+  de frame budget.
 
 Estado alineado de las fases maestras:
 

@@ -152,6 +152,157 @@ code {
   }
 }
 
+@keyframes jarvis-core-breathe {
+  0%, 100% {
+    transform: scale(0.99);
+    filter: saturate(1.02) brightness(0.96);
+  }
+  42% {
+    transform: scale(1.024);
+    filter: saturate(1.18) brightness(1.10);
+  }
+  64% {
+    transform: scale(1.008);
+    filter: saturate(1.08) brightness(1.04);
+  }
+}
+
+@keyframes jarvis-micro-orbit {
+  0% {
+    opacity: var(--particle-opacity-low);
+    transform: rotate(var(--orbit-angle)) translateX(var(--orbit-radius)) scale(0.74);
+  }
+  38% {
+    opacity: var(--particle-opacity-high);
+    transform: rotate(calc(var(--orbit-angle) + 136deg)) translateX(var(--orbit-radius)) scale(1.06);
+  }
+  100% {
+    opacity: var(--particle-opacity-end);
+    transform: rotate(calc(var(--orbit-angle) + 360deg)) translateX(var(--orbit-radius)) scale(0.86);
+  }
+}
+
+.jarvis-particle-sphere-stage {
+  animation-name: jarvis-sphere-size-breathe;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+  animation-iteration-count: infinite;
+  transform-origin: center;
+}
+
+@keyframes jarvis-sphere-size-breathe {
+  0%, 100% {
+    transform: scale(var(--sphere-scale-mid));
+  }
+  34% {
+    transform: scale(var(--sphere-scale-min));
+  }
+  62% {
+    transform: scale(var(--sphere-scale-max));
+  }
+}
+
+.jarvis-micro-particle {
+  animation-name: jarvis-micro-orbit;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  filter: brightness(1.14) saturate(1.18);
+}
+
+@keyframes jarvis-speaking-spike {
+  0%, 100% {
+    opacity: var(--spike-opacity-low);
+    transform: rotate(var(--spike-angle)) translateX(28%) scaleX(0.24);
+  }
+  36% {
+    opacity: var(--spike-opacity-high);
+    transform: rotate(calc(var(--spike-angle) + 2deg)) translateX(calc(28% + var(--spike-push))) scaleX(1);
+  }
+  58% {
+    opacity: var(--spike-opacity-mid);
+    transform: rotate(calc(var(--spike-angle) - 1deg)) translateX(calc(28% + var(--spike-push-mid))) scaleX(0.58);
+  }
+}
+
+.jarvis-speaking-spike {
+  animation-name: jarvis-speaking-spike;
+  animation-timing-function: cubic-bezier(0.16, 0.8, 0.24, 1);
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 0 12px rgba(230,251,255,0.55));
+  width: var(--spike-length);
+}
+
+@keyframes jarvis-fallback-particle {
+  0%, 100% {
+    opacity: var(--fallback-opacity-low);
+    transform: rotate(var(--fallback-angle)) translateX(var(--fallback-radius)) scale(0.76);
+  }
+  48% {
+    opacity: var(--fallback-opacity-high);
+    transform: rotate(calc(var(--fallback-angle) + 172deg)) translateX(var(--fallback-radius-mid)) scale(1.08);
+  }
+}
+
+.jarvis-fallback-particle {
+  animation-name: jarvis-fallback-particle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  filter: brightness(1.18) saturate(1.1);
+}
+
+@keyframes jarvis-emergent-core {
+  0%, 100% {
+    opacity: var(--core-opacity-low);
+    transform: rotate(var(--core-angle)) translateX(var(--core-radius)) scale(0.68);
+  }
+  42% {
+    opacity: var(--core-opacity-high);
+    transform: rotate(calc(var(--core-angle) + 84deg)) translateX(var(--core-radius-tight)) scale(1.12);
+  }
+  70% {
+    opacity: var(--core-opacity-low);
+    transform: rotate(calc(var(--core-angle) + 176deg)) translateX(var(--core-radius-mid)) scale(0.82);
+  }
+}
+
+.jarvis-emergent-core-particle {
+  animation-name: jarvis-emergent-core;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  filter: brightness(1.2) saturate(1.08);
+}
+
+@keyframes jarvis-emergent-core-ring {
+  0%, 100% {
+    filter: blur(0.4px);
+  }
+  46% {
+    filter: blur(1px);
+  }
+}
+
+.jarvis-emergent-core-ring {
+  animation: jarvis-emergent-core-ring 4.6s ease-in-out infinite;
+}
+
+@keyframes jarvis-core-scan {
+  0%, 100% {
+    opacity: 0.28;
+    transform: rotate(0deg) scale(0.985);
+  }
+  45% {
+    opacity: 0.72;
+    transform: rotate(96deg) scale(1.018);
+  }
+  72% {
+    opacity: 0.42;
+    transform: rotate(180deg) scale(1.004);
+  }
+}
+
+.jarvis-core-scan {
+  animation: jarvis-core-scan 5.8s ease-in-out infinite;
+}
+
 /* ---- Plus-lighter blend for headings ---- */
 .blend-lighter {
   mix-blend-mode: plus-lighter;
