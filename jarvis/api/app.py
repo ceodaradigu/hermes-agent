@@ -238,6 +238,7 @@ from jarvis.phase_2_local_assistant_runtime import (
     ExecutionHistoryStore,
     Phase2LocalAssistantRuntimeControlPlane,
 )
+from jarvis.phase_3_local_runtime import Phase3LocalRuntimeControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -606,6 +607,34 @@ class Mark3ExecutionStopRequest(BaseModel):
 
 class Mark3ExecutionHistoryRequest(BaseModel):
     limit: int = 25
+
+
+class Mark3LocalDaemonHeartbeatRequest(BaseModel):
+    daemon_id: Optional[str] = None
+    actor: str = "David"
+
+
+class Mark3LocalDaemonControlRequest(BaseModel):
+    requested_by: str = "David"
+    reason: str = "operator request"
+    timeout_seconds: int = 10
+
+
+class Mark3TrustedApprovalChannelVerifyRequest(BaseModel):
+    channel_id: str
+    actor: str = "David"
+    local_presence: bool = True
+
+
+class Mark3TrustedApprovalDecisionRequest(BaseModel):
+    approval_id: str
+    decision: str = "approve"
+    actor: str = "David"
+    channel_id: str = "ui_local_browser"
+    step_id: Optional[str] = None
+    confirmation_phrase: Optional[str] = None
+    readback_text: Optional[str] = None
+    reason: str = ""
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2067,7 +2096,7 @@ def create_app(
         adapter_factory=hermes_runtime_adapter_factory,
     )
     app.state.execution_history = ExecutionHistoryStore.from_environment()
-    app.state.phase_2_local_assistant_runtime = Phase2LocalAssistantRuntimeControlPlane(
+    app.state.phase_2_local_assistant_runtime = Phase3LocalRuntimeControlPlane(
         intake_pipeline=app.state.conversational_intake_pipeline,
         policy_engine=app.state.policy_engine,
         mission_loop=app.state.mark_3_mission_loop,
@@ -2076,6 +2105,7 @@ def create_app(
         memory_brain_v2=app.state.memory_brain_v2,
         execution_history=app.state.execution_history,
     )
+    app.state.phase_3_local_runtime = app.state.phase_2_local_assistant_runtime
     app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
 
     @app.get("/health")
@@ -2432,13 +2462,88 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-3/status")
+    def mark_3_phase_3_status() -> dict:
+        return app.state.phase_3_local_runtime.phase_3_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
+    @app.get("/mark-3/local-daemon/status")
+    def mark_3_local_daemon_status() -> dict:
+        return app.state.phase_3_local_runtime.local_daemon_status()
+
+    @app.get("/mark-3/local-daemon/health")
+    def mark_3_local_daemon_health() -> dict:
+        return app.state.phase_3_local_runtime.local_daemon_health()
+
+    @app.post("/mark-3/local-daemon/heartbeat")
+    def mark_3_local_daemon_heartbeat(payload: Mark3LocalDaemonHeartbeatRequest) -> dict:
+        try:
+            return app.state.phase_3_local_runtime.heartbeat(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/local-daemon/stop-request")
+    def mark_3_local_daemon_stop_request(payload: Mark3LocalDaemonControlRequest) -> dict:
+        return app.state.phase_3_local_runtime.daemon_stop_request(**payload.model_dump())
+
+    @app.post("/mark-3/local-daemon/restart-request")
+    def mark_3_local_daemon_restart_request(payload: Mark3LocalDaemonControlRequest) -> dict:
+        return app.state.phase_3_local_runtime.daemon_restart_request(**payload.model_dump())
+
+    @app.get("/mark-3/local-doctor/status")
+    def mark_3_local_doctor_status() -> dict:
+        return app.state.phase_3_local_runtime.local_doctor_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
+    @app.get("/mark-3/trusted-approval-channels/status")
+    def mark_3_trusted_approval_channels_status() -> dict:
+        return app.state.phase_3_local_runtime.trusted_approval_channels_status()
+
+    @app.post("/mark-3/trusted-approval-channels/verify")
+    def mark_3_trusted_approval_channels_verify(payload: Mark3TrustedApprovalChannelVerifyRequest) -> dict:
+        return app.state.phase_3_local_runtime.verify_trusted_channel(**payload.model_dump())
+
     @app.get("/mark-3/execution/action-catalog")
     def mark_3_execution_action_catalog() -> dict:
         return app.state.phase_2_local_assistant_runtime.action_catalog()
 
     @app.get("/mark-3/execution/history")
-    def mark_3_execution_history(limit: int = 25) -> dict:
-        return app.state.phase_2_local_assistant_runtime.history(limit=limit)
+    def mark_3_execution_history(
+        limit: int = 25,
+        action_key: Optional[str] = None,
+        risk: Optional[str] = None,
+        approval_status: Optional[str] = None,
+        stop_status: Optional[str] = None,
+        rollback_status: Optional[str] = None,
+    ) -> dict:
+        return app.state.phase_2_local_assistant_runtime.history(
+            limit=limit,
+            action_key=action_key,
+            risk=risk,
+            approval_status=approval_status,
+            stop_status=stop_status,
+            rollback_status=rollback_status,
+        )
+
+    @app.get("/mark-3/execution/history/export-preview")
+    def mark_3_execution_history_export_preview(
+        limit: int = 25,
+        action_key: Optional[str] = None,
+        risk: Optional[str] = None,
+        approval_status: Optional[str] = None,
+        stop_status: Optional[str] = None,
+        rollback_status: Optional[str] = None,
+    ) -> dict:
+        return app.state.phase_3_local_runtime.history_export_preview(
+            limit=limit,
+            action_key=action_key,
+            risk=risk,
+            approval_status=approval_status,
+            stop_status=stop_status,
+            rollback_status=rollback_status,
+        )
 
     @app.get("/mark-3/execution/history/{execution_id}")
     def mark_3_execution_history_detail(execution_id: str) -> dict:
@@ -2450,6 +2555,33 @@ def create_app(
     @app.get("/mark-3/approval/status")
     def mark_3_approval_status() -> dict:
         return app.state.phase_2_local_assistant_runtime.approval_status()
+
+    @app.post("/mark-3/approval/strong-decision")
+    def mark_3_approval_strong_decision(payload: Mark3TrustedApprovalDecisionRequest) -> dict:
+        try:
+            return app.state.phase_3_local_runtime.decide_strong_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="approval not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/approval/double-decision")
+    def mark_3_approval_double_decision(payload: Mark3TrustedApprovalDecisionRequest) -> dict:
+        try:
+            return app.state.phase_3_local_runtime.decide_double_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="approval not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/approval/triple-decision")
+    def mark_3_approval_triple_decision(payload: Mark3TrustedApprovalDecisionRequest) -> dict:
+        try:
+            return app.state.phase_3_local_runtime.decide_triple_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="approval not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/mark-3/local-runtime/status")
     def mark_3_local_runtime_status() -> dict:

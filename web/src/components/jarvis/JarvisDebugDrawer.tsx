@@ -109,11 +109,18 @@ export function JarvisDebugDrawer({
   const localDoctorProcess = localDoctorRuntime?.process as Record<string, unknown> | undefined;
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackOffline.timeline ?? [];
   const phase2Status = (dashboard.phase_2_status ?? {}) as Record<string, unknown>;
+  const phase3Status = (dashboard.phase_3_status ?? {}) as Record<string, unknown>;
   const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 8);
   const executionHistoryStatus: JarvisExecutionHistoryStatus = dashboard.execution_history?.status ?? dashboard.governed_execution?.execution_history ?? {};
   const executionHistoryItems: JarvisExecutionHistoryItem[] = (dashboard.execution_history?.items ?? dashboard.governed_execution?.execution_history?.recent ?? []).slice(0, 5);
   const localRuntime: JarvisLocalRuntimeStatus = dashboard.local_runtime ?? dashboard.governed_execution?.local_runtime ?? {};
+  const localDaemon = (dashboard.local_daemon ?? localRuntime.daemon ?? {}) as Record<string, unknown>;
+  const trayReadiness = (dashboard.tray_readiness ?? localRuntime.tray ?? {}) as Record<string, unknown>;
+  const trustedChannels = (dashboard.trusted_approval_channels ?? localRuntime.trusted_approval_channels ?? {}) as Record<string, unknown>;
+  const trustedChannelItems = (trustedChannels.channels as Record<string, unknown>[] | undefined ?? []).slice(0, 7);
+  const remoteBridgeFuture = (localRuntime.remote_bridge_future ?? phase3Status.remote_bridge_future ?? {}) as Record<string, unknown>;
   const browserVerification: JarvisBrowserVerificationStatus = dashboard.browser_verification ?? dashboard.governed_execution?.browser_verification ?? {};
+  const phase3Pilot = (browserVerification.phase_3_pilot ?? phase3Status.browser_local_pilot ?? {}) as Record<string, unknown>;
   const browserChecks: JarvisBrowserVerificationCheck[] = (browserVerification.checks ?? []).slice(0, 8);
   const stopRollbackContracts = (dashboard.stop_rollback_contracts ?? dashboard.governed_execution?.stop_rollback_contracts ?? {}) as Record<string, unknown>;
   const voicePhase2Runtime: JarvisPhase2VoiceRuntime = voiceRuntimePack.phase_2_runtime ?? {};
@@ -137,6 +144,16 @@ export function JarvisDebugDrawer({
     ["local runtime ready", yesNo(phase2Status.local_runtime_ready, "true", "false")],
   ] as const;
 
+  const phase3Rows = [
+    ["phase", valueText(phase3Status.phase, "Phase 3")],
+    ["status", valueText(phase3Status.status, "ready")],
+    ["daemon contract", yesNo((phase3Status.implemented_blocks as Record<string, unknown> | undefined)?.local_runtime_daemon_contract, "implemented", "unknown")],
+    ["trusted channels", yesNo((phase3Status.implemented_blocks as Record<string, unknown> | undefined)?.trusted_approval_channels, "implemented", "unknown")],
+    ["double approval", yesNo((phase3Status.implemented_blocks as Record<string, unknown> | undefined)?.double_approval_two_steps, "real", "unknown")],
+    ["triple", valueText((phase3Status.blocked_or_unsupported as Record<string, unknown> | undefined)?.triple, "blocked")],
+    ["remote approval", yesNo((phase3Status.security_gates as Record<string, unknown> | undefined)?.remote_approval_allowed, "allowed", "false")],
+  ] as const;
+
   const localRuntimeRows = [
     ["daemon", valueText(localRuntime.daemon_status, "not_running")],
     ["tray", valueText(localRuntime.tray_status, "not_running")],
@@ -146,6 +163,54 @@ export function JarvisDebugDrawer({
     ["auto start", yesNo(localRuntime.auto_start_enabled, "true", "false")],
     ["opt-in", yesNo(localRuntime.user_opt_in_required, "true", "false")],
     ["binding", valueText(localRuntime.local_only_binding, "127.0.0.1/localhost")],
+  ] as const;
+
+  const daemonRows = [
+    ["daemon_id", valueText(localDaemon.daemon_id)],
+    ["status", valueText(localDaemon.daemon_status, "running_embedded_local_api_process")],
+    ["pid", valueText(localDaemon.pid)],
+    ["bind", `${valueText(localDaemon.bind_host, "127.0.0.1")}:${valueText(localDaemon.bind_port, "9119")}`],
+    ["local_only", yesNo(localDaemon.local_only, "true", "false")],
+    ["auto_start", yesNo(localDaemon.auto_start_enabled, "true", "false")],
+    ["background", yesNo(localDaemon.background_listening_enabled, "true", "false")],
+    ["mic/camera/wake auto", `${yesNo(localDaemon.mic_auto_start, "true", "false")}/${yesNo(localDaemon.camera_auto_start, "true", "false")}/${yesNo(localDaemon.wake_auto_start, "true", "false")}`],
+    ["health", valueText(localDaemon.health_status, "healthy")],
+    ["heartbeat", valueText(localDaemon.last_heartbeat_at, "none")],
+    ["stop", yesNo(localDaemon.stop_supported, "supported", "unsupported")],
+    ["restart", yesNo(localDaemon.restart_supported, "supported", "unsupported")],
+  ] as const;
+
+  const trayRows = [
+    ["available", yesNo(trayReadiness.tray_available, "true", "false")],
+    ["installed", yesNo(trayReadiness.tray_installed, "true", "false")],
+    ["running", yesNo(trayReadiness.tray_running, "true", "false")],
+    ["open JARVIS", yesNo(trayReadiness.can_open_jarvis, "true", "false")],
+    ["show approval", yesNo(trayReadiness.can_show_approval, "true", "false")],
+    ["show status", yesNo(trayReadiness.can_show_status, "true", "false")],
+    ["voice/camera/recording", `${yesNo(trayReadiness.can_toggle_voice_session, "voice", "no voice")} · ${yesNo(trayReadiness.can_toggle_camera_session, "camera", "no camera")} · ${yesNo(trayReadiness.can_toggle_recording_session, "recording", "no recording")}`],
+    ["no background capture", yesNo(trayReadiness.no_background_capture, "true", "false")],
+  ] as const;
+
+  const trustedChannelRows = [
+    ["trusted enabled", valueText(trustedChannels.trusted_enabled_channel_count, "0")],
+    ["normal", yesNo(trustedChannels.can_grant_normal, "available", "false")],
+    ["strong", yesNo(trustedChannels.can_grant_strong, "available", "false")],
+    ["double", yesNo(trustedChannels.can_grant_double, "available", "false")],
+    ["triple", yesNo(trustedChannels.can_grant_triple, "available", "false")],
+    ["voice approves", yesNo(trustedChannels.voice_can_approve, "allowed", "false")],
+    ["wake approves", yesNo(trustedChannels.wake_phrase_can_approve, "allowed", "false")],
+    ["remote approval", yesNo(trustedChannels.remote_approval_allowed, "allowed", "false")],
+  ] as const;
+
+  const doubleApprovalRows = [
+    ["step 1", "strong local browser/terminal"],
+    ["step 2", "separate trusted channel"],
+    ["same approval_id", "true"],
+    ["different step_id", "true"],
+    ["readback", "required"],
+    ["confirmation phrase", "required"],
+    ["anti-reuse", "enabled"],
+    ["triple", valueText(trustedChannels.triple_status, "triple_requires_additional_trusted_channel_not_configured")],
   ] as const;
 
   const browserVerificationRows = [
@@ -371,6 +436,27 @@ export function JarvisDebugDrawer({
     ["ffmpeg", yesNo(localDoctor.optional_dependencies?.ffmpeg?.available, "available", "missing")],
     ["openWakeWord", yesNo(localDoctor.optional_dependencies?.openwakeword?.available, "available", "missing")],
     ["psutil", yesNo(localDoctor.optional_dependencies?.psutil?.available, "available", "unavailable")],
+  ] as const;
+
+  const phase3DoctorRows = [
+    ["schema", valueText(localDoctor.schema_version, "jarvis.local_doctor.v1")],
+    ["bind safe", yesNo(localDoctor.state?.local_bind_host_safe, "true", "false")],
+    ["external bind", yesNo(localDoctor.state?.external_bind_enabled, "true", "false")],
+    [".env read", yesNo(localDoctor.state?.env_file_read, "true", "false")],
+    ["secrets exposed", yesNo(localDoctor.state?.secrets_exposed, "true", "false")],
+    ["state dir", valueText((localDoctor.storage as Record<string, unknown> | undefined)?.state_dir)],
+    ["node_modules", valueText((localDoctor.checks as Record<string, unknown>[] | undefined)?.find((check) => check.name === "node_modules_status")?.status)],
+    ["package lock", valueText((localDoctor.checks as Record<string, unknown>[] | undefined)?.find((check) => check.name === "package_lock_unmodified")?.status)],
+  ] as const;
+
+  const remoteBridgeRows = [
+    ["telegram", valueText(remoteBridgeFuture.telegram_bridge_status, "disabled_not_configured")],
+    ["mobile", valueText(remoteBridgeFuture.mobile_bridge_status, "disabled_not_configured")],
+    ["remote approval", yesNo(remoteBridgeFuture.remote_approval_allowed, "allowed", "false")],
+    ["remote execution", yesNo(remoteBridgeFuture.remote_execution_allowed, "allowed", "false")],
+    ["trusted pairing", yesNo(remoteBridgeFuture.trusted_pairing_required, "required", "unknown")],
+    ["tokens loaded", yesNo(remoteBridgeFuture.tokens_loaded, "true", "false")],
+    ["external calls", yesNo(remoteBridgeFuture.external_calls_made, "true", "false")],
   ] as const;
 
   const sensorLedgerRows = [
@@ -713,6 +799,49 @@ export function JarvisDebugDrawer({
 
             {activeTab === "approvals" && (
               <div className="grid gap-4 xl:grid-cols-2">
+                <Card data-testid="jarvis-trusted-approval-channels">
+                  <CardHeader>
+                    <CardTitle>Trusted Approval Channels</CardTitle>
+                    <CardDescription>Canales locales confiables; voz/wake/remoto no conceden approval.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={trustedChannelRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {trustedChannelItems.map((channel) => (
+                        <div key={valueText(channel.channel_id)} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.12em]">{valueText(channel.channel_id)}</p>
+                            <Badge variant={Boolean(channel.enabled) ? "success" : "outline"}>{yesNo(channel.enabled, "enabled", "disabled")}</Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                            {valueText(channel.channel_type)} · risk {valueText(channel.risk_limit)} · trusted {yesNo(channel.trusted)}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Badge variant={Boolean(channel.can_grant_strong) ? "success" : "outline"}>strong {yesNo(channel.can_grant_strong, "yes", "no")}</Badge>
+                            <Badge variant={Boolean(channel.can_grant_double) ? "success" : "outline"}>double {yesNo(channel.can_grant_double, "yes", "no")}</Badge>
+                            <Badge variant={Boolean(channel.can_grant_triple) ? "warning" : "outline"}>triple {yesNo(channel.can_grant_triple, "yes", "no")}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-double-approval-steps">
+                  <CardHeader>
+                    <CardTitle>Double Approval Steps</CardTitle>
+                    <CardDescription>Dos pasos independientes, readback y challenge obligatorio.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={doubleApprovalRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Step 1 y step 2 usan el mismo approval_id con step_id diferente.</SafetyLine>
+                      <SafetyLine>No se reutilizan approvals ya decididos o usados.</SafetyLine>
+                      <SafetyLine>Triple queda bloqueado hasta tener otro canal confiable independiente.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {approvalCards.map((card) => (
                   <Card key={card.id}>
                     <CardHeader>
@@ -1045,17 +1174,79 @@ export function JarvisDebugDrawer({
 
                 <Card data-testid="jarvis-local-runtime-readiness">
                   <CardHeader>
-                    <CardTitle>Phase 2 / Local Runtime</CardTitle>
-                    <CardDescription>Preparado para daemon/tray local, sin auto mic/camera ni auto wake.</CardDescription>
+                    <CardTitle>Phase 3 / Local Runtime</CardTitle>
+                    <CardDescription>Daemon local, tray readiness y canales confiables sin auto mic/camera/wake.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList items={phase2Rows} />
+                    <StatusList items={phase3Rows} />
                     <StatusList items={localRuntimeRows} />
                     <div className="grid gap-2 md:grid-cols-2">
-                      <SafetyLine>Daemon real queda readiness/modelo de lifecycle; no se instala servicio.</SafetyLine>
-                      <SafetyLine>Tray real queda capability model; no auto-start sin opt-in.</SafetyLine>
+                      <SafetyLine>Daemon local corre embebido en backend; no se instala servicio.</SafetyLine>
+                      <SafetyLine>Tray queda capability model; no auto-start sin opt-in.</SafetyLine>
                       <SafetyLine>background_listening_enabled=false.</SafetyLine>
                       <SafetyLine>user_opt_in_required=true.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-local-daemon-status">
+                  <CardHeader>
+                    <CardTitle>Local Daemon</CardTitle>
+                    <CardDescription>Contrato local-only; stop/restart honestamente unsupported en runtime embebido.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={daemonRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>bind_host=127.0.0.1, sin puertos externos.</SafetyLine>
+                      <SafetyLine>auto_start=false y background_listening=false.</SafetyLine>
+                      <SafetyLine>mic_auto_start=false, camera_auto_start=false, wake_auto_start=false.</SafetyLine>
+                      <SafetyLine>Stop/restart no se fingen si el proceso embebido no puede autocontrolarse.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-tray-readiness">
+                  <CardHeader>
+                    <CardTitle>Tray / Local Controller</CardTitle>
+                    <CardDescription>Readiness de tray sin dependencia nativa pesada.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={trayRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Tray nativo no instalado.</SafetyLine>
+                      <SafetyLine>Puede mostrar status/approval como contrato futuro.</SafetyLine>
+                      <SafetyLine>No hay captura en background.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-phase-3-local-doctor">
+                  <CardHeader>
+                    <CardTitle>Local Doctor Phase 3</CardTitle>
+                    <CardDescription>Checks locales seguros; no lee .env ni secretos.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase3DoctorRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Comprueba imports, bind local, state/audit/history y build artifacts si existen.</SafetyLine>
+                      <SafetyLine>Browser, voz y wake quedan unknown/manual cuando el backend no puede verificarlos sin sensores.</SafetyLine>
+                      <SafetyLine>No ejecuta scanners pesados ni instala dependencias.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-remote-bridge-future-readiness">
+                  <CardHeader>
+                    <CardTitle>Telegram / Mobile Future Bridge</CardTitle>
+                    <CardDescription>Readiness disabled; sin tokens, llamadas externas ni ejecución remota.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={remoteBridgeRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>remote_approval_allowed=false.</SafetyLine>
+                      <SafetyLine>remote_execution_allowed=false.</SafetyLine>
+                      <SafetyLine>trusted_pairing_required=true para una fase futura.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>
@@ -1099,11 +1290,21 @@ export function JarvisDebugDrawer({
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-warning" />
-                      <CardTitle>Checklist de seguridad</CardTitle>
+                      <CardTitle>Phase 3 Pilot Checklist</CardTitle>
                     </div>
-                    <CardDescription>Visual Command Center Pilot checks.</CardDescription>
+                    <CardDescription>Automated/build/manual split para browser/local pilot.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {["validated_by_automated_tests", "validated_by_build", "pending_manual_browser_pilot"].map((key) => (
+                        <div key={key} className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em]">{key}</p>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                            {Array.isArray(phase3Pilot[key]) ? (phase3Pilot[key] as unknown[]).length : 0} checks
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {(visualPilot.read_only_checks ?? []).map((check) => (
                         <div key={check.name} className="border border-border/70 bg-background/35 p-3">

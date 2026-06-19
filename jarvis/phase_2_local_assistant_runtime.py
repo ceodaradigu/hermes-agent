@@ -25,7 +25,7 @@ from jarvis.phase_1_governed_execution import (
 
 
 PHASE_2_SCHEMA_VERSION = "jarvis.phase_2_local_assistant_runtime.v1"
-EXECUTION_HISTORY_SCHEMA_VERSION = "jarvis.execution_history.v1"
+EXECUTION_HISTORY_SCHEMA_VERSION = "jarvis.execution_history.v2"
 EXECUTION_HISTORY_DB_RELATIVE_PATH = Path(".jarvis") / "execution_history" / "execution_history.sqlite3"
 
 APPROVAL_LEVELS = ("none", "soft", "normal", "strong", "double", "triple", "blocked", "unsupported")
@@ -455,16 +455,23 @@ class ExecutionHistoryStore:
             "status": _safe_text(values.get("status"), limit=80),
             "risk_level": _safe_text(values.get("risk_level"), limit=80),
             "approval_level": _safe_text(values.get("approval_level"), limit=80),
+            "approval_status": _safe_text(values.get("approval_status") or "none", limit=80),
             "started_at": _safe_text(values.get("started_at") or now, limit=80),
             "finished_at": _safe_text(values.get("finished_at") or now, limit=80),
             "duration_ms": int(values.get("duration_ms") or 0),
             "result_summary": _redact_text(values.get("result_summary"), limit=500),
             "error_summary": _redact_text(values.get("error_summary"), limit=500),
             "stop_requested": bool(values.get("stop_requested", False)),
+            "stop_status": _safe_text(values.get("stop_status") or "not_requested", limit=80),
+            "stop_request_id": _safe_text(values.get("stop_request_id"), limit=120),
             "rollback_requested": bool(values.get("rollback_requested", False)),
             "rollback_status": _safe_text(values.get("rollback_status") or "not_required", limit=80),
+            "rollback_request_id": _safe_text(values.get("rollback_request_id"), limit=120),
+            "rollback_plan_id": _safe_text(values.get("rollback_plan_id"), limit=120),
+            "rollback_audit_id": _safe_text(values.get("rollback_audit_id"), limit=120),
             "audit_ids": _safe_json_list(values.get("audit_ids")),
             "memory_influence_ids": _safe_json_list(values.get("memory_influence_ids")),
+            "channel_ids": _safe_json_list(values.get("channel_ids")),
             "redaction_summary": _safe_json_dict(values.get("redaction_summary")) or {
                 "metadata_only": True,
                 "raw_output_stored": False,
@@ -481,13 +488,15 @@ class ExecutionHistoryStore:
                 """
                 INSERT OR REPLACE INTO executions (
                     schema_version, execution_id, action_id, approval_id, intent_summary,
-                    action_key, status, risk_level, approval_level, started_at, finished_at,
-                    duration_ms, result_summary, error_summary, stop_requested,
-                    rollback_requested, rollback_status, audit_ids_json,
-                    memory_influence_ids_json, redaction_summary_json, contains_secret,
+                    action_key, status, risk_level, approval_level, approval_status,
+                    started_at, finished_at, duration_ms, result_summary, error_summary,
+                    stop_requested, stop_status, stop_request_id, rollback_requested,
+                    rollback_status, rollback_request_id, rollback_plan_id, rollback_audit_id,
+                    audit_ids_json, memory_influence_ids_json, channel_ids_json,
+                    redaction_summary_json, contains_secret,
                     contains_credential, contains_raw_audio, contains_camera_frame
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["schema_version"],
@@ -499,16 +508,23 @@ class ExecutionHistoryStore:
                     record["status"],
                     record["risk_level"],
                     record["approval_level"],
+                    record["approval_status"],
                     record["started_at"],
                     record["finished_at"],
                     record["duration_ms"],
                     record["result_summary"],
                     record["error_summary"],
                     int(record["stop_requested"]),
+                    record["stop_status"],
+                    record["stop_request_id"],
                     int(record["rollback_requested"]),
                     record["rollback_status"],
+                    record["rollback_request_id"],
+                    record["rollback_plan_id"],
+                    record["rollback_audit_id"],
                     _json_dumps(record["audit_ids"]),
                     _json_dumps(record["memory_influence_ids"]),
+                    _json_dumps(record["channel_ids"]),
                     _json_dumps(record["redaction_summary"]),
                     0,
                     0,
@@ -519,12 +535,39 @@ class ExecutionHistoryStore:
             self._conn.commit()
         return record
 
-    def list(self, *, limit: int = 25, newest_first: bool = True) -> List[Dict[str, Any]]:
+    def list(
+        self,
+        *,
+        limit: int = 25,
+        newest_first: bool = True,
+        action_key: str | None = None,
+        risk_level: str | None = None,
+        approval_status: str | None = None,
+        stop_status: str | None = None,
+        rollback_status: str | None = None,
+    ) -> List[Dict[str, Any]]:
         limit = max(0, min(int(limit), 200))
         if limit == 0:
             return []
         order = "DESC" if newest_first else "ASC"
-        rows = self._conn.execute(f"SELECT * FROM executions ORDER BY id {order} LIMIT ?", (limit,)).fetchall()
+        filters: List[str] = []
+        values: List[Any] = []
+        for column, value in (
+            ("action_key", action_key),
+            ("risk_level", risk_level),
+            ("approval_status", approval_status),
+            ("stop_status", stop_status),
+            ("rollback_status", rollback_status),
+        ):
+            text = _safe_text(value, limit=120)
+            if text:
+                filters.append(f"{column} = ?")
+                values.append(text)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        rows = self._conn.execute(
+            f"SELECT * FROM executions {where} ORDER BY id {order} LIMIT ?",
+            (*values, limit),
+        ).fetchall()
         return [_history_row_to_dict(row) for row in rows]
 
     def get(self, execution_id: str) -> Dict[str, Any]:
@@ -550,6 +593,15 @@ class ExecutionHistoryStore:
             "contains_raw_audio": False,
             "contains_camera_frame": False,
             "recent": self.list(limit=5),
+            "filters_supported": [
+                "limit",
+                "action_key",
+                "risk",
+                "approval_status",
+                "stop_status",
+                "rollback_status",
+            ],
+            "export_preview_endpoint": "/mark-3/execution/history/export-preview",
             "read_only_endpoint": "/mark-3/execution/history",
         }
 
@@ -567,16 +619,23 @@ class ExecutionHistoryStore:
                 status TEXT NOT NULL,
                 risk_level TEXT NOT NULL,
                 approval_level TEXT NOT NULL,
+                approval_status TEXT NOT NULL DEFAULT 'none',
                 started_at TEXT NOT NULL,
                 finished_at TEXT NOT NULL,
                 duration_ms INTEGER NOT NULL,
                 result_summary TEXT NOT NULL,
                 error_summary TEXT NOT NULL,
                 stop_requested INTEGER NOT NULL DEFAULT 0,
+                stop_status TEXT NOT NULL DEFAULT 'not_requested',
+                stop_request_id TEXT NOT NULL DEFAULT '',
                 rollback_requested INTEGER NOT NULL DEFAULT 0,
                 rollback_status TEXT NOT NULL,
+                rollback_request_id TEXT NOT NULL DEFAULT '',
+                rollback_plan_id TEXT NOT NULL DEFAULT '',
+                rollback_audit_id TEXT NOT NULL DEFAULT '',
                 audit_ids_json TEXT NOT NULL,
                 memory_influence_ids_json TEXT NOT NULL,
+                channel_ids_json TEXT NOT NULL DEFAULT '[]',
                 redaction_summary_json TEXT NOT NULL,
                 contains_secret INTEGER NOT NULL DEFAULT 0,
                 contains_credential INTEGER NOT NULL DEFAULT 0,
@@ -585,9 +644,25 @@ class ExecutionHistoryStore:
             )
             """
         )
+        self._ensure_column("approval_status", "TEXT NOT NULL DEFAULT 'none'")
+        self._ensure_column("stop_status", "TEXT NOT NULL DEFAULT 'not_requested'")
+        self._ensure_column("stop_request_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("rollback_request_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("rollback_plan_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("rollback_audit_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("channel_ids_json", "TEXT NOT NULL DEFAULT '[]'")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_created ON executions(started_at)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_action_key ON executions(action_key)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_risk_level ON executions(risk_level)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_approval_status ON executions(approval_status)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_stop_status ON executions(stop_status)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_executions_rollback_status ON executions(rollback_status)")
         self._conn.commit()
+
+    def _ensure_column(self, name: str, definition: str) -> None:
+        columns = {row["name"] for row in self._conn.execute("PRAGMA table_info(executions)").fetchall()}
+        if name not in columns:
+            self._conn.execute(f"ALTER TABLE executions ADD COLUMN {name} {definition}")
 
 
 class Phase2LocalAssistantRuntimeControlPlane(Phase1GovernedExecutionControlPlane):
@@ -1618,16 +1693,23 @@ class Phase2LocalAssistantRuntimeControlPlane(Phase1GovernedExecutionControlPlan
             "status": dispatch.get("status") or result.get("state") or "unknown",
             "risk_level": preview.get("risk_level", "unknown"),
             "approval_level": preview.get("approval_level_required") or preview.get("approval_level", "unknown"),
+            "approval_status": envelope.get("status") or ("not_required" if not preview.get("requires_approval") else "missing"),
             "started_at": started_at,
             "finished_at": finished_at or _now_iso(),
             "duration_ms": duration_ms,
             "result_summary": dispatch.get("result_summary") or dispatch.get("message") or dispatch.get("status") or "completed",
             "error_summary": dispatch.get("error_summary") or dispatch.get("reason") or "",
             "stop_requested": preview.get("state") == "stop_requested",
+            "stop_status": action.get("stop_status") or ("not_requested" if preview.get("state") != "stop_requested" else "requested"),
             "rollback_requested": False,
             "rollback_status": action.get("rollback_status") or "not_required",
             "audit_ids": audit_ids or [],
             "memory_influence_ids": [item.get("memory_id", "unknown") for item in memory_influence],
+            "channel_ids": envelope.get("channel_ids") or [
+                step.get("channel_id", "")
+                for step in envelope.get("approval_steps", [])
+                if isinstance(step, Mapping) and step.get("status") == "approved"
+            ],
             "redaction_summary": {
                 "metadata_only": True,
                 "raw_output_stored": False,
@@ -1907,6 +1989,8 @@ def _normalize_action_key(value: str) -> str:
 
 
 def _required_approval_level(contract: ActionContract) -> str:
+    if contract.approval_required in {"double", "triple"}:
+        return contract.approval_required
     if contract.risk_level == "high":
         return "strong"
     if contract.risk_level == "critical":
@@ -1965,29 +2049,36 @@ def _browser_check(name: str, passed: bool, notes: str) -> Dict[str, Any]:
 
 
 def _history_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
-    return {
-        "schema_version": row["schema_version"],
-        "execution_id": row["execution_id"],
-        "action_id": row["action_id"],
-        "approval_id": row["approval_id"],
-        "intent_summary": row["intent_summary"],
-        "action_key": row["action_key"],
-        "status": row["status"],
-        "risk_level": row["risk_level"],
-        "approval_level": row["approval_level"],
-        "started_at": row["started_at"],
-        "finished_at": row["finished_at"],
-        "duration_ms": row["duration_ms"],
-        "result_summary": row["result_summary"],
-        "error_summary": row["error_summary"],
-        "stop_requested": bool(row["stop_requested"]),
-        "rollback_requested": bool(row["rollback_requested"]),
-        "rollback_status": row["rollback_status"],
-        "audit_ids": _json_loads(row["audit_ids_json"], []),
-        "memory_influence_ids": _json_loads(row["memory_influence_ids_json"], []),
-        "redaction_summary": _json_loads(row["redaction_summary_json"], {}),
-        "contains_secret": bool(row["contains_secret"]),
-        "contains_credential": bool(row["contains_credential"]),
+        return {
+            "schema_version": row["schema_version"],
+            "execution_id": row["execution_id"],
+            "action_id": row["action_id"],
+            "approval_id": row["approval_id"],
+            "intent_summary": row["intent_summary"],
+            "action_key": row["action_key"],
+            "status": row["status"],
+            "risk_level": row["risk_level"],
+            "approval_level": row["approval_level"],
+            "approval_status": row["approval_status"],
+            "started_at": row["started_at"],
+            "finished_at": row["finished_at"],
+            "duration_ms": row["duration_ms"],
+            "result_summary": row["result_summary"],
+            "error_summary": row["error_summary"],
+            "stop_requested": bool(row["stop_requested"]),
+            "stop_status": row["stop_status"],
+            "stop_request_id": row["stop_request_id"],
+            "rollback_requested": bool(row["rollback_requested"]),
+            "rollback_status": row["rollback_status"],
+            "rollback_request_id": row["rollback_request_id"],
+            "rollback_plan_id": row["rollback_plan_id"],
+            "rollback_audit_id": row["rollback_audit_id"],
+            "audit_ids": _json_loads(row["audit_ids_json"], []),
+            "memory_influence_ids": _json_loads(row["memory_influence_ids_json"], []),
+            "channel_ids": _json_loads(row["channel_ids_json"], []),
+            "redaction_summary": _json_loads(row["redaction_summary_json"], {}),
+            "contains_secret": bool(row["contains_secret"]),
+            "contains_credential": bool(row["contains_credential"]),
         "contains_raw_audio": bool(row["contains_raw_audio"]),
         "contains_camera_frame": bool(row["contains_camera_frame"]),
     }

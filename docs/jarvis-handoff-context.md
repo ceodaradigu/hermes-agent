@@ -1265,3 +1265,50 @@ Documentos de cierre:
 
 - `docs/jarvis-pr-165-phase-1-completion-governed-execution-pilot.md`
 - `docs/jarvis-phase-1-completion-report.md`
+
+## PR #167 - Phase 3 Local Runtime Daemon + Trusted Approval Channels
+
+PR #167 implementa la macro-fase Phase 3 encima de Phase 2 sin crear otro
+Hermes ni duplicar runtime. JARVIS gobierna y Hermes sigue siendo solo ejecutor
+existente para acciones allowlisted.
+
+Incluye:
+
+- `Phase3LocalRuntimeControlPlane` en `jarvis/phase_3_local_runtime.py`;
+- daemon local embebido con `local_only=true`, bind `127.0.0.1`, no autostart,
+  no background listening y no auto mic/camera/wake;
+- endpoints `/mark-3/phase-3/status`,
+  `/mark-3/local-daemon/status`, `/health`, `/heartbeat`, `/stop-request` y
+  `/restart-request`;
+- tray/local controller readiness sin instalar tray nativo;
+- trusted approval channels: UI local, terminal local, tray not installed,
+  voice readback only, wake disabled, Telegram/mobile future disabled;
+- double approval real con dos pasos, readback, phrases, caducidad, canales
+  separados, anti-reuse y audit por paso;
+- triple blocked con
+  `triple_requires_additional_trusted_channel_not_configured`;
+- stop/rollback observable con ids y estados honestos;
+- `ExecutionHistoryStore` v2 con filtros y export preview metadata-only;
+- local doctor Phase 3 sin leer `.env`;
+- dashboard/event stream y drawer `/jarvis` con daemon, tray, channels, doctor,
+  history, pilot y future bridge readiness;
+- docs de cierre:
+  `docs/jarvis-pr-167-phase-3-local-runtime-daemon-trusted-approvals.md`,
+  `docs/jarvis-phase-3-local-runtime-daemon-trusted-approval-report.md` y
+  `docs/jarvis-phase-3-local-runtime-pilot-report.md`.
+
+Sigue bloqueado:
+
+- `/execute`;
+- shell libre;
+- frontend directo a Hermes;
+- voice/wake approval;
+- auto mic/camera/wake;
+- tray nativo;
+- tercer canal triple real;
+- Telegram/mobile remoto activo;
+- dinero, Stripe, deploy, email y publicacion externa.
+
+Siguiente recomendado: Phase 4 como tray/local controller opt-in real, tercer
+canal confiable para triple approval y stop cooperativo mas profundo para
+procesos largos.

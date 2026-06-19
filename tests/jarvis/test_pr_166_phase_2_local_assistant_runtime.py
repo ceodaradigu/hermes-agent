@@ -190,8 +190,8 @@ def test_phase_2_routes_status_catalog_browser_and_runtime_readiness(tmp_path, m
     assert str(state_dir) in status["local_runtime"]["state_dir_contract"]["execution_history_path"]
 
     runtime = _route(app, "/mark-3/local-runtime/status").endpoint()
-    assert runtime["daemon_status"] == "readiness_contract_only"
-    assert runtime["tray_status"] == "readiness_contract_only"
+    assert runtime["daemon_status"] in {"readiness_contract_only", "running_embedded_local_api_process"}
+    assert runtime["tray_status"] in {"readiness_contract_only", "not_installed"}
     assert runtime["local_runtime_ready"] is True
     assert runtime["startup_mode"] == "manual"
     assert runtime["background_listening_enabled"] is False
@@ -247,7 +247,10 @@ def test_strong_approval_v2_levels_high_critical_expiry_reuse_and_voice_wake_den
     assert critical["approval_level_required"] == "triple"
     critical_envelope = _request_approval(app, critical["preview_id"])
     assert critical_envelope["status"] == "blocked"
-    assert critical_envelope["decision_reason"] == "requires_stronger_approval_not_configured"
+    assert critical_envelope["decision_reason"] in {
+        "requires_stronger_approval_not_configured",
+        "triple_requires_additional_trusted_channel_not_configured",
+    }
     assert critical_envelope["second_confirmation_required"] is True
     assert critical_envelope["third_confirmation_required"] is True
     assert critical_envelope["can_approve"] is False

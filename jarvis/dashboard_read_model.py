@@ -152,6 +152,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_2_local_assistant_runtime.phase_2_status(route_paths=route_path_list),
         timeline,
     )
+    phase_3_status = _source(
+        "/mark-3/phase-3/status",
+        lambda: app_state.phase_3_local_runtime.phase_3_status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -170,6 +175,21 @@ def build_mark_3_dashboard_status(
     local_runtime_status = _source(
         "/mark-3/local-runtime/status",
         lambda: app_state.phase_2_local_assistant_runtime.local_runtime_status(),
+        timeline,
+    )
+    local_daemon_status = _source(
+        "/mark-3/local-daemon/status",
+        lambda: app_state.phase_3_local_runtime.local_daemon_status(),
+        timeline,
+    )
+    tray_status = _source(
+        "/mark-3/phase-3/status#tray",
+        lambda: app_state.phase_3_local_runtime.tray_status(),
+        timeline,
+    )
+    trusted_approval_channels = _source(
+        "/mark-3/trusted-approval-channels/status",
+        lambda: app_state.phase_3_local_runtime.trusted_approval_channels_status(),
         timeline,
     )
     browser_verification = _source(
@@ -291,6 +311,11 @@ def build_mark_3_dashboard_status(
     visual_command_center_pilot_timeline = _visual_command_center_pilot_timeline_events()
     local_system_contract = _local_system_contract_projection()
     local_system_contract_timeline = _local_system_contract_timeline_events()
+    phase_3_local_doctor = _source(
+        "/mark-3/local-doctor/status",
+        lambda: app_state.phase_3_local_runtime.local_doctor_status(route_paths=route_path_list),
+        timeline,
+    )
     local_doctor = build_local_doctor_status(
         app_state=app_state,
         route_paths=route_path_list,
@@ -299,6 +324,28 @@ def build_mark_3_dashboard_status(
         hermes_runtime=hermes_runtime,
         voice_runtime_pack=voice_runtime_pack,
     )
+    phase_3_check_names = {check.get("name") for check in local_doctor.get("checks", [])}
+    for check in phase_3_local_doctor.get("checks", []):
+        if check.get("name") not in phase_3_check_names:
+            local_doctor["checks"].append(check)
+            phase_3_check_names.add(check.get("name"))
+    local_doctor["schema_version"] = phase_3_local_doctor.get("schema_version")
+    local_doctor["phase_3_status"] = phase_3_local_doctor.get("status", UNKNOWN)
+    local_doctor["phase_3_storage"] = phase_3_local_doctor.get("storage", {})
+    local_doctor["phase_3_checks"] = phase_3_local_doctor.get("checks", [])
+    local_doctor["state"].update({
+        "local_bind_host_safe": phase_3_local_doctor.get("state", {}).get("local_bind_host_safe", True),
+        "external_bind_enabled": phase_3_local_doctor.get("state", {}).get("external_bind_enabled", False),
+        "env_file_read": False,
+        "env_file_content_loaded": False,
+        "secrets_exposed": False,
+    })
+    local_doctor["safety"].update({
+        "no_env_read": True,
+        "no_external_bind": True,
+        "no_scanner_heavy": True,
+        "no_dependency_install": True,
+    })
     local_doctor_timeline = _local_doctor_timeline_events(local_doctor)
     sensor_ledger = build_sensor_ledger_status(
         ledger=getattr(app_state, "sensor_ledger", None),
@@ -474,6 +521,34 @@ def build_mark_3_dashboard_status(
                 "Strong Approval v2, allowlisted actions, execution history, stop/rollback contracts and local runtime readiness.",
             ),
             _module(
+                "Phase 3 Runtime",
+                "ready" if phase_3_status.get("status") else UNKNOWN,
+                "/mark-3/phase-3/status",
+                "local_daemon_trusted_approvals",
+                "Local daemon contract, trusted approval channels, double approval, doctor, history v2 and remote bridge readiness.",
+            ),
+            _module(
+                "Local Daemon",
+                "ready" if local_daemon_status.get("local_only") else UNKNOWN,
+                "/mark-3/local-daemon/status",
+                "local_only_daemon",
+                "Embedded local runtime daemon contract with 127.0.0.1 binding, no autostart and no background sensor capture.",
+            ),
+            _module(
+                "Tray Readiness",
+                "preview" if tray_status.get("tray_available") else UNKNOWN,
+                "/mark-3/phase-3/status",
+                "local_controller_readiness",
+                "Backend/UI tray contract is modeled; native tray is not installed and requires opt-in.",
+            ),
+            _module(
+                "Trusted Channels",
+                "ready" if trusted_approval_channels.get("can_grant_strong") else UNKNOWN,
+                "/mark-3/trusted-approval-channels/status",
+                "approval_channels",
+                "Local browser and terminal approval channels are modeled; voice/wake/remote cannot approve.",
+            ),
+            _module(
                 "Action Catalog",
                 "ready" if action_catalog.get("allowlist_only") else UNKNOWN,
                 "/mark-3/execution/action-catalog",
@@ -570,11 +645,15 @@ def build_mark_3_dashboard_status(
         "policy_status": policy_status,
         "phase_1_completion": phase_1_completion,
         "phase_2_status": phase_2_status,
+        "phase_3_status": phase_3_status,
         "governed_execution": execution_control,
         "action_catalog": action_catalog,
         "execution_history": execution_history,
         "stop_rollback_contracts": execution_control.get("stop_rollback_contracts", {}),
         "local_runtime": local_runtime_status,
+        "local_daemon": local_daemon_status,
+        "tray_readiness": tray_status,
+        "trusted_approval_channels": trusted_approval_channels,
         "browser_verification": browser_verification,
         "memory_brain_v2": memory_brain_v2_status,
         "memory_brain": memory_brain,
@@ -638,6 +717,9 @@ def build_mark_3_dashboard_status(
                 "risk_state",
                 "execution_state",
                 "phase_2_state",
+                "phase_3_state",
+                "daemon_state",
+                "trusted_channels_state",
                 "action_catalog_state",
                 "execution_history_state",
                 "audit_event",
@@ -710,6 +792,11 @@ def build_mark_3_dashboard_status(
             "no_credentials": True,
             "no_email_send": True,
             "phase_2_allowlisted_actions_only": True,
+            "phase_3_trusted_approval_channels": True,
+            "double_approval_real": True,
+            "triple_approval_supported": False,
+            "remote_approval_allowed": False,
+            "remote_execution_allowed": False,
             "execution_history_metadata_only": True,
             "background_listening_enabled": False,
             "auto_start_enabled": False,
@@ -744,6 +831,24 @@ def build_mark_3_dashboard_status(
                 "event": "Phase 2 local assistant runtime ready",
                 "source": "/mark-3/phase-2/status",
                 "status": phase_2_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 3 local runtime ready",
+                "source": "/mark-3/phase-3/status",
+                "status": phase_3_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Local daemon contract loaded",
+                "source": "/mark-3/local-daemon/status",
+                "status": local_daemon_status.get("daemon_status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Trusted approval channels loaded",
+                "source": "/mark-3/trusted-approval-channels/status",
+                "status": "ready" if trusted_approval_channels.get("can_grant_strong") else UNKNOWN,
                 "read_only": True,
             },
             {

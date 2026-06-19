@@ -25,6 +25,11 @@ export const api = {
   getJarvisExecutionStatus: () => fetchJSON<JarvisGovernedExecutionStatus>("/mark-3/execution/status"),
   getJarvisPhase1Status: () => fetchJSON<JarvisPhase1Status>("/mark-3/phase-1/status"),
   getJarvisPhase2Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-2/status"),
+  getJarvisPhase3Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-3/status"),
+  getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
+  getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
+  getJarvisLocalDoctorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-doctor/status"),
+  getJarvisTrustedApprovalChannels: () => fetchJSON<Record<string, unknown>>("/mark-3/trusted-approval-channels/status"),
   getJarvisActionCatalog: () => fetchJSON<{ actions?: JarvisActionContract[] }>("/mark-3/execution/action-catalog"),
   getJarvisExecutionHistory: (limit = 25) =>
     fetchJSON<JarvisExecutionHistoryResponse>(`/mark-3/execution/history?limit=${limit}`),
@@ -565,16 +570,28 @@ export interface JarvisExecutionHistoryResponse {
 }
 
 export interface JarvisLocalRuntimeStatus {
+  schema_version?: string;
   daemon_status?: string;
   tray_status?: string;
   local_runtime_ready?: boolean;
+  phase_3_ready?: boolean;
+  local_only?: boolean;
+  bind_host?: string;
+  bind_port?: number;
   startup_mode?: string;
   background_listening_enabled?: boolean;
   auto_start_enabled?: boolean;
+  camera_auto_start?: boolean;
+  mic_auto_start?: boolean;
+  wake_auto_start?: boolean;
   user_opt_in_required?: boolean;
   local_only_binding?: Record<string, unknown>;
   privacy_contract?: Record<string, boolean>;
   state_dir_contract?: Record<string, unknown>;
+  daemon?: Record<string, unknown>;
+  tray?: Record<string, unknown>;
+  trusted_approval_channels?: Record<string, unknown>;
+  remote_bridge_future?: Record<string, unknown>;
   failure_modes?: string[];
   source_endpoint?: string;
 }
@@ -599,6 +616,7 @@ export interface JarvisBrowserVerificationStatus {
   no_auto_get_user_media?: boolean;
   no_execute_route?: boolean;
   no_direct_hermes_frontend?: boolean;
+  phase_3_pilot?: Record<string, unknown>;
   source_endpoint?: string;
 }
 
@@ -1599,15 +1617,19 @@ export interface JarvisPersistentAudit {
 export interface JarvisLocalDoctorCheck {
   name: string;
   status: string;
-  evidence: string;
+  evidence?: string;
+  detail?: string;
   read_only?: boolean;
+  metadata_only?: boolean;
 }
 
 export interface JarvisLocalDoctor {
+  schema_version?: string;
   state?: Record<string, string | boolean | number>;
   checks?: JarvisLocalDoctorCheck[];
   optional_dependencies?: Record<string, { available?: boolean; source?: string; status?: string; version?: string }>;
   runtime?: Record<string, unknown>;
+  storage?: Record<string, unknown>;
   ports?: Record<string, unknown>;
   browser_checks?: Record<string, unknown>;
   browser_only_capabilities?: Record<string, unknown>;
@@ -1680,10 +1702,14 @@ export interface JarvisDashboardStatus {
   governed_execution?: JarvisGovernedExecutionStatus;
   phase_1_completion?: JarvisPhase1Status;
   phase_2_status?: Record<string, unknown>;
+  phase_3_status?: Record<string, unknown>;
   action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
   execution_history?: JarvisExecutionHistoryResponse;
   stop_rollback_contracts?: Record<string, unknown>;
   local_runtime?: JarvisLocalRuntimeStatus;
+  local_daemon?: Record<string, unknown>;
+  tray_readiness?: Record<string, unknown>;
+  trusted_approval_channels?: Record<string, unknown>;
   browser_verification?: JarvisBrowserVerificationStatus;
   conversational_brain?: JarvisConversationalBrain;
   conversational_intake?: JarvisConversationalIntake;
