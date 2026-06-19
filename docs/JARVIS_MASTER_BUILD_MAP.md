@@ -145,6 +145,18 @@ Piezas relevantes ya documentadas:
   y stopped se reduce/atenua. Añade Visual QA local plegado via controles y
   query param `jarvisVisualPreview`, sin Hermes, approvals, sensores, Web Audio
   nuevo, backend upload ni dependencias nuevas.
+- Voice Runtime Pack de PR #163: agrega `VoiceRuntimePack` y GET
+  `/mark-3/voice-runtime/status` como control-plane/read model seguro para la
+  sesion de voz local/manual. Declara estados
+  `idle/listening/transcribing/thinking/speaking/cancelled/stopped/error/
+  approval_required/wake_listening_available/wake_listening_disabled`,
+  contracts STT/TTS para browser y futuros providers locales, y flags duros
+  `raw_audio_sent_to_backend=false`, `transcript_persistence=false`,
+  `voice_approval_enabled=false`, `wake_phrase_can_approve=false`,
+  `wake_phrase_can_execute=false`, `hermes_dispatch_allowed=false`. No instala
+  faster-whisper, whisper.cpp, Piper, ffmpeg, sounddevice, torch, openWakeWord,
+  MediaPipe ni TFJS; no descarga modelos; no activa wake always-on ni Hermes
+  directo desde frontend.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

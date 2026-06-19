@@ -2,6 +2,40 @@
 
 Fecha: 2026-06-18
 
+## Actualización PR #163 - Phase 1 Voice Runtime Pack
+
+Implementado en esta rama:
+
+- `VoiceRuntimePack` backend/control-plane con GET
+  `/mark-3/voice-runtime/status`, integrado en `/mark-3/dashboard/status`,
+  `/mark-3/dashboard/events`, `/stream` y Local Doctor.
+- Provider contracts seguros:
+  `browser_speech_recognition`, `browser_speech_synthesis`,
+  `piper_local_disabled_or_missing`, `faster_whisper_disabled_or_missing` y
+  `whisper_cpp_disabled_or_missing`.
+- Local Voice Loop mejora stop/cancel, interrupt TTS, cola corta
+  `speechSynthesis`, filtro de posible eco, estados `cancelled/stopped` y
+  fallback honesto cuando STT/TTS del navegador no existe.
+- La esfera de particulas sigue state-driven: listening concentrado,
+  transcribing reorganizado, thinking turbulento, speaking con picos/ondas,
+  error como patron error y stopped/cancelled calmado. No se abre Web Audio ni
+  se piden permisos nuevos para visuales.
+- Seguridad mantenida: `raw_audio_sent_to_backend=false`,
+  `transcript_persistence=false`, `voice_approval_enabled=false`,
+  `wake_phrase_can_approve=false`, `wake_phrase_can_execute=false`,
+  `hermes_dispatch_allowed=false`.
+- Repos revisadas para #163: `OpenVoiceOS/ovos-core` (Apache-2.0),
+  `MycroftAI/mycroft-core` (Apache-2.0), `dscripka/openWakeWord` (Apache-2.0),
+  `SYSTRAN/faster-whisper` (MIT), `openai/whisper` (MIT),
+  `ggml-org/whisper.cpp` (MIT), `OHF-Voice/piper1-gpl` (GPL-3.0),
+  `OHF-Voice/wyoming` (MIT), `ethanplusai/jarvis` (personal/no comercial),
+  `harsh-raj00/my-jarvis` (MIT) y `chevgan/react-ai-voice-visualizer` (MIT).
+- No se copio codigo externo, no se adopto runtime externo, no se instalaron
+  dependencias, no se descargaron modelos, no se activo wake always-on, no se
+  abrieron proveedores externos y no se cambio el contrato: JARVIS gobierna;
+  Hermes ejecuta.
+- Documentacion completa: `docs/jarvis-pr-163-voice-runtime-pack.md`.
+
 ## Actualización PR #162 - Particle Sphere Motion Polish + Visual QA
 
 Implementado en esta rama:

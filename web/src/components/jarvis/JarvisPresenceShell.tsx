@@ -135,6 +135,8 @@ export function JarvisPresenceShell({
   const orbVisualState: JarvisOrbVisualState =
     valueText(system.kill_switch_state, "not_wired") === "active"
       ? "stopped"
+      : localVoice.localVoiceState === "cancelled" || localVoice.localVoiceState === "stopped"
+        ? "stopped"
       : localVoice.localVoiceState === "error" || localVoice.localVoiceState === "not_supported" || localVoice.localVoiceState === "unavailable"
         ? "error"
         : hermesRuntime.active_execution === true
@@ -296,6 +298,8 @@ export function JarvisPresenceShell({
         capabilityNotice={localVoice.capabilityNotice}
         selectedVoiceName={localVoice.selectedVoiceName}
         voiceQualityNotice={localVoice.voiceQualityNotice}
+        canInterrupt={localVoice.canInterrupt}
+        canCancel={localVoice.canCancel}
         onBegin={localVoice.beginLocalVoiceLoop}
         onCancel={localVoice.cancelLocalVoiceLoop}
         onDraftActivity={handleSmartBarDraftActivity}

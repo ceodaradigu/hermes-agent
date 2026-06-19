@@ -219,6 +219,31 @@ Actualización #159 / Fase 1 Conversational Intake + LLM Brain Adapter:
 - Local Voice Loop puede usar la respuesta del intake/brain en modo
   prepare-only sin perder el bloqueo de credenciales introducido en #158.
 
+Actualización #163 / Fase 1 Voice Runtime Pack:
+
+- Existe `VoiceRuntimePack` en `jarvis/voice_runtime_pack.py` con
+  `schema_version=jarvis.voice_runtime_pack.v1` y endpoint GET
+  `/mark-3/voice-runtime/status`.
+- El pack declara sesion de voz manual/local, `manual_push_to_talk_enabled=true`,
+  estados `idle/listening/transcribing/thinking/speaking/cancelled/stopped/error/
+  approval_required/wake_listening_available/wake_listening_disabled`, provider
+  contracts STT/TTS y lifecycle de transcript/TTS.
+- Browser STT/TTS se declaran client-side (`client_side_unknown` en backend);
+  providers locales futuros `faster_whisper_disabled_or_missing`,
+  `whisper_cpp_disabled_or_missing` y `piper_local_disabled_or_missing` quedan
+  `enabled=false`, sin instalar dependencias ni descargar modelos.
+- `/mark-3/dashboard/status` expone `voice_runtime_pack`; `/mark-3/dashboard/events`
+  y `/stream` exponen `voice_runtime_state`; Local Doctor marca
+  `voice_runtime_pack_endpoint=true`, `no_voice_provider_install=true` y
+  `no_voice_model_download=true`.
+- `/jarvis` mejora el Local Voice Loop: stop/cancel visible, interrupt de TTS,
+  cola corta `speechSynthesis`, filtro de posible eco y estados visuales
+  `cancelled/stopped` mapeados a esfera calmada.
+- Siguen falsos por defecto: `raw_audio_sent_to_backend=false`,
+  `transcript_persistence=false`, `voice_approval_enabled=false`,
+  `wake_phrase_can_approve=false`, `wake_phrase_can_execute=false` y
+  `hermes_dispatch_allowed=false`.
+
 Actualización #160 / Fase 1 Presence UI real + 3D Orb/HUD adoption:
 
 - `/jarvis` pasa a Presence UI orb-first: header reducido, nucleo central

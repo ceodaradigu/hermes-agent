@@ -4,6 +4,8 @@ export type LocalVoiceLoopState =
   | "transcribing"
   | "thinking"
   | "speaking"
+  | "cancelled"
+  | "stopped"
   | "error"
   | "not_supported"
   | "unavailable";
@@ -103,6 +105,7 @@ export type JarvisEventType =
   | "intake_state"
   | "brain_adapter_state"
   | "brain_state"
+  | "voice_runtime_state"
   | "voice_state"
   | "voice_session_state"
   | "wake_state"
@@ -183,6 +186,8 @@ export interface LocalVoiceLoopController {
   capabilityNotice: string;
   selectedVoiceName: string;
   voiceQualityNotice: string;
+  canInterrupt: boolean;
+  canCancel: boolean;
   beginLocalVoiceLoop: () => void;
   cancelLocalVoiceLoop: () => void;
 }

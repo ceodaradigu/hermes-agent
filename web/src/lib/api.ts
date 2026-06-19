@@ -613,6 +613,69 @@ export interface JarvisVoiceCore {
   read_only?: boolean;
 }
 
+export interface JarvisVoiceProviderContract {
+  provider_name?: string;
+  mode?: string;
+  installed?: boolean | string;
+  detected?: boolean | string;
+  enabled?: boolean;
+  requires_model?: boolean;
+  model_path?: string | null;
+  model_available?: boolean;
+  local_only?: boolean;
+  network_required?: boolean;
+  external_provider?: boolean;
+  raw_audio_persistence?: boolean;
+  voice_name?: string | null;
+  voice_quality?: string;
+  status?: string;
+  unavailable_reason?: string;
+  browser_client_side?: boolean;
+  detection_location?: string;
+}
+
+export interface JarvisVoiceRuntimePack {
+  schema_version?: string;
+  runtime_id?: string;
+  mode?: string;
+  enabled?: boolean;
+  manual_push_to_talk_enabled?: boolean;
+  browser_stt_available?: string;
+  browser_tts_available?: string;
+  local_stt_provider_status?: Record<string, JarvisVoiceProviderContract>;
+  local_tts_provider_status?: Record<string, JarvisVoiceProviderContract>;
+  wake_runtime_status?: Record<string, unknown>;
+  active_session?: Record<string, unknown>;
+  last_transcript_summary?: Record<string, unknown>;
+  last_response_summary?: Record<string, unknown>;
+  current_state?: string;
+  supported_states?: string[];
+  can_interrupt?: boolean;
+  can_cancel?: boolean;
+  raw_audio_sent_to_backend?: boolean;
+  transcript_persistence?: boolean;
+  voice_approval_enabled?: boolean;
+  wake_phrase_can_approve?: boolean;
+  wake_phrase_can_execute?: boolean;
+  hermes_dispatch_allowed?: boolean;
+  provider_architecture?: {
+    stt_providers?: Record<string, JarvisVoiceProviderContract>;
+    tts_providers?: Record<string, JarvisVoiceProviderContract>;
+    no_provider_install_performed?: boolean;
+    no_model_download_performed?: boolean;
+    browser_detection_location?: string;
+    backend_detection_location?: string;
+  };
+  transcript_lifecycle?: Record<string, unknown>;
+  tts_lifecycle?: Record<string, unknown>;
+  visual_state_mapping?: Record<string, string>;
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
+  source_endpoints?: string[];
+  preview_only?: boolean;
+  read_only?: boolean;
+}
+
 export interface JarvisLocalVoiceToneProfile {
   tone: "calmado" | "concentrado" | "alerta" | "intenso" | string;
   rate?: number;
@@ -1181,6 +1244,7 @@ export interface JarvisDashboardStatus {
   brain_adapter?: JarvisBrainAdapter;
   voice_session?: JarvisVoiceSession;
   wake_architecture?: Record<string, unknown>;
+  voice_runtime_pack?: JarvisVoiceRuntimePack;
   voice_core?: JarvisVoiceCore;
   local_voice_loop?: JarvisLocalVoiceLoop;
   wake_word_flow?: JarvisWakeWordFlow;

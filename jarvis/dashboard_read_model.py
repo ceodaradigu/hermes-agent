@@ -152,6 +152,14 @@ def build_mark_3_dashboard_status(
         lambda: app_state.voice_session_control.status(wake_listener_status=wake_listener),
         timeline,
     )
+    voice_runtime_pack = _source(
+        "/mark-3/voice-runtime/status",
+        lambda: app_state.voice_runtime_pack.status(
+            wake_listener_status=wake_listener,
+            voice_session_status=voice_session,
+        ),
+        timeline,
+    )
     camera_control = _source(
         "/camera-control/status",
         lambda: app_state.camera_control_runtime.status(),
@@ -194,6 +202,7 @@ def build_mark_3_dashboard_status(
     brain_adapter_timeline = _brain_adapter_timeline_events(brain_adapter)
     voice_core = _voice_core_projection(voice_runtime=voice_runtime, wake_listener=wake_listener)
     voice_core_timeline = _voice_core_timeline_events()
+    voice_runtime_pack_timeline = _voice_runtime_pack_timeline_events(voice_runtime_pack)
     wake_word_flow = _wake_word_flow_projection(wake_listener=wake_listener)
     wake_word_flow_timeline = _wake_word_flow_timeline_events()
     local_voice_loop = _local_voice_loop_projection()
@@ -229,6 +238,7 @@ def build_mark_3_dashboard_status(
         generated_at=generated_at,
         health=health,
         hermes_runtime=hermes_runtime,
+        voice_runtime_pack=voice_runtime_pack,
     )
     local_doctor_timeline = _local_doctor_timeline_events(local_doctor)
     sensor_ledger = build_sensor_ledger_status(
@@ -337,9 +347,9 @@ def build_mark_3_dashboard_status(
             _module(
                 "Voice",
                 "browser_controlled",
-                "/voice-runtime/session-status",
+                "/mark-3/voice-runtime/status",
                 "sensor_privacy",
-                "Voice session manager separates wake, conversation, STT, TTS, recording, approval, and Hermes execution.",
+                "Voice Runtime Pack exposes manual browser voice, provider contracts, transcript/TTS lifecycle and safe local provider status.",
             ),
             _module(
                 "Wake Listener",
@@ -420,6 +430,7 @@ def build_mark_3_dashboard_status(
         "conversational_brain": conversational_brain,
         "conversational_intake": conversational_intake,
         "brain_adapter": brain_adapter,
+        "voice_runtime_pack": voice_runtime_pack,
         "voice_session": voice_session,
         "wake_architecture": voice_session.get("wake_architecture", {}),
         "voice_core": voice_core,
@@ -432,13 +443,13 @@ def build_mark_3_dashboard_status(
             "wake_phrase_can_approve": False,
             "wake_phrase_can_execute": False,
             "local_voice_loop": "browser_controlled_manual_only",
-            "browser_stt_supported": UNKNOWN,
-            "browser_tts_supported": UNKNOWN,
+            "browser_stt_supported": voice_runtime_pack.get("browser_stt_available", UNKNOWN),
+            "browser_tts_supported": voice_runtime_pack.get("browser_tts_available", UNKNOWN),
             "audio_recording": False,
             "raw_audio_stored": False,
             "raw_audio_sent_to_backend": False,
             "external_provider_called": False,
-            "source_endpoints": ["/voice-runtime/status", "/mark-2/wake-listener/status"],
+            "source_endpoints": ["/mark-3/voice-runtime/status", "/voice-runtime/status", "/mark-2/wake-listener/status"],
         },
         "camera_vision": camera_vision,
         "raw_audio_recording": raw_audio_recording,
@@ -491,7 +502,9 @@ def build_mark_3_dashboard_status(
                 "intake_state",
                 "brain_adapter_state",
                 "brain_state",
+                "voice_runtime_state",
                 "voice_state",
+                "voice_session_state",
                 "wake_state",
                 "tts_state",
                 "hermes_state",
@@ -574,6 +587,7 @@ def build_mark_3_dashboard_status(
         + conversational_brain_timeline
         + conversational_intake_timeline
         + brain_adapter_timeline
+        + voice_runtime_pack_timeline
         + list(voice_session.get("timeline", []))
         + voice_core_timeline
         + wake_word_flow_timeline
@@ -767,10 +781,12 @@ def build_local_doctor_status(
     generated_at: str,
     health: Dict[str, Any] | None = None,
     hermes_runtime: Dict[str, Any] | None = None,
+    voice_runtime_pack: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     route_path_set = set(route_paths)
     health_status = dict(health or {"status": UNKNOWN})
     hermes_status = dict(hermes_runtime or {})
+    voice_pack = dict(voice_runtime_pack or {})
     psutil_status = _psutil_status()
     process_info = _process_info(psutil_status)
     browser_capabilities = {
@@ -794,6 +810,7 @@ def build_local_doctor_status(
             "event_stream_available": _route_exists(route_path_set, "/mark-3/dashboard/events/stream"),
             "conversational_intake_endpoint": _route_exists(route_path_set, "/mark-3/conversational-intake/status"),
             "brain_adapter_endpoint": _route_exists(route_path_set, "/mark-3/brain-adapter/status"),
+            "voice_runtime_pack_endpoint": _route_exists(route_path_set, "/mark-3/voice-runtime/status"),
             "hermes_status_endpoint": _route_exists(route_path_set, "/mark-3/hermes-runtime/status"),
             "hermes_status": "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
             "local_doctor_endpoint": _route_exists(route_path_set, "/mark-3/local-doctor/status"),
@@ -825,6 +842,11 @@ def build_local_doctor_status(
                 "GET /mark-3/brain-adapter/status",
             ),
             _doctor_check(
+                "voice_runtime_pack",
+                "ok" if _route_exists(route_path_set, "/mark-3/voice-runtime/status") else "missing",
+                "GET /mark-3/voice-runtime/status",
+            ),
+            _doctor_check(
                 "hermes_status",
                 "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
                 "/mark-3/hermes-runtime/status",
@@ -842,6 +864,7 @@ def build_local_doctor_status(
             "ffmpeg": _binary_status("ffmpeg"),
             "openwakeword": _python_dependency_status("openwakeword"),
             "faster_whisper": _python_dependency_status("faster_whisper"),
+            "whisper_cpp": _binary_status("whisper-cli"),
             "piper": _python_dependency_status("piper"),
             "sounddevice": _python_dependency_status("sounddevice"),
             "torch": _python_dependency_status("torch"),
@@ -877,6 +900,8 @@ def build_local_doctor_status(
             "no_secret_read": True,
             "no_env_dump": True,
             "no_hermes_execution": True,
+            "no_voice_provider_install": True,
+            "no_voice_model_download": True,
         },
         "source_endpoint": "/mark-3/local-doctor/status",
         "preview_only": False,
@@ -884,6 +909,7 @@ def build_local_doctor_status(
         "source_status": {
             "hermes": _status_summary(hermes_status),
             "personal_memory": _status_summary(getattr(app_state, "personal_memory_control", object()).status() if hasattr(getattr(app_state, "personal_memory_control", None), "status") else {}),
+            "voice_runtime_pack": _status_summary(voice_pack),
         },
     }
 
@@ -3158,6 +3184,42 @@ def _voice_core_timeline_events() -> List[Dict[str, Any]]:
             "event": "No audio recording performed",
             "source": "/mark-3/dashboard/status",
             "status": "ok",
+            "read_only": True,
+        },
+    ]
+
+
+def _voice_runtime_pack_timeline_events(voice_runtime_pack: Dict[str, Any]) -> List[Dict[str, Any]]:
+    provider_statuses = [
+        item.get("status", UNKNOWN)
+        for item in list(voice_runtime_pack.get("local_stt_provider_status", {}).values())
+        + list(voice_runtime_pack.get("local_tts_provider_status", {}).values())
+        if isinstance(item, dict)
+    ]
+    status_summary = "disabled_or_missing" if provider_statuses and all(status in {"missing", "disabled_by_default"} for status in provider_statuses) else UNKNOWN
+    return [
+        {
+            "event": "Voice Runtime Pack status read",
+            "source": "/mark-3/voice-runtime/status",
+            "status": voice_runtime_pack.get("current_state", "idle"),
+            "read_only": True,
+        },
+        {
+            "event": "Browser STT/TTS declared client-side",
+            "source": "/mark-3/voice-runtime/status",
+            "status": "client_side_unknown",
+            "read_only": True,
+        },
+        {
+            "event": "Local STT/TTS providers remain disabled or missing",
+            "source": "/mark-3/voice-runtime/status",
+            "status": status_summary,
+            "read_only": True,
+        },
+        {
+            "event": "Voice runtime safety gates confirmed",
+            "source": "/mark-3/voice-runtime/status",
+            "status": "no_raw_audio_no_transcript_persistence_no_hermes_dispatch",
             "read_only": True,
         },
     ]

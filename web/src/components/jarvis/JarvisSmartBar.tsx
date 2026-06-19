@@ -25,6 +25,8 @@ interface JarvisSmartBarProps {
   capabilityNotice: string;
   selectedVoiceName: string;
   voiceQualityNotice: string;
+  canInterrupt: boolean;
+  canCancel: boolean;
   onBegin: () => void;
   onCancel: () => void;
   onDraftActivity?: (draft: string) => void;
@@ -48,6 +50,8 @@ export function JarvisSmartBar({
   capabilityNotice,
   selectedVoiceName,
   voiceQualityNotice,
+  canInterrupt,
+  canCancel,
   onBegin,
   onCancel,
   onDraftActivity,
@@ -57,7 +61,7 @@ export function JarvisSmartBar({
   const lastResponse = messages.find((message) => message.speaker === "JARVIS")?.content ?? previewVoiceSubtitle;
   const localVoiceBusy = isLocalVoiceBusy(localVoiceState);
   const startDisabled = sttSupport !== "supported" || localVoiceBusy || conversationActive;
-  const stopDisabled = !conversationActive && !localVoiceBusy && localVoiceState === "idle";
+  const stopDisabled = !canCancel;
   const displayedTranscript = localDraft || transcript || interimTranscript || valueText(missionControl.sample_command, sampleMissionCommand);
   const displayedResponse = localVoiceResponse || lastResponse;
   const stateLabel = localVoiceStateLabels[localVoiceState];
@@ -125,8 +129,8 @@ export function JarvisSmartBar({
           <Button
             disabled={stopDisabled}
             aria-disabled={stopDisabled}
-            aria-label="Detener conversación manual, escucha o habla de JARVIS"
-            title="Stop/cancel conversación manual"
+            aria-label={canInterrupt ? "Interrumpir voz de JARVIS y cerrar conversación manual" : "Detener conversación manual, escucha o habla de JARVIS"}
+            title={canInterrupt ? "Interrumpir voz" : "Stop/cancel conversación manual"}
             type="button"
             variant="outline"
             size="icon"
@@ -147,6 +151,7 @@ export function JarvisSmartBar({
             Conversación manual {conversationActive ? "activa" : "en reposo"}
           </Badge>
           <Badge variant={statusBadgeVariant}>estado: {stateLabel}</Badge>
+          <Badge variant={canInterrupt ? "warning" : "outline"}>{canInterrupt ? "interrupt disponible" : "interrupt idle"}</Badge>
           <Badge variant={wakeAvailable ? "success" : "outline"}>wake gated</Badge>
         </div>
         <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/54">
@@ -175,6 +180,7 @@ export function JarvisSmartBar({
             <p>{capabilityNotice}</p>
             <p>{voiceQualityNotice}</p>
             <p>intent {localVoiceIntent} · risk {localVoiceRisk}</p>
+            <p>can_interrupt {canInterrupt ? "true" : "false"} · can_cancel {canCancel ? "true" : "false"}</p>
             <p>borrador local {localDraft ? "presente/no enviado" : "vacío"}</p>
             <p>No puedo hacer eso, David. Las credenciales y secretos están protegidos.</p>
             <p>wake_runtime_enabled {wakeRuntimeEnabled ? "true" : "false"} · wake no aprueba · wake no ejecuta · voice approval disabled unless authenticated/gated/audited.</p>

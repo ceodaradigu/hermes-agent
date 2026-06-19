@@ -30,6 +30,7 @@ export interface LocalJarvisSensorState {
 function buildLocalSnapshot(status: JarvisDashboardStatus): JarvisEventSnapshot {
   const generatedAt = new Date().toISOString();
   const voiceState = status.voice_core?.state ?? {};
+  const voiceRuntimePack = status.voice_runtime_pack ?? {};
   const voiceSessionState = status.voice_session?.state ?? {};
   const brainState = status.conversational_brain?.state ?? {};
   const brainPreview = status.conversational_brain?.sample_analysis;
@@ -107,6 +108,19 @@ function buildLocalSnapshot(status: JarvisDashboardStatus): JarvisEventSnapshot 
         microphone_enabled: voiceState.microphone_enabled === true,
         command_listening_enabled: voiceState.command_listening_enabled === true,
         approval_by_voice_enabled: voiceState.voice_approval_enabled === true,
+      }),
+      event("voice_runtime_state", "/mark-3/voice-runtime/status", valueText(voiceRuntimePack.current_state, "idle"), {
+        schema_version: valueText(voiceRuntimePack.schema_version, "jarvis.voice_runtime_pack.v1"),
+        mode: valueText(voiceRuntimePack.mode, "local_manual_browser_voice_control_plane"),
+        manual_push_to_talk_enabled: voiceRuntimePack.manual_push_to_talk_enabled === true,
+        browser_stt_available: valueText(voiceRuntimePack.browser_stt_available, "client_side_unknown"),
+        browser_tts_available: valueText(voiceRuntimePack.browser_tts_available, "client_side_unknown"),
+        raw_audio_sent_to_backend: false,
+        transcript_persistence: false,
+        voice_approval_enabled: false,
+        wake_phrase_can_approve: false,
+        wake_phrase_can_execute: false,
+        hermes_dispatch_allowed: false,
       }),
       event("voice_session_state", "/voice-runtime/session-status", valueText(voiceSessionState.current_state, "idle"), {
         current_state: valueText(voiceSessionState.current_state, "idle"),
