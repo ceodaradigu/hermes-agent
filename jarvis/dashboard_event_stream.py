@@ -25,6 +25,9 @@ ALLOWED_EVENT_TYPES = (
     "risk_state",
     "execution_state",
     "phase_1_state",
+    "phase_2_state",
+    "action_catalog_state",
+    "execution_history_state",
     "audit_event",
     "persistent_audit_state",
     "memory_brain_v2_state",
@@ -388,6 +391,61 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         ),
         _event(
             generated_at,
+            "phase_2_state",
+            "/mark-3/phase-2/status",
+            _get(dashboard_status, "phase_2_status.status", "implemented_as_local_governed_runtime_macro_phase"),
+            {
+                "schema_version": _get(dashboard_status, "phase_2_status.schema_version", "jarvis.phase_2_local_assistant_runtime.v1"),
+                "strong_approval_v2": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.strong_approval_v2", True)),
+                "allowlisted_bridge": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.hermes_action_bridge_allowlisted", True)),
+                "execution_history": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.execution_history", True)),
+                "stop_rollback_contracts": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.stop_rollback_contracts", True)),
+                "voice_wake_runtime_readiness": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.voice_wake_runtime_readiness", True)),
+                "browser_verification": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.browser_verification", True)),
+                "local_daemon_tray_readiness": _bool(_get(dashboard_status, "phase_2_status.implemented_blocks.local_daemon_tray_readiness", True)),
+                "generic_execute_absent": _bool(_get(dashboard_status, "phase_2_status.route_readiness.generic_execute_absent", True)),
+                "critical_double_triple": _get(dashboard_status, "phase_2_status.blocked_or_unsupported.critical_double_triple", "blocked_requires_stronger_approval_not_configured"),
+                "no_commands_or_outputs": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "action_catalog_state",
+            "/mark-3/execution/action-catalog",
+            "allowlist_only",
+            {
+                "schema_version": _get(dashboard_status, "action_catalog.schema_version", "jarvis.phase_2_local_assistant_runtime.v1"),
+                "allowlist_only": _bool(_get(dashboard_status, "action_catalog.allowlist_only", True)),
+                "freeform_shell_allowed": False,
+                "arbitrary_command_allowed": False,
+                "action_count": len(_get(dashboard_status, "action_catalog.actions", [])),
+                "denied_action_count": len(_get(dashboard_status, "action_catalog.denied_actions", [])),
+                "network_allowed": False,
+                "external_side_effects": False,
+                "frontend_direct_hermes_allowed": False,
+                "no_command_text": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "execution_history_state",
+            "/mark-3/execution/history",
+            _get(dashboard_status, "execution_history.status.record_count", 0),
+            {
+                "schema_version": _get(dashboard_status, "execution_history.schema_version", "jarvis.execution_history.v1"),
+                "read_only": True,
+                "metadata_only": _bool(_get(dashboard_status, "execution_history.status.metadata_only", True)),
+                "record_count": _get(dashboard_status, "execution_history.status.record_count", 0),
+                "persistent": _bool(_get(dashboard_status, "execution_history.status.persistent", False)),
+                "contains_secret": False,
+                "contains_credential": False,
+                "contains_raw_audio": False,
+                "contains_camera_frame": False,
+                "raw_output_included": False,
+            },
+        ),
+        _event(
+            generated_at,
             "remote_state",
             "/mobile/companion/status",
             _get(dashboard_status, "mobile_companion.state.mode", "preview"),
@@ -716,8 +774,10 @@ def _risk_level_for_event(event_type: str) -> str:
         return "sensor_privacy"
     if event_type == "brain_state":
         return "intent_risk_preview"
-    if event_type in {"approval_state", "risk_state", "execution_state", "policy_state"}:
+    if event_type in {"approval_state", "risk_state", "execution_state", "phase_2_state", "action_catalog_state", "policy_state"}:
         return "approval_gate"
+    if event_type == "execution_history_state":
+        return "metadata_audit"
     if event_type == "remote_state":
         return "remote_surface"
     if event_type in {"memory_state", "memory_brain_v2_state"}:

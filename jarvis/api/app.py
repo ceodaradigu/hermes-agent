@@ -234,6 +234,10 @@ from jarvis.operator_console import (
 from jarvis.personal_memory import PersonalMemoryControlPlane
 from jarvis.persistent_audit import PersistentAuditLedger
 from jarvis.phase_1_governed_execution import Phase1GovernedExecutionControlPlane
+from jarvis.phase_2_local_assistant_runtime import (
+    ExecutionHistoryStore,
+    Phase2LocalAssistantRuntimeControlPlane,
+)
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -560,6 +564,8 @@ class Mark3ExecutionPreviewRequest(BaseModel):
     target_path: Optional[str] = None
     command: Optional[str] = None
     requested_action_type: Optional[str] = None
+    action_key: Optional[str] = None
+    inputs: Optional[Dict[str, Any]] = None
     transcript_confidence: float = 1.0
     voice_session_state: str = "idle"
 
@@ -576,6 +582,8 @@ class Mark3ExecutionApprovalDecisionRequest(BaseModel):
     confirmation_phrase: Optional[str] = None
     readback_text: Optional[str] = None
     reason: str = ""
+    decision_source: str = "ui"
+    channel: str = "frontend"
 
 
 class Mark3ExecutionDispatchRequest(BaseModel):
@@ -594,6 +602,10 @@ class Mark3ExecutionStopRequest(BaseModel):
     preview_id: Optional[str] = None
     session_id: Optional[str] = None
     reason: str = "operator stop"
+
+
+class Mark3ExecutionHistoryRequest(BaseModel):
+    limit: int = 25
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2054,14 +2066,17 @@ def create_app(
         app.state.mark_3_mission_loop,
         adapter_factory=hermes_runtime_adapter_factory,
     )
-    app.state.phase_1_governed_execution = Phase1GovernedExecutionControlPlane(
+    app.state.execution_history = ExecutionHistoryStore.from_environment()
+    app.state.phase_2_local_assistant_runtime = Phase2LocalAssistantRuntimeControlPlane(
         intake_pipeline=app.state.conversational_intake_pipeline,
         policy_engine=app.state.policy_engine,
         mission_loop=app.state.mark_3_mission_loop,
         hermes_runtime_bridge=app.state.mark_3_hermes_runtime_bridge,
         persistent_audit_ledger=app.state.persistent_audit_ledger,
         memory_brain_v2=app.state.memory_brain_v2,
+        execution_history=app.state.execution_history,
     )
+    app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
 
     @app.get("/health")
     def health() -> dict:
@@ -2411,6 +2426,41 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-2/status")
+    def mark_3_phase_2_status() -> dict:
+        return app.state.phase_2_local_assistant_runtime.phase_2_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
+    @app.get("/mark-3/execution/action-catalog")
+    def mark_3_execution_action_catalog() -> dict:
+        return app.state.phase_2_local_assistant_runtime.action_catalog()
+
+    @app.get("/mark-3/execution/history")
+    def mark_3_execution_history(limit: int = 25) -> dict:
+        return app.state.phase_2_local_assistant_runtime.history(limit=limit)
+
+    @app.get("/mark-3/execution/history/{execution_id}")
+    def mark_3_execution_history_detail(execution_id: str) -> dict:
+        try:
+            return app.state.phase_2_local_assistant_runtime.history_detail(execution_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="execution not found") from None
+
+    @app.get("/mark-3/approval/status")
+    def mark_3_approval_status() -> dict:
+        return app.state.phase_2_local_assistant_runtime.approval_status()
+
+    @app.get("/mark-3/local-runtime/status")
+    def mark_3_local_runtime_status() -> dict:
+        return app.state.phase_2_local_assistant_runtime.local_runtime_status()
+
+    @app.get("/mark-3/browser-verification/status")
+    def mark_3_browser_verification_status() -> dict:
+        return app.state.phase_2_local_assistant_runtime.browser_verification_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
     @app.post("/mark-3/execution/preview")
     def mark_3_execution_preview(payload: Mark3ExecutionPreviewRequest) -> dict:
         try:
@@ -2467,10 +2517,16 @@ def create_app(
         voice_session_status = app.state.voice_session_control.status(
             wake_listener_status=wake_listener_status,
         )
-        return app.state.voice_runtime_pack.status(
+        pack = app.state.voice_runtime_pack.status(
             wake_listener_status=wake_listener_status,
             voice_session_status=voice_session_status,
         )
+        pack["phase_2_runtime"] = app.state.phase_2_local_assistant_runtime.voice_wake_runtime_status(
+            wake_listener_status=wake_listener_status,
+            voice_session_status=voice_session_status,
+            voice_runtime_pack=pack,
+        )
+        return pack
 
     @app.get("/mark-3/dashboard/status")
     def mark_3_dashboard_status() -> dict:

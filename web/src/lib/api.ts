@@ -24,6 +24,10 @@ export const api = {
   getJarvisDashboardStatus: () => fetchJSON<JarvisDashboardStatus>("/mark-3/dashboard/status"),
   getJarvisExecutionStatus: () => fetchJSON<JarvisGovernedExecutionStatus>("/mark-3/execution/status"),
   getJarvisPhase1Status: () => fetchJSON<JarvisPhase1Status>("/mark-3/phase-1/status"),
+  getJarvisPhase2Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-2/status"),
+  getJarvisActionCatalog: () => fetchJSON<{ actions?: JarvisActionContract[] }>("/mark-3/execution/action-catalog"),
+  getJarvisExecutionHistory: (limit = 25) =>
+    fetchJSON<JarvisExecutionHistoryResponse>(`/mark-3/execution/history?limit=${limit}`),
   createJarvisExecutionPreview: (payload: JarvisExecutionPreviewRequest) =>
     fetchJSON<JarvisExecutionPreview>("/mark-3/execution/preview", {
       method: "POST",
@@ -251,11 +255,16 @@ export type JarvisRiskLevel =
   | string;
 
 export type JarvisApprovalLevel =
+  | "none"
+  | "soft"
+  | "normal"
   | "direct"
   | "simple"
   | "strong"
   | "double"
   | "triple"
+  | "blocked"
+  | "unsupported"
   | "forbidden"
   | "unknown"
   | string;
@@ -298,6 +307,8 @@ export interface JarvisExecutionPreviewRequest {
   target_path?: string | null;
   command?: string | null;
   requested_action_type?: string | null;
+  action_key?: string | null;
+  inputs?: Record<string, unknown> | null;
   transcript_confidence?: number;
   voice_session_state?: string;
 }
@@ -314,6 +325,8 @@ export interface JarvisExecutionApprovalDecisionRequest {
   confirmation_phrase?: string | null;
   readback_text?: string | null;
   reason?: string;
+  decision_source?: string;
+  channel?: string;
 }
 
 export interface JarvisExecutionDispatchRequest {
@@ -342,9 +355,22 @@ export interface JarvisExecutionApprovalEnvelope {
   created_at?: string;
   expires_at?: string;
   status: JarvisApprovalStatus | string;
+  action_id?: string;
+  action_key?: string;
   action_type?: string;
   risk_level?: JarvisRiskLevel;
   approval_level?: JarvisApprovalLevel;
+  approval_level_required?: JarvisApprovalLevel;
+  requester?: string;
+  reason?: string;
+  preview?: Record<string, unknown>;
+  challenge?: string;
+  second_confirmation_required?: boolean;
+  third_confirmation_required?: boolean;
+  decided_at?: string | null;
+  rejection_reason?: string;
+  audit_id?: string;
+  used_at?: string | null;
   confirmation_level_required?: string;
   confirmation_phrase?: string | null;
   readback_required?: boolean;
@@ -371,14 +397,19 @@ export interface JarvisExecutionPreview {
   decision: "allowed" | "requires_approval" | "denied" | "unsupported" | string;
   risk_level: JarvisRiskLevel;
   approval_level: JarvisApprovalLevel;
+  approval_level_required?: JarvisApprovalLevel;
   requires_approval: boolean;
+  inputs?: Record<string, unknown>;
   action: {
+    action_id?: string;
+    action_key?: string;
     title?: string;
     summary?: string;
     decision?: string;
     action_type?: string;
     risk_level?: string;
     approval_level?: string;
+    approval_level_required?: string;
     requires_approval?: boolean;
     requires_readback?: boolean;
     requires_strong_confirmation?: boolean;
@@ -394,6 +425,12 @@ export interface JarvisExecutionPreview {
     rollback_plan?: string;
     stop_plan?: string;
     command_allowlisted?: boolean;
+    stop_supported?: boolean;
+    rollback_supported?: boolean;
+    rollback_status?: string;
+    network_allowed?: boolean;
+    external_side_effects?: boolean;
+    secrets_policy?: string;
   };
   preview?: {
     title?: string;
@@ -442,7 +479,126 @@ export interface JarvisGovernedExecutionStatus {
   counts?: Record<string, number | string>;
   recent_previews?: JarvisExecutionPreview[];
   recent_approval_envelopes?: JarvisExecutionApprovalEnvelope[];
+  approval_levels?: string[];
+  action_catalog?: JarvisActionContract[];
+  execution_history?: JarvisExecutionHistoryStatus;
+  stop_rollback_contracts?: Record<string, unknown>;
+  approval_v2?: Record<string, unknown>;
+  local_runtime?: JarvisLocalRuntimeStatus;
+  browser_verification?: JarvisBrowserVerificationStatus;
   safety?: Record<string, boolean>;
+  source_endpoint?: string;
+}
+
+export interface JarvisActionContract {
+  action_key: string;
+  description: string;
+  allowed_inputs_schema?: Record<string, unknown>;
+  risk_level: string;
+  approval_required: string;
+  approval_level_required?: string;
+  timeout_seconds?: number;
+  stop_supported?: boolean;
+  rollback_supported?: boolean;
+  audit_event_types?: string[];
+  output_redaction?: string;
+  filesystem_scope?: string;
+  network_allowed?: boolean;
+  external_side_effects?: boolean;
+  secrets_policy?: string;
+  stop_method?: string;
+  rollback_plan?: string;
+  rollback_risk?: string;
+  rollback_requires_approval?: boolean;
+  rollback_status?: string;
+  rollback_limitations?: string[];
+  execution_backend?: string;
+  contract?: Record<string, unknown>;
+}
+
+export interface JarvisExecutionHistoryItem {
+  execution_id: string;
+  action_id?: string;
+  approval_id?: string;
+  intent_summary?: string;
+  action_key?: string;
+  status?: string;
+  risk_level?: string;
+  approval_level?: string;
+  started_at?: string;
+  finished_at?: string;
+  duration_ms?: number;
+  result_summary?: string;
+  error_summary?: string;
+  stop_requested?: boolean;
+  rollback_requested?: boolean;
+  rollback_status?: string;
+  audit_ids?: string[];
+  memory_influence_ids?: string[];
+  redaction_summary?: Record<string, unknown>;
+  contains_secret?: boolean;
+  contains_credential?: boolean;
+  contains_raw_audio?: boolean;
+  contains_camera_frame?: boolean;
+}
+
+export interface JarvisExecutionHistoryStatus {
+  available?: boolean;
+  persistent?: boolean;
+  local_only?: boolean;
+  metadata_only?: boolean;
+  record_count?: number;
+  storage_path?: string;
+  storage_configured?: boolean;
+  contains_secret?: boolean;
+  contains_credential?: boolean;
+  contains_raw_audio?: boolean;
+  contains_camera_frame?: boolean;
+  recent?: JarvisExecutionHistoryItem[];
+}
+
+export interface JarvisExecutionHistoryResponse {
+  items?: JarvisExecutionHistoryItem[];
+  status?: JarvisExecutionHistoryStatus;
+  read_only?: boolean;
+  source_endpoint?: string;
+}
+
+export interface JarvisLocalRuntimeStatus {
+  daemon_status?: string;
+  tray_status?: string;
+  local_runtime_ready?: boolean;
+  startup_mode?: string;
+  background_listening_enabled?: boolean;
+  auto_start_enabled?: boolean;
+  user_opt_in_required?: boolean;
+  local_only_binding?: Record<string, unknown>;
+  privacy_contract?: Record<string, boolean>;
+  state_dir_contract?: Record<string, unknown>;
+  failure_modes?: string[];
+  source_endpoint?: string;
+}
+
+export interface JarvisBrowserVerificationCheck {
+  name: string;
+  passed?: boolean;
+  status?: string;
+  notes?: string;
+  description?: string;
+}
+
+export interface JarvisBrowserVerificationStatus {
+  status?: string;
+  route?: string;
+  playwright_required?: boolean;
+  playwright_status?: string;
+  static_plus_manual_checklist?: boolean;
+  check_count?: number;
+  checks?: JarvisBrowserVerificationCheck[];
+  all_static_checks_passed?: boolean;
+  no_auto_get_user_media?: boolean;
+  no_execute_route?: boolean;
+  no_direct_hermes_frontend?: boolean;
   source_endpoint?: string;
 }
 
@@ -842,6 +998,41 @@ export interface JarvisVoiceProviderContract {
   detection_location?: string;
 }
 
+export interface JarvisPhase2VoiceRuntime {
+  schema_version?: string;
+  voice_runtime_diagnostics?: {
+    browser_stt_capability?: string;
+    browser_tts_capability?: string;
+    selected_voice_metadata?: string;
+    selected_voice_name?: string;
+    tts_interrupt_stop?: string;
+    low_confidence_clarification_threshold?: number;
+    low_confidence_behavior?: string;
+    voice_intent_submitted_to_preview?: boolean;
+    voice_intent_submitted_behavior?: string;
+    voice_can_read_readback?: boolean;
+    voice_can_cancel_or_stop?: boolean;
+    voice_can_approve?: boolean;
+    voice_can_execute_without_approval?: boolean;
+    raw_audio_sent_to_backend?: boolean;
+    raw_audio_persisted_backend?: boolean;
+  };
+  wake_runtime_readiness?: {
+    provider_status?: string;
+    wake_always_on_real?: boolean;
+    always_on_enabled?: boolean;
+    openwakeword_active?: boolean;
+    auto_mic?: boolean;
+    wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
+    readiness_contract_only?: boolean;
+  };
+  privacy_status?: Record<string, boolean>;
+  source_endpoint?: string;
+  base_voice_runtime_pack?: Record<string, unknown>;
+  base_voice_session?: Record<string, unknown>;
+}
+
 export interface JarvisVoiceRuntimePack {
   schema_version?: string;
   runtime_id?: string;
@@ -878,6 +1069,7 @@ export interface JarvisVoiceRuntimePack {
   tts_lifecycle?: Record<string, unknown>;
   visual_state_mapping?: Record<string, string>;
   safety?: Record<string, boolean>;
+  phase_2_runtime?: JarvisPhase2VoiceRuntime;
   source_endpoint?: string;
   source_endpoints?: string[];
   preview_only?: boolean;
@@ -1487,6 +1679,12 @@ export interface JarvisDashboardStatus {
   hermes_execution?: JarvisHermesExecution;
   governed_execution?: JarvisGovernedExecutionStatus;
   phase_1_completion?: JarvisPhase1Status;
+  phase_2_status?: Record<string, unknown>;
+  action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
+  execution_history?: JarvisExecutionHistoryResponse;
+  stop_rollback_contracts?: Record<string, unknown>;
+  local_runtime?: JarvisLocalRuntimeStatus;
+  browser_verification?: JarvisBrowserVerificationStatus;
   conversational_brain?: JarvisConversationalBrain;
   conversational_intake?: JarvisConversationalIntake;
   brain_adapter?: JarvisBrainAdapter;

@@ -1,5 +1,14 @@
 import { Activity, AlertTriangle, BadgeCheck, Brain, Camera, CircleDollarSign, Cpu, Radar, ScrollText, Smartphone, Stethoscope, TerminalSquare, Workflow, ZapOff } from "lucide-react";
-import type { JarvisDashboardStatus } from "@/lib/api";
+import type {
+  JarvisActionContract,
+  JarvisBrowserVerificationCheck,
+  JarvisBrowserVerificationStatus,
+  JarvisDashboardStatus,
+  JarvisExecutionHistoryItem,
+  JarvisExecutionHistoryStatus,
+  JarvisLocalRuntimeStatus,
+  JarvisPhase2VoiceRuntime,
+} from "@/lib/api";
 import type { JarvisEvent } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,9 +105,20 @@ export function JarvisDebugDrawer({
   const sensorLedger = dashboard.sensor_ledger ?? {};
   const eventBus = dashboard.event_bus ?? {};
   const policyStatus = dashboard.policy_status ?? {};
-  const localDoctorRuntime = localDoctor.runtime as Record<string, any> | undefined;
-  const localDoctorProcess = localDoctorRuntime?.process as Record<string, any> | undefined;
+  const localDoctorRuntime = localDoctor.runtime as Record<string, unknown> | undefined;
+  const localDoctorProcess = localDoctorRuntime?.process as Record<string, unknown> | undefined;
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackOffline.timeline ?? [];
+  const phase2Status = (dashboard.phase_2_status ?? {}) as Record<string, unknown>;
+  const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 8);
+  const executionHistoryStatus: JarvisExecutionHistoryStatus = dashboard.execution_history?.status ?? dashboard.governed_execution?.execution_history ?? {};
+  const executionHistoryItems: JarvisExecutionHistoryItem[] = (dashboard.execution_history?.items ?? dashboard.governed_execution?.execution_history?.recent ?? []).slice(0, 5);
+  const localRuntime: JarvisLocalRuntimeStatus = dashboard.local_runtime ?? dashboard.governed_execution?.local_runtime ?? {};
+  const browserVerification: JarvisBrowserVerificationStatus = dashboard.browser_verification ?? dashboard.governed_execution?.browser_verification ?? {};
+  const browserChecks: JarvisBrowserVerificationCheck[] = (browserVerification.checks ?? []).slice(0, 8);
+  const stopRollbackContracts = (dashboard.stop_rollback_contracts ?? dashboard.governed_execution?.stop_rollback_contracts ?? {}) as Record<string, unknown>;
+  const voicePhase2Runtime: JarvisPhase2VoiceRuntime = voiceRuntimePack.phase_2_runtime ?? {};
+  const voiceDiagnostics = voicePhase2Runtime.voice_runtime_diagnostics ?? {};
+  const wakeRuntimeReadiness = voicePhase2Runtime.wake_runtime_readiness ?? {};
 
   const hermesRows = [
     ["Hermes disponible", yesNo(hermesRuntime.available, "sí", "no")],
@@ -106,6 +126,44 @@ export function JarvisDebugDrawer({
     ["ejecución activa", yesNo(hermesRuntime.active_execution, "sí", "no")],
     ["modo", valueText(hermesRuntime.execution_mode, "read_only_visibility")],
     ["coste", valueText(hermesRuntime.measured_cost)],
+  ] as const;
+
+  const phase2Rows = [
+    ["phase", valueText(phase2Status.phase, "phase_2_local_assistant_runtime")],
+    ["status", valueText(phase2Status.status, "ready")],
+    ["allowlist", yesNo(phase2Status.allowlist_only, "true", "false")],
+    ["approval v2", yesNo(phase2Status.strong_approval_v2, "enabled", "unknown")],
+    ["history", yesNo(phase2Status.execution_history, "enabled", "unknown")],
+    ["local runtime ready", yesNo(phase2Status.local_runtime_ready, "true", "false")],
+  ] as const;
+
+  const localRuntimeRows = [
+    ["daemon", valueText(localRuntime.daemon_status, "not_running")],
+    ["tray", valueText(localRuntime.tray_status, "not_running")],
+    ["ready", yesNo(localRuntime.local_runtime_ready, "true", "false")],
+    ["startup", valueText(localRuntime.startup_mode, "manual")],
+    ["background listening", yesNo(localRuntime.background_listening_enabled, "true", "false")],
+    ["auto start", yesNo(localRuntime.auto_start_enabled, "true", "false")],
+    ["opt-in", yesNo(localRuntime.user_opt_in_required, "true", "false")],
+    ["binding", valueText(localRuntime.local_only_binding, "127.0.0.1/localhost")],
+  ] as const;
+
+  const browserVerificationRows = [
+    ["status", valueText(browserVerification.status, "ready_for_manual_or_static_verification")],
+    ["route", valueText(browserVerification.route, "/jarvis")],
+    ["checks", valueText(browserVerification.check_count ?? browserChecks.length, "0")],
+    ["playwright", valueText(browserVerification.playwright_status, "not_required")],
+    ["auto mic", yesNo(browserVerification.no_auto_get_user_media, "blocked", "unknown")],
+    ["generic execute route", yesNo(browserVerification.no_execute_route, "absent", "unknown")],
+    ["frontend Hermes", yesNo(browserVerification.no_direct_hermes_frontend, "blocked", "unknown")],
+  ] as const;
+
+  const stopRollbackRows = [
+    ["catalog actions", valueText(stopRollbackContracts.catalog_actions, String(actionCatalogItems.length || 0))],
+    ["stop unsupported honest", yesNo(stopRollbackContracts.stop_unsupported_honest, "true", "unknown")],
+    ["rollback never faked", yesNo(stopRollbackContracts.rollback_never_faked, "true", "unknown")],
+    ["read-only rollback", valueText(stopRollbackContracts.read_only_rollback_status, "not_required")],
+    ["prepare-only rollback", valueText(stopRollbackContracts.prepare_only_rollback_status, "discard_preview")],
   ] as const;
 
   const voiceRows = [
@@ -151,6 +209,17 @@ export function JarvisDebugDrawer({
     ["transcript persistence", yesNo(voiceRuntimePack.transcript_persistence, "true", "false")],
     ["voice approval", yesNo(voiceRuntimePack.voice_approval_enabled, "enabled", "disabled")],
     ["Hermes dispatch", yesNo(voiceRuntimePack.hermes_dispatch_allowed, "allowed", "false")],
+  ] as const;
+
+  const phase2VoiceRows = [
+    ["diagnostics", "ready_for_browser_capability_check"],
+    ["browser STT", valueText(voiceDiagnostics.browser_stt_capability, "client_side_unknown")],
+    ["browser TTS", valueText(voiceDiagnostics.browser_tts_capability, "client_side_unknown")],
+    ["selected voice", valueText(voiceDiagnostics.selected_voice_metadata, "browser_selected_voice_name_lang_voice_uri_only")],
+    ["low confidence", valueText(voiceDiagnostics.low_confidence_clarification_threshold, "0.65")],
+    ["intent submitted", yesNo(voiceDiagnostics.voice_intent_submitted_to_preview, "execution_preview_only", "false")],
+    ["wake provider", valueText(wakeRuntimeReadiness.provider_status, "disabled")],
+    ["always-on wake", yesNo(wakeRuntimeReadiness.wake_always_on_real, "enabled", "disabled")],
   ] as const;
 
   const voiceSessionRows = [
@@ -697,6 +766,40 @@ export function JarvisDebugDrawer({
                     <p className="font-mono-ui text-sm">Esta pantalla pide approvals al backend gobernado; no llama a Hermes directo.</p>
                   </div>
                 </div>
+                <Card data-testid="jarvis-action-catalog-drawer">
+                  <CardHeader>
+                    <CardTitle>Action Catalog Allowlist</CardTitle>
+                    <CardDescription>Catálogo cerrado Phase 2; no shell libre ni comandos arbitrarios.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase2Rows} />
+                    <StatusList items={stopRollbackRows} />
+                    <div className="grid gap-2 lg:grid-cols-2">
+                      {actionCatalogItems.length === 0 ? (
+                        <SafetyLine>No hay catálogo cargado en este snapshot.</SafetyLine>
+                      ) : actionCatalogItems.map((action: JarvisActionContract) => (
+                        <div key={valueText(action.action_key)} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.12em] text-foreground">{valueText(action.action_key)}</p>
+                            <Badge variant={statusVariant(valueText(action.risk_level))}>{valueText(action.risk_level)}</Badge>
+                          </div>
+                          <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(action.description)}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Badge variant="outline">approval {valueText(action.approval_required)}</Badge>
+                            <Badge variant={action.stop_supported ? "success" : "outline"}>stop {yesNo(action.stop_supported, "supported", "unsupported")}</Badge>
+                            <Badge variant={action.rollback_supported ? "success" : "outline"}>rollback {valueText(action.rollback_status)}</Badge>
+                            <Badge variant={action.network_allowed ? "warning" : "success"}>network {yesNo(action.network_allowed, "allowed", "false")}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <SafetyLine>Allowlist-only; UI no acepta comandos libres.</SafetyLine>
+                      <SafetyLine>Outputs pasan por redacción antes de llegar al dashboard.</SafetyLine>
+                      <SafetyLine>Secrets, tokens, cookies, passwords y .env quedan denied.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -713,6 +816,7 @@ export function JarvisDebugDrawer({
                   <CardContent className="space-y-4">
                     <StatusList items={voiceRows} />
                     <StatusList items={voiceRuntimePackRows} />
+                    <StatusList items={phase2VoiceRows} />
                     <StatusList items={voiceSessionRows} />
                     <StatusList items={localVoiceRows} />
                     <article className="border border-warning/40 bg-warning/10 p-4">
@@ -939,6 +1043,58 @@ export function JarvisDebugDrawer({
                   </CardContent>
                 </Card>
 
+                <Card data-testid="jarvis-local-runtime-readiness">
+                  <CardHeader>
+                    <CardTitle>Phase 2 / Local Runtime</CardTitle>
+                    <CardDescription>Preparado para daemon/tray local, sin auto mic/camera ni auto wake.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase2Rows} />
+                    <StatusList items={localRuntimeRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>Daemon real queda readiness/modelo de lifecycle; no se instala servicio.</SafetyLine>
+                      <SafetyLine>Tray real queda capability model; no auto-start sin opt-in.</SafetyLine>
+                      <SafetyLine>background_listening_enabled=false.</SafetyLine>
+                      <SafetyLine>user_opt_in_required=true.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-execution-history-drawer">
+                  <CardHeader>
+                    <CardTitle>Execution History</CardTitle>
+                    <CardDescription>Historial metadata-only de ejecuciones gobernadas.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList
+                      items={[
+                        ["status", executionHistoryStatus.metadata_only ? "metadata_only" : valueText(executionHistoryStatus.available, "metadata_only")],
+                        ["count", valueText(executionHistoryStatus.record_count, "0")],
+                        ["contains_secret", yesNo(executionHistoryStatus.contains_secret, "true", "false")],
+                        ["contains_raw_audio", yesNo(executionHistoryStatus.contains_raw_audio, "true", "false")],
+                        ["contains_camera_frame", yesNo(executionHistoryStatus.contains_camera_frame, "true", "false")],
+                      ]}
+                    />
+                    <div className="grid gap-2">
+                      {executionHistoryItems.length === 0 ? (
+                        <SafetyLine>No hay ejecuciones recientes en este snapshot.</SafetyLine>
+                      ) : executionHistoryItems.map((item: JarvisExecutionHistoryItem, index: number) => (
+                        <div key={`${valueText(item.execution_id)}-${index}`} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.12em]">{valueText(item.action_key)}</p>
+                            <Badge variant={statusVariant(valueText(item.status))}>{valueText(item.status)}</Badge>
+                          </div>
+                          <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(item.result_summary ?? item.error_summary ?? item.intent_summary)}</p>
+                          <p className="mt-2 font-mono-ui text-[0.66rem] text-muted-foreground">
+                            risk {valueText(item.risk_level)} · approval {valueText(item.approval_level)} · duration {valueText(item.duration_ms)}ms · redaction {valueText(item.redaction_summary)}
+                          </p>
+                        </div>
+                      ))}
+                      <SafetyLine>El historial no guarda salidas completas, audio bruto, frames, secretos ni credenciales.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <div className="flex items-center gap-2">
@@ -996,6 +1152,34 @@ export function JarvisDebugDrawer({
                         <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
                       </div>
                     </article>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-browser-verification-checklist">
+                  <CardHeader>
+                    <CardTitle>Browser Verification</CardTitle>
+                    <CardDescription>Checklist estático/manual para /jarvis y endpoints locales.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={browserVerificationRows} />
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {browserChecks.length === 0 ? (
+                        <SafetyLine>No hay checklist de navegador cargado.</SafetyLine>
+                      ) : browserChecks.map((check: JarvisBrowserVerificationCheck) => (
+                        <div key={valueText(check.name)} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono-ui text-xs text-foreground">{valueText(check.name)}</p>
+                            <Badge variant={check.status === "passed" ? "success" : statusVariant(valueText(check.status))}>{valueText(check.status)}</Badge>
+                          </div>
+                          <p className="mt-2 line-clamp-2 font-mono-ui text-[0.7rem] text-muted-foreground">{valueText(check.description ?? check.notes)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <SafetyLine>No auto getUserMedia on load.</SafetyLine>
+                      <SafetyLine>No generic execute route.</SafetyLine>
+                      <SafetyLine>No direct Hermes frontend path.</SafetyLine>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

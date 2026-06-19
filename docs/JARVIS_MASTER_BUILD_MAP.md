@@ -157,6 +157,22 @@ Piezas relevantes ya documentadas:
   faster-whisper, whisper.cpp, Piper, ffmpeg, sounddevice, torch, openWakeWord,
   MediaPipe ni TFJS; no descarga modelos; no activa wake always-on ni Hermes
   directo desde frontend.
+- Phase 2 Local Assistant Runtime de PR #166: JARVIS añade ejecución local
+  gobernada usable sin crear otro Hermes. `Phase2LocalAssistantRuntimeControlPlane`
+  extiende Phase 1, reutiliza el `Mark3HermesRuntimeBridge` existente para
+  `repo.file.read_safe`, y añade catálogo allowlisted para
+  `local.status.read`, `local.doctor.run`, `repo.status.read`,
+  `repo.tests.run_allowlisted`, `repo.diff.read`, `repo.log.read`,
+  `jarvis.phase.status`, `jarvis.audit.status`, `jarvis.memory.status`,
+  `jarvis.execution.history.read` y `jarvis.execution.preview`. Strong
+  Approval v2 soporta `none/soft/normal/strong/double/triple/blocked/unsupported`;
+  high requiere strong y critical queda blocked si double/triple real no está
+  configurado. Execution History persiste metadata-only en SQLite cuando hay
+  state dir. Stop/rollback contracts, browser verification, voice/wake
+  readiness y daemon/tray readiness quedan visibles en API, event stream y
+  drawer de `/jarvis`. Sigue sin `/execute`, shell libre, comandos arbitrarios,
+  frontend Hermes directo, auto mic/camera/wake, secretos, dinero, Stripe,
+  deploy, email ni publicación.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

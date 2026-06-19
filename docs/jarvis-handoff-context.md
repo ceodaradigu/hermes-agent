@@ -132,6 +132,45 @@ git status --short
 
 `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
 
+Actualización PR #166 / Phase 2 Local Assistant Runtime:
+
+- JARVIS pasa de base local gobernada a asistente local usable con runtime
+  local gobernado y catálogo allowlisted. No se creó otro Hermes.
+- `Phase2LocalAssistantRuntimeControlPlane` extiende el control plane de
+  Phase 1 y mantiene el `Mark3HermesRuntimeBridge` existente como único camino
+  Hermes real para `repo.file.read_safe`.
+- Strong Approval v2 soporta `none`, `soft`, `normal`, `strong`, `double`,
+  `triple`, `blocked` y `unsupported`; high requiere strong, critical requiere
+  double/triple y queda blocked con `requires_stronger_approval_not_configured`
+  porque el canal real double/triple no está configurado.
+- Catálogo allowlisted Phase 2:
+  `local.status.read`, `local.doctor.run`, `repo.status.read`,
+  `repo.tests.run_allowlisted`, `repo.diff.read`, `repo.log.read`,
+  `repo.file.read_safe`, `jarvis.phase.status`, `jarvis.audit.status`,
+  `jarvis.memory.status`, `jarvis.execution.history.read` y
+  `jarvis.execution.preview`.
+- Execution History persiste metadata segura en SQLite cuando existe
+  `JARVIS_LOCAL_STATE_DIR`/`JARVIS_STATE_DIR`; no guarda outputs completos,
+  contenido de archivos, audio bruto, frames, secretos ni credenciales.
+- `/mark-3/phase-2/status`, `/mark-3/execution/action-catalog`,
+  `/mark-3/execution/history`, `/mark-3/approval/status`,
+  `/mark-3/local-runtime/status` y
+  `/mark-3/browser-verification/status` quedan disponibles como endpoints
+  gobernados/read-only donde aplica.
+- `/mark-3/dashboard/status`, `/mark-3/dashboard/events` y `/stream` exponen
+  Phase 2 con `phase_2_state`, `action_catalog_state` y
+  `execution_history_state`, siempre metadata-only.
+- `/jarvis` muestra catálogo, historial compacto, stop/rollback, voice
+  diagnostics, browser verification y daemon/tray readiness en drawer; la
+  presencia central, esfera de partículas y smart bar siguen intactas.
+- Sigue prohibido: `/execute`, shell libre, comandos arbitrarios, frontend
+  directo a Hermes, wake approval, voice approval, auto mic/camera/wake,
+  secretos, `.env`, tokens, cookies, passwords, dinero, Stripe, deploy, email,
+  publicación y operaciones externas productivas.
+- Documentación principal:
+  `docs/jarvis-pr-166-phase-2-local-assistant-runtime.md` y
+  `docs/jarvis-phase-2-local-assistant-runtime-report.md`.
+
 Actualización #157 / Fase 1 base operativa local:
 
 - `/mark-3/dashboard/status` expone `sensor_ledger`, `policy_status`,

@@ -147,6 +147,36 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_1_governed_execution.phase_1_status(route_paths=route_path_list),
         timeline,
     )
+    phase_2_status = _source(
+        "/mark-3/phase-2/status",
+        lambda: app_state.phase_2_local_assistant_runtime.phase_2_status(route_paths=route_path_list),
+        timeline,
+    )
+    action_catalog = _source(
+        "/mark-3/execution/action-catalog",
+        lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
+        timeline,
+    )
+    execution_history = _source(
+        "/mark-3/execution/history",
+        lambda: app_state.phase_2_local_assistant_runtime.history(limit=10),
+        timeline,
+    )
+    approval_v2_status = _source(
+        "/mark-3/approval/status",
+        lambda: app_state.phase_2_local_assistant_runtime.approval_status(),
+        timeline,
+    )
+    local_runtime_status = _source(
+        "/mark-3/local-runtime/status",
+        lambda: app_state.phase_2_local_assistant_runtime.local_runtime_status(),
+        timeline,
+    )
+    browser_verification = _source(
+        "/mark-3/browser-verification/status",
+        lambda: app_state.phase_2_local_assistant_runtime.browser_verification_status(route_paths=route_path_list),
+        timeline,
+    )
     conversational_brain = _source(
         "/mark-3/conversational-brain/status",
         lambda: app_state.conversational_brain_bridge.status(),
@@ -433,8 +463,29 @@ def build_mark_3_dashboard_status(
                 "Governed Execution",
                 "ready" if execution_control.get("state", {}).get("available") else UNKNOWN,
                 "/mark-3/execution/status",
-                "phase_1_governed_dispatch",
-                "Intent -> preview -> risk -> approval -> governed dispatch -> audit is wired through backend gates.",
+                "phase_2_allowlisted_governed_dispatch",
+                "Intent -> allowlisted preview -> risk -> approval v2 -> governed dispatch -> history/audit is wired through backend gates.",
+            ),
+            _module(
+                "Phase 2 Runtime",
+                "ready" if phase_2_status.get("status") else UNKNOWN,
+                "/mark-3/phase-2/status",
+                "local_assistant_runtime",
+                "Strong Approval v2, allowlisted actions, execution history, stop/rollback contracts and local runtime readiness.",
+            ),
+            _module(
+                "Action Catalog",
+                "ready" if action_catalog.get("allowlist_only") else UNKNOWN,
+                "/mark-3/execution/action-catalog",
+                "allowlisted_only",
+                "No shell freeform or arbitrary commands; every action has risk, approval, timeout, stop/rollback and redaction contracts.",
+            ),
+            _module(
+                "Execution History",
+                "ready" if execution_history.get("status", {}).get("available") else UNKNOWN,
+                "/mark-3/execution/history",
+                "metadata_only",
+                "Persistent local execution history stores summaries only; no secrets, raw audio or camera frames.",
             ),
             _module(
                 "Phase 1 Completion",
@@ -484,6 +535,7 @@ def build_mark_3_dashboard_status(
             },
             "source_endpoint": "/mark-3/execution/status",
             "raw_status": _status_summary(approvals_status),
+            "approval_v2_status": approval_v2_status,
         },
         "mission_control": mission_control,
         "hermes_execution": hermes_execution,
@@ -517,7 +569,13 @@ def build_mark_3_dashboard_status(
         "sensor_ledger": sensor_ledger,
         "policy_status": policy_status,
         "phase_1_completion": phase_1_completion,
+        "phase_2_status": phase_2_status,
         "governed_execution": execution_control,
+        "action_catalog": action_catalog,
+        "execution_history": execution_history,
+        "stop_rollback_contracts": execution_control.get("stop_rollback_contracts", {}),
+        "local_runtime": local_runtime_status,
+        "browser_verification": browser_verification,
         "memory_brain_v2": memory_brain_v2_status,
         "memory_brain": memory_brain,
         "mobile_companion": mobile_companion,
@@ -579,6 +637,9 @@ def build_mark_3_dashboard_status(
                 "memory_state",
                 "risk_state",
                 "execution_state",
+                "phase_2_state",
+                "action_catalog_state",
+                "execution_history_state",
                 "audit_event",
                 "persistent_audit_state",
                 "memory_brain_v2_state",
@@ -648,6 +709,11 @@ def build_mark_3_dashboard_status(
             "no_deploy": True,
             "no_credentials": True,
             "no_email_send": True,
+            "phase_2_allowlisted_actions_only": True,
+            "execution_history_metadata_only": True,
+            "background_listening_enabled": False,
+            "auto_start_enabled": False,
+            "user_opt_in_required": True,
         },
         "timeline": timeline
         + hermes_timeline
@@ -673,6 +739,26 @@ def build_mark_3_dashboard_status(
         + local_doctor_timeline
         + sensor_ledger_timeline
         + policy_status_timeline
+        + [
+            {
+                "event": "Phase 2 local assistant runtime ready",
+                "source": "/mark-3/phase-2/status",
+                "status": phase_2_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Allowlisted action catalog loaded",
+                "source": "/mark-3/execution/action-catalog",
+                "status": "ready" if action_catalog.get("allowlist_only") else UNKNOWN,
+                "read_only": True,
+            },
+            {
+                "event": "Execution history metadata available",
+                "source": "/mark-3/execution/history",
+                "status": "ready" if execution_history.get("status", {}).get("available") else UNKNOWN,
+                "read_only": True,
+            },
+        ]
         + [
             {
                 "event": "dashboard read model generated",
