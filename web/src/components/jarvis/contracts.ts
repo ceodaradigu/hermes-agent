@@ -60,11 +60,11 @@ export const jarvisPresenceVisualLayers = {
 } as const;
 
 export const presenceStates = [
-  ["idle", "idle/calmado", "Esfera media; respiración suave; centro casi inexistente."],
+  ["idle", "idle/calmado", "Esfera de partículas casi quieta; deriva apenas perceptible; centro casi inexistente."],
   ["wake_listening", "wake listening", "Atención ligera bajo opt-in futuro; wake phrase nunca aprueba."],
-  ["listening", "escuchando", "Esfera más pequeña/concentrada; partículas tensas y pulso fino."],
+  ["listening", "escuchando", "Atención sutil con micro pulso fino; sin agitación ni picos radiales."],
   ["transcribing", "transcribiendo", "Reorganización ordenada, como si recalculase; texto temporal sin audio bruto."],
-  ["thinking", "pensando", "Turbulencia interna clara, remolinos y redistribución distinta de speaking."],
+  ["thinking", "pensando", "Remolino interno moderado y redistribución distinta de speaking."],
   ["speaking", "hablando", "Picos/ondas radiales; la voz empuja partículas hacia fuera mediante pseudo-audio local."],
   ["cancelled", "cancelado", "Vuelve a una esfera calmada tras cancelar escucha o TTS."],
   ["approval_required", "approval required", "Canal cálido separado; JARVIS espera confirmación humana y wake no aprueba."],

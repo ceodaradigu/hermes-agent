@@ -220,6 +220,12 @@ export function JarvisOrb3D({
       const reflow = reducedMotion ? currentOrb.transcribingReflow * 0.18 : currentOrb.transcribingReflow;
       const radialEnergy = reducedMotion ? currentOrb.radialSpikeEnergy * 0.20 : currentOrb.radialSpikeEnergy;
       const pressure = reducedMotion ? currentOrb.spherePressure * 0.18 : currentOrb.spherePressure;
+      const idleDrift = currentOrb.visualState === "idle";
+      const wakeDrift = currentOrb.visualState === "wake_listening";
+      const listeningDrift = currentOrb.visualState === "listening";
+      const laneBaseSpeed = idleDrift ? 0.006 : wakeDrift ? 0.010 : listeningDrift ? 0.014 : 0.030;
+      const laneSpreadSpeed = idleDrift ? 0.0008 : wakeDrift ? 0.0012 : listeningDrift ? 0.002 : 0.004;
+      const motionScale = idleDrift ? 0.36 + currentOrb.motion * 0.10 : wakeDrift ? 0.42 + currentOrb.motion * 0.12 : listeningDrift ? 0.50 + currentOrb.motion * 0.18 : 0.72 + currentOrb.motion * 0.42;
 
       context.clearRect(0, 0, width, height);
       context.save();
@@ -229,7 +235,7 @@ export function JarvisOrb3D({
       const maxParticles = reducedMotion ? 820 : Math.min(particles.length, currentOrb.particleBudget);
       for (let index = 0; index < maxParticles; index += 1) {
         const particle = particles[index];
-        const laneSpeed = (0.030 + particle.lane * 0.004 + currentOrb.stateReactiveEnergy * 0.020 + focus * 0.010 + reflow * 0.014 + radialEnergy * 0.030 + turbulence * 0.046) * (0.72 + currentOrb.motion * 0.42);
+        const laneSpeed = (laneBaseSpeed + particle.lane * laneSpreadSpeed + currentOrb.stateReactiveEnergy * 0.020 + focus * 0.010 + reflow * 0.014 + radialEnergy * 0.030 + turbulence * 0.046) * motionScale;
         const spin = t * laneSpeed * (0.65 + particle.seed);
         const cy = Math.cos(spin);
         const sy = Math.sin(spin);
@@ -355,12 +361,13 @@ export function JarvisOrb3D({
       data-fallback-particle-budget="360"
       data-dynamic-sphere-size={`${orb.sphereScaleMin}/${orb.sphereScaleMid}/${orb.sphereScaleMax}`}
       data-idle-center="nearly-nonexistent"
+      data-idle-motion-signature="nearly-still-barely-perceptible-drift-no-radial-spikes"
       data-speaking-radial-spikes={String(orb.radialSpikeEnergy > 0.8)}
       data-speaking-motion="pseudo-audio-deterministic-radial-push-spikes-outward-waves"
       data-thinking-turbulence={String(orb.thinkingTurbulence)}
       data-thinking-motion-signature="curl-swirl-internal-redistribution-not-speaking-spikes"
       data-listening-focus={String(orb.listeningFocus)}
-      data-listening-motion-signature="contracted-tense-fine-pulse-smaller-sphere"
+      data-listening-motion-signature="subtle-focus-micro-pulse-attentive-not-agitated"
       data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.65;renderer:canvas-2d`}
     >
       <div className="absolute inset-0 bg-[#00030a]" />
@@ -383,7 +390,7 @@ export function JarvisOrb3D({
           data-particle-sphere-count={particles.length}
           data-speaking-spikes="radial-spikes-and-outward-waves"
           data-thinking-motion="internal-turbulence-and-swirl"
-          data-listening-motion="focused-contraction-and-attention-pulse"
+          data-listening-motion="subtle-focus-and-fine-attention-pulse"
           style={sphereStyle}
         >
           <div
@@ -419,7 +426,13 @@ export function JarvisOrb3D({
                     "--particle-opacity-high": String(particle.opacity * (0.45 + orb.stateReactiveEnergy * 0.45)),
                     "--particle-opacity-end": orb.isStopped ? "0.04" : "0.18",
                     animationDelay: `${particle.delay}s`,
-                    animationDuration: `${Math.max(2.6, particle.duration / (0.75 + orb.motion * 0.22))}s`,
+                    animationDuration: `${
+                      orb.visualState === "idle"
+                        ? particle.duration * 6.4
+                        : orb.visualState === "wake_listening"
+                          ? particle.duration * 3.8
+                          : Math.max(2.6, particle.duration / (0.75 + orb.motion * 0.22))
+                    }s`,
                     height: `${particle.size}px`,
                     opacity: particle.opacity,
                     width: `${particle.size}px`,
@@ -510,7 +523,13 @@ export function JarvisOrb3D({
                         "--fallback-opacity-low": orb.isStopped ? "0.05" : "0.16",
                         "--fallback-opacity-high": String(particle.opacity * (0.52 + orb.stateReactiveEnergy * 0.32)),
                         animationDelay: `${particle.delay}s`,
-                        animationDuration: `${Math.max(2.8, particle.duration / (0.78 + orb.motion * 0.20))}s`,
+                        animationDuration: `${
+                          orb.visualState === "idle"
+                            ? particle.duration * 6.2
+                            : orb.visualState === "wake_listening"
+                              ? particle.duration * 3.6
+                              : Math.max(2.8, particle.duration / (0.78 + orb.motion * 0.20))
+                        }s`,
                         height: `${particle.size}px`,
                         width: `${particle.size}px`,
                       } as CSSProperties

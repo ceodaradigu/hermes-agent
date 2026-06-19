@@ -79,26 +79,26 @@ def test_pr_162_states_have_distinct_motion_energy_center_and_size_contracts():
         "isSpeaking ? 1.48",
         "isError ? 1.56",
         "isAlert ? 1.42",
-        'visualState === "listening" ? 0.62',
+        'visualState === "listening" ? 0.94',
         "isStopped ? 0.48",
-        ": 0.008;",
+        ": 0.006;",
         "radialSpikeEnergy = isStopped ? 0 : isError ? 1.22 : isAlert ? 1.08 : isSpeaking ? 1",
-        "thinkingTurbulence = isStopped ? 0 : isThinking ? 1",
-        'listeningFocus = isStopped ? 0 : visualState === "listening" ? 1',
+        "thinkingTurbulence = isStopped ? 0 : isThinking ? 0.58",
+        'listeningFocus = isStopped ? 0 : visualState === "listening" ? 0.24',
         "transcribingReflow = isStopped ? 0 : isTranscribing ? 1 : 0",
         "particleBudget: isStopped ? 760 : isSpeaking ? 2600",
         "isThinking ? 2460",
         'visualState === "listening" ? 2240',
-        "isThinking ? 0.80",
-        'visualState === "listening" ? 0.62',
-        ": 0.055;",
+        "isThinking ? 0.46",
+        'visualState === "listening" ? 0.18',
+        ": 0.012;",
         "spherePressure = isStopped ? 0.05",
-        ": 0.025;",
-        "visualState === \"listening\" ? 0.62",
-        ": 0.985;",
+        ": 0.003;",
+        "visualState === \"listening\" ? 0.12",
+        ": 0.997;",
         ": 1.00;",
-        ": 1.018;",
-        ": 10.5;",
+        ": 1.003;",
+        ": 22.0;",
         ": 1500,",
     ):
         assert marker in state_hook
@@ -110,10 +110,12 @@ def test_pr_162_states_have_distinct_motion_energy_center_and_size_contracts():
         "outwardWave",
         "spikeMask",
         "swirl",
-        "const laneSpeed = (0.030",
+        "const laneBaseSpeed = idleDrift ? 0.006",
+        "const laneSpeed = (laneBaseSpeed",
         'data-speaking-motion="pseudo-audio-deterministic-radial-push-spikes-outward-waves"',
         'data-thinking-motion-signature="curl-swirl-internal-redistribution-not-speaking-spikes"',
-        'data-listening-motion-signature="contracted-tense-fine-pulse-smaller-sphere"',
+        'data-idle-motion-signature="nearly-still-barely-perceptible-drift-no-radial-spikes"',
+        'data-listening-motion-signature="subtle-focus-micro-pulse-attentive-not-agitated"',
         "data-dynamic-sphere-size=",
     ):
         assert marker in orb
@@ -124,25 +126,82 @@ def test_pr_162_idle_is_the_calmest_motion_state():
 
     for marker in (
         "baseReactiveEnergy =",
-        ": 0.055;",
-        'visualState === "listening" ? 0.62',
-        "isThinking ? 0.80",
+        ": 0.012;",
+        'visualState === "listening" ? 0.18',
+        "isThinking ? 0.46",
         "isSpeaking ? 1",
-        "radialSpikeEnergy = isStopped ? 0 : isError ? 1.22 : isAlert ? 1.08 : isSpeaking ? 1 : textReactiveActive ? 0.46 : 0",
-        "thinkingTurbulence = isStopped ? 0 : isThinking ? 1 : isTranscribing ? 0.18 : 0",
+        "radialSpikeEnergy = isStopped ? 0 : isError ? 1.22 : isAlert ? 1.08 : isSpeaking ? 1 : 0",
+        "thinkingTurbulence = isStopped ? 0 : isThinking ? 0.58 : isTranscribing ? 0.14 : 0",
         "spherePressure = isStopped ? 0.05",
-        ": 0.025;",
-        ": 0.008;",
+        ": 0.003;",
+        ": 0.006;",
         "sphereAnimationSeconds =",
-        ": 10.5;",
+        ": 22.0;",
         "particleBudget: isStopped ? 760 : isSpeaking ? 2600",
         ": 1500,",
     ):
         assert marker in state_hook
 
-    assert state_hook.index(": 0.055;") > state_hook.index('visualState === "listening" ? 0.62')
-    assert state_hook.index(": 0.055;") > state_hook.index("isThinking ? 0.80")
-    assert state_hook.index("isSpeaking ? 1") < state_hook.index("isThinking ? 0.80")
+    assert state_hook.index(": 0.012;") > state_hook.index('visualState === "listening" ? 0.18')
+    assert state_hook.index(": 0.012;") > state_hook.index("isThinking ? 0.46")
+    assert state_hook.index("isSpeaking ? 1") < state_hook.index("isThinking ? 0.46")
+
+
+def test_pr_168_orb_idle_motion_polish_contract_is_explicit():
+    orb = _read(JARVIS_COMPONENT_DIR / "JarvisOrb3D.tsx")
+    state_hook = _read(JARVIS_HOOK_DIR / "useJarvisOrbState.ts")
+    contracts = _read(JARVIS_COMPONENT_DIR / "contracts.ts")
+
+    for marker in (
+        "visualMotionActive",
+        "textReactiveActive ? 0.08 : 0",
+        "speakingSpikeEnergy = isStopped ? 0 : isSpeaking ? 1 : 0",
+        "radialSpikeEnergy = isStopped ? 0 : isError ? 1.22 : isAlert ? 1.08 : isSpeaking ? 1 : 0",
+        "isSpeaking ? 1.32 : isThinking ? 0.82",
+        'visualState === "listening" ? 0.42',
+        'visualState === "wake_listening" ? 0.22',
+        ": 0.10);",
+        "isThinking ? 0.58",
+        'visualState === "listening" ? 0.28',
+        ": 0.035;",
+        "isThinking ? 0.32",
+        'visualState === "listening" ? 0.12',
+        ": 0.003;",
+        "isThinking ? 0.90",
+        'visualState === "listening" ? 0.94',
+        ": 0.997;",
+        "isThinking ? 1.08",
+        'visualState === "listening" ? 0.988',
+        "textReactiveActive ? 1.012 : 1.003",
+        "isSpeaking ? 1.10 : isThinking ? 4.2",
+        'visualState === "listening" ? 8.5',
+        ": 22.0;",
+        "targetFrameMs: isStopped ? 90 : isError ? 42 : visualMotionActive ? 16 : textReactiveActive ? 42 : 80",
+    ):
+        assert marker in state_hook
+
+    for marker in (
+        "const idleDrift = currentOrb.visualState === \"idle\"",
+        "const laneBaseSpeed = idleDrift ? 0.006",
+        "const laneSpreadSpeed = idleDrift ? 0.0008",
+        "const motionScale = idleDrift ? 0.36 + currentOrb.motion * 0.10",
+        "orb.visualState === \"idle\"",
+        "? particle.duration * 6.4",
+        "? particle.duration * 6.2",
+        'data-idle-motion-signature="nearly-still-barely-perceptible-drift-no-radial-spikes"',
+        'data-listening-motion-signature="subtle-focus-micro-pulse-attentive-not-agitated"',
+        'data-listening-motion="subtle-focus-and-fine-attention-pulse"',
+    ):
+        assert marker in orb
+
+    for marker in (
+        "Esfera de partículas casi quieta",
+        "deriva apenas perceptible",
+        "sin agitación ni picos radiales",
+        "Remolino interno moderado",
+        "Picos/ondas radiales",
+    ):
+        assert marker in contracts
 
 
 def test_pr_162_visual_qa_preview_is_local_safe_and_state_complete():
