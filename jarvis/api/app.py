@@ -239,7 +239,9 @@ from jarvis.phase_2_local_assistant_runtime import (
     Phase2LocalAssistantRuntimeControlPlane,
 )
 from jarvis.phase_3_local_runtime import Phase3LocalRuntimeControlPlane
-from jarvis.phase_4_local_controller_remote_pairing import Phase4LocalControllerRemotePairingControlPlane
+from jarvis.phase_5_local_controller_trusted_identity_voice_approval import (
+    Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane,
+)
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -637,6 +639,8 @@ class Mark3TrustedApprovalDecisionRequest(BaseModel):
     confirmation_phrase: Optional[str] = None
     readback_text: Optional[str] = None
     reason: str = ""
+    action_id: Optional[str] = None
+    scope_fingerprint: Optional[str] = None
 
 
 class Mark3LocalControllerRegisterRequest(BaseModel):
@@ -683,6 +687,74 @@ class Mark3RemotePairingRevokeRequest(BaseModel):
     actor: str = "David"
     device_id: Optional[str] = None
     reason: str = "operator revoke"
+
+
+class Mark3LocalControllerOptInRequest(BaseModel):
+    enabled: bool = False
+    actor: str = "David"
+    reason: str = "operator opt-in"
+
+
+class Mark3LocalControllerStartRequest(BaseModel):
+    actor: str = "David"
+    reason: str = "operator start"
+
+
+class Mark3LocalControllerKillSwitchRequest(BaseModel):
+    enabled: bool = True
+    actor: str = "David"
+    reason: str = "operator kill switch"
+
+
+class Mark3TrustedDeviceImportPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    device_id: str = "imported-device"
+    display_name: str = "Imported device"
+    trusted: bool = False
+    verified: bool = False
+    paired: bool = False
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class Mark3LocalPairingChallengeRequest(BaseModel):
+    display_name: str = "David trusted local device"
+    public_identifier: str = "local-device-public-identifier"
+    channel: str = "local_pairing"
+    scope: List[str] = ["voice_approval", "normal", "strong"]
+    capabilities: Optional[Dict[str, Any]] = None
+    ttl_seconds: int = 180
+    risk_limit: str = "high"
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class Mark3LocalPairingVerifyRequest(BaseModel):
+    challenge_id: str
+    nonce: str
+    response_phrase: str
+    public_identifier: str
+    display_name: str = "David trusted local device"
+    scope: List[str] = ["voice_approval", "normal", "strong"]
+
+
+class Mark3VoiceApprovalStartRequest(BaseModel):
+    approval_id: str
+    device_id: str
+    voice_session_id: str = "local-voice-session"
+    readback_text: str
+    scope: Optional[List[str]] = None
+    cost_summary: str = "unknown; operator review required"
+    duration_seconds: int = 180
+
+
+class Mark3VoiceApprovalDecisionRequest(BaseModel):
+    session_id: str
+    device_id: str
+    transcript: str
+    readback_text: str
+    scope: Optional[List[str]] = None
+    action_id: Optional[str] = None
+    cost_summary: str = "unknown; operator review required"
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2144,7 +2216,7 @@ def create_app(
         adapter_factory=hermes_runtime_adapter_factory,
     )
     app.state.execution_history = ExecutionHistoryStore.from_environment()
-    app.state.phase_2_local_assistant_runtime = Phase4LocalControllerRemotePairingControlPlane(
+    app.state.phase_2_local_assistant_runtime = Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(
         intake_pipeline=app.state.conversational_intake_pipeline,
         policy_engine=app.state.policy_engine,
         mission_loop=app.state.mark_3_mission_loop,
@@ -2155,6 +2227,7 @@ def create_app(
     )
     app.state.phase_3_local_runtime = app.state.phase_2_local_assistant_runtime
     app.state.phase_4_local_controller = app.state.phase_2_local_assistant_runtime
+    app.state.phase_5_local_identity_voice = app.state.phase_2_local_assistant_runtime
     app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
 
     @app.get("/health")
@@ -2523,6 +2596,12 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-5/status")
+    def mark_3_phase_5_status() -> dict:
+        return app.state.phase_5_local_identity_voice.phase_5_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
     @app.get("/mark-3/local-daemon/status")
     def mark_3_local_daemon_status() -> dict:
         return app.state.phase_3_local_runtime.local_daemon_status()
@@ -2572,6 +2651,18 @@ def create_app(
     def mark_3_local_controller_stop_request(payload: Mark3LocalControllerStopRequest) -> dict:
         return app.state.phase_4_local_controller.local_controller_stop_request(**payload.model_dump())
 
+    @app.post("/mark-3/local-controller/opt-in")
+    def mark_3_local_controller_opt_in(payload: Mark3LocalControllerOptInRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.set_local_controller_opt_in(**payload.model_dump())
+
+    @app.post("/mark-3/local-controller/start-request")
+    def mark_3_local_controller_start_request(payload: Mark3LocalControllerStartRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.local_controller_start_request(**payload.model_dump())
+
+    @app.post("/mark-3/local-controller/kill-switch")
+    def mark_3_local_controller_kill_switch(payload: Mark3LocalControllerKillSwitchRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.local_controller_kill_switch(**payload.model_dump())
+
     @app.get("/mark-3/local-doctor/status")
     def mark_3_local_doctor_status() -> dict:
         return app.state.phase_3_local_runtime.local_doctor_status(
@@ -2589,6 +2680,22 @@ def create_app(
     @app.get("/mark-3/trusted-devices/status")
     def mark_3_trusted_devices_status() -> dict:
         return app.state.phase_4_local_controller.trusted_devices_status()
+
+    @app.post("/mark-3/trusted-devices/import-preview")
+    def mark_3_trusted_devices_import_preview(payload: Mark3TrustedDeviceImportPreviewRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.trusted_device_import_preview(payload=payload.model_dump())
+
+    @app.get("/mark-3/local-pairing/status")
+    def mark_3_local_pairing_status() -> dict:
+        return app.state.phase_5_local_identity_voice.local_pairing_status()
+
+    @app.post("/mark-3/local-pairing/challenge")
+    def mark_3_local_pairing_challenge(payload: Mark3LocalPairingChallengeRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.create_local_pairing_challenge(**payload.model_dump())
+
+    @app.post("/mark-3/local-pairing/verify")
+    def mark_3_local_pairing_verify(payload: Mark3LocalPairingVerifyRequest) -> dict:
+        return app.state.phase_5_local_identity_voice.verify_local_pairing_challenge(**payload.model_dump())
 
     @app.get("/mark-3/remote-pairing/status")
     def mark_3_remote_pairing_status() -> dict:
@@ -2613,6 +2720,32 @@ def create_app(
     @app.get("/mark-3/stop-rollback/status")
     def mark_3_stop_rollback_status() -> dict:
         return app.state.phase_4_local_controller.stop_rollback_status()
+
+    @app.get("/mark-3/voice-approval/status")
+    def mark_3_voice_approval_status() -> dict:
+        return app.state.phase_5_local_identity_voice.voice_approval_status()
+
+    @app.post("/mark-3/voice-approval/start")
+    def mark_3_voice_approval_start(payload: Mark3VoiceApprovalStartRequest) -> dict:
+        try:
+            return app.state.phase_5_local_identity_voice.start_voice_approval_session(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="approval not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/voice-approval/decision")
+    def mark_3_voice_approval_decision(payload: Mark3VoiceApprovalDecisionRequest) -> dict:
+        try:
+            return app.state.phase_5_local_identity_voice.decide_voice_approval(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="voice approval session not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/mark-3/notifications/status")
+    def mark_3_notifications_status() -> dict:
+        return app.state.phase_5_local_identity_voice.notifications_status()
 
     @app.get("/mark-3/execution/action-catalog")
     def mark_3_execution_action_catalog() -> dict:
@@ -2668,7 +2801,9 @@ def create_app(
     @app.post("/mark-3/approval/strong-decision")
     def mark_3_approval_strong_decision(payload: Mark3TrustedApprovalDecisionRequest) -> dict:
         try:
-            return app.state.phase_3_local_runtime.decide_strong_approval(**payload.model_dump())
+            return app.state.phase_3_local_runtime.decide_strong_approval(
+                **payload.model_dump(exclude={"action_id", "scope_fingerprint"})
+            )
         except KeyError:
             raise HTTPException(status_code=404, detail="approval not found")
         except ValueError as exc:
@@ -2677,7 +2812,9 @@ def create_app(
     @app.post("/mark-3/approval/double-decision")
     def mark_3_approval_double_decision(payload: Mark3TrustedApprovalDecisionRequest) -> dict:
         try:
-            return app.state.phase_3_local_runtime.decide_double_approval(**payload.model_dump())
+            return app.state.phase_3_local_runtime.decide_double_approval(
+                **payload.model_dump(exclude={"action_id", "scope_fingerprint"})
+            )
         except KeyError:
             raise HTTPException(status_code=404, detail="approval not found")
         except ValueError as exc:

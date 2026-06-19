@@ -1846,3 +1846,72 @@ Documentos:
 - `docs/jarvis-pr-167-phase-3-local-runtime-daemon-trusted-approvals.md`
 - `docs/jarvis-phase-3-local-runtime-daemon-trusted-approval-report.md`
 - `docs/jarvis-phase-3-local-runtime-pilot-report.md`
+
+## PR #170 - Phase 5 Local Controller, Trusted Identity, Pairing & Voice Approval
+
+Estado: implementado como fundacion local gobernada, con partes nativas
+marcadas honestamente como readiness.
+
+Incluye:
+
+- control plane Phase 5 en
+  `jarvis/phase_5_local_controller_trusted_identity_voice_approval.py`;
+- controlador local opt-in v1: status, opt-in, start intent, kill switch,
+  local-only, no autostart, no background hidden behavior, no external exposure;
+- store SQLite local para identidad persistente de dispositivos confiables;
+- revocacion persistente: un device revocado queda revocado tras restart;
+- pairing local hardened: nonce, challenge exacto, TTL, one-time use, scope
+  exacto, binding de device, rate limit, audit y revoke path;
+- contrato de voice approval v1: wake phrase no aprueba, transcript fixture,
+  trusted device, exact readback, challenge/phrase, scope/cost/action, expiry,
+  anti-replay y audit;
+- triple approval endurecido con identidad persistente, action id, scope
+  fingerprint opcional, canal esperado y verificacion de audit chain;
+- notification readiness metadata-only para approval pending, pairing requested,
+  device trusted/revoked, action blocked, approval expired y voice accepted/denied;
+- script manual/dev local-only:
+  `scripts/local/jarvis-local-controller-dev.py`;
+- `/jarvis`, dashboard read model y event stream exponen Phase 5 sin crear
+  controles de ejecucion directa.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-5/status`
+- `POST /mark-3/local-controller/opt-in`
+- `POST /mark-3/local-controller/start-request`
+- `POST /mark-3/local-controller/kill-switch`
+- `POST /mark-3/trusted-devices/import-preview`
+- `GET /mark-3/local-pairing/status`
+- `POST /mark-3/local-pairing/challenge`
+- `POST /mark-3/local-pairing/verify`
+- `GET /mark-3/voice-approval/status`
+- `POST /mark-3/voice-approval/start`
+- `POST /mark-3/voice-approval/decision`
+- `GET /mark-3/notifications/status`
+
+Invariantes:
+
+- no `/execute`;
+- no shell libre;
+- no frontend directo a Hermes;
+- no Telegram/mobile remote execution;
+- no native tray fake;
+- no autostart;
+- no public bind;
+- no wake phrase approval;
+- no raw audio stored by default;
+- memory never grants permission;
+- pairing never bypasses ApprovalGateway or calls Hermes.
+
+Real vs readiness:
+
+- Real: local contracts, SQLite identity, pairing challenge verification,
+  revocation persistence, voice transcript approval gates, triple persistent
+  identity gates, audit events, dashboard/UI exposure.
+- Readiness: native tray, OS notifications, Telegram/mobile notifications,
+  real STT/VAD/TTS/wake engine, hardware-backed device attestation.
+
+Documento:
+
+- `docs/jarvis-pr-170-phase-5-local-controller-trusted-identity-voice-approval.md`
+- `docs/jarvis-phase-5-local-controller-trusted-identity-voice-approval-report.md`

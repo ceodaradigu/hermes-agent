@@ -111,6 +111,7 @@ export function JarvisDebugDrawer({
   const phase2Status = (dashboard.phase_2_status ?? {}) as Record<string, unknown>;
   const phase3Status = (dashboard.phase_3_status ?? {}) as Record<string, unknown>;
   const phase4Status = (dashboard.phase_4_status ?? {}) as Record<string, unknown>;
+  const phase5Status = (dashboard.phase_5_status ?? {}) as Record<string, unknown>;
   const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 8);
   const executionHistoryStatus: JarvisExecutionHistoryStatus = dashboard.execution_history?.status ?? dashboard.governed_execution?.execution_history ?? {};
   const executionHistoryItems: JarvisExecutionHistoryItem[] = (dashboard.execution_history?.items ?? dashboard.governed_execution?.execution_history?.recent ?? []).slice(0, 5);
@@ -123,6 +124,10 @@ export function JarvisDebugDrawer({
   const trustedDevices = (dashboard.trusted_devices ?? phase4Status.trusted_devices ?? {}) as Record<string, unknown>;
   const trustedDeviceItems = (trustedDevices.devices as Record<string, unknown>[] | undefined ?? []).slice(0, 8);
   const tripleReadiness = (phase4Status.triple_approval_readiness ?? {}) as Record<string, unknown>;
+  const phase5TripleReadiness = (phase5Status.triple_approval_readiness ?? tripleReadiness) as Record<string, unknown>;
+  const localPairing = (dashboard.local_pairing ?? phase5Status.local_pairing ?? {}) as Record<string, unknown>;
+  const voiceApproval = (dashboard.voice_approval ?? phase5Status.voice_approval ?? {}) as Record<string, unknown>;
+  const notifications = (dashboard.notifications ?? phase5Status.notifications ?? {}) as Record<string, unknown>;
   const remotePairing = (dashboard.remote_pairing ?? phase4Status.remote_pairing ?? {}) as Record<string, unknown>;
   const telegramBridge = (dashboard.telegram_bridge ?? phase4Status.telegram_bridge ?? {}) as Record<string, unknown>;
   const remoteBridgeFuture = (localRuntime.remote_bridge_future ?? phase3Status.remote_bridge_future ?? {}) as Record<string, unknown>;
@@ -171,6 +176,17 @@ export function JarvisDebugDrawer({
     ["triple readiness", valueText(tripleReadiness.triple_status, "blocked_no_three_verified_channels")],
     ["remote pairing", yesNo((phase4Status.security_gates as Record<string, unknown> | undefined)?.remote_pairing_enabled, "enabled", "false")],
     ["Telegram API", yesNo((phase4Status.security_gates as Record<string, unknown> | undefined)?.telegram_api_called, "called", "false")],
+  ] as const;
+
+  const phase5Rows = [
+    ["phase", valueText(phase5Status.phase, "Phase 5")],
+    ["status", valueText(phase5Status.status, "trusted identity / voice foundation")],
+    ["persistent identity", yesNo((phase5Status.implemented_blocks as Record<string, unknown> | undefined)?.persistent_trusted_device_identity_v1, "implemented", "unknown")],
+    ["local pairing", yesNo((phase5Status.implemented_blocks as Record<string, unknown> | undefined)?.hardened_local_pairing_v1, "implemented", "unknown")],
+    ["voice approval", yesNo((phase5Status.implemented_blocks as Record<string, unknown> | undefined)?.governed_voice_approval_contract_v1, "governed", "unknown")],
+    ["notifications", yesNo((phase5Status.implemented_blocks as Record<string, unknown> | undefined)?.notification_readiness_contracts, "ready", "unknown")],
+    ["wake approves", yesNo((phase5Status.security_gates as Record<string, unknown> | undefined)?.wake_phrase_can_approve, "allowed", "false")],
+    ["remote execution", yesNo((phase5Status.security_gates as Record<string, unknown> | undefined)?.remote_execution_allowed, "allowed", "false")],
   ] as const;
 
   const localRuntimeRows = [
@@ -248,14 +264,16 @@ export function JarvisDebugDrawer({
   ] as const;
 
   const tripleApprovalRows = [
-    ["status", valueText(tripleReadiness.triple_status, "blocked_no_three_verified_channels")],
-    ["steps", valueText(tripleReadiness.required_step_count, "3")],
-    ["ready channels", valueText((tripleReadiness.ready_channel_ids as unknown[] | undefined)?.join?.(", "), "none")],
-    ["channel separation", yesNo(tripleReadiness.channel_separation_required, "required", "unknown")],
-    ["challenge per step", yesNo(tripleReadiness.challenge_per_step, "required", "unknown")],
-    ["readback per step", yesNo(tripleReadiness.readback_per_step, "required", "unknown")],
-    ["anti-reuse", yesNo(tripleReadiness.anti_reuse, "enabled", "unknown")],
-    ["policy recalc final", yesNo(tripleReadiness.policy_recalculation_before_final_decision, "required", "unknown")],
+    ["status", valueText(phase5TripleReadiness.triple_status, "blocked_no_three_persistent_verified_channels")],
+    ["steps", valueText(phase5TripleReadiness.required_step_count, "3")],
+    ["ready channels", valueText((phase5TripleReadiness.ready_channel_ids as unknown[] | undefined)?.join?.(", "), "none")],
+    ["persistent identity", yesNo(phase5TripleReadiness.persistent_identity_required, "required", "unknown")],
+    ["channel separation", yesNo(phase5TripleReadiness.channel_separation_required, "required", "unknown")],
+    ["challenge per step", yesNo(phase5TripleReadiness.challenge_per_step, "required", "unknown")],
+    ["readback per step", yesNo(phase5TripleReadiness.readback_per_step, "required", "unknown")],
+    ["anti-reuse", yesNo(phase5TripleReadiness.anti_reuse ?? phase5TripleReadiness.no_replay, "enabled", "unknown")],
+    ["audit chain", yesNo(phase5TripleReadiness.audit_chain_required, "required", "unknown")],
+    ["policy recalc final", yesNo(phase5TripleReadiness.policy_recalculation_before_final_decision, "required", "unknown")],
   ] as const;
 
   const doubleApprovalRows = [
@@ -278,6 +296,38 @@ export function JarvisDebugDrawer({
     ["TTL", valueText(remotePairing.pairing_code_ttl_seconds, "300")],
     ["pending", valueText(remotePairing.pending_pairing_count, "0")],
     ["revoked", valueText(remotePairing.revoked_pairing_count, "0")],
+  ] as const;
+
+  const localPairingRows = [
+    ["status", valueText(localPairing.pairing_status, "local_hardened_pairing_available")],
+    ["nonce", yesNo(localPairing.nonce_required, "required", "unknown")],
+    ["one-time", yesNo(localPairing.one_time_use, "required", "unknown")],
+    ["exact scope", yesNo(localPairing.exact_scope_required, "required", "unknown")],
+    ["trusted binding", yesNo(localPairing.trusted_device_binding, "required", "unknown")],
+    ["pending", valueText(localPairing.pending_pairing_count, "0")],
+    ["failed attempts", valueText(localPairing.failed_attempt_count, "0")],
+    ["remote execution", yesNo(localPairing.remote_execution_allowed, "allowed", "false")],
+  ] as const;
+
+  const voiceApprovalRows = [
+    ["available", yesNo(voiceApproval.voice_approval_available, "true", "false")],
+    ["enabled", yesNo(voiceApproval.voice_approval_enabled, "true", "false")],
+    ["active session", yesNo(voiceApproval.requires_active_voice_session, "required", "unknown")],
+    ["trusted device", yesNo(voiceApproval.requires_trusted_device, "required", "unknown")],
+    ["exact readback", yesNo(voiceApproval.requires_exact_readback, "required", "unknown")],
+    ["spoken challenge", yesNo(voiceApproval.requires_spoken_challenge, "required", "unknown")],
+    ["anti-replay sessions", valueText(voiceApproval.active_session_count, "0")],
+    ["wake approves", yesNo(voiceApproval.wake_phrase_can_approve, "allowed", "false")],
+    ["raw audio", yesNo(voiceApproval.raw_audio_stored_by_default, "stored", "false")],
+  ] as const;
+
+  const notificationRows = [
+    ["status", valueText(notifications.status, "local_notification_contract_ready")],
+    ["external notifications", yesNo(notifications.external_notifications_enabled, "enabled", "false")],
+    ["Telegram", yesNo(notifications.telegram_notification_only_readiness, "readiness", "false")],
+    ["remote execution", yesNo(notifications.remote_execution_allowed, "allowed", "false")],
+    ["events", valueText((notifications.supported_events as unknown[] | undefined)?.length, "0")],
+    ["recent", valueText((notifications.recent_events as unknown[] | undefined)?.length, "0")],
   ] as const;
 
   const telegramBridgeRows = [
@@ -884,6 +934,21 @@ export function JarvisDebugDrawer({
                     </div>
                   </CardContent>
                 </Card>
+                <Card data-testid="jarvis-phase-5-status">
+                  <CardHeader>
+                    <CardTitle>Phase 5 Trust Layer</CardTitle>
+                    <CardDescription>persistent identity · pairing · voice approval · notifications.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase5Rows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>Dispositivos confiables persisten en SQLite local y pueden revocarse.</SafetyLine>
+                      <SafetyLine>Pairing usa nonce, TTL, scope exacto, one-time use y rate limiting.</SafetyLine>
+                      <SafetyLine>La voz solo aprueba con sesión válida, device trusted, readback exacto, challenge y audit.</SafetyLine>
+                      <SafetyLine>Wake phrase alone never approves.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -913,6 +978,79 @@ export function JarvisDebugDrawer({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-phase-5-trusted-devices">
+                  <CardHeader>
+                    <CardTitle>Persistent Trusted Devices</CardTitle>
+                    <CardDescription>Identidad durable local; import/deserialization no puede crear trust.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={trustedDeviceRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {trustedDeviceItems.map((device) => (
+                        <div key={valueText(device.device_id)} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.12em]">{valueText(device.display_name, valueText(device.device_id))}</p>
+                            <Badge variant={Boolean(device.revoked) ? "destructive" : Boolean(device.trusted) ? "success" : "outline"}>
+                              {Boolean(device.revoked) ? "revoked" : yesNo(device.trusted, "trusted", "untrusted")}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                            {valueText(device.channel_type)} · scope {valueText((device.approval_scope as unknown[] | undefined)?.join?.(", "), "none")} · last_seen {valueText(device.last_seen_at, "none")}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Badge variant="outline">fingerprint hash</Badge>
+                            <Badge variant={Boolean(device.can_voice_approve) ? "warning" : "outline"}>voice {yesNo(device.can_voice_approve, "yes", "no")}</Badge>
+                            <Badge variant={Boolean(device.can_grant_triple) ? "warning" : "outline"}>triple {yesNo(device.can_grant_triple, "yes", "no")}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-phase-5-triple-approval">
+                  <CardHeader>
+                    <CardTitle>Triple Approval Persistent Gate</CardTitle>
+                    <CardDescription>Device identity, action id, scope, expiry, no replay and audit chain.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={tripleApprovalRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Critical approvals require three persistent trusted local identities.</SafetyLine>
+                      <SafetyLine>Each step is bound to an exact channel, readback and challenge.</SafetyLine>
+                      <SafetyLine>Revoked devices cannot satisfy triple approval after restart.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-local-pairing-status">
+                  <CardHeader>
+                    <CardTitle>Local Pairing</CardTitle>
+                    <CardDescription>Short-lived challenge · nonce · exact scope · rate limit.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={localPairingRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Pairing does not call Hermes and cannot enable remote execution.</SafetyLine>
+                      <SafetyLine>Pairing creates only scoped trusted identity after exact local challenge.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-notification-readiness">
+                  <CardHeader>
+                    <CardTitle>Notification Readiness</CardTitle>
+                    <CardDescription>Local contracts only; remote channels remain notification-only readiness.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={notificationRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Approval pending, pairing, trust/revoke, blocked action, expiry and voice decisions are modeled.</SafetyLine>
+                      <SafetyLine>No Telegram/mobile remote execution is enabled by this readiness layer.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>
@@ -1116,6 +1254,18 @@ export function JarvisDebugDrawer({
                           <SafetyLine>La wake phrase no ejecuta acciones.</SafetyLine>
                           <SafetyLine>La wake phrase solo puede abrir una ventana de comando futura.</SafetyLine>
                           <SafetyLine>La aprobación por voz requiere canal autenticado, readback y auditoría.</SafetyLine>
+                        </div>
+                      </div>
+                    </article>
+                    <article className="border border-cyan-300/15 bg-[#061526]/50 p-4" data-testid="jarvis-voice-approval-contract">
+                      <h3 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-100">Spoken Permission Contract</h3>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <StatusList items={voiceApprovalRows} />
+                        <div className="grid gap-2">
+                          <SafetyLine>“JARVIS, autorizo”, “JARVIS, confirmo” y “JARVIS, apruebo esta acción” solo son válidas dentro de una sesión activa gobernada.</SafetyLine>
+                          <SafetyLine>Acciones de riesgo alto requieren challenge exacto; critical/triple no baja de riesgo por voz.</SafetyLine>
+                          <SafetyLine>“JARVIS, cancela” y “JARVIS, deniega” cierran la decisión como denegada.</SafetyLine>
+                          <SafetyLine>No se guarda audio bruto ni transcript completo por defecto.</SafetyLine>
                         </div>
                       </div>
                     </article>
