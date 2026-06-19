@@ -1777,3 +1777,54 @@ Documentos:
 
 - `docs/jarvis-pr-165-phase-1-completion-governed-execution-pilot.md`
 - `docs/jarvis-phase-1-completion-report.md`
+
+## PR #167 - Phase 3 Local Runtime Daemon + Trusted Approval Channels
+
+Estado: implementado como macro-fase local gobernada.
+
+Objetivo cerrado:
+
+- daemon local readiness real sin servicio del sistema;
+- tray/local controller readiness sin dependencia pesada;
+- trusted approval channels;
+- double approval real;
+- triple blocked honesto hasta canal adicional;
+- stop/rollback observable;
+- execution history v2;
+- local doctor seguro;
+- browser/local pilot;
+- Telegram/mobile future bridge disabled.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-3/status`
+- `GET /mark-3/local-daemon/status`
+- `GET /mark-3/local-daemon/health`
+- `POST /mark-3/local-daemon/heartbeat`
+- `POST /mark-3/local-daemon/stop-request`
+- `POST /mark-3/local-daemon/restart-request`
+- `GET /mark-3/trusted-approval-channels/status`
+- `POST /mark-3/trusted-approval-channels/verify`
+- `POST /mark-3/approval/strong-decision`
+- `POST /mark-3/approval/double-decision`
+- `POST /mark-3/approval/triple-decision`
+- `GET /mark-3/local-doctor/status`
+- `GET /mark-3/execution/history/export-preview`
+
+Invariantes:
+
+- no `/execute`;
+- no shell libre;
+- no frontend directo a Hermes;
+- no wake approval;
+- no voice approval;
+- no auto mic/camera/wake;
+- no puertos externos;
+- no secrets/env read;
+- audit/history metadata-only.
+
+Documentos:
+
+- `docs/jarvis-pr-167-phase-3-local-runtime-daemon-trusted-approvals.md`
+- `docs/jarvis-phase-3-local-runtime-daemon-trusted-approval-report.md`
+- `docs/jarvis-phase-3-local-runtime-pilot-report.md`

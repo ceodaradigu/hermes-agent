@@ -634,3 +634,36 @@ Resultado:
   superseding/contradiction, redaccion basica metadata-only.
 
 Documento: `docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.
+
+## PR #167 - External Adoption Notes: Local Runtime Daemon + Trusted Approval
+
+Repos revisadas para Phase 3:
+
+| Repo | Licencia visible | Decision |
+|---|---|---|
+| `OpenInterpreter/open-interpreter` | Apache-2.0 | Reimplementar ideas de permisos/sandbox local. No copiar runtime. |
+| `microsoft/autogen` | MIT, docs CC-BY-4.0 | Tomar patron conceptual de human-in-loop approval. No dependencia. |
+| `langchain-ai/langgraph` | MIT | Tomar patron conceptual de state/checkpoint/human-in-loop. No dependencia. |
+| `crewAIInc/crewAI` | MIT | Usar solo ideas de orquestacion. No agente externo. |
+| `OpenVoiceOS/ovos-core` | Apache-2.0 | Separacion skills/intents del runtime de voz. No codigo. |
+| `OpenVoiceOS/ovos-audio` | Apache-2.0 | Separacion audio service. No codigo. |
+| `dscripka/openWakeWord` | Apache-2.0 code, pretrained models CC BY-NC-SA 4.0 | Readiness wake only. No modelo ni activacion. |
+| `getzep/graphiti` | Apache-2.0 | Provenance/memory temporal conceptual. |
+| `mem0ai/mem0` | Apache-2.0 | Memory influence/lifecycle conceptual. |
+| `sigstore/rekor` | Apache-2.0 | Transparencia/audit metadata conceptual. |
+| `google/trillian` | Apache-2.0 | Log verificable conceptual. |
+| `Yelp/detect-secrets` | Apache-2.0 | Ideas de redaction/secret prevention. |
+| `trufflesecurity/trufflehog` | AGPL-3.0 | No copiar ni instalar. Solo clases de riesgo. |
+| `semgrep/semgrep` | LGPL-2.1 | No integrar reglas/runtime. Solo patron conceptual. |
+| `mattermost/mattermost` | Multiple notices | Solo ideas de canales separados. No dependencia. |
+
+Resultado:
+
+- No se copio codigo externo.
+- No se introdujeron dependencias pesadas.
+- No se abrieron servidores externos.
+- No se agrego cloud memory, agentes externos ni APIs externas.
+- Se reimplementaron patrones locales: trusted channels, double approval steps,
+  metadata-only audit/history, doctor seguro y readiness remota disabled.
+
+Documento: `docs/jarvis-pr-167-phase-3-local-runtime-daemon-trusted-approvals.md`.

@@ -255,7 +255,10 @@ def test_critical_external_actions_require_stronger_approval_or_block(tmp_path):
 
     envelope = _request_approval(app, preview["preview_id"])
     assert envelope["status"] == "blocked"
-    assert envelope["decision_reason"] == "requires_stronger_approval_not_configured"
+    assert envelope["decision_reason"] in {
+        "requires_stronger_approval_not_configured",
+        "triple_requires_additional_trusted_channel_not_configured",
+    }
     assert envelope["requires_double_confirmation"] is True
     assert envelope["requires_triple_confirmation"] is True
     assert envelope["can_approve"] is False
