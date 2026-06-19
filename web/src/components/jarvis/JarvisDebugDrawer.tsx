@@ -13,10 +13,12 @@ import {
   missionLifecycleDisplay,
   missionSafetyLabels,
   sampleMissionCommand,
+  visualQaPreviewStates,
   type CommandCenterTabId,
 } from "./contracts";
 import { ContractVault, MiniStat, SafetyLine, StatusList } from "./JarvisPanels";
 import { metricValue, statusVariant, valueText, yesNo } from "./utils";
+import type { JarvisOrbVisualState } from "./types";
 
 interface JarvisDebugDrawerProps {
   dashboard: JarvisDashboardStatus;
@@ -29,6 +31,9 @@ interface JarvisDebugDrawerProps {
   sttText: string;
   ttsText: string;
   coreSubtitle: string;
+  visualPreviewState: JarvisOrbVisualState | null;
+  resolvedVisualState: JarvisOrbVisualState;
+  onVisualPreviewStateChange: (state: JarvisOrbVisualState | null) => void;
 }
 
 export function JarvisDebugDrawer({
@@ -42,6 +47,9 @@ export function JarvisDebugDrawer({
   sttText,
   ttsText,
   coreSubtitle,
+  visualPreviewState,
+  resolvedVisualState,
+  onVisualPreviewStateChange,
 }: JarvisDebugDrawerProps) {
   const fallbackOffline = fallbackDashboard("offline");
   const modules = dashboard.modules?.length ? dashboard.modules : fallbackOffline.modules ?? [];
@@ -293,6 +301,54 @@ export function JarvisDebugDrawer({
 
       <div className="absolute bottom-14 left-0 w-[min(72rem,calc(100vw-3rem))] border border-cyan-300/18 bg-[#020817]/96 p-4 shadow-[0_0_90px_rgba(34,211,238,0.18)] backdrop-blur-xl">
         <section className="mb-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]" data-testid="jarvis-secondary-controls">
+          <article
+            className="border border-cyan-300/12 bg-[#04101f]/60 p-4 xl:col-span-2"
+            data-testid="jarvis-visual-qa-preview-controls"
+            data-visual-qa-preview="local-front-end-only"
+            data-visual-qa-no-hermes="true"
+            data-visual-qa-no-sensors="true"
+            data-visual-qa-no-approval="true"
+            data-visual-qa-no-backend-execution="true"
+            data-visual-qa-query-param="jarvisVisualPreview"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-expanded text-sm font-bold uppercase tracking-[0.12em] text-cyan-50">Visual QA</h2>
+                <p className="mt-1 font-mono-ui text-xs text-cyan-100/50">Estado visual: {resolvedVisualState}. Preview local, sin sensores ni ejecución.</p>
+              </div>
+              <Badge variant={visualPreviewState ? "warning" : "outline"}>{visualPreviewState ? `forced:${visualPreviewState}` : "auto"}</Badge>
+            </div>
+            <div className="mt-3 flex max-w-full gap-1 overflow-x-auto scrollbar-none" role="group" aria-label="Visual particle sphere preview states">
+              <button
+                type="button"
+                aria-pressed={visualPreviewState === null}
+                onClick={() => onVisualPreviewStateChange(null)}
+                className={
+                  "h-8 whitespace-nowrap border px-3 font-display text-[0.68rem] uppercase tracking-[0.12em] " +
+                  (visualPreviewState === null ? "border-cyan-200/70 bg-cyan-300/18 text-cyan-50" : "border-cyan-300/12 bg-[#020b17]/70 text-cyan-100/56")
+                }
+              >
+                Auto
+              </button>
+              {visualQaPreviewStates.map(([state, label]) => (
+                <button
+                  key={state}
+                  type="button"
+                  aria-pressed={visualPreviewState === state}
+                  onClick={() => onVisualPreviewStateChange(state)}
+                  className={
+                    "h-8 whitespace-nowrap border px-3 font-display text-[0.68rem] uppercase tracking-[0.12em] " +
+                    (visualPreviewState === state ? "border-cyan-200/70 bg-cyan-300/18 text-cyan-50" : "border-cyan-300/12 bg-[#020b17]/70 text-cyan-100/56")
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="sr-only">
+              idle listening transcribing thinking speaking alert stopped visual QA preview states; no Hermes call, no sensor permission call, no real approval action, no execution route
+            </div>
+          </article>
           <article className="border border-cyan-300/12 bg-[#04101f]/60 p-4" data-testid="jarvis-hermes-timeline-summary">
             <div className="mb-3 grid gap-3 lg:grid-cols-2">
               <div>

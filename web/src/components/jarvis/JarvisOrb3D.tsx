@@ -13,6 +13,7 @@ interface JarvisOrb3DProps {
   killSwitchState: string;
   textReactive?: boolean;
   textSignal?: string;
+  visualQaPreviewState?: JarvisOrbVisualState | null;
 }
 
 interface CanvasParticle {
@@ -63,16 +64,18 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function makeCanvasParticles(): CanvasParticle[] {
-  return Array.from({ length: 1420 }, (_, index) => {
+  return Array.from({ length: 2600 }, (_, index) => {
     const z = seeded(index + 900) * 2 - 1;
     const theta = seeded(index + 1800) * Math.PI * 2;
-    const radius = Math.sqrt(Math.max(0, 1 - z * z)) * (0.72 + seeded(index + 2700) * 0.34);
+    const shellBias = Math.pow(seeded(index + 2700), 0.44);
+    const innerDust = index % 17 === 0 ? seeded(index + 2750) * 0.34 : 0;
+    const radius = Math.sqrt(Math.max(0, 1 - z * z)) * (innerDust || 0.26 + shellBias * 0.82);
     return {
       x: Math.cos(theta) * radius,
       y: Math.sin(theta) * radius,
-      z: z * (0.76 + seeded(index + 3600) * 0.28),
-      size: 0.72 + seeded(index + 4500) * 2.25,
-      opacity: 0.28 + seeded(index + 5400) * 0.62,
+      z: z * (innerDust || 0.28 + shellBias * (0.70 + seeded(index + 3600) * 0.28)),
+      size: 0.56 + seeded(index + 4500) * 2.85,
+      opacity: 0.20 + seeded(index + 5400) * 0.70,
       seed: seeded(index + 6300),
       lane: index % 7,
     };
@@ -143,6 +146,7 @@ export function JarvisOrb3D({
   killSwitchState,
   textReactive = false,
   textSignal = "",
+  visualQaPreviewState = null,
 }: JarvisOrb3DProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [canvasReady, setCanvasReady] = useState(true);
@@ -204,11 +208,12 @@ export function JarvisOrb3D({
       const centerX = width / 2;
       const centerY = height / 2;
       const t = time * 0.001;
+      const breathingCycle = Math.max(1, currentOrb.sphereAnimationSeconds);
       const pseudoAudio = Math.pow(0.5 + 0.5 * Math.sin(t * 7.2 + Math.sin(t * 1.7) * 1.8), 2.45);
       const scalePulse =
         currentOrb.sphereScaleMid +
-        Math.sin(t * (reducedMotion ? 0.25 : 1.18)) * (currentOrb.sphereScaleMax - currentOrb.sphereScaleMin) * 0.36 +
-        pseudoAudio * currentOrb.radialSpikeEnergy * 0.11;
+        Math.sin((t / breathingCycle) * Math.PI * 2) * (currentOrb.sphereScaleMax - currentOrb.sphereScaleMin) * 0.36 +
+        pseudoAudio * currentOrb.radialSpikeEnergy * 0.16;
       const sphereRadius = Math.min(width, height) * 0.34 * clamp(scalePulse, 0.52, 1.36);
       const focus = currentOrb.listeningFocus;
       const turbulence = reducedMotion ? currentOrb.thinkingTurbulence * 0.18 : currentOrb.thinkingTurbulence;
@@ -224,7 +229,7 @@ export function JarvisOrb3D({
       const maxParticles = reducedMotion ? 820 : Math.min(particles.length, currentOrb.particleBudget);
       for (let index = 0; index < maxParticles; index += 1) {
         const particle = particles[index];
-        const laneSpeed = 0.12 + particle.lane * 0.011 + currentOrb.stateReactiveEnergy * 0.034 + turbulence * 0.036;
+        const laneSpeed = (0.030 + particle.lane * 0.004 + currentOrb.stateReactiveEnergy * 0.020 + focus * 0.010 + reflow * 0.014 + radialEnergy * 0.030 + turbulence * 0.046) * (0.72 + currentOrb.motion * 0.42);
         const spin = t * laneSpeed * (0.65 + particle.seed);
         const cy = Math.cos(spin);
         const sy = Math.sin(spin);
@@ -239,21 +244,25 @@ export function JarvisOrb3D({
         const nx = x / length;
         const ny = y / length;
         const nz = z / length;
-        const localAudio = Math.pow(0.5 + 0.5 * Math.sin(t * (6.4 + particle.seed * 2.4) + particle.seed * 37), 2.2);
-        const spikeMask = seeded(index + Math.floor(t * 9) * 13) > 0.68 ? 1 : 0.26;
-        const spike = radialEnergy * (0.04 + localAudio * 0.24) * spikeMask;
-        const turbulenceWave = Math.sin(t * (2.0 + particle.seed) + particle.y * 7.0) * Math.cos(t * 1.6 + particle.x * 5.0);
-        const reflowWave = Math.sin(t * 3.4 + particle.lane * 1.6 + particle.seed * 17);
+        const radialLength = Math.max(0.001, Math.hypot(particle.x, particle.y, particle.z));
+        const localAudio = Math.pow(0.5 + 0.5 * Math.sin(t * (7.8 + particle.seed * 3.2) + particle.seed * 37), 2.1);
+        const angularWave = Math.max(0, Math.sin(t * 7.6 + Math.atan2(ny, nx) * 8 + particle.seed * 12));
+        const outwardWave = Math.max(0, Math.sin(t * 8.8 - radialLength * 5.1 + particle.seed * 3.8));
+        const spikeMask = Math.max(0.22, angularWave * outwardWave);
+        const spike = radialEnergy * (0.05 + localAudio * 0.36) * spikeMask;
+        const turbulenceWave = Math.sin(t * (2.2 + particle.seed * 0.7) + particle.y * 8.2) * Math.cos(t * 1.8 + particle.x * 6.2 + particle.z * 4.0);
+        const swirl = turbulence * Math.sin(t * 2.4 + particle.seed * 9.0 + z * 4.4) * 0.13;
+        const reflowWave = Math.sin(t * 3.6 + particle.lane * 1.6 + particle.seed * 17);
         const radiusScale =
           1 -
-          focus * 0.11 +
-          pressure * Math.sin(t * 1.15 + particle.seed * 8) * 0.035 +
+          focus * 0.22 +
+          pressure * Math.sin(t * 1.15 + particle.seed * 8) * 0.052 +
           spike +
-          reflow * reflowWave * 0.045;
+          reflow * reflowWave * 0.075;
 
-        x = x * radiusScale + (-ny) * turbulence * turbulenceWave * 0.082;
-        y = y * radiusScale + nx * turbulence * turbulenceWave * 0.082;
-        z = z * radiusScale + nz * spike * 0.60;
+        x = x * radiusScale + (-ny) * turbulence * turbulenceWave * 0.10 + (-ny) * swirl;
+        y = y * radiusScale + nx * turbulence * turbulenceWave * 0.10 + nx * swirl;
+        z = z * radiusScale + nz * spike * 0.92 + turbulence * Math.sin(t * 1.7 + particle.seed * 11) * 0.035;
 
         const perspective = 1 / (2.28 - z * 0.64);
         const screenX = centerX + x * sphereRadius * perspective * 1.82;
@@ -261,9 +270,10 @@ export function JarvisOrb3D({
         const depth = clamp((z + 1.35) / 2.7, 0, 1);
         const alpha =
           particle.opacity *
-          (0.18 + depth * 0.68) *
+          (0.12 + depth * 0.74) *
+          (0.62 + clamp(radialLength, 0, 1) * 0.46) *
           (currentOrb.isStopped ? 0.36 : 0.78 + currentOrb.stateReactiveEnergy * 0.26 + radialEnergy * 0.22);
-        const size = particle.size * pixelRatio * (0.48 + depth * 1.18 + radialEnergy * localAudio * 0.90);
+        const size = particle.size * pixelRatio * (0.38 + depth * 1.22 + radialEnergy * localAudio * 1.05 + turbulence * Math.abs(turbulenceWave) * 0.22);
         const color =
           particle.lane % 5 === 0
             ? `rgba(230,251,255,${clamp(alpha, 0.03, 0.96)})`
@@ -281,11 +291,11 @@ export function JarvisOrb3D({
         context.fill();
       }
 
-      if (currentOrb.emergentCoreConcentration > 0.10) {
-        const coreAlpha = currentOrb.emergentCoreConcentration * (0.12 + pseudoAudio * radialEnergy * 0.18);
+      if (currentOrb.emergentCoreConcentration > 0.12) {
+        const coreAlpha = currentOrb.emergentCoreConcentration * (0.08 + pseudoAudio * radialEnergy * 0.13);
         const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, sphereRadius * 0.17);
-        gradient.addColorStop(0, `rgba(230,251,255,${clamp(coreAlpha, 0, 0.32)})`);
-        gradient.addColorStop(0.52, `rgba(174,247,255,${clamp(coreAlpha * 0.34, 0, 0.12)})`);
+        gradient.addColorStop(0, `rgba(230,251,255,${clamp(coreAlpha, 0, 0.18)})`);
+        gradient.addColorStop(0.52, `rgba(174,247,255,${clamp(coreAlpha * 0.30, 0, 0.08)})`);
         gradient.addColorStop(1, "rgba(103,232,249,0)");
         context.fillStyle = gradient;
         context.beginPath();
@@ -311,54 +321,63 @@ export function JarvisOrb3D({
     animationDuration: `${orb.sphereAnimationSeconds}s`,
   } as CSSProperties;
 
-  const coreOpacity = clamp(orb.emergentCoreConcentration * 0.78, 0.02, 0.72);
+  const coreOpacity = clamp(orb.emergentCoreConcentration * 0.74, 0, 0.58);
   const spikeOpacity = clamp(orb.radialSpikeEnergy * 0.92, 0, 0.92);
   const stateSummary = `${localVoiceStateLabels[localVoiceState]} · ${currentPresence[2]}`;
 
   return (
     <article
       className="relative h-full min-h-0 overflow-hidden"
-      data-testid="jarvis-central-core"
+      data-testid="jarvis-particle-sphere-presence"
       data-renderer="canvas-2d-particle-sphere-primary"
       data-no-webgl-primary="true"
       data-local-voice-state={localVoiceState}
       data-orb-visual-state={visualState}
+      data-visual-qa-forced-state={visualQaPreviewState ?? "auto"}
+      data-visual-qa-safe="local-frontend-only-no-hermes-no-sensors-no-approval"
       data-jarvis-tone={jarvisTone}
       data-conversation-active={conversationActive ? "true" : "false"}
       data-kill-switch-state={killSwitchState}
       data-read-model-voice-state={voiceState}
       data-particle-sphere-mode="visible-canvas-2d-primary"
+      data-particle-cloud-mode="living-volumetric-canvas-2d-primary"
+      data-particle-cloud-contract="alive volumetric particle cloud with air gaps, cold-white/ice-blue particles, no solid mass"
       data-core-detail="emergent-particle-concentration-not-fixed-solid"
       data-core-layers="particle-convergence transient-white-blue-density no-fixed-logo no-solid-core"
+      data-center-emergence="idle-nearly-none compression-only dissolves-on-expansion"
       data-no-fixed-central-logo="true"
       data-no-solid-core="true"
       data-no-central-jarvis-text="true"
       data-visible-particles="canvas-2d-plus-css-micro-particles"
       data-text-signal-active={textSignalActive ? "true" : "false"}
       data-minimum-visible-particles="1420"
+      data-volumetric-particle-count="2600"
       data-fallback-particle-budget="360"
       data-dynamic-sphere-size={`${orb.sphereScaleMin}/${orb.sphereScaleMid}/${orb.sphereScaleMax}`}
+      data-idle-center="nearly-nonexistent"
       data-speaking-radial-spikes={String(orb.radialSpikeEnergy > 0.8)}
+      data-speaking-motion="pseudo-audio-deterministic-radial-push-spikes-outward-waves"
       data-thinking-turbulence={String(orb.thinkingTurbulence)}
+      data-thinking-motion-signature="curl-swirl-internal-redistribution-not-speaking-spikes"
       data-listening-focus={String(orb.listeningFocus)}
+      data-listening-motion-signature="contracted-tense-fine-pulse-smaller-sphere"
       data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.65;renderer:canvas-2d`}
     >
       <div className="absolute inset-0 bg-[#00030a]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(14,165,233,0.10)_0%,rgba(2,132,199,0.035)_30%,rgba(0,3,10,0)_68%),radial-gradient(circle_at_50%_88%,rgba(8,47,73,0.20),transparent_46%)]" />
       <div className="relative flex h-full min-h-0 flex-col items-center justify-center px-4">
-        <div className="absolute top-4 z-10 flex items-center gap-2 border border-cyan-100/10 bg-[#000814]/58 px-3 py-2 backdrop-blur-md">
+        <div className="sr-only">
           <span className="h-1.5 w-1.5 rounded-full bg-[#e6fbff] shadow-[0_0_16px_rgba(230,251,255,0.85)]" />
-          <p className="font-display text-[0.64rem] uppercase tracking-[0.18em] text-cyan-50/72">{currentPresence[1]}</p>
+          <p>{currentPresence[1]}</p>
           <span className="sr-only">Presence UI</span>
-          <span className="sr-only">Núcleo de Voz JARVIS</span>
           <span className="sr-only">tono {profile.label}</span>
           <span className="sr-only">estado {visualState}</span>
         </div>
 
         <div
-          className="jarvis-particle-sphere-stage relative flex aspect-square w-[min(82dvh,54rem)] max-h-[calc(100dvh-11rem)] max-w-[min(94vw,56rem)] items-center justify-center motion-reduce:animate-none xl:max-w-[min(62vw,56rem)]"
+          className="jarvis-particle-sphere-stage relative flex aspect-square w-[min(88dvh,60rem)] max-h-[calc(100dvh-9.5rem)] max-w-[min(96vw,62rem)] items-center justify-center motion-reduce:animate-none xl:max-w-[min(66vw,60rem)]"
           data-testid="jarvis-cinematic-orb-hud"
-          data-sphere-contract="particle sphere / sphere of particles / nube viva de particulas"
+          data-sphere-contract="particle sphere / sphere of particles / nube viva de particulas / volumetric living cloud"
           data-emergent-core="density-only-no-permanent-nucleus"
           data-particle-budget={orb.particleBudget}
           data-particle-sphere-count={particles.length}
@@ -379,7 +398,7 @@ export function JarvisOrb3D({
           />
           <canvas
             ref={canvasRef}
-            aria-label="Esfera viva de partículas JARVIS renderizada en Canvas 2D; sin WebGL como visual principal."
+            aria-label="Esfera viva de partículas renderizada en Canvas 2D; sin logo central, sin núcleo fijo y sin WebGL como visual principal."
             className="absolute inset-0 h-full w-full opacity-95 [filter:drop-shadow(0_0_28px_rgba(103,232,249,0.36))]"
             data-testid="jarvis-particle-sphere-canvas"
             data-renderer="canvas-2d-particle-sphere"
@@ -443,6 +462,8 @@ export function JarvisOrb3D({
             className="pointer-events-none absolute inset-[39%]"
             data-testid="jarvis-emergent-core-density"
             data-core-contract="emergent center appears only through particle concentration"
+            data-idle-core-opacity="near-zero"
+            data-no-permanent-nucleus="true"
             style={{ opacity: coreOpacity }}
           >
             {emergentCoreParticles.map((particle) => (
@@ -517,8 +538,8 @@ export function JarvisOrb3D({
           <p className="sr-only">wake_listening futuro sin grabación ni transcripción continua; conversation_active manual; recording=false; no captura Web Audio; no sensores nuevos</p>
         </div>
 
-        <div className="absolute bottom-4 left-1/2 w-[min(38rem,calc(100vw-3rem))] -translate-x-1/2 text-center">
-          <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/58">{stateSummary}</p>
+        <div className="sr-only">
+          <p>{stateSummary}</p>
           <p className="sr-only">{subtitle}</p>
           <details className="sr-only">
             <summary>state map</summary>

@@ -51,24 +51,34 @@ export const jarvisPresenceVisualLayers = {
   background: "#00030a",
   outerHalo: "#0ea5e9",
   particles: "#67e8f9",
-  core: "#e6fbff",
+  emergentCenter: "#e6fbff",
   approval: "#facc15",
   alert: "#fb7185",
-  contract: "dark background, cool particles, blue-white core, separated approval/alert channel",
+  contract: "dark background, cool particles, blue-white emergent center, separated approval/alert channel",
 } as const;
 
 export const presenceStates = [
-  ["idle", "idle/calmado", "Núcleo respira lento; partículas mínimas."],
+  ["idle", "idle/calmado", "Esfera media; respiración suave; centro casi inexistente."],
   ["wake_listening", "wake listening", "Atención ligera bajo opt-in futuro; wake phrase nunca aprueba."],
-  ["listening", "escuchando", "Pulso fino y partículas activas; SpeechRecognition solo por permiso explícito."],
-  ["transcribing", "transcribiendo", "Ondas contenidas; texto temporal del navegador sin audio bruto."],
-  ["thinking", "pensando", "Dinámica interna compleja; respuesta local controlada sin Hermes."],
-  ["speaking", "hablando", "Partículas y glow más activos; speechSynthesis si el navegador lo soporta."],
+  ["listening", "escuchando", "Esfera más pequeña/concentrada; partículas tensas y pulso fino."],
+  ["transcribing", "transcribiendo", "Reorganización ordenada, como si recalculase; texto temporal sin audio bruto."],
+  ["thinking", "pensando", "Turbulencia interna clara, remolinos y redistribución distinta de speaking."],
+  ["speaking", "hablando", "Picos/ondas radiales; la voz empuja partículas hacia fuera mediante pseudo-audio local."],
   ["approval_required", "approval required", "Canal cálido separado; JARVIS espera confirmación humana y wake no aprueba."],
-  ["alert", "alerta", "Cambio visual claro ante riesgo; no ejecuta por sí mismo."],
-  ["error", "error/no disponible", "Canal rojo/rosa separado; STT/TTS no soportado o permiso denegado."],
-  ["stopped", "stopped", "Núcleo calmado/apagado por stop/cancel o kill switch visible."],
+  ["alert", "alerta", "Picos agresivos y expansión brusca ante riesgo; no ejecuta por sí mismo."],
+  ["error", "error/no disponible", "Canal rojo/rosa separado con picos bruscos; STT/TTS no soportado o permiso denegado."],
+  ["stopped", "stopped", "Esfera reducida y atenuada por stop/cancel o kill switch visible."],
   ["executing", "executing", "Solo visualiza ejecución gobernada si el read model la declara."],
+] as const;
+
+export const visualQaPreviewStates = [
+  ["idle", "Idle"],
+  ["listening", "Listening"],
+  ["transcribing", "Transcribing"],
+  ["thinking", "Thinking"],
+  ["speaking", "Speaking"],
+  ["alert", "Alert"],
+  ["stopped", "Stopped"],
 ] as const;
 
 const fallbackBuilderStages = [

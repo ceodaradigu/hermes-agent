@@ -2,6 +2,37 @@
 
 Fecha: 2026-06-18
 
+## Actualización PR #162 - Particle Sphere Motion Polish + Visual QA
+
+Implementado en esta rama:
+
+- `/jarvis` pule el visual central sobre #161: esfera/nube viva de particulas
+  Canvas 2D, 2600 particulas precomputadas, distribucion volumetrica,
+  profundidad, variacion de tamano/opacidad y aire entre particulas.
+- No hay logo, texto grande, nucleo fijo, placa de lectura ni reactor circular
+  visible dentro del centro. El centro aparece solo por concentracion temporal
+  y se diluye cuando la nube se expande.
+- Estados visuales diferenciados: idle suave, listening concentrado,
+  transcribing ordenado, thinking turbulento, speaking con pseudo-audio
+  determinista y picos/ondas radiales, alert/error mas agresivos y stopped
+  reducido/atenuado.
+- Visual QA local plegado en `Sistemas` permite forzar Auto, Idle, Listening,
+  Transcribing, Thinking, Speaking, Alert y Stopped. Tambien existe query param
+  `jarvisVisualPreview`. Es solo visual/frontend: no llama Hermes, no ejecuta,
+  no aprueba, no activa mic/camara, no abre Web Audio y no añade backend.
+- Repos revisadas para #162: `jincocodev/openclaw-jarvis-ui` (ISC),
+  `Suryansh777777/Jarvis-CV` (licencia no visible),
+  `zoharbarzilai/Generative-3D-Audio-Visualizer` (licencia no visible),
+  `harsh-raj00/my-jarvis` (MIT), `TheStack-ai/jarvis-orb` (MIT),
+  `chevgan/react-ai-voice-visualizer` (MIT), `ethanplusai/jarvis`
+  (personal/non-commercial visible), `pmndrs/react-three-fiber`/`drei`/
+  `react-postprocessing` (MIT).
+- No se copio codigo externo, no se adopto runtime externo, no se instalaron
+  dependencias, no se abrieron sensores nuevos y se mantiene el contrato:
+  JARVIS gobierna; Hermes ejecuta.
+- Documentacion completa:
+  `docs/jarvis-pr-162-particle-sphere-motion-polish-visual-qa.md`.
+
 ## Actualización PR #161 - Presence UI Visual Overhaul v2 + Audio-Reactive Orb
 
 Implementado en esta rama:

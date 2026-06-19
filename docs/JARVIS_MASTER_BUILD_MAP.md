@@ -135,6 +135,16 @@ Piezas relevantes ya documentadas:
   premium/minimos. La reactividad es state-driven; no abre Web Audio, no pide
   permisos nuevos, no auto-start mic/camara, no añade dependencias y no cambia
   el contrato JARVIS gobierna / Hermes ejecuta.
+- Particle Sphere Motion Polish + Visual QA de PR #162: el centro de `/jarvis`
+  queda como esfera/nube viva de particulas Canvas 2D, con 2600 particulas
+  precomputadas, distribucion volumetrica, centro emergente por concentracion
+  y sin logo, texto, nucleo fijo ni reactor circular visible. Los estados
+  visuales quedan diferenciados: idle respira suave, listening se concentra,
+  transcribing reorganiza, thinking usa turbulencia/remolino, speaking usa
+  pseudo-audio determinista con picos radiales, alert/error expanden mas brusco
+  y stopped se reduce/atenua. Añade Visual QA local plegado via controles y
+  query param `jarvisVisualPreview`, sin Hermes, approvals, sensores, Web Audio
+  nuevo, backend upload ni dependencias nuevas.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

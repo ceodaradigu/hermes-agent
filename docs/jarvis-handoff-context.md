@@ -266,6 +266,32 @@ Actualización #161 / Fase 1 Presence UI Visual Overhaul v2 + Audio-Reactive Orb
   screenshots desktop/mobile, canvas nonblank, fallback WebGL y medicion simple
   de frame budget.
 
+Actualización #162 / Fase 1 Particle Sphere Motion Polish + Visual QA:
+
+- #162 corrige el visual central despues de #161: la esfera ya no debe leerse
+  como nucleo fijo, logo, placa, reactor circular ni HUD tecnico. Es una nube
+  viva de particulas Canvas 2D, blanco frio/azul hielo, con aire, profundidad y
+  variacion de tamano/opacidad.
+- `JarvisOrb3D` usa 2600 particulas precomputadas, distribucion volumetrica,
+  centro emergente por concentracion y fallback CSS de particulas si Canvas 2D
+  falla. El error tecnico queda en `data-canvas-error`, no como mensaje visible.
+- Estados pulidos: idle respira y casi no tiene centro; listening se contrae y
+  tensa; transcribing reorganiza; thinking genera turbulencia/remolinos;
+  speaking usa pseudo-audio determinista local con picos/ondas radiales;
+  alert/error expanden mas agresivo; stopped se reduce y atenua.
+- Visual QA local: drawer `Sistemas` incluye controles para Auto, Idle,
+  Listening, Transcribing, Thinking, Speaking, Alert y Stopped. Tambien se puede
+  abrir con `?jarvisVisualPreview=speaking`. No llama Hermes, no aprueba, no
+  activa micro/camara, no abre Web Audio y no toca backend de ejecucion.
+- Laterales, smart bar, camara, approvals, audio bruto local, finance plegado y
+  drawers se mantienen. La zona central queda limpia.
+- No se añadieron dependencias ni se copio codigo externo. Repos y licencias
+  documentadas en
+  `docs/jarvis-pr-162-particle-sphere-motion-polish-visual-qa.md`.
+- Siguiente PR recomendada: #163 Visual Browser Verification con screenshots
+  desktop/mobile, canvas no blanco/no negro, fallback, reduced motion y firmas
+  visuales diferenciadas por estado.
+
 Estado alineado de las fases maestras:
 
 | Fase maestra | Estado actual |
