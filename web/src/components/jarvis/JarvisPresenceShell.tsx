@@ -9,6 +9,7 @@ import {
   fallbackApprovalCards,
   fallbackDashboard,
   previewVoiceSubtitle,
+  visualQaPreviewStates,
   type CommandCenterTabId,
 } from "./contracts";
 import { JarvisApprovalPanel } from "./JarvisApprovalPanel";
@@ -22,6 +23,13 @@ import { capabilityText, metricValue, readModules, valueText } from "./utils";
 import type { JarvisCameraAuditEvent, JarvisCameraState } from "@/hooks/jarvis/useJarvisCameraControl";
 import type { JarvisLocalVideoRecording, JarvisVideoRecordingState } from "@/hooks/jarvis/useJarvisCameraControl";
 import type { JarvisLocalRecording, JarvisRecordingAuditEvent, JarvisRecordingState } from "@/hooks/jarvis/useJarvisAudioRecorder";
+
+function readInitialVisualQaPreviewState(): JarvisOrbVisualState | null {
+  if (typeof window === "undefined") return null;
+  const raw = new URLSearchParams(window.location.search).get("jarvisVisualPreview");
+  if (!raw) return null;
+  return visualQaPreviewStates.some(([state]) => state === raw) ? (raw as JarvisOrbVisualState) : null;
+}
 
 interface JarvisPresenceShellProps {
   dashboard: JarvisDashboardStatus;
@@ -73,6 +81,7 @@ export function JarvisPresenceShell({
   const fallbackOffline = useMemo(() => fallbackDashboard("offline"), []);
   const [smartBarTextPulse, setSmartBarTextPulse] = useState(false);
   const [smartBarTextSignal, setSmartBarTextSignal] = useState("");
+  const [visualQaPreviewState, setVisualQaPreviewState] = useState<JarvisOrbVisualState | null>(() => readInitialVisualQaPreviewState());
   const modules = useMemo(() => readModules(dashboard.modules), [dashboard.modules]);
   const system = dashboard.system ?? fallbackOffline.system ?? {};
   const localSystemContract = dashboard.local_system_contract ?? fallbackOffline.local_system_contract!;
@@ -140,6 +149,7 @@ export function JarvisPresenceShell({
               : approvalsPending
                 ? "approval_required"
                 : "idle";
+  const resolvedOrbVisualState = visualQaPreviewState ?? orbVisualState;
 
   return (
     <div
@@ -147,6 +157,11 @@ export function JarvisPresenceShell({
       data-testid="jarvis-command-center-page"
       data-presence-layout="cinematic-orb-first"
       data-visual-direction="dark-background-distinct-blue-white-core-clean-side-rails"
+      data-visual-qa-preview-mode={visualQaPreviewState ? "forced-local-preview" : "auto"}
+      data-visual-qa-preview-state={visualQaPreviewState ?? "auto"}
+      data-visual-qa-no-hermes="true"
+      data-visual-qa-no-sensors="true"
+      data-visual-qa-no-approval="true"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,182,212,0.105),transparent_35%),radial-gradient(circle_at_68%_48%,rgba(248,113,113,0.045),transparent_24%),radial-gradient(circle_at_35%_75%,rgba(250,204,21,0.025),transparent_29%),linear-gradient(180deg,rgba(0,3,10,0.08),rgba(0,3,10,0.98))]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(103,232,249,0.016)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.012)_1px,transparent_1px)] bg-[length:128px_128px]" />
@@ -211,12 +226,13 @@ export function JarvisPresenceShell({
           voiceState={voiceState}
           subtitle={coreSubtitle}
           localVoiceState={localVoice.localVoiceState}
-          visualState={orbVisualState}
+          visualState={resolvedOrbVisualState}
           jarvisTone={localVoice.jarvisTone}
           conversationActive={localVoice.conversationActive}
           killSwitchState={valueText(system.kill_switch_state, "not_wired")}
           textReactive={textReactive}
           textSignal={smartBarTextSignal || localVoice.interimTranscript || localVoice.transcript || localVoice.localVoiceResponse}
+          visualQaPreviewState={visualQaPreviewState}
         />
 
         <aside className="hidden min-h-0 content-start gap-3 overflow-auto pr-1 xl:grid" data-testid="jarvis-contextual-side-panel" data-side-panel-style="premium-quiet-not-dashboard">
@@ -296,6 +312,9 @@ export function JarvisPresenceShell({
         sttText={capabilityText(localVoice.sttSupport)}
         ttsText={capabilityText(localVoice.ttsSupport)}
         coreSubtitle={coreSubtitle}
+        visualPreviewState={visualQaPreviewState}
+        resolvedVisualState={resolvedOrbVisualState}
+        onVisualPreviewStateChange={setVisualQaPreviewState}
       />
     </div>
   );

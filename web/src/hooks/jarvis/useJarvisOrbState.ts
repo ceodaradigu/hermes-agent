@@ -69,49 +69,49 @@ export function useJarvisOrbState({
       ? isApprovalRequired ? "rgba(250,204,21,0.50)" : "rgba(251,146,60,0.46)"
         : "rgba(34,211,238,0.48)";
   const pulse =
-    isStopped ? 0.72 : isError ? 1.08 : isAlert ? 1.22 : isExecuting ? 1.26 : isSpeaking ? 1.30 : isThinking ? 1.18 : isTranscribing ? 1.16 : visualState === "listening" ? 1.18 : visualState === "wake_listening" ? 1.08 : textReactiveActive ? 1.10 : isActive ? 1.06 : 0.94;
+    isStopped ? 0.72 : isError ? 1.08 : isAlert ? 1.22 : isExecuting ? 1.26 : isSpeaking ? 1.30 : isThinking ? 1.18 : isTranscribing ? 1.16 : visualState === "listening" ? 1.18 : visualState === "wake_listening" ? 1.08 : textReactiveActive ? 1.10 : isActive ? 1.06 : 0.88;
   const wave =
-    isStopped ? 0.16 : isError ? 0.78 : isAlert ? 1.08 : isExecuting ? 1.14 : isSpeaking ? 1.28 : isThinking ? 0.90 : isTranscribing ? 1.02 : visualState === "listening" ? 1.12 : visualState === "wake_listening" ? 0.62 : textReactiveActive ? 0.78 : 0.44;
+    isStopped ? 0.16 : isError ? 0.78 : isAlert ? 1.08 : isExecuting ? 1.14 : isSpeaking ? 1.28 : isThinking ? 0.90 : isTranscribing ? 1.02 : visualState === "listening" ? 1.12 : visualState === "wake_listening" ? 0.62 : textReactiveActive ? 0.78 : 0.16;
   const glitch = isError ? 0.75 : isAlert ? 0.22 : 0;
   const motion =
     motionBase *
-    (isStopped ? 0.28 : isError ? 1.18 : isAlert ? 1.28 : isExecuting ? 1.42 : isSpeaking ? 1.32 : isThinking ? 1.14 : isTranscribing ? 1.12 : visualState === "listening" ? 1.08 : visualState === "wake_listening" ? 0.92 : textReactiveActive ? 0.98 : 0.86);
+    (isStopped ? 0.28 : isError ? 1.18 : isAlert ? 1.28 : isExecuting ? 1.42 : isSpeaking ? 1.32 : isThinking ? 1.14 : isTranscribing ? 1.12 : visualState === "listening" ? 1.08 : visualState === "wake_listening" ? 0.92 : textReactiveActive ? 0.98 : 0.38);
   const baseReactiveEnergy =
-    isStopped ? 0.06 : isError ? 0.88 : isAlert ? 0.82 : isExecuting ? 0.92 : isSpeaking ? 1 : isThinking ? 0.76 : isTranscribing ? 0.74 : visualState === "listening" ? 0.82 : visualState === "wake_listening" ? 0.50 : 0.30;
+    isStopped ? 0.04 : isError ? 0.96 : isAlert ? 0.90 : isExecuting ? 0.86 : isSpeaking ? 1 : isThinking ? 0.80 : isTranscribing ? 0.58 : visualState === "listening" ? 0.62 : visualState === "wake_listening" ? 0.42 : 0.055;
   const stateReactiveEnergy = Math.min(1, baseReactiveEnergy + (textReactiveActive ? 0.24 : 0));
   const speakingSpikeEnergy = isStopped ? 0 : isSpeaking ? 1 : textReactiveActive ? 0.46 : 0;
-  const radialSpikeEnergy = isStopped ? 0 : isError ? 1.05 : isAlert ? 0.84 : isSpeaking ? 1 : textReactiveActive ? 0.46 : 0;
-  const thinkingTurbulence = isStopped ? 0 : isThinking ? 1 : isTranscribing ? 0.30 : 0;
+  const radialSpikeEnergy = isStopped ? 0 : isError ? 1.22 : isAlert ? 1.08 : isSpeaking ? 1 : textReactiveActive ? 0.46 : 0;
+  const thinkingTurbulence = isStopped ? 0 : isThinking ? 1 : isTranscribing ? 0.18 : 0;
   const listeningFocus = isStopped ? 0 : visualState === "listening" ? 1 : visualState === "wake_listening" ? 0.42 : 0;
   const transcribingReflow = isStopped ? 0 : isTranscribing ? 1 : 0;
-  const spherePressure = isStopped ? 0.08 : isError ? 0.92 : isAlert ? 0.78 : isSpeaking ? 1 : isThinking ? 0.62 : isTranscribing ? 0.52 : visualState === "listening" ? 0.44 : visualState === "wake_listening" ? 0.28 : textReactiveActive ? 0.50 : 0.18;
+  const spherePressure = isStopped ? 0.05 : isError ? 1.04 : isAlert ? 0.94 : isSpeaking ? 1 : isThinking ? 0.68 : isTranscribing ? 0.36 : visualState === "listening" ? 0.58 : visualState === "wake_listening" ? 0.30 : textReactiveActive ? 0.50 : 0.025;
   const emergentCoreConcentration = isStopped
-    ? 0.02
+    ? 0.01
     : isError
-      ? 0.70
+      ? 0.62
       : isAlert
-        ? 0.62
+        ? 0.56
         : isSpeaking
-          ? 0.78
+          ? 0.52
           : isThinking
-            ? 0.58
+            ? 0.42
             : isTranscribing
-              ? 0.46
+              ? 0.34
               : visualState === "listening"
-                ? 0.52
+                ? 0.48
                 : visualState === "wake_listening"
-                  ? 0.34
+                  ? 0.26
                   : textReactiveActive
-                    ? 0.50
-                    : 0.06;
+                    ? 0.34
+                    : 0.008;
   const sphereScaleMin =
-    isStopped ? 0.60 : isError ? 0.82 : isAlert ? 0.84 : isSpeaking ? 0.76 : isThinking ? 0.70 : isTranscribing ? 0.82 : visualState === "listening" ? 0.74 : visualState === "wake_listening" ? 0.82 : 0.92;
+    isStopped ? 0.48 : isError ? 0.88 : isAlert ? 0.82 : isSpeaking ? 0.86 : isThinking ? 0.80 : isTranscribing ? 0.76 : visualState === "listening" ? 0.62 : visualState === "wake_listening" ? 0.74 : 0.985;
   const sphereScaleMid =
-    isStopped ? 0.66 : isError ? 1.06 : isAlert ? 1.02 : isSpeaking ? 0.96 : isThinking ? 0.94 : isTranscribing ? 0.95 : visualState === "listening" ? 0.86 : visualState === "wake_listening" ? 0.90 : 0.98;
+    isStopped ? 0.56 : isError ? 1.18 : isAlert ? 1.08 : isSpeaking ? 1.08 : isThinking ? 0.98 : isTranscribing ? 0.88 : visualState === "listening" ? 0.74 : visualState === "wake_listening" ? 0.82 : 1.00;
   const sphereScaleMax =
-    isStopped ? 0.72 : isError ? 1.28 : isAlert ? 1.18 : isSpeaking ? 1.22 : isThinking ? 1.13 : isTranscribing ? 1.04 : visualState === "listening" ? 0.96 : visualState === "wake_listening" ? 1.00 : textReactiveActive ? 1.08 : 1.03;
+    isStopped ? 0.64 : isError ? 1.56 : isAlert ? 1.42 : isSpeaking ? 1.48 : isThinking ? 1.24 : isTranscribing ? 1.02 : visualState === "listening" ? 0.88 : visualState === "wake_listening" ? 0.94 : textReactiveActive ? 1.12 : 1.018;
   const sphereAnimationSeconds =
-    isStopped ? 8.5 : isError ? 1.15 : isAlert ? 1.55 : isSpeaking ? 1.45 : isThinking ? 2.1 : isTranscribing ? 2.7 : visualState === "listening" ? 2.35 : visualState === "wake_listening" ? 3.2 : 5.8;
+    isStopped ? 9.5 : isError ? 0.92 : isAlert ? 1.18 : isSpeaking ? 1.10 : isThinking ? 1.85 : isTranscribing ? 2.35 : visualState === "listening" ? 2.05 : visualState === "wake_listening" ? 3.0 : 10.5;
   return {
     accent,
     coreColor,
@@ -135,7 +135,7 @@ export function useJarvisOrbState({
     sphereScaleMax,
     sphereAnimationSeconds,
     targetFrameMs: isStopped ? 90 : isActive ? 16 : 42,
-    particleBudget: isStopped ? 900 : isSpeaking ? 3800 : isThinking ? 3500 : visualState === "listening" ? 3200 : isTranscribing ? 3200 : textReactiveActive ? 3000 : isActive ? 2900 : 2400,
+    particleBudget: isStopped ? 760 : isSpeaking ? 2600 : isThinking ? 2460 : visualState === "listening" ? 2240 : isTranscribing ? 2300 : textReactiveActive ? 2200 : isActive ? 2100 : 1500,
     textReactiveActive,
     isError,
     isApprovalRequired,
