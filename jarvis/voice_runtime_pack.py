@@ -5,6 +5,8 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from jarvis.phase_6_voice_wake_sensor_runtime import VoiceProviderRegistry
+
 
 VOICE_RUNTIME_PACK_SCHEMA_VERSION = "jarvis.voice_runtime_pack.v1"
 VOICE_RUNTIME_PACK_ID = "jarvis-local-manual-voice-runtime-pack"
@@ -15,6 +17,8 @@ VOICE_RUNTIME_STATES: Tuple[str, ...] = (
     "transcribing",
     "thinking",
     "speaking",
+    "awaiting_approval",
+    "awaiting_spoken_challenge",
     "cancelled",
     "stopped",
     "error",
@@ -90,6 +94,9 @@ class VoiceRuntimePackStatus:
     browser_tts_available: str = "client_side_unknown"
     local_stt_provider_status: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     local_tts_provider_status: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    local_vad_provider_status: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    wake_provider_status: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    provider_availability_diagnostics: Dict[str, Any] = field(default_factory=dict)
     wake_runtime_status: Dict[str, Any] = field(default_factory=dict)
     active_session: Dict[str, Any] = field(default_factory=dict)
     last_transcript_summary: Dict[str, Any] = field(default_factory=dict)
@@ -172,6 +179,18 @@ class VoiceRuntimePack:
         wake_state = "wake_listening_available" if dependency_installed else "wake_listening_disabled"
         local_stt = _local_stt_provider_contracts()
         local_tts = _local_tts_provider_contracts()
+        provider_registry = VoiceProviderRegistry().status()
+        registry_providers = provider_registry.get("providers", {})
+        local_vad = {
+            key: value
+            for key, value in registry_providers.items()
+            if isinstance(value, Mapping) and value.get("capability") == "vad"
+        }
+        wake_providers = {
+            key: value
+            for key, value in registry_providers.items()
+            if isinstance(value, Mapping) and value.get("capability") == "wake"
+        }
         browser_stt = _browser_stt_contract()
         browser_tts = _browser_tts_contract()
 
@@ -180,6 +199,9 @@ class VoiceRuntimePack:
             browser_tts_available="client_side_unknown",
             local_stt_provider_status=local_stt,
             local_tts_provider_status=local_tts,
+            local_vad_provider_status=local_vad,
+            wake_provider_status=wake_providers,
+            provider_availability_diagnostics=provider_registry.get("diagnostics", {}),
             wake_runtime_status={
                 "status": wake_state,
                 "enabled": False,
@@ -232,6 +254,9 @@ class VoiceRuntimePack:
                     "browser_speech_synthesis": browser_tts,
                     **local_tts,
                 },
+                "vad_providers": local_vad,
+                "wake_providers": wake_providers,
+                "provider_registry_schema": provider_registry.get("schema_version"),
                 "no_provider_install_performed": True,
                 "no_model_download_performed": True,
                 "browser_detection_location": "client",

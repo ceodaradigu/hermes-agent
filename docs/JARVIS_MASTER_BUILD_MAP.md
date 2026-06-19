@@ -1915,3 +1915,81 @@ Documento:
 
 - `docs/jarvis-pr-170-phase-5-local-controller-trusted-identity-voice-approval.md`
 - `docs/jarvis-phase-5-local-controller-trusted-identity-voice-approval-report.md`
+
+## PR #171 - Phase 6 Real Voice, Wake, Memory & Sensor Runtime
+
+Estado: implementado como piloto local gobernado, con proveedores nativos
+marcados honestamente como readiness salvo contratos/manual fixtures.
+
+Incluye:
+
+- registro `VoiceProviderRegistry` para browser STT/TTS, faster-whisper,
+  whisper.cpp, Silero VAD, openWakeWord, Piper y Wyoming;
+- diagnostico honesto de disponibilidad: no fake readiness, no instalaciones,
+  no descargas de modelos y no llamadas externas por defecto;
+- `VoiceSessionManagerV2` con estados idle/listening/transcribing/thinking/
+  speaking/awaiting_approval/awaiting_spoken_challenge/cancelled/error;
+- sesiones manual push-to-talk, wake-start, timeout, cancelacion, stop global y
+  transcript metadata-only/redacted;
+- spoken approval v2 sobre Phase 5: `voice_session_id` explicito requiere
+  sesion Phase 6 activa en servidor; el modo legacy/direct sin id mantiene
+  compatibilidad PR170 sin simular microfono real; trusted device, exact
+  readback, challenge, anti-replay, expiracion, frases espanolas y limites
+  hablados siguen obligatorios;
+- `WakeRuntimeOptIn` opt-in/manual fixture: wake abre sesion pero nunca aprueba
+  ni ejecuta;
+- `MemoryBrainV3` sobre Memory Brain v2 con review, compaction preview,
+  influence explanation, provenance/confidence/sensitivity y sin permisos;
+- `SensorRuntimeOptIn` metadata-only para microfono, camara, screen context,
+  audio/video recording y wake, con opt-in, indicador, stop/cancel y delete;
+- `/jarvis`, dashboard read model y event stream exponen Phase 6 sin raw audio,
+  frames, secretos ni controles directos de Hermes.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-6/status`
+- `POST /mark-3/phase-6/stop-global`
+- `GET /mark-3/voice-providers/status`
+- `GET /mark-3/voice-session-v2/status`
+- `POST /mark-3/voice-session-v2/start`
+- `POST /mark-3/voice-session-v2/transition`
+- `POST /mark-3/voice-session-v2/cancel`
+- `GET /mark-3/wake-runtime/status`
+- `POST /mark-3/wake-runtime/opt-in`
+- `POST /mark-3/wake-runtime/fixture`
+- `GET /mark-3/sensor-runtime/status`
+- `POST /mark-3/sensor-runtime/opt-in`
+- `POST /mark-3/sensor-runtime/start`
+- `POST /mark-3/sensor-runtime/stop`
+- `POST /mark-3/sensor-runtime/delete`
+- `GET /mark-3/memory-brain-v3/status`
+- `GET /mark-3/memory-brain-v3/review`
+- `GET /mark-3/memory-brain-v3/compaction-preview`
+- `GET /mark-3/memory-brain-v3/influence`
+
+Invariantes:
+
+- no `/execute`;
+- no shell libre;
+- no frontend directo a Hermes;
+- no proveedor de voz marcado ready sin deteccion/configuracion real;
+- no hidden mic/camera;
+- no continuous transcription por defecto;
+- no raw audio/video storage por defecto;
+- wake phrase no aprueba;
+- voice no baja riesgo;
+- memoria nunca concede permisos;
+- sensores y grabacion empiezan off y requieren opt-in visible.
+
+Real vs readiness:
+
+- Real: contratos y diagnosticos de proveedor, sesiones de voz v2 en memoria,
+  wake manual fixture opt-in, spoken approval por transcript gobernado, Memory
+  Brain v3 wrapper, sensor opt-in metadata-only, dashboard/UI/event stream.
+- Readiness: openWakeWord, Silero VAD, whisper.cpp, faster-whisper, Piper y
+  Wyoming no se ejecutan automaticamente; requieren modelos/binarios/config
+  explicitos y validacion manual local.
+
+Documento:
+
+- `docs/jarvis-pr-171-phase-6-real-voice-wake-memory-sensor-runtime.md`

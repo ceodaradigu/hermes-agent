@@ -119,6 +119,7 @@ from jarvis.future_moonshot.foundation import (
 )
 from jarvis.llm_brain_adapter import LLMBrainAdapter
 from jarvis.memory_brain_v2 import MemoryBrainV2Store
+from jarvis.memory_brain_v3 import MemoryBrainV3
 from jarvis.mission_control import MissionControl
 from jarvis.marketing_distribution.foundation import (
     AudienceSegmentPreview,
@@ -241,6 +242,13 @@ from jarvis.phase_2_local_assistant_runtime import (
 from jarvis.phase_3_local_runtime import Phase3LocalRuntimeControlPlane
 from jarvis.phase_5_local_controller_trusted_identity_voice_approval import (
     Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane,
+)
+from jarvis.phase_6_voice_wake_sensor_runtime import (
+    Phase6VoiceWakeMemorySensorRuntime,
+    SensorRuntimeOptIn,
+    VoiceProviderRegistry,
+    VoiceSessionManagerV2,
+    WakeRuntimeOptIn,
 )
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
@@ -744,7 +752,10 @@ class Mark3VoiceApprovalStartRequest(BaseModel):
     readback_text: str
     scope: Optional[List[str]] = None
     cost_summary: str = "unknown; operator review required"
+    cost_limit_eur: Optional[float] = None
     duration_seconds: int = 180
+    voice_session_active: bool = True
+    opened_by_wake_only: bool = False
 
 
 class Mark3VoiceApprovalDecisionRequest(BaseModel):
@@ -755,6 +766,67 @@ class Mark3VoiceApprovalDecisionRequest(BaseModel):
     scope: Optional[List[str]] = None
     action_id: Optional[str] = None
     cost_summary: str = "unknown; operator review required"
+
+
+class Mark3Phase6VoiceSessionStartRequest(BaseModel):
+    device_id: str = ""
+    source: str = "manual_push_to_talk"
+    timeout_seconds: Optional[int] = None
+
+
+class Mark3Phase6VoiceSessionTransitionRequest(BaseModel):
+    session_id: str
+    state: str
+    transcript: str = ""
+    approval_id: Optional[str] = None
+    challenge_id: Optional[str] = None
+    reason: str = "state transition"
+
+
+class Mark3Phase6VoiceSessionCancelRequest(BaseModel):
+    session_id: str
+    reason: str = "operator cancel"
+
+
+class Mark3WakeRuntimeOptInRequest(BaseModel):
+    enabled: bool = False
+    phrase: str = "hola jarvis"
+    actor: str = "David"
+    reason: str = "operator opt-in"
+
+
+class Mark3WakeRuntimeFixtureRequest(BaseModel):
+    transcript: str
+    confidence: float = 1.0
+
+
+class Mark3SensorRuntimeOptInRequest(BaseModel):
+    sensor_type: str
+    enabled: bool = False
+    actor: str = "David"
+    reason: str = "operator opt-in"
+
+
+class Mark3SensorRuntimeStartRequest(BaseModel):
+    sensor_type: str
+    recording: bool = False
+    actor: str = "David"
+    reason: str = "operator start"
+
+
+class Mark3SensorRuntimeStopRequest(BaseModel):
+    sensor_type: str = "all"
+    reason: str = "operator stop"
+
+
+class Mark3SensorRuntimeDeleteRequest(BaseModel):
+    sensor_type: str
+    actor: str = "David"
+    reason: str = "operator delete"
+
+
+class Mark3Phase6StopGlobalRequest(BaseModel):
+    reason: str = "operator stop global"
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2149,6 +2221,7 @@ def create_app(
     app.state.memory_brain_v2 = memory_brain_v2 or MemoryBrainV2Store.from_environment(
         audit_ledger=app.state.persistent_audit_ledger,
     )
+    app.state.memory_brain_v3 = MemoryBrainV3(app.state.memory_brain_v2)
     app.state.mark_3_research_radar = ResearchRadar()
     app.state.mark_3_research_execution_bridge = ResearchExecutionControlPlane(
         approval_service=app.state.approval_hardening,
@@ -2186,6 +2259,21 @@ def create_app(
     )
     app.state.voice_runtime_pack = VoiceRuntimePack()
     app.state.sensor_ledger = SensorLedger()
+    app.state.phase_6_voice_provider_registry = VoiceProviderRegistry()
+    app.state.phase_6_voice_session_manager = VoiceSessionManagerV2()
+    app.state.phase_6_sensor_runtime = SensorRuntimeOptIn(ledger=app.state.sensor_ledger)
+    app.state.phase_6_wake_runtime = WakeRuntimeOptIn(
+        session_manager=app.state.phase_6_voice_session_manager,
+        provider_registry=app.state.phase_6_voice_provider_registry,
+        wake_runtime=app.state.wake_voice_runtime,
+    )
+    app.state.phase_6_runtime = Phase6VoiceWakeMemorySensorRuntime(
+        provider_registry=app.state.phase_6_voice_provider_registry,
+        voice_session_manager=app.state.phase_6_voice_session_manager,
+        wake_runtime=app.state.phase_6_wake_runtime,
+        sensor_runtime=app.state.phase_6_sensor_runtime,
+        memory_brain_v3=app.state.memory_brain_v3,
+    )
     app.state.camera_control_runtime = CameraControlRuntime()
     app.state.local_daemon_control = LocalDaemonControl()
     app.state.desktop_runtime = DesktopRuntime()
@@ -2568,6 +2656,22 @@ def create_app(
     def mark_3_memory_brain_preview() -> dict:
         return app.state.memory_brain_v2.preview()
 
+    @app.get("/mark-3/memory-brain-v3/status")
+    def mark_3_memory_brain_v3_status() -> dict:
+        return app.state.memory_brain_v3.status()
+
+    @app.get("/mark-3/memory-brain-v3/review")
+    def mark_3_memory_brain_v3_review() -> dict:
+        return app.state.memory_brain_v3.review()
+
+    @app.get("/mark-3/memory-brain-v3/compaction-preview")
+    def mark_3_memory_brain_v3_compaction_preview() -> dict:
+        return app.state.memory_brain_v3.compaction_preview()
+
+    @app.get("/mark-3/memory-brain-v3/influence")
+    def mark_3_memory_brain_v3_influence() -> dict:
+        return app.state.memory_brain_v3.influence_explanation()
+
     @app.get("/mark-3/execution/status")
     def mark_3_execution_status() -> dict:
         return app.state.phase_1_governed_execution.status()
@@ -2601,6 +2705,14 @@ def create_app(
         return app.state.phase_5_local_identity_voice.phase_5_status(
             route_paths=(route.path for route in app.routes),
         )
+
+    @app.get("/mark-3/phase-6/status")
+    def mark_3_phase_6_status() -> dict:
+        return app.state.phase_6_runtime.status()
+
+    @app.post("/mark-3/phase-6/stop-global")
+    def mark_3_phase_6_stop_global(payload: Mark3Phase6StopGlobalRequest) -> dict:
+        return app.state.phase_6_runtime.stop_global(**payload.model_dump())
 
     @app.get("/mark-3/local-daemon/status")
     def mark_3_local_daemon_status() -> dict:
@@ -2728,7 +2840,22 @@ def create_app(
     @app.post("/mark-3/voice-approval/start")
     def mark_3_voice_approval_start(payload: Mark3VoiceApprovalStartRequest) -> dict:
         try:
-            return app.state.phase_5_local_identity_voice.start_voice_approval_session(**payload.model_dump())
+            data = payload.model_dump()
+            explicit_fields = set(getattr(payload, "model_fields_set", set()))
+            voice_session_id = str(data.get("voice_session_id") or "").strip()
+            voice_session_id_provided = "voice_session_id" in explicit_fields and bool(voice_session_id)
+            if voice_session_id_provided:
+                data["voice_session_active"] = bool(
+                    app.state.phase_6_voice_session_manager.is_active(voice_session_id)
+                    and not data.get("opened_by_wake_only")
+                )
+            else:
+                # Legacy/direct Phase 5 compatibility path: old control-plane
+                # callers/tests have no real browser microphone session id.
+                # Phase 5 still enforces trusted device, exact readback,
+                # challenge, expiry, anti-replay, revoke state and audit.
+                data["voice_session_active"] = bool(data.get("voice_session_active")) and not data.get("opened_by_wake_only")
+            return app.state.phase_5_local_identity_voice.start_voice_approval_session(**data)
         except KeyError:
             raise HTTPException(status_code=404, detail="approval not found")
         except ValueError as exc:
@@ -2905,6 +3032,78 @@ def create_app(
             voice_runtime_pack=pack,
         )
         return pack
+
+    @app.get("/mark-3/voice-providers/status")
+    def mark_3_voice_providers_status() -> dict:
+        return app.state.phase_6_voice_provider_registry.status()
+
+    @app.get("/mark-3/voice-session-v2/status")
+    def mark_3_voice_session_v2_status() -> dict:
+        return app.state.phase_6_voice_session_manager.status()
+
+    @app.post("/mark-3/voice-session-v2/start")
+    def mark_3_voice_session_v2_start(payload: Mark3Phase6VoiceSessionStartRequest) -> dict:
+        return app.state.phase_6_voice_session_manager.start_manual(**payload.model_dump())
+
+    @app.post("/mark-3/voice-session-v2/transition")
+    def mark_3_voice_session_v2_transition(payload: Mark3Phase6VoiceSessionTransitionRequest) -> dict:
+        try:
+            return app.state.phase_6_voice_session_manager.transition(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="voice session not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/voice-session-v2/cancel")
+    def mark_3_voice_session_v2_cancel(payload: Mark3Phase6VoiceSessionCancelRequest) -> dict:
+        try:
+            return app.state.phase_6_voice_session_manager.cancel(**payload.model_dump())
+        except KeyError:
+            raise HTTPException(status_code=404, detail="voice session not found")
+
+    @app.get("/mark-3/wake-runtime/status")
+    def mark_3_wake_runtime_status() -> dict:
+        return app.state.phase_6_wake_runtime.status()
+
+    @app.post("/mark-3/wake-runtime/opt-in")
+    def mark_3_wake_runtime_opt_in(payload: Mark3WakeRuntimeOptInRequest) -> dict:
+        return app.state.phase_6_wake_runtime.configure(**payload.model_dump())
+
+    @app.post("/mark-3/wake-runtime/fixture")
+    def mark_3_wake_runtime_fixture(payload: Mark3WakeRuntimeFixtureRequest) -> dict:
+        return app.state.phase_6_wake_runtime.handle_fixture_transcript(**payload.model_dump())
+
+    @app.get("/mark-3/sensor-runtime/status")
+    def mark_3_sensor_runtime_status() -> dict:
+        return app.state.phase_6_sensor_runtime.status()
+
+    @app.post("/mark-3/sensor-runtime/opt-in")
+    def mark_3_sensor_runtime_opt_in(payload: Mark3SensorRuntimeOptInRequest) -> dict:
+        try:
+            return app.state.phase_6_sensor_runtime.set_opt_in(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/sensor-runtime/start")
+    def mark_3_sensor_runtime_start(payload: Mark3SensorRuntimeStartRequest) -> dict:
+        try:
+            return app.state.phase_6_sensor_runtime.start(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/sensor-runtime/stop")
+    def mark_3_sensor_runtime_stop(payload: Mark3SensorRuntimeStopRequest) -> dict:
+        try:
+            return app.state.phase_6_sensor_runtime.stop(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/sensor-runtime/delete")
+    def mark_3_sensor_runtime_delete(payload: Mark3SensorRuntimeDeleteRequest) -> dict:
+        try:
+            return app.state.phase_6_sensor_runtime.delete_local_retention(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/mark-3/dashboard/status")
     def mark_3_dashboard_status() -> dict:
