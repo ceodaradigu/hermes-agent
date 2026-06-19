@@ -1,4 +1,4 @@
-import { useMemo, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { ShieldAlert } from "lucide-react";
 import type { JarvisDashboardStatus } from "@/lib/api";
 import type { JarvisEvent, JarvisOrbVisualState, LocalVoiceLoopController } from "./types";
@@ -71,6 +71,8 @@ export function JarvisPresenceShell({
   eventConnectionState,
 }: JarvisPresenceShellProps) {
   const fallbackOffline = useMemo(() => fallbackDashboard("offline"), []);
+  const [smartBarTextPulse, setSmartBarTextPulse] = useState(false);
+  const [smartBarTextSignal, setSmartBarTextSignal] = useState("");
   const modules = useMemo(() => readModules(dashboard.modules), [dashboard.modules]);
   const system = dashboard.system ?? fallbackOffline.system ?? {};
   const localSystemContract = dashboard.local_system_contract ?? fallbackOffline.local_system_contract!;
@@ -109,6 +111,18 @@ export function JarvisPresenceShell({
   const intakeRisk = valueText(conversationalIntake.sample?.classification?.risk_level, "unknown");
   const latestWakeEvent = events.find((event) => event.event_type === "wake_state");
   const approvalsPending = typeof approvals.pending_count === "number" ? approvals.pending_count > 0 : false;
+  const handleSmartBarDraftActivity = useCallback((draft: string) => {
+    setSmartBarTextSignal(draft);
+    setSmartBarTextPulse(draft.trim().length > 0);
+  }, []);
+  useEffect(() => {
+    if (!smartBarTextPulse) return;
+    const timeout = window.setTimeout(() => setSmartBarTextPulse(false), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [smartBarTextPulse, smartBarTextSignal]);
+  const textReactive =
+    smartBarTextPulse ||
+    Boolean(localVoice.interimTranscript.trim() || localVoice.transcript.trim() || localVoice.localVoiceResponse.trim());
   const orbVisualState: JarvisOrbVisualState =
     valueText(system.kill_switch_state, "not_wired") === "active"
       ? "stopped"
@@ -129,21 +143,22 @@ export function JarvisPresenceShell({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 top-12 z-30 h-[calc(100dvh-3rem)] overflow-hidden bg-[#01050d] text-cyan-50"
+      className="fixed inset-x-0 bottom-0 top-12 z-30 h-[calc(100dvh-3rem)] overflow-hidden bg-[#00030a] text-cyan-50"
       data-testid="jarvis-command-center-page"
       data-presence-layout="cinematic-orb-first"
+      data-visual-direction="dark-background-distinct-blue-white-core-clean-side-rails"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.24),transparent_42%),radial-gradient(circle_at_68%_46%,rgba(248,113,113,0.10),transparent_28%),radial-gradient(circle_at_34%_74%,rgba(250,204,21,0.08),transparent_32%),linear-gradient(180deg,rgba(1,5,13,0.22),rgba(1,5,13,0.96))]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(34,211,238,0.030)_1px,transparent_1px),linear-gradient(0deg,rgba(34,211,238,0.020)_1px,transparent_1px)] bg-[length:112px_112px]" />
-      <div className="pointer-events-none absolute inset-x-0 top-[4.2rem] h-px bg-cyan-300/46 shadow-[0_0_26px_rgba(34,211,238,0.76)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,182,212,0.105),transparent_35%),radial-gradient(circle_at_68%_48%,rgba(248,113,113,0.045),transparent_24%),radial-gradient(circle_at_35%_75%,rgba(250,204,21,0.025),transparent_29%),linear-gradient(180deg,rgba(0,3,10,0.08),rgba(0,3,10,0.98))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(103,232,249,0.016)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.012)_1px,transparent_1px)] bg-[length:128px_128px]" />
+      <div className="pointer-events-none absolute inset-x-0 top-[4.2rem] h-px bg-cyan-300/22 shadow-[0_0_18px_rgba(34,211,238,0.34)]" />
 
       <header
         data-testid="jarvis-command-center-header"
-        className="absolute inset-x-0 top-0 z-40 h-[4.25rem] border-b border-cyan-300/20 bg-[#01050d]/64 backdrop-blur-xl"
+        className="absolute inset-x-0 top-0 z-40 h-[4.25rem] border-b border-cyan-100/12 bg-[#00030a]/76 backdrop-blur-xl"
       >
         <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-5 2xl:px-7">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
+            <span className="h-2 w-2 rounded-full bg-[#e6fbff] shadow-[0_0_18px_rgba(230,251,255,0.82)]" />
             <div className="min-w-0">
               <p className="font-display text-[0.62rem] uppercase tracking-[0.18em] text-cyan-200/50">local presence</p>
               <p className="truncate font-mono-ui text-xs text-cyan-50/72">
@@ -153,21 +168,21 @@ export function JarvisPresenceShell({
           </div>
 
           <div className="text-center">
-            <p className="font-expanded text-2xl font-bold uppercase tracking-[0.34em] text-cyan-200 blend-lighter drop-shadow-[0_0_20px_rgba(34,211,238,0.82)]">JARVIS</p>
-            <p className="mt-0.5 font-display text-[0.62rem] uppercase tracking-[0.24em] text-cyan-100/58">presence chamber</p>
+            <p className="font-expanded text-2xl font-bold uppercase tracking-[0.34em] text-[#e6fbff] blend-lighter drop-shadow-[0_0_22px_rgba(230,251,255,0.76)]">JARVIS</p>
+            <p className="mt-0.5 font-display text-[0.62rem] uppercase tracking-[0.24em] text-cyan-100/46">presence chamber</p>
             <span className="sr-only">Centro de Mando JARVIS</span>
             <span className="sr-only">JARVIS Presence UI + Local System Contract</span>
             <span className="sr-only">Visual Command Center GET {DASHBOARD_READ_MODEL_ENDPOINT}</span>
           </div>
 
           <div className="flex min-w-0 items-center justify-end gap-2">
-            <Badge className="hidden border-cyan-300/22 bg-[#061526]/64 text-cyan-100/70 sm:inline-flex" variant="outline">
+            <Badge className="hidden border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60 sm:inline-flex" variant="outline">
               {eventConnectionState}
             </Badge>
-            <Badge className={approvalsPending ? "border-amber-300/40 bg-amber-400/12 text-amber-100" : "border-cyan-300/22 bg-[#061526]/64 text-cyan-100/70"} variant="outline">
+            <Badge className={approvalsPending ? "border-amber-300/40 bg-amber-400/12 text-amber-100" : "border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60"} variant="outline">
               {approvalsPending ? "approval required" : "read-only"}
             </Badge>
-            <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-400/40 bg-red-950/35 px-3 text-red-100" data-testid="jarvis-header-kill-switch">
+            <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-300/34 bg-red-950/28 px-3 text-red-100" data-testid="jarvis-header-kill-switch">
               <ShieldAlert className="h-3.5 w-3.5" />
               KILL SWITCH
             </Button>
@@ -181,7 +196,7 @@ export function JarvisPresenceShell({
 
       <section
         data-testid="jarvis-cockpit-layout"
-        className="absolute inset-x-0 bottom-[8.7rem] top-[4.25rem] z-10 grid min-h-0 gap-3 px-4 py-3 lg:grid-cols-[minmax(160px,13vw)_minmax(0,1fr)] xl:grid-cols-[minmax(180px,13vw)_minmax(0,1fr)_minmax(270px,18vw)] 2xl:px-7"
+        className="absolute inset-x-0 bottom-[8.7rem] top-[4.25rem] z-10 grid min-h-0 gap-3 px-4 py-3 lg:grid-cols-[minmax(150px,12vw)_minmax(0,1fr)] xl:grid-cols-[minmax(170px,12vw)_minmax(0,1fr)_minmax(266px,17vw)] 2xl:px-7"
       >
         <JarvisSideRail
           system={system}
@@ -200,9 +215,11 @@ export function JarvisPresenceShell({
           jarvisTone={localVoice.jarvisTone}
           conversationActive={localVoice.conversationActive}
           killSwitchState={valueText(system.kill_switch_state, "not_wired")}
+          textReactive={textReactive}
+          textSignal={smartBarTextSignal || localVoice.interimTranscript || localVoice.transcript || localVoice.localVoiceResponse}
         />
 
-        <aside className="hidden min-h-0 content-start gap-3 overflow-auto pr-1 xl:grid" data-testid="jarvis-contextual-side-panel">
+        <aside className="hidden min-h-0 content-start gap-3 overflow-auto pr-1 xl:grid" data-testid="jarvis-contextual-side-panel" data-side-panel-style="premium-quiet-not-dashboard">
           <JarvisApprovalPanel cards={approvalCards} pendingCount={approvals.pending_count} />
           <JarvisCameraPanel
             cameraState={cameraControl.cameraState}
@@ -228,8 +245,8 @@ export function JarvisPresenceShell({
             onStop={audioRecorder.stopRecording}
             onDelete={audioRecorder.deleteRecording}
           />
-          <details className="border border-cyan-300/12 bg-[#04101f]/52 p-3" data-testid="jarvis-finance-summary">
-            <summary className="cursor-pointer font-expanded text-xs font-bold uppercase tracking-[0.12em] text-cyan-100/72">Finance / ROI</summary>
+          <details className="border border-cyan-100/10 bg-[#000711]/52 p-3 backdrop-blur" data-testid="jarvis-finance-summary">
+            <summary className="cursor-pointer font-expanded text-xs font-bold uppercase tracking-[0.12em] text-cyan-100/58">Finance / ROI</summary>
             <p className="mt-2 font-mono-ui text-xs text-cyan-100/50">No fake metrics. Si no hay evidencia, mostrar unknown.</p>
             <div className="mt-3 grid grid-cols-2 gap-2 font-mono-ui text-[0.7rem] text-cyan-100/65">
               <span>coste real {metricValue(financeMetrics.actual_cost)}</span>
@@ -265,6 +282,7 @@ export function JarvisPresenceShell({
         voiceQualityNotice={localVoice.voiceQualityNotice}
         onBegin={localVoice.beginLocalVoiceLoop}
         onCancel={localVoice.cancelLocalVoiceLoop}
+        onDraftActivity={handleSmartBarDraftActivity}
       />
 
       <JarvisDebugDrawer

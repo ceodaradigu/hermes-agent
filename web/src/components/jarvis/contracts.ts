@@ -47,18 +47,28 @@ export const jarvisToneProfiles: Record<
   intenso: { label: "intenso", rate: 1.1, pitch: 0.82, volume: 1, motion: 1.36, accent: "#f87171" },
 };
 
+export const jarvisPresenceVisualLayers = {
+  background: "#00030a",
+  outerHalo: "#0ea5e9",
+  particles: "#67e8f9",
+  core: "#e6fbff",
+  approval: "#facc15",
+  alert: "#fb7185",
+  contract: "dark background, cool particles, blue-white core, separated approval/alert channel",
+} as const;
+
 export const presenceStates = [
-  ["idle", "idle/calmado", "Núcleo estable, sin escucha activa."],
-  ["wake_listening", "wake listening", "Ventana futura de wake bajo opt-in; wake phrase nunca aprueba."],
-  ["listening", "escuchando", "SpeechRecognition activo solo por permiso explícito."],
-  ["transcribing", "transcribiendo", "Texto temporal del navegador; sin audio bruto."],
-  ["thinking", "pensando", "Respuesta local controlada; sin Hermes."],
-  ["speaking", "hablando", "speechSynthesis si el navegador lo soporta."],
-  ["approval_required", "approval required", "JARVIS espera confirmación humana; wake phrase no aprueba."],
-  ["alert", "alerta", "Riesgo o approval pendiente; no ejecuta por sí mismo."],
-  ["error", "error/no disponible", "STT/TTS no soportado o permiso denegado."],
-  ["stopped", "stopped", "Stop/cancel o kill switch visible."],
-  ["executing", "executing", "Visualiza ejecución gobernada si el read model la declara."],
+  ["idle", "idle/calmado", "Núcleo respira lento; partículas mínimas."],
+  ["wake_listening", "wake listening", "Atención ligera bajo opt-in futuro; wake phrase nunca aprueba."],
+  ["listening", "escuchando", "Pulso fino y partículas activas; SpeechRecognition solo por permiso explícito."],
+  ["transcribing", "transcribiendo", "Ondas contenidas; texto temporal del navegador sin audio bruto."],
+  ["thinking", "pensando", "Dinámica interna compleja; respuesta local controlada sin Hermes."],
+  ["speaking", "hablando", "Partículas y glow más activos; speechSynthesis si el navegador lo soporta."],
+  ["approval_required", "approval required", "Canal cálido separado; JARVIS espera confirmación humana y wake no aprueba."],
+  ["alert", "alerta", "Cambio visual claro ante riesgo; no ejecuta por sí mismo."],
+  ["error", "error/no disponible", "Canal rojo/rosa separado; STT/TTS no soportado o permiso denegado."],
+  ["stopped", "stopped", "Núcleo calmado/apagado por stop/cancel o kill switch visible."],
+  ["executing", "executing", "Solo visualiza ejecución gobernada si el read model la declara."],
 ] as const;
 
 const fallbackBuilderStages = [

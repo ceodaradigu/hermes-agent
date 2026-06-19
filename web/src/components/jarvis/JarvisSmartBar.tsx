@@ -27,6 +27,7 @@ interface JarvisSmartBarProps {
   voiceQualityNotice: string;
   onBegin: () => void;
   onCancel: () => void;
+  onDraftActivity?: (draft: string) => void;
 }
 
 export function JarvisSmartBar({
@@ -49,6 +50,7 @@ export function JarvisSmartBar({
   voiceQualityNotice,
   onBegin,
   onCancel,
+  onDraftActivity,
 }: JarvisSmartBarProps) {
   const [localDraft, setLocalDraft] = useState("");
   const messages = missionControl.conversation_preview?.messages ?? [];
@@ -76,29 +78,34 @@ export function JarvisSmartBar({
       data-local-voice-loop="browser-controlled"
       data-local-voice-state={localVoiceState}
       data-smart-bar-mode="local-draft-and-manual-voice"
+      data-smart-bar-contract="human-response-visible-details-folded-send-disabled"
     >
       <div className="mx-auto mb-2 grid w-[min(58rem,calc(100vw-1.5rem))] gap-2 md:grid-cols-[0.9fr_1.1fr]">
-        <div className="min-w-0 border border-cyan-300/16 bg-[#031426]/70 px-3 py-2 shadow-[0_0_24px_rgba(34,211,238,0.08)] backdrop-blur">
-          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-cyan-200/62">Tú · transcripción temporal local</p>
+        <div className="min-w-0 border border-cyan-100/12 bg-[#000711]/76 px-3 py-2 shadow-[0_0_22px_rgba(230,251,255,0.05)] backdrop-blur">
+          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-cyan-100/52">Tú · transcripción temporal local</p>
           <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedTranscript}</p>
         </div>
-        <div className="min-w-0 border border-cyan-300/22 bg-[#031426]/82 px-3 py-2 shadow-[0_0_32px_rgba(34,211,238,0.12)] backdrop-blur">
-          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-cyan-200/62">JARVIS · respuesta humana corta</p>
+        <div className="min-w-0 border border-[#e6fbff]/22 bg-[#000711]/84 px-3 py-2 shadow-[0_0_34px_rgba(230,251,255,0.10)] backdrop-blur">
+          <p className="font-display text-[0.64rem] uppercase tracking-[0.16em] text-[#e6fbff]/66">JARVIS · respuesta humana corta</p>
           <p className="mt-1 truncate font-mono-ui text-xs text-cyan-50">{displayedResponse}</p>
           <p className="sr-only">respuesta temporal local controlada · tono {jarvisTone}</p>
         </div>
       </div>
 
-      <div className="relative rounded-full border border-cyan-300/35 bg-[#020b17]/95 p-2 shadow-[0_0_80px_rgba(34,211,238,0.24),inset_0_0_52px_rgba(34,211,238,0.06)] backdrop-blur-xl">
-        <div className="absolute -inset-2 -z-10 rounded-full bg-cyan-300/10 blur-2xl" />
-        <div className="flex min-w-0 items-center gap-3 rounded-full border border-cyan-300/18 bg-[#061629]/92 px-4 py-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.22)]">
-            <MessageSquare className="h-5 w-5 text-cyan-100" />
+      <div className="relative rounded-full border border-[#e6fbff]/34 bg-[#00030a]/96 p-2 shadow-[0_0_88px_rgba(230,251,255,0.18),inset_0_0_52px_rgba(230,251,255,0.055)] backdrop-blur-xl">
+        <div className="absolute -inset-2 -z-10 rounded-full bg-[#e6fbff]/10 blur-2xl" />
+        <div className="flex min-w-0 items-center gap-3 rounded-full border border-[#e6fbff]/18 bg-[#000711]/94 px-4 py-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#e6fbff]/30 bg-[#e6fbff]/[0.07] shadow-[0_0_32px_rgba(230,251,255,0.22)]">
+            <MessageSquare className="h-5 w-5 text-[#e6fbff]" />
           </div>
           <input
             aria-label="Barra inteligente inferior para escribir a JARVIS"
             value={localDraft || interimTranscript || transcript}
-            onChange={(event) => setLocalDraft(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              setLocalDraft(nextDraft);
+              onDraftActivity?.(nextDraft);
+            }}
             placeholder={conversationActive ? "Conversación manual activa. Habla cuando quieras o pulsa stop." : "Escribe un borrador local o pulsa el micrófono una vez..."}
             className="min-w-0 flex-1 bg-transparent font-mono-ui text-base text-cyan-50 outline-none placeholder:text-cyan-100/36 sm:text-lg"
           />
@@ -111,7 +118,7 @@ export function JarvisSmartBar({
             variant="outline"
             size="icon"
             onClick={onBegin}
-            className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100 disabled:opacity-45"
+            className="rounded-full border-[#e6fbff]/24 bg-[#e6fbff]/[0.045] text-[#e6fbff] disabled:opacity-45"
           >
             {sttSupport === "supported" ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
           </Button>
@@ -128,13 +135,13 @@ export function JarvisSmartBar({
           >
             <Square className="h-4 w-4" />
           </Button>
-          <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-300/25 bg-cyan-300/[0.04] text-cyan-100">
+          <Button disabled aria-disabled="true" type="button" variant="outline" size="icon" className="rounded-full border-cyan-100/16 bg-cyan-300/[0.025] text-cyan-100/50">
             <SendHorizontal className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="mx-auto mt-2 grid w-[min(60rem,calc(100vw-1.5rem))] gap-2 border border-cyan-300/14 bg-[#020b17]/76 px-4 py-2 backdrop-blur md:grid-cols-[auto_1fr_auto]">
+      <div className="mx-auto mt-2 grid w-[min(60rem,calc(100vw-1.5rem))] gap-2 border border-cyan-100/10 bg-[#000711]/74 px-4 py-2 backdrop-blur md:grid-cols-[auto_1fr_auto]">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant={conversationActive ? "warning" : statusBadgeVariant}>
             Conversación manual {conversationActive ? "activa" : "en reposo"}
@@ -142,7 +149,7 @@ export function JarvisSmartBar({
           <Badge variant={statusBadgeVariant}>estado: {stateLabel}</Badge>
           <Badge variant={wakeAvailable ? "success" : "outline"}>wake gated</Badge>
         </div>
-        <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/58">
+        <p className="min-w-0 font-mono-ui text-[0.72rem] text-cyan-100/54">
           {conversationActive
             ? "JARVIS vuelve a escuchar al terminar de hablar mientras este modo siga activo. Stop/cancel cierra la conversación."
             : `Wake ${wakeAvailable ? "disponible por dependencia" : "desactivado/no disponible"} no equivale a conversación activa. Micrófono manual; no hay transcripción continua ni Hermes directo.`}
@@ -176,13 +183,13 @@ export function JarvisSmartBar({
         </details>
       </div>
 
-      <details className="mx-auto mt-2 w-fit border border-cyan-300/16 bg-[#020b17]/80 px-5 py-2 backdrop-blur" data-testid="jarvis-folded-history">
+      <details className="mx-auto mt-2 w-fit border border-cyan-100/10 bg-[#000711]/76 px-5 py-2 backdrop-blur" data-testid="jarvis-folded-history">
         <summary className="flex cursor-pointer items-center gap-2 font-display text-xs uppercase tracking-[0.14em] text-cyan-100/64">
           <History className="h-4 w-4" />
           Historial plegado / folded history
         </summary>
         <div className="mt-3 grid max-h-40 w-[min(42rem,calc(100vw-3rem))] gap-2 overflow-auto">
-          <div className="grid gap-2 border border-cyan-300/15 bg-[#071629]/55 p-3">
+          <div className="grid gap-2 border border-cyan-100/9 bg-[#000711]/55 p-3">
             <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">transcripción temporal local</p>
             <p className="truncate font-mono-ui text-xs text-cyan-50">{displayedTranscript}</p>
             <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-200/55">respuesta temporal local controlada</p>
@@ -190,7 +197,7 @@ export function JarvisSmartBar({
           </div>
           <div className="grid gap-2">
             {messages.map((message, index) => (
-              <div key={`${message.speaker}-${index}`} className="border border-cyan-300/10 bg-[#020717]/70 p-2">
+              <div key={`${message.speaker}-${index}`} className="border border-cyan-100/8 bg-[#000711]/70 p-2">
                 <p className="font-display text-[0.68rem] uppercase tracking-[0.12em] text-cyan-200/50">{message.speaker}</p>
                 <p className="font-mono-ui text-xs text-cyan-50/80">{message.content}</p>
               </div>

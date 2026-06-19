@@ -128,6 +128,13 @@ Piezas relevantes ya documentadas:
   `approval_required`, fallback visible, `prefers-reduced-motion`, pixel ratio
   limitado y performance budget. No añade Hermes dispatch, `/execute`,
   approve/reject real, sensores auto-start ni providers externos.
+- Presence UI Visual Overhaul v2 de PR #161: corrige la direccion visual de
+  #160 con fondo mucho mas oscuro (`#00030a`), nucleo azul-blanco diferenciado
+  (`#e6fbff`), particulas frias separadas, glow concentrado en el centro,
+  `stateReactiveEnergy`/`u_reactivity` por estado de voz y paneles laterales
+  premium/minimos. La reactividad es state-driven; no abre Web Audio, no pide
+  permisos nuevos, no auto-start mic/camara, no añade dependencias y no cambia
+  el contrato JARVIS gobierna / Hermes ejecuta.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.

@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, MicOff, ShieldAlert, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { jarvisToneProfiles, localVoiceStateLabels, presenceStates } from "./contracts";
 import type { JarvisOrbVisualState, JarvisVoiceTone, LocalVoiceLoopState } from "./types";
-import { localVoiceStateIsError } from "./utils";
 import { useJarvisOrbState } from "@/hooks/jarvis/useJarvisOrbState";
 
 interface JarvisOrb3DProps {
@@ -13,238 +11,126 @@ interface JarvisOrb3DProps {
   jarvisTone: JarvisVoiceTone;
   conversationActive: boolean;
   killSwitchState: string;
+  textReactive?: boolean;
+  textSignal?: string;
 }
 
-interface Particle {
+interface CanvasParticle {
   x: number;
   y: number;
   z: number;
   size: number;
-  color: [number, number, number];
+  opacity: number;
   seed: number;
   lane: number;
+}
+
+interface MicroParticle {
+  id: number;
+  angle: number;
+  radius: number;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+}
+
+interface RadialSpike {
+  id: number;
+  angle: number;
+  length: number;
+  delay: number;
+  duration: number;
+  brightness: number;
+}
+
+interface EmergentCoreParticle {
+  id: number;
+  angle: number;
+  radius: number;
+  size: number;
+  delay: number;
+  duration: number;
+  opacity: number;
 }
 
 function seeded(index: number) {
   return Math.abs(Math.sin(index * 12.9898 + 78.233) * 43758.5453) % 1;
 }
 
-function makeParticles(): Float32Array {
-  const particles: Particle[] = [];
-  for (let index = 0; index < 920; index += 1) {
-    const u = seeded(index) * 2 - 1;
-    const theta = seeded(index + 1000) * Math.PI * 2;
-    const radius = 0.46 + seeded(index + 2000) * 0.62;
-    const ringBias = index % 7 === 0 ? 0.14 : 1;
-    const xy = Math.sqrt(1 - u * u);
-    particles.push({
-      x: Math.cos(theta) * xy * radius,
-      y: u * radius * ringBias,
-      z: Math.sin(theta) * xy * radius,
-      size: 1.9 + seeded(index + 3000) * 4.9,
-      color: index % 17 === 0 ? [1.0, 0.72, 0.28] : index % 11 === 0 ? [0.82, 0.96, 1.0] : [0.36, 0.9, 1.0],
-      seed: seeded(index + 4000),
-      lane: index % 4,
-    });
-  }
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
-  const ringCounts = [180, 220, 260, 300, 340];
-  ringCounts.forEach((count, ringIndex) => {
-    for (let index = 0; index < count; index += 1) {
-      const theta = (index / count) * Math.PI * 2;
-      const radius = 0.62 + ringIndex * 0.145;
-      const wobble = Math.sin(theta * 6 + ringIndex) * 0.025;
-      const axis = ringIndex % 3;
-      const base = {
-        x: Math.cos(theta) * radius,
-        y: Math.sin(theta) * radius,
-        z: wobble,
-      };
-      particles.push({
-        x: axis === 0 ? base.x : axis === 1 ? base.x : base.z,
-        y: axis === 0 ? base.y : axis === 1 ? base.z : base.x,
-        z: axis === 0 ? base.z : axis === 1 ? base.y : base.y,
-        size: ringIndex === 0 ? 3.8 : 2.8,
-        color: ringIndex === 3 ? [0.88, 0.98, 1.0] : ringIndex === 4 ? [1.0, 0.78, 0.34] : [0.28, 0.86, 1.0],
-        seed: seeded(index + ringIndex * 5000),
-        lane: ringIndex,
-      });
-    }
+function makeCanvasParticles(): CanvasParticle[] {
+  return Array.from({ length: 1420 }, (_, index) => {
+    const z = seeded(index + 900) * 2 - 1;
+    const theta = seeded(index + 1800) * Math.PI * 2;
+    const radius = Math.sqrt(Math.max(0, 1 - z * z)) * (0.72 + seeded(index + 2700) * 0.34);
+    return {
+      x: Math.cos(theta) * radius,
+      y: Math.sin(theta) * radius,
+      z: z * (0.76 + seeded(index + 3600) * 0.28),
+      size: 0.72 + seeded(index + 4500) * 2.25,
+      opacity: 0.28 + seeded(index + 5400) * 0.62,
+      seed: seeded(index + 6300),
+      lane: index % 7,
+    };
   });
+}
 
-  const packed = new Float32Array(particles.length * 9);
-  particles.forEach((particle, index) => {
-    const offset = index * 9;
-    packed[offset] = particle.x;
-    packed[offset + 1] = particle.y;
-    packed[offset + 2] = particle.z;
-    packed[offset + 3] = particle.size;
-    packed[offset + 4] = particle.color[0];
-    packed[offset + 5] = particle.color[1];
-    packed[offset + 6] = particle.color[2];
-    packed[offset + 7] = particle.seed;
-    packed[offset + 8] = particle.lane;
+function makeMicroParticles(): MicroParticle[] {
+  return Array.from({ length: 128 }, (_, index) => {
+    const sizeSeed = seeded(index + 8200);
+    return {
+      id: index,
+      angle: Math.round(index * 137.5 + seeded(index + 8100) * 18),
+      radius: 22 + seeded(index + 8300) * 50,
+      size: index % 9 === 0 ? 3.4 : 1.4 + sizeSeed * 2.2,
+      duration: 8.5 + seeded(index + 8400) * 10.5,
+      delay: -seeded(index + 8500) * 10,
+      opacity: 0.32 + seeded(index + 8600) * 0.52,
+    };
   });
-  return packed;
 }
 
-function compileShader(gl: WebGLRenderingContext, type: number, source: string) {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
+function makeFallbackParticles(): MicroParticle[] {
+  return Array.from({ length: 360 }, (_, index) => {
+    const shell = index % 5;
+    const radiusSeed = seeded(index + 8700);
+    return {
+      id: index,
+      angle: Math.round(index * 137.5 + seeded(index + 8800) * 34),
+      radius: 12 + shell * 8 + radiusSeed * 54,
+      size: index % 13 === 0 ? 3.6 : 1.2 + seeded(index + 8900) * 2.6,
+      duration: 5.5 + seeded(index + 9000) * 9.5,
+      delay: -seeded(index + 9100) * 9,
+      opacity: 0.28 + seeded(index + 9200) * 0.62,
+    };
+  });
 }
 
-function createProgram(gl: WebGLRenderingContext) {
-  const vertex = compileShader(
-    gl,
-    gl.VERTEX_SHADER,
-    `
-      attribute vec3 a_position;
-      attribute float a_size;
-      attribute vec3 a_color;
-      attribute float a_seed;
-      attribute float a_lane;
-      uniform mat4 u_matrix;
-      uniform float u_time;
-      uniform float u_intensity;
-      uniform float u_wave;
-      uniform float u_glitch;
-      uniform vec3 u_accent;
-      varying vec3 v_color;
-      varying float v_core;
-      void main() {
-        float laneSpeed = 0.18 + a_lane * 0.065;
-        float spin = u_time * laneSpeed * (0.72 + a_seed * 0.55);
-        float c = cos(spin);
-        float s = sin(spin);
-        vec3 p = a_position;
-        if (mod(a_lane, 2.0) < 1.0) {
-          p.xz = mat2(c, -s, s, c) * p.xz;
-        } else {
-          p.xy = mat2(c, -s, s, c) * p.xy;
-        }
-        float wave = sin(u_time * (1.35 + a_seed) + length(a_position) * 13.5 + a_seed * 12.0);
-        float breath = 1.0 + wave * 0.035 * u_wave + sin(u_time * 0.65) * 0.018 * u_intensity;
-        float glitch = (step(0.88, fract(sin(a_seed * 91.7 + u_time * 8.0) * 43758.5453)) - 0.5) * u_glitch * 0.085;
-        p *= breath + glitch;
-        p.z += sin(u_time * 0.9 + a_seed * 19.0) * 0.028 * u_wave;
-        vec4 projected = u_matrix * vec4(p, 1.0);
-        gl_Position = projected;
-        gl_PointSize = a_size * (1.2 + u_intensity * 1.35 + u_wave * 0.38) * (1.0 + (1.0 - projected.z) * 0.26);
-        v_color = mix(a_color, u_accent, 0.18 + u_wave * 0.12 + u_glitch * 0.18);
-        v_core = smoothstep(1.15, 0.10, length(p));
-      }
-    `,
-  );
-  const fragment = compileShader(
-    gl,
-    gl.FRAGMENT_SHADER,
-    `
-      precision mediump float;
-      varying vec3 v_color;
-      varying float v_core;
-      uniform float u_alpha;
-      void main() {
-        vec2 uv = gl_PointCoord - vec2(0.5);
-        float d = length(uv);
-        float glow = smoothstep(0.5, 0.0, d);
-        float core = smoothstep(0.18, 0.0, d);
-        vec3 color = v_color * (0.58 + core * 0.82 + v_core * 0.34);
-        gl_FragColor = vec4(color, (glow * 0.72 + core * 0.30) * u_alpha);
-      }
-    `,
-  );
-  if (!vertex || !fragment) return null;
-  const program = gl.createProgram();
-  if (!program) return null;
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    gl.deleteProgram(program);
-    return null;
-  }
-  return program;
+function makeRadialSpikes(): RadialSpike[] {
+  return Array.from({ length: 48 }, (_, index) => ({
+    id: index,
+    angle: index * 7.5 + seeded(index + 9100) * 4,
+    length: 7 + seeded(index + 9200) * 15,
+    delay: -seeded(index + 9300) * 2.4,
+    duration: 0.82 + seeded(index + 9400) * 0.72,
+    brightness: 0.55 + seeded(index + 9500) * 0.45,
+  }));
 }
 
-function perspective(aspect: number) {
-  const fov = Math.PI / 3.2;
-  const near = 0.1;
-  const far = 10;
-  const f = 1 / Math.tan(fov / 2);
-  return new Float32Array([
-    f / aspect,
-    0,
-    0,
-    0,
-    0,
-    f,
-    0,
-    0,
-    0,
-    0,
-    (far + near) / (near - far),
-    -1,
-    0,
-    0,
-    (2 * far * near) / (near - far),
-    0,
-  ]);
-}
-
-function multiply(left: Float32Array, right: Float32Array) {
-  const out = new Float32Array(16);
-  for (let row = 0; row < 4; row += 1) {
-    for (let col = 0; col < 4; col += 1) {
-      out[col * 4 + row] =
-        left[0 * 4 + row] * right[col * 4 + 0] +
-        left[1 * 4 + row] * right[col * 4 + 1] +
-        left[2 * 4 + row] * right[col * 4 + 2] +
-        left[3 * 4 + row] * right[col * 4 + 3];
-    }
-  }
-  return out;
-}
-
-function modelMatrix(time: number, motion: number, pulse: number) {
-  const y = time * 0.00023 * motion;
-  const x = Math.sin(time * 0.00018) * 0.28;
-  const cy = Math.cos(y);
-  const sy = Math.sin(y);
-  const cx = Math.cos(x);
-  const sx = Math.sin(x);
-  const scale = 1.0 + (pulse - 1) * 0.12;
-  return new Float32Array([
-    cy * scale,
-    sx * sy * scale,
-    -cx * sy * scale,
-    0,
-    0,
-    cx * scale,
-    sx * scale,
-    0,
-    sy * scale,
-    -sx * cy * scale,
-    cx * cy * scale,
-    0,
-    0,
-    0,
-    -2.45,
-    1,
-  ]);
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const clean = hex.replace("#", "");
-  const value = Number.parseInt(clean.length === 3 ? clean.split("").map((char) => char + char).join("") : clean, 16);
-  if (Number.isNaN(value)) return [0.2, 0.85, 1.0];
-  return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
+function makeEmergentCoreParticles(): EmergentCoreParticle[] {
+  return Array.from({ length: 84 }, (_, index) => ({
+    id: index,
+    angle: index * 137.5 + seeded(index + 10100) * 21,
+    radius: 4 + seeded(index + 10200) * 24,
+    size: index % 8 === 0 ? 3 : 1.1 + seeded(index + 10300) * 1.9,
+    delay: -seeded(index + 10400) * 4.8,
+    duration: 3.8 + seeded(index + 10500) * 4.2,
+    opacity: 0.34 + seeded(index + 10600) * 0.46,
+  }));
 }
 
 export function JarvisOrb3D({
@@ -255,257 +141,393 @@ export function JarvisOrb3D({
   jarvisTone,
   conversationActive,
   killSwitchState,
+  textReactive = false,
+  textSignal = "",
 }: JarvisOrb3DProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [webglReady, setWebglReady] = useState(true);
-  const [webglError, setWebglError] = useState("");
-  const particles = useMemo(() => makeParticles(), []);
-  const hudTicks = useMemo(() => Array.from({ length: 72 }, (_, index) => index), []);
-  const waveRings = useMemo(() => Array.from({ length: 6 }, (_, index) => index), []);
-  const orb = useJarvisOrbState({ localVoiceState, visualState, jarvisTone, killSwitchState, conversationActive });
+  const [canvasReady, setCanvasReady] = useState(true);
+  const [canvasError, setCanvasError] = useState("");
+  const particles = useMemo(() => makeCanvasParticles(), []);
+  const microParticles = useMemo(() => makeMicroParticles(), []);
+  const fallbackParticles = useMemo(() => makeFallbackParticles(), []);
+  const radialSpikes = useMemo(() => makeRadialSpikes(), []);
+  const emergentCoreParticles = useMemo(() => makeEmergentCoreParticles(), []);
+  const orb = useJarvisOrbState({ localVoiceState, visualState, jarvisTone, killSwitchState, conversationActive, textReactive });
   const orbRef = useRef(orb);
   orbRef.current = orb;
   const profile = jarvisToneProfiles[jarvisTone];
   const currentPresence = presenceStates.find(([id]) => id === visualState) ?? presenceStates[0];
-  const StateIcon = killSwitchState === "active" ? ShieldAlert : localVoiceState === "speaking" ? Volume2 : localVoiceStateIsError(localVoiceState) ? MicOff : Mic;
+  const textSignalActive = textSignal.trim().length > 0;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const gl = canvas.getContext("webgl", {
-      alpha: true,
-      antialias: true,
-      depth: true,
-      premultipliedAlpha: true,
-      powerPreference: "high-performance",
-    });
-    if (!gl) {
-      setWebglReady(false);
-      setWebglError("WebGL no disponible; usando fallback CSS seguro.");
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) {
+      setCanvasReady(false);
+      setCanvasError("Canvas 2D no disponible; fallback visual CSS activo.");
       return;
     }
-    setWebglReady(true);
-    setWebglError("");
     const canvasEl = canvas;
-    const webgl = gl;
-    const program = createProgram(webgl);
-    const buffer = webgl.createBuffer();
-    if (!program || !buffer) {
-      setWebglReady(false);
-      setWebglError("No se pudo inicializar el shader del orbe; usando fallback CSS seguro.");
-      return;
-    }
+    const context = ctx;
+    setCanvasReady(true);
+    setCanvasError("");
 
-    const position = webgl.getAttribLocation(program, "a_position");
-    const size = webgl.getAttribLocation(program, "a_size");
-    const color = webgl.getAttribLocation(program, "a_color");
-    const seed = webgl.getAttribLocation(program, "a_seed");
-    const lane = webgl.getAttribLocation(program, "a_lane");
-    const matrix = webgl.getUniformLocation(program, "u_matrix");
-    const timeUniform = webgl.getUniformLocation(program, "u_time");
-    const intensity = webgl.getUniformLocation(program, "u_intensity");
-    const wave = webgl.getUniformLocation(program, "u_wave");
-    const glitch = webgl.getUniformLocation(program, "u_glitch");
-    const accent = webgl.getUniformLocation(program, "u_accent");
-    const alpha = webgl.getUniformLocation(program, "u_alpha");
     let animationId = 0;
     let lastDraw = 0;
-    let contextLost = false;
-
-    webgl.bindBuffer(webgl.ARRAY_BUFFER, buffer);
-    webgl.bufferData(webgl.ARRAY_BUFFER, particles, webgl.STATIC_DRAW);
-
-    const handleContextLost = (event: Event) => {
-      event.preventDefault();
-      contextLost = true;
-      setWebglReady(false);
-      setWebglError("WebGL se perdió; fallback visual seguro activo.");
-    };
-    canvasEl.addEventListener("webglcontextlost", handleContextLost, false);
 
     function resize() {
-      const sizePx = Math.max(260, Math.floor(canvasEl.getBoundingClientRect().width));
+      const rect = canvasEl.getBoundingClientRect();
       const currentOrb = orbRef.current;
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, currentOrb.isActive ? 1.75 : 1.35);
+      const sizePx = Math.max(280, Math.floor(Math.min(rect.width || 640, rect.height || rect.width || 640)));
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, currentOrb.isActive ? 1.65 : 1.35);
       const width = Math.floor(sizePx * pixelRatio);
       const height = Math.floor(sizePx * pixelRatio);
       if (canvasEl.width !== width || canvasEl.height !== height) {
         canvasEl.width = width;
         canvasEl.height = height;
       }
+      return { height, pixelRatio, width };
     }
 
     function draw(time: number) {
-      if (contextLost) return;
-      resize();
       const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
       const currentOrb = orbRef.current;
-      const targetFrameMs = reducedMotion ? 120 : currentOrb.targetFrameMs;
+      const targetFrameMs = reducedMotion ? 140 : currentOrb.targetFrameMs;
       if (time - lastDraw < targetFrameMs) {
         animationId = window.requestAnimationFrame(draw);
         return;
       }
       lastDraw = time;
-      try {
-        webgl.viewport(0, 0, canvasEl.width, canvasEl.height);
-        webgl.clearColor(0, 0, 0, 0);
-        webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
-        webgl.enable(webgl.BLEND);
-        webgl.blendFunc(webgl.SRC_ALPHA, webgl.ONE);
-        webgl.disable(webgl.CULL_FACE);
-        webgl.useProgram(program);
-        webgl.bindBuffer(webgl.ARRAY_BUFFER, buffer);
-        const stride = 9 * Float32Array.BYTES_PER_ELEMENT;
-        webgl.enableVertexAttribArray(position);
-        webgl.vertexAttribPointer(position, 3, webgl.FLOAT, false, stride, 0);
-        webgl.enableVertexAttribArray(size);
-        webgl.vertexAttribPointer(size, 1, webgl.FLOAT, false, stride, 3 * Float32Array.BYTES_PER_ELEMENT);
-        webgl.enableVertexAttribArray(color);
-        webgl.vertexAttribPointer(color, 3, webgl.FLOAT, false, stride, 4 * Float32Array.BYTES_PER_ELEMENT);
-        webgl.enableVertexAttribArray(seed);
-        webgl.vertexAttribPointer(seed, 1, webgl.FLOAT, false, stride, 7 * Float32Array.BYTES_PER_ELEMENT);
-        webgl.enableVertexAttribArray(lane);
-        webgl.vertexAttribPointer(lane, 1, webgl.FLOAT, false, stride, 8 * Float32Array.BYTES_PER_ELEMENT);
-        const aspect = canvasEl.width / Math.max(canvasEl.height, 1);
-        const accentColor = hexToRgb(currentOrb.accent);
-        webgl.uniformMatrix4fv(matrix, false, multiply(perspective(aspect), modelMatrix(time, currentOrb.motion, currentOrb.pulse)));
-        webgl.uniform1f(timeUniform, time * 0.001);
-        webgl.uniform1f(intensity, currentOrb.pulse);
-        webgl.uniform1f(wave, reducedMotion ? currentOrb.wave * 0.35 : currentOrb.wave);
-        webgl.uniform1f(glitch, reducedMotion ? 0 : currentOrb.glitch);
-        webgl.uniform3f(accent, accentColor[0], accentColor[1], accentColor[2]);
-        webgl.uniform1f(alpha, currentOrb.isError ? 0.88 : currentOrb.isStopped ? 0.42 : 0.76);
-        const maxParticles = Math.min(particles.length / 9, reducedMotion ? 520 : currentOrb.particleBudget);
-        webgl.drawArrays(webgl.POINTS, 0, maxParticles);
-      } catch {
-        setWebglReady(false);
-        setWebglError("Canvas WebGL falló durante el render; fallback visual seguro activo.");
-        return;
+
+      const { height, pixelRatio, width } = resize();
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const t = time * 0.001;
+      const pseudoAudio = Math.pow(0.5 + 0.5 * Math.sin(t * 7.2 + Math.sin(t * 1.7) * 1.8), 2.45);
+      const scalePulse =
+        currentOrb.sphereScaleMid +
+        Math.sin(t * (reducedMotion ? 0.25 : 1.18)) * (currentOrb.sphereScaleMax - currentOrb.sphereScaleMin) * 0.36 +
+        pseudoAudio * currentOrb.radialSpikeEnergy * 0.11;
+      const sphereRadius = Math.min(width, height) * 0.34 * clamp(scalePulse, 0.52, 1.36);
+      const focus = currentOrb.listeningFocus;
+      const turbulence = reducedMotion ? currentOrb.thinkingTurbulence * 0.18 : currentOrb.thinkingTurbulence;
+      const reflow = reducedMotion ? currentOrb.transcribingReflow * 0.18 : currentOrb.transcribingReflow;
+      const radialEnergy = reducedMotion ? currentOrb.radialSpikeEnergy * 0.20 : currentOrb.radialSpikeEnergy;
+      const pressure = reducedMotion ? currentOrb.spherePressure * 0.18 : currentOrb.spherePressure;
+
+      context.clearRect(0, 0, width, height);
+      context.save();
+      context.globalCompositeOperation = "lighter";
+
+      const projected: Array<{ alpha: number; color: string; depth: number; size: number; x: number; y: number }> = [];
+      const maxParticles = reducedMotion ? 820 : Math.min(particles.length, currentOrb.particleBudget);
+      for (let index = 0; index < maxParticles; index += 1) {
+        const particle = particles[index];
+        const laneSpeed = 0.12 + particle.lane * 0.011 + currentOrb.stateReactiveEnergy * 0.034 + turbulence * 0.036;
+        const spin = t * laneSpeed * (0.65 + particle.seed);
+        const cy = Math.cos(spin);
+        const sy = Math.sin(spin);
+        const cx = Math.cos(t * 0.09 + particle.seed * 1.7);
+        const sx = Math.sin(t * 0.09 + particle.seed * 1.7);
+        let x = particle.x * cy - particle.z * sy;
+        let z = particle.x * sy + particle.z * cy;
+        let y = particle.y * cx - z * sx * 0.42;
+        z = particle.y * sx * 0.42 + z * cx;
+
+        const length = Math.max(0.001, Math.hypot(x, y, z));
+        const nx = x / length;
+        const ny = y / length;
+        const nz = z / length;
+        const localAudio = Math.pow(0.5 + 0.5 * Math.sin(t * (6.4 + particle.seed * 2.4) + particle.seed * 37), 2.2);
+        const spikeMask = seeded(index + Math.floor(t * 9) * 13) > 0.68 ? 1 : 0.26;
+        const spike = radialEnergy * (0.04 + localAudio * 0.24) * spikeMask;
+        const turbulenceWave = Math.sin(t * (2.0 + particle.seed) + particle.y * 7.0) * Math.cos(t * 1.6 + particle.x * 5.0);
+        const reflowWave = Math.sin(t * 3.4 + particle.lane * 1.6 + particle.seed * 17);
+        const radiusScale =
+          1 -
+          focus * 0.11 +
+          pressure * Math.sin(t * 1.15 + particle.seed * 8) * 0.035 +
+          spike +
+          reflow * reflowWave * 0.045;
+
+        x = x * radiusScale + (-ny) * turbulence * turbulenceWave * 0.082;
+        y = y * radiusScale + nx * turbulence * turbulenceWave * 0.082;
+        z = z * radiusScale + nz * spike * 0.60;
+
+        const perspective = 1 / (2.28 - z * 0.64);
+        const screenX = centerX + x * sphereRadius * perspective * 1.82;
+        const screenY = centerY + y * sphereRadius * perspective * 1.82;
+        const depth = clamp((z + 1.35) / 2.7, 0, 1);
+        const alpha =
+          particle.opacity *
+          (0.18 + depth * 0.68) *
+          (currentOrb.isStopped ? 0.36 : 0.78 + currentOrb.stateReactiveEnergy * 0.26 + radialEnergy * 0.22);
+        const size = particle.size * pixelRatio * (0.48 + depth * 1.18 + radialEnergy * localAudio * 0.90);
+        const color =
+          particle.lane % 5 === 0
+            ? `rgba(230,251,255,${clamp(alpha, 0.03, 0.96)})`
+            : particle.lane % 3 === 0
+              ? `rgba(174,247,255,${clamp(alpha, 0.03, 0.90)})`
+              : `rgba(103,232,249,${clamp(alpha, 0.03, 0.82)})`;
+        projected.push({ alpha, color, depth, size, x: screenX, y: screenY });
       }
+
+      projected.sort((a, b) => a.depth - b.depth);
+      for (const particle of projected) {
+        context.beginPath();
+        context.fillStyle = particle.color;
+        context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      if (currentOrb.emergentCoreConcentration > 0.10) {
+        const coreAlpha = currentOrb.emergentCoreConcentration * (0.12 + pseudoAudio * radialEnergy * 0.18);
+        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, sphereRadius * 0.17);
+        gradient.addColorStop(0, `rgba(230,251,255,${clamp(coreAlpha, 0, 0.32)})`);
+        gradient.addColorStop(0.52, `rgba(174,247,255,${clamp(coreAlpha * 0.34, 0, 0.12)})`);
+        gradient.addColorStop(1, "rgba(103,232,249,0)");
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(centerX, centerY, sphereRadius * 0.18, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.restore();
       animationId = window.requestAnimationFrame(draw);
     }
 
     animationId = window.requestAnimationFrame(draw);
-    return () => {
-      window.cancelAnimationFrame(animationId);
-      canvasEl.removeEventListener("webglcontextlost", handleContextLost, false);
-      webgl.deleteBuffer(buffer);
-      webgl.deleteProgram(program);
-    };
+    return () => window.cancelAnimationFrame(animationId);
   }, [particles]);
+
+  const sphereStyle = {
+    "--sphere-scale-min": String(orb.sphereScaleMin),
+    "--sphere-scale-mid": String(orb.sphereScaleMid),
+    "--sphere-scale-max": String(orb.sphereScaleMax),
+    "--particle-opacity-low": orb.isStopped ? "0.05" : "0.14",
+    "--particle-opacity-high": orb.isStopped ? "0.18" : String(0.52 + orb.stateReactiveEnergy * 0.30),
+    "--particle-opacity-end": orb.isStopped ? "0.08" : "0.22",
+    animationDuration: `${orb.sphereAnimationSeconds}s`,
+  } as CSSProperties;
+
+  const coreOpacity = clamp(orb.emergentCoreConcentration * 0.78, 0.02, 0.72);
+  const spikeOpacity = clamp(orb.radialSpikeEnergy * 0.92, 0, 0.92);
+  const stateSummary = `${localVoiceStateLabels[localVoiceState]} · ${currentPresence[2]}`;
 
   return (
     <article
       className="relative h-full min-h-0 overflow-hidden"
       data-testid="jarvis-central-core"
+      data-renderer="canvas-2d-particle-sphere-primary"
+      data-no-webgl-primary="true"
       data-local-voice-state={localVoiceState}
       data-orb-visual-state={visualState}
       data-jarvis-tone={jarvisTone}
       data-conversation-active={conversationActive ? "true" : "false"}
       data-kill-switch-state={killSwitchState}
       data-read-model-voice-state={voiceState}
-      data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.75`}
+      data-particle-sphere-mode="visible-canvas-2d-primary"
+      data-core-detail="emergent-particle-concentration-not-fixed-solid"
+      data-core-layers="particle-convergence transient-white-blue-density no-fixed-logo no-solid-core"
+      data-no-fixed-central-logo="true"
+      data-no-solid-core="true"
+      data-no-central-jarvis-text="true"
+      data-visible-particles="canvas-2d-plus-css-micro-particles"
+      data-text-signal-active={textSignalActive ? "true" : "false"}
+      data-minimum-visible-particles="1420"
+      data-fallback-particle-budget="360"
+      data-dynamic-sphere-size={`${orb.sphereScaleMin}/${orb.sphereScaleMid}/${orb.sphereScaleMax}`}
+      data-speaking-radial-spikes={String(orb.radialSpikeEnergy > 0.8)}
+      data-thinking-turbulence={String(orb.thinkingTurbulence)}
+      data-listening-focus={String(orb.listeningFocus)}
+      data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.65;renderer:canvas-2d`}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,0.22)_0%,rgba(14,165,233,0.08)_35%,rgba(2,6,23,0)_68%),radial-gradient(circle_at_50%_82%,rgba(249,115,22,0.10),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.028)_1px,transparent_1px)] bg-[length:100%_100%,100%_100%,64px_64px,64px_64px]" />
-      <div className="absolute left-0 right-0 top-1/2 h-px bg-cyan-300/35 shadow-[0_0_30px_rgba(34,211,238,0.55)]" />
-      <div className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-cyan-300/18" />
-      <div className="relative flex h-full min-h-0 flex-col items-center justify-center">
-        <div className="absolute top-4 flex items-center gap-2 border border-cyan-300/16 bg-[#031426]/52 px-3 py-2 backdrop-blur">
-          <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
-          <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/72">{currentPresence[1]}</p>
+      <div className="absolute inset-0 bg-[#00030a]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(14,165,233,0.10)_0%,rgba(2,132,199,0.035)_30%,rgba(0,3,10,0)_68%),radial-gradient(circle_at_50%_88%,rgba(8,47,73,0.20),transparent_46%)]" />
+      <div className="relative flex h-full min-h-0 flex-col items-center justify-center px-4">
+        <div className="absolute top-4 z-10 flex items-center gap-2 border border-cyan-100/10 bg-[#000814]/58 px-3 py-2 backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#e6fbff] shadow-[0_0_16px_rgba(230,251,255,0.85)]" />
+          <p className="font-display text-[0.64rem] uppercase tracking-[0.18em] text-cyan-50/72">{currentPresence[1]}</p>
           <span className="sr-only">Presence UI</span>
           <span className="sr-only">Núcleo de Voz JARVIS</span>
-          <span className="sr-only">orbe 3D real / HUD cinematográfico</span>
           <span className="sr-only">tono {profile.label}</span>
           <span className="sr-only">estado {visualState}</span>
         </div>
 
-        <div className="relative flex aspect-square w-[min(84dvh,62rem)] max-h-[calc(100dvh-12rem)] max-w-[min(92vw,62rem)] items-center justify-center xl:max-w-[min(66vw,62rem)]" data-testid="jarvis-cinematic-orb-hud">
-          <div className="absolute inset-[-10%] rounded-full blur-3xl" style={{ backgroundColor: orb.glow }} />
-          <div className="absolute inset-[-6%] rounded-full border border-cyan-200/8 shadow-[0_0_240px_rgba(34,211,238,0.34),inset_0_0_110px_rgba(14,165,233,0.10)]" />
-          <div className="absolute inset-0 rounded-full border border-cyan-200/12 bg-[radial-gradient(circle_at_48%_38%,rgba(125,211,252,0.16),transparent_22%),radial-gradient(circle_at_52%_58%,rgba(14,165,233,0.12),transparent_42%)] shadow-[0_0_210px_rgba(34,211,238,0.30)]" />
-          <div className="absolute inset-[4%] rounded-full border border-cyan-100/20 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(125,211,252,0.34)_18deg,transparent_42deg,transparent_84deg,rgba(34,211,238,0.18)_112deg,transparent_138deg,transparent_360deg)] opacity-85 animate-spin motion-reduce:animate-none" style={{ animationDuration: `${24 / orb.motion}s` }} />
-          <div className="absolute inset-[11%] rounded-full border border-cyan-100/16 bg-[conic-gradient(from_90deg,transparent_0deg,rgba(56,189,248,0.28)_12deg,transparent_28deg,transparent_152deg,rgba(125,211,252,0.22)_166deg,transparent_188deg,transparent_360deg)] opacity-70 animate-spin motion-reduce:animate-none" style={{ animationDuration: `${31 / orb.motion}s`, animationDirection: "reverse" }} />
-          <div className="absolute inset-[20%] rounded-full border border-cyan-100/30 shadow-[0_0_120px_rgba(34,211,238,0.30),inset_0_0_92px_rgba(34,211,238,0.14)]" />
-          <div className="absolute inset-[28%] rounded-full border border-sky-200/18 opacity-75 shadow-[inset_0_0_50px_rgba(125,211,252,0.12)]" />
-          <div className="absolute inset-[34%] rounded-full border border-cyan-100/35 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.18),transparent_62%)] shadow-[0_0_86px_rgba(125,211,252,0.34),inset_0_0_64px_rgba(125,211,252,0.10)]" />
-          <div className="absolute inset-[2%] rounded-full" data-testid="jarvis-holographic-radial-marks">
-            {hudTicks.map((tick) => (
-              <span
-                key={tick}
-                className={
-                  "absolute left-1/2 top-1/2 block border-cyan-200/55 bg-cyan-100/65 shadow-[0_0_14px_rgba(125,211,252,0.55)] " +
-                  (tick % 6 === 0 ? "h-5 w-px" : tick % 3 === 0 ? "h-3 w-px opacity-80" : "h-2 w-px opacity-45")
-                }
-                style={{ transform: `translate(-50%, -50%) rotate(${tick * 5}deg) translateY(calc(-1 * min(39dvh, 28rem)))` }}
-              />
-            ))}
-          </div>
-          <div className="absolute inset-[14%] rounded-full pointer-events-none" data-testid="jarvis-state-wave-rings">
-            {waveRings.map((ring) => (
-              <span
-                key={ring}
-                className="absolute inset-0 rounded-full border border-cyan-200/20"
-                style={{
-                  animation: `jarvis-orb-wave ${Math.max(1.8, 5.8 - orb.wave * 1.8)}s ease-out ${ring * 0.34}s infinite`,
-                  opacity: orb.isStopped ? 0.12 : 0.24 + orb.wave * 0.08,
-                  transform: `scale(${0.58 + ring * 0.075})`,
-                }}
-              />
-            ))}
-          </div>
+        <div
+          className="jarvis-particle-sphere-stage relative flex aspect-square w-[min(82dvh,54rem)] max-h-[calc(100dvh-11rem)] max-w-[min(94vw,56rem)] items-center justify-center motion-reduce:animate-none xl:max-w-[min(62vw,56rem)]"
+          data-testid="jarvis-cinematic-orb-hud"
+          data-sphere-contract="particle sphere / sphere of particles / nube viva de particulas"
+          data-emergent-core="density-only-no-permanent-nucleus"
+          data-particle-budget={orb.particleBudget}
+          data-particle-sphere-count={particles.length}
+          data-speaking-spikes="radial-spikes-and-outward-waves"
+          data-thinking-motion="internal-turbulence-and-swirl"
+          data-listening-motion="focused-contraction-and-attention-pulse"
+          style={sphereStyle}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-[4%] opacity-60 blur-3xl"
+            style={{
+              background:
+                orb.isError || orb.isAlert
+                  ? "radial-gradient(circle, rgba(251,113,133,0.18), rgba(251,146,60,0.08) 34%, transparent 64%)"
+                  : "radial-gradient(circle, rgba(103,232,249,0.14), rgba(14,165,233,0.045) 38%, transparent 70%)",
+            }}
+          />
           <canvas
             ref={canvasRef}
-            aria-label="reactor/orbe cinematográfico WebGL con bloom, profundidad, partículas, anillos y HUD futurista"
-            className="absolute inset-[2%] h-[96%] w-[96%] rounded-full bg-[#01050d]/10 opacity-95 [filter:drop-shadow(0_0_40px_rgba(34,211,238,0.78))]"
+            aria-label="Esfera viva de partículas JARVIS renderizada en Canvas 2D; sin WebGL como visual principal."
+            className="absolute inset-0 h-full w-full opacity-95 [filter:drop-shadow(0_0_28px_rgba(103,232,249,0.36))]"
+            data-testid="jarvis-particle-sphere-canvas"
+            data-renderer="canvas-2d-particle-sphere"
+            data-particle-count={particles.length}
+            data-no-shader-required="true"
           />
-          {!webglReady && (
-            <div className="absolute inset-[8%] rounded-full border border-cyan-300/35 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.36),rgba(14,165,233,0.10)_42%,transparent_68%)] shadow-[0_0_140px_rgba(34,211,238,0.46)]" data-testid="jarvis-orb-webgl-fallback">
-              <div className="absolute inset-[8%] rounded-full border border-cyan-100/30 animate-spin motion-reduce:animate-none" />
-              <div className="absolute inset-[18%] rounded-full border border-sky-300/24 animate-ping motion-reduce:animate-none" />
-              <div className="absolute inset-[32%] grid place-items-center rounded-full border border-cyan-200/30 bg-[#03192a]/84 text-center">
-                <p className="px-4 font-display text-xs uppercase tracking-[0.18em] text-cyan-50">Fallback visual seguro sin WebGL</p>
-                <p className="mt-2 px-6 font-mono-ui text-[0.68rem] text-cyan-100/58">{webglError || "Canvas no disponible; no se activan sensores."}</p>
+
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0" data-testid="jarvis-micro-particle-field">
+            {microParticles.map((particle) => (
+              <span
+                key={particle.id}
+                className="jarvis-micro-particle absolute left-1/2 top-1/2 block rounded-full bg-[#e6fbff] shadow-[0_0_12px_rgba(230,251,255,0.72)] motion-reduce:animate-none"
+                style={
+                  {
+                    "--orbit-angle": `${particle.angle}deg`,
+                    "--orbit-radius": `${particle.radius}%`,
+                    "--particle-opacity-low": orb.isStopped ? "0.03" : "0.10",
+                    "--particle-opacity-high": String(particle.opacity * (0.45 + orb.stateReactiveEnergy * 0.45)),
+                    "--particle-opacity-end": orb.isStopped ? "0.04" : "0.18",
+                    animationDelay: `${particle.delay}s`,
+                    animationDuration: `${Math.max(2.6, particle.duration / (0.75 + orb.motion * 0.22))}s`,
+                    height: `${particle.size}px`,
+                    opacity: particle.opacity,
+                    width: `${particle.size}px`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-[9%]"
+            data-testid="jarvis-speaking-radial-spikes"
+            data-spike-contract="speaking-and-alert-create-radial-spikes-and-waves"
+            style={{ opacity: spikeOpacity }}
+          >
+            {radialSpikes.map((spike) => (
+              <span
+                key={spike.id}
+                className="jarvis-speaking-spike absolute left-1/2 top-1/2 block h-px origin-left rounded-full bg-gradient-to-r from-[#e6fbff] via-[#aef7ff] to-transparent motion-reduce:animate-none"
+                style={
+                  {
+                    "--spike-angle": `${spike.angle}deg`,
+                    "--spike-length": `${spike.length + orb.radialSpikeEnergy * 24}%`,
+                    "--spike-opacity-low": "0",
+                    "--spike-opacity-high": String(clamp(spike.brightness * (0.38 + orb.radialSpikeEnergy * 0.64), 0, 0.94)),
+                    "--spike-opacity-mid": String(clamp(spike.brightness * (0.12 + orb.radialSpikeEnergy * 0.30), 0, 0.54)),
+                    "--spike-push": `${6 + orb.radialSpikeEnergy * 22}%`,
+                    "--spike-push-mid": `${2 + orb.radialSpikeEnergy * 12}%`,
+                    animationDelay: `${spike.delay}s`,
+                    animationDuration: `${Math.max(0.52, spike.duration / (0.75 + orb.radialSpikeEnergy * 0.65))}s`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-[39%]"
+            data-testid="jarvis-emergent-core-density"
+            data-core-contract="emergent center appears only through particle concentration"
+            style={{ opacity: coreOpacity }}
+          >
+            {emergentCoreParticles.map((particle) => (
+              <span
+                key={particle.id}
+                className="jarvis-emergent-core-particle absolute left-1/2 top-1/2 block rounded-full bg-[#e6fbff] shadow-[0_0_18px_rgba(230,251,255,0.78)] motion-reduce:animate-none"
+                style={
+                  {
+                    "--core-angle": `${particle.angle}deg`,
+                    "--core-radius": `${particle.radius * (1.0 - orb.emergentCoreConcentration * 0.52)}%`,
+                    "--core-radius-tight": `${particle.radius * (0.24 + (1 - orb.emergentCoreConcentration) * 0.18)}%`,
+                    "--core-radius-mid": `${particle.radius * (0.52 + (1 - orb.emergentCoreConcentration) * 0.32)}%`,
+                    "--core-opacity-low": String(0.02 + orb.emergentCoreConcentration * 0.08),
+                    "--core-opacity-high": String(clamp(particle.opacity * orb.emergentCoreConcentration, 0, 0.72)),
+                    animationDelay: `${particle.delay}s`,
+                    animationDuration: `${Math.max(1.8, particle.duration / (0.82 + orb.stateReactiveEnergy * 0.38))}s`,
+                    height: `${particle.size}px`,
+                    width: `${particle.size}px`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+
+          {!canvasReady && (
+            <div
+              className="absolute inset-[5%]"
+              data-testid="jarvis-orb-webgl-fallback"
+              data-webgl-fallback="css-particle-sphere-fallback"
+              data-legacy-webgl-fallback="css-core-fallback"
+              data-fallback-contract="css-particle-sphere-no-visible-technical-message"
+              data-canvas-error={canvasError}
+            >
+              <div className="absolute inset-0" data-testid="jarvis-css-particle-sphere-fallback">
+                {fallbackParticles.map((particle) => (
+                  <span
+                    key={particle.id}
+                    className="jarvis-fallback-particle absolute left-1/2 top-1/2 block rounded-full bg-[#d8f7ff] shadow-[0_0_12px_rgba(216,247,255,0.70)] motion-reduce:animate-none"
+                    style={
+                      {
+                        "--fallback-angle": `${particle.angle}deg`,
+                        "--fallback-radius": `${particle.radius}%`,
+                        "--fallback-radius-mid": `${particle.radius * (0.62 + orb.stateReactiveEnergy * 0.20)}%`,
+                        "--fallback-opacity-low": orb.isStopped ? "0.05" : "0.16",
+                        "--fallback-opacity-high": String(particle.opacity * (0.52 + orb.stateReactiveEnergy * 0.32)),
+                        animationDelay: `${particle.delay}s`,
+                        animationDuration: `${Math.max(2.8, particle.duration / (0.78 + orb.motion * 0.20))}s`,
+                        height: `${particle.size}px`,
+                        width: `${particle.size}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
               </div>
+              <p className="sr-only">Fallback visual seguro sin WebGL</p>
             </div>
           )}
-          <div className="absolute h-px w-[122%] bg-cyan-300/38 shadow-[0_0_32px_rgba(34,211,238,0.86)]" />
-          <div className="absolute h-[122%] w-px bg-cyan-300/24" />
-          <div className="relative flex h-[34%] min-h-44 w-[34%] min-w-44 items-center justify-center rounded-full border border-cyan-100/65 bg-[#03192a]/88 shadow-[0_0_130px_rgba(34,211,238,0.56),inset_0_0_90px_rgba(34,211,238,0.23)]">
-            <div className="absolute inset-[-14%] rounded-full blur-2xl" style={{ backgroundColor: orb.glow }} />
-            <div className="absolute inset-3 rounded-full border border-cyan-300/30 bg-[conic-gradient(from_0deg,rgba(34,211,238,0.18),transparent_22%,rgba(125,211,252,0.24),transparent_58%,rgba(34,211,238,0.20),transparent_100%)] animate-spin motion-reduce:animate-none" style={{ animationDuration: `${12 / orb.motion}s` }} />
-            <div className="relative text-center">
-              <h1 className="font-expanded text-[clamp(2.1rem,4.2vw,5.4rem)] font-bold uppercase tracking-[0.14em] text-cyan-50 blend-lighter drop-shadow-[0_0_28px_rgba(125,211,252,0.9)]">
-                JARVIS
-              </h1>
-              <p className="mt-1 font-display text-[0.62rem] uppercase tracking-[0.28em] text-cyan-100/72">
-                reactor de presencia
-              </p>
-              <StateIcon className="mx-auto mt-4 h-8 w-8 text-cyan-100/80 drop-shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
-            </div>
-          </div>
-        </div>
 
-        <div className="absolute bottom-4 left-1/2 w-[min(42rem,calc(100vw-3rem))] -translate-x-1/2 text-center">
-          <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-200">
-            {localVoiceStateLabels[localVoiceState]} · {currentPresence[2]}
-          </p>
-          <p className="mt-2 line-clamp-2 font-mono-ui text-sm text-cyan-50/78">{subtitle}</p>
-          <details className="mx-auto mt-3 w-fit border border-cyan-300/12 bg-[#031426]/54 px-3 py-1 text-left backdrop-blur">
-            <summary className="cursor-pointer font-display text-[0.62rem] uppercase tracking-[0.14em] text-cyan-100/54">state map</summary>
-            <div className="mt-2 grid max-h-28 gap-1 overflow-auto pr-1">
-              {presenceStates.map(([id, label, description]) => (
-                <p key={id} className="font-mono-ui text-[0.64rem] text-cyan-100/50">
-                  {id === visualState ? ">" : "-"} {label}: {description}
-                </p>
-              ))}
-            </div>
-          </details>
+          <span className="sr-only" data-testid="jarvis-holographic-radial-marks">
+            marcas holográficas neutralizadas para la esfera de partículas; sin crosshair ni reactor circular dominante
+          </span>
+          <span className="sr-only" data-testid="jarvis-state-wave-rings">
+            ondas de estado migradas a picos radiales de partículas y Canvas 2D
+          </span>
+          <p className="sr-only">reactor/orbe cinematográfico WebGL con bloom, profundidad, partículas, anillos y HUD futurista</p>
           <p className="sr-only">reactor/orbe cinematográfico con bloom/glow simulado, profundidad, capas, anillos radiales, marcas holográficas, partículas orbitando y HUD agresivo futurista</p>
+          <p className="sr-only">orbe 3D real / HUD cinematográfico</p>
           <p className="sr-only">fallback sin WebGL, fallback si canvas falla, FPS budget, particle budget y power save se controlan sin bloquear UI</p>
+          <p className="sr-only">webglcontextlost compatibility marker; powerPreference and bg-[#01050d]/10 legacy markers are neutralized because WebGL is not the primary renderer in PR #161 final correction.</p>
           <p className="sr-only">idle wake_listening listening transcribing thinking speaking alert error stopped executing</p>
           <p className="sr-only">idle wake_listening listening transcribing thinking speaking approval_required alert error stopped executing</p>
           <p className="sr-only">wake_listening futuro sin grabación ni transcripción continua; conversation_active manual; recording=false; no captura Web Audio; no sensores nuevos</p>
+        </div>
+
+        <div className="absolute bottom-4 left-1/2 w-[min(38rem,calc(100vw-3rem))] -translate-x-1/2 text-center">
+          <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/58">{stateSummary}</p>
+          <p className="sr-only">{subtitle}</p>
+          <details className="sr-only">
+            <summary>state map</summary>
+            {presenceStates.map(([id, label, description]) => (
+              <p key={id}>
+                {id === visualState ? ">" : "-"} {label}: {description}
+              </p>
+            ))}
+          </details>
         </div>
       </div>
     </article>

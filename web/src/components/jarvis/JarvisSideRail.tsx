@@ -39,15 +39,15 @@ export function JarvisSideRail({
   ] as const;
 
   return (
-    <aside className="hidden min-h-0 content-center gap-4 lg:grid">
-      <article className="relative border-l border-cyan-300/22 bg-gradient-to-r from-[#03111f]/66 to-transparent py-2 pl-4 pr-1" data-testid="jarvis-essential-status">
+    <aside className="hidden min-h-0 content-center gap-4 lg:grid" data-testid="jarvis-quiet-side-rail">
+      <article className="relative border-l border-cyan-100/12 bg-gradient-to-r from-[#000711]/58 to-transparent py-2 pl-4 pr-1" data-testid="jarvis-essential-status" data-panel-style="premium-minimal-presence">
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-cyan-300/18 bg-cyan-300/[0.055] shadow-[0_0_28px_rgba(34,211,238,0.13)]">
-            <Activity className="h-5 w-5 text-cyan-200" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#e6fbff]/18 bg-[#e6fbff]/[0.045] shadow-[0_0_30px_rgba(230,251,255,0.11)]">
+            <Activity className="h-5 w-5 text-[#e6fbff]/78" />
           </div>
           <div>
-            <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-200/65">Estado general</p>
-            <p className="font-expanded text-lg font-bold uppercase tracking-[0.08em] text-cyan-200">
+            <p className="font-display text-[0.68rem] uppercase tracking-[0.18em] text-cyan-100/48">Estado general</p>
+            <p className="font-expanded text-lg font-bold uppercase tracking-[0.08em] text-[#e6fbff]/88">
               {valueText(system.api_status, UNKNOWN) === "offline" ? "fallback" : "presente"}
             </p>
           </div>
@@ -55,18 +55,18 @@ export function JarvisSideRail({
         <div className="grid gap-2">
           <div>
             <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">JARVIS ahora</p>
-            <p className="font-mono-ui text-xs text-cyan-50/76">{voiceState}</p>
+            <p className="font-mono-ui text-xs text-cyan-50/70">{voiceState}</p>
           </div>
           <div>
             <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">Puede hacer</p>
-            <p className="font-mono-ui text-xs text-cyan-50/76">responder, preparar preview, pedir approval</p>
+            <p className="font-mono-ui text-xs text-cyan-50/70">responder, preparar preview, pedir approval</p>
           </div>
           <div>
             <p className="font-display text-[0.62rem] uppercase tracking-[0.16em] text-cyan-200/48">Gates</p>
-            <p className="font-mono-ui text-xs text-cyan-50/76">Hermes gated · wake no aprueba · sensores opt-in</p>
+            <p className="font-mono-ui text-xs text-cyan-50/70">Hermes gated · wake no aprueba · sensores opt-in</p>
           </div>
         </div>
-        <details className="mt-4 border-t border-cyan-300/12 pt-3">
+        <details className="mt-4 border-t border-cyan-100/10 pt-3">
           <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/54">estado técnico plegado</summary>
           <div className="mt-3">
             <StatusList items={essentialRows} />
@@ -78,9 +78,9 @@ export function JarvisSideRail({
         </div>
       </article>
 
-      <details className="border border-cyan-300/12 bg-[#03101f]/46 p-3 backdrop-blur" data-testid="jarvis-local-system-contract">
+      <details className="border border-cyan-100/10 bg-[#000711]/48 p-3 backdrop-blur" data-testid="jarvis-local-system-contract" data-panel-style="contract-folded-premium">
         <summary className="flex cursor-pointer items-center gap-2 font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/76">
-          <Lock className="h-4 w-4 text-cyan-200" />
+          <Lock className="h-4 w-4 text-[#e6fbff]/70" />
           Local System Contract
         </summary>
         <div className="grid gap-2">
@@ -94,7 +94,7 @@ export function JarvisSideRail({
         <div className="mt-3">
           <StatusList items={localContractRows} />
         </div>
-        <Badge className="mt-3 border-cyan-300/25 bg-cyan-300/10 text-cyan-100" variant="outline">
+        <Badge className="mt-3 border-cyan-100/18 bg-[#e6fbff]/[0.045] text-cyan-100/72" variant="outline">
           JARVIS Presence UI + Local System Contract
         </Badge>
       </details>
