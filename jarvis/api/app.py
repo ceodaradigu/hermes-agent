@@ -239,6 +239,7 @@ from jarvis.phase_2_local_assistant_runtime import (
     Phase2LocalAssistantRuntimeControlPlane,
 )
 from jarvis.phase_3_local_runtime import Phase3LocalRuntimeControlPlane
+from jarvis.phase_4_local_controller_remote_pairing import Phase4LocalControllerRemotePairingControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -624,6 +625,7 @@ class Mark3TrustedApprovalChannelVerifyRequest(BaseModel):
     channel_id: str
     actor: str = "David"
     local_presence: bool = True
+    challenge_response: Optional[str] = None
 
 
 class Mark3TrustedApprovalDecisionRequest(BaseModel):
@@ -635,6 +637,52 @@ class Mark3TrustedApprovalDecisionRequest(BaseModel):
     confirmation_phrase: Optional[str] = None
     readback_text: Optional[str] = None
     reason: str = ""
+
+
+class Mark3LocalControllerRegisterRequest(BaseModel):
+    controller_id: Optional[str] = None
+    display_name: str = "JARVIS Local Controller"
+    actor: str = "David"
+    verification_phrase: str = ""
+    local_only: bool = True
+    bind_host: str = "127.0.0.1"
+    bind_port: Optional[int] = None
+
+
+class Mark3LocalControllerHeartbeatRequest(BaseModel):
+    controller_id: Optional[str] = None
+    actor: str = "David"
+
+
+class Mark3LocalControllerRequest(BaseModel):
+    controller_id: Optional[str] = None
+    actor: str = "David"
+    reason: str = "operator request"
+
+
+class Mark3LocalControllerStopRequest(BaseModel):
+    controller_id: Optional[str] = None
+    actor: str = "David"
+    reason: str = "operator stop"
+    scope: Optional[List[str]] = None
+    deadline_seconds: int = 10
+
+
+class Mark3RemotePairingPrepareRequest(BaseModel):
+    actor: str = "David"
+    channel: str = "local_controller"
+
+
+class Mark3RemotePairingCancelRequest(BaseModel):
+    actor: str = "David"
+    challenge_id: Optional[str] = None
+    reason: str = "operator cancel"
+
+
+class Mark3RemotePairingRevokeRequest(BaseModel):
+    actor: str = "David"
+    device_id: Optional[str] = None
+    reason: str = "operator revoke"
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2096,7 +2144,7 @@ def create_app(
         adapter_factory=hermes_runtime_adapter_factory,
     )
     app.state.execution_history = ExecutionHistoryStore.from_environment()
-    app.state.phase_2_local_assistant_runtime = Phase3LocalRuntimeControlPlane(
+    app.state.phase_2_local_assistant_runtime = Phase4LocalControllerRemotePairingControlPlane(
         intake_pipeline=app.state.conversational_intake_pipeline,
         policy_engine=app.state.policy_engine,
         mission_loop=app.state.mark_3_mission_loop,
@@ -2106,6 +2154,7 @@ def create_app(
         execution_history=app.state.execution_history,
     )
     app.state.phase_3_local_runtime = app.state.phase_2_local_assistant_runtime
+    app.state.phase_4_local_controller = app.state.phase_2_local_assistant_runtime
     app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
 
     @app.get("/health")
@@ -2468,6 +2517,12 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-4/status")
+    def mark_3_phase_4_status() -> dict:
+        return app.state.phase_4_local_controller.phase_4_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
     @app.get("/mark-3/local-daemon/status")
     def mark_3_local_daemon_status() -> dict:
         return app.state.phase_3_local_runtime.local_daemon_status()
@@ -2491,6 +2546,32 @@ def create_app(
     def mark_3_local_daemon_restart_request(payload: Mark3LocalDaemonControlRequest) -> dict:
         return app.state.phase_3_local_runtime.daemon_restart_request(**payload.model_dump())
 
+    @app.get("/mark-3/local-controller/status")
+    def mark_3_local_controller_status() -> dict:
+        return app.state.phase_4_local_controller.local_controller_status()
+
+    @app.post("/mark-3/local-controller/register")
+    def mark_3_local_controller_register(payload: Mark3LocalControllerRegisterRequest) -> dict:
+        try:
+            return app.state.phase_4_local_controller.register_local_controller(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/local-controller/heartbeat")
+    def mark_3_local_controller_heartbeat(payload: Mark3LocalControllerHeartbeatRequest) -> dict:
+        try:
+            return app.state.phase_4_local_controller.local_controller_heartbeat(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/local-controller/open-jarvis-request")
+    def mark_3_local_controller_open_jarvis_request(payload: Mark3LocalControllerRequest) -> dict:
+        return app.state.phase_4_local_controller.local_controller_open_jarvis_request(**payload.model_dump())
+
+    @app.post("/mark-3/local-controller/stop-request")
+    def mark_3_local_controller_stop_request(payload: Mark3LocalControllerStopRequest) -> dict:
+        return app.state.phase_4_local_controller.local_controller_stop_request(**payload.model_dump())
+
     @app.get("/mark-3/local-doctor/status")
     def mark_3_local_doctor_status() -> dict:
         return app.state.phase_3_local_runtime.local_doctor_status(
@@ -2504,6 +2585,34 @@ def create_app(
     @app.post("/mark-3/trusted-approval-channels/verify")
     def mark_3_trusted_approval_channels_verify(payload: Mark3TrustedApprovalChannelVerifyRequest) -> dict:
         return app.state.phase_3_local_runtime.verify_trusted_channel(**payload.model_dump())
+
+    @app.get("/mark-3/trusted-devices/status")
+    def mark_3_trusted_devices_status() -> dict:
+        return app.state.phase_4_local_controller.trusted_devices_status()
+
+    @app.get("/mark-3/remote-pairing/status")
+    def mark_3_remote_pairing_status() -> dict:
+        return app.state.phase_4_local_controller.remote_pairing_status()
+
+    @app.post("/mark-3/remote-pairing/prepare")
+    def mark_3_remote_pairing_prepare(payload: Mark3RemotePairingPrepareRequest) -> dict:
+        return app.state.phase_4_local_controller.remote_pairing_prepare(**payload.model_dump())
+
+    @app.post("/mark-3/remote-pairing/cancel")
+    def mark_3_remote_pairing_cancel(payload: Mark3RemotePairingCancelRequest) -> dict:
+        return app.state.phase_4_local_controller.remote_pairing_cancel(**payload.model_dump())
+
+    @app.post("/mark-3/remote-pairing/revoke")
+    def mark_3_remote_pairing_revoke(payload: Mark3RemotePairingRevokeRequest) -> dict:
+        return app.state.phase_4_local_controller.remote_pairing_revoke(**payload.model_dump())
+
+    @app.get("/mark-3/telegram-bridge/status")
+    def mark_3_telegram_bridge_status() -> dict:
+        return app.state.phase_4_local_controller.telegram_bridge_status()
+
+    @app.get("/mark-3/stop-rollback/status")
+    def mark_3_stop_rollback_status() -> dict:
+        return app.state.phase_4_local_controller.stop_rollback_status()
 
     @app.get("/mark-3/execution/action-catalog")
     def mark_3_execution_action_catalog() -> dict:

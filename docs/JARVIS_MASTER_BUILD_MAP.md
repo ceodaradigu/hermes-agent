@@ -173,6 +173,22 @@ Piezas relevantes ya documentadas:
   drawer de `/jarvis`. Sigue sin `/execute`, shell libre, comandos arbitrarios,
   frontend Hermes directo, auto mic/camera/wake, secretos, dinero, Stripe,
   deploy, email ni publicación.
+- Phase 4 Real Local Controller + Remote Pairing Readiness de PR #169: JARVIS
+  convierte la readiness local en un controlador local opt-in realista sin
+  instalar servicio, tray nativo ni autostart. `Phase4LocalControllerRemotePairingControlPlane`
+  extiende Phase 3, modela `controller_id`, status/mode, bind local
+  `127.0.0.1`, capacidades de status/approvals/stop/cancel/toggles, no
+  background capture y failure modes honestos. Trusted Devices agrega navegador
+  local, terminal local verificado por challenge y local controller registrado
+  y verificado; voz/wake no aprueban y remoto queda untrusted por defecto.
+  Triple approval queda preparado con tres pasos, canales separados,
+  challenge/readback/phrase/expiry/anti-reuse/audit por paso y recalculo de
+  policy antes de finalizar; critical sigue blocked si faltan tres canales.
+  Remote pairing y Telegram/Hermes bridge quedan readiness-only,
+  deshabilitados, sin tokens, sin `.env`, sin API calls, sin webhook, sin
+  approval remoto y sin ejecucion remota. Stop/Rollback v2 expone metadata
+  observable sin ejecutar rollback destructivo. `/jarvis` muestra Phase 4 en el
+  drawer y preserva la esfera calmada de #168.
 - Mission Control MVP con evaluación de cada step antes de Hermes.
 - Voz base con `VoiceAdapter`, `MockVoiceAdapter`, adapter HTTP GPT-SoVITS, `/voice/tts`, `/voice/status` y almacenamiento local opcional de audio.
 - Runtime local de voz/control documentado con feedback de entendimiento y comandos locales.
@@ -225,9 +241,11 @@ Esta lista describe capacidades runtime/producción completas pendientes; no con
 - Voice Companion.
 - Mobile Companion.
 - Ambient Vision / Camera Companion.
-- Multi-device runtime.
-- Trusted devices.
-- Strong approval desde cualquier dispositivo autorizado.
+- Multi-device runtime real.
+- Trusted devices persistentes/remotos.
+- Strong approval desde cualquier dispositivo autorizado real.
+- Remote pairing activado con threat model completo.
+- Telegram/mobile bridge activo bajo pairing y policy.
 - Sandbox execution.
 - Tool Adoption Pipeline.
 - Graphify/CodeGraph/Open Design evaluation.

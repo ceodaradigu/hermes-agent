@@ -157,6 +157,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_3_local_runtime.phase_3_status(route_paths=route_path_list),
         timeline,
     )
+    phase_4_status = _source(
+        "/mark-3/phase-4/status",
+        lambda: app_state.phase_4_local_controller.phase_4_status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -190,6 +195,31 @@ def build_mark_3_dashboard_status(
     trusted_approval_channels = _source(
         "/mark-3/trusted-approval-channels/status",
         lambda: app_state.phase_3_local_runtime.trusted_approval_channels_status(),
+        timeline,
+    )
+    local_controller = _source(
+        "/mark-3/local-controller/status",
+        lambda: app_state.phase_4_local_controller.local_controller_status(),
+        timeline,
+    )
+    trusted_devices = _source(
+        "/mark-3/trusted-devices/status",
+        lambda: app_state.phase_4_local_controller.trusted_devices_status(),
+        timeline,
+    )
+    remote_pairing = _source(
+        "/mark-3/remote-pairing/status",
+        lambda: app_state.phase_4_local_controller.remote_pairing_status(),
+        timeline,
+    )
+    telegram_bridge = _source(
+        "/mark-3/telegram-bridge/status",
+        lambda: app_state.phase_4_local_controller.telegram_bridge_status(),
+        timeline,
+    )
+    stop_rollback_v2 = _source(
+        "/mark-3/stop-rollback/status",
+        lambda: app_state.phase_4_local_controller.stop_rollback_status(),
         timeline,
     )
     browser_verification = _source(
@@ -528,11 +558,25 @@ def build_mark_3_dashboard_status(
                 "Local daemon contract, trusted approval channels, double approval, doctor, history v2 and remote bridge readiness.",
             ),
             _module(
+                "Phase 4 Readiness",
+                "ready" if phase_4_status.get("status") else UNKNOWN,
+                "/mark-3/phase-4/status",
+                "local_controller_remote_pairing_readiness",
+                "Local controller opt-in, trusted device identity, triple gate readiness, remote pairing disabled and Telegram bridge disabled.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
                 "local_only_daemon",
                 "Embedded local runtime daemon contract with 127.0.0.1 binding, no autostart and no background sensor capture.",
+            ),
+            _module(
+                "Local Controller",
+                "ready" if local_controller.get("local_only") else UNKNOWN,
+                "/mark-3/local-controller/status",
+                "local_opt_in_controller",
+                "Controller contract is local-only, opt-in, no service install, no autostart and no background capture.",
             ),
             _module(
                 "Tray Readiness",
@@ -547,6 +591,27 @@ def build_mark_3_dashboard_status(
                 "/mark-3/trusted-approval-channels/status",
                 "approval_channels",
                 "Local browser and terminal approval channels are modeled; voice/wake/remote cannot approve.",
+            ),
+            _module(
+                "Trusted Devices",
+                "ready" if trusted_devices.get("default_remote_devices_zero_untrusted") else UNKNOWN,
+                "/mark-3/trusted-devices/status",
+                "controller_identity",
+                "Local browser, terminal and controller identity are modeled; remote devices are zero/untrusted by default.",
+            ),
+            _module(
+                "Remote Pairing",
+                "disabled" if remote_pairing.get("remote_pairing_enabled") is False else UNKNOWN,
+                "/mark-3/remote-pairing/status",
+                "remote_pairing_readiness_disabled",
+                "Pairing challenge readiness is local/ephemeral only; remote approval and execution remain false.",
+            ),
+            _module(
+                "Telegram Bridge",
+                "disabled" if telegram_bridge.get("telegram_bridge_status") else UNKNOWN,
+                "/mark-3/telegram-bridge/status",
+                "telegram_hermes_future_bridge_disabled",
+                "Telegram/Hermes bridge readiness is visible, but no token is read, no bot starts and no API call is made.",
             ),
             _module(
                 "Action Catalog",
@@ -646,14 +711,20 @@ def build_mark_3_dashboard_status(
         "phase_1_completion": phase_1_completion,
         "phase_2_status": phase_2_status,
         "phase_3_status": phase_3_status,
+        "phase_4_status": phase_4_status,
         "governed_execution": execution_control,
         "action_catalog": action_catalog,
         "execution_history": execution_history,
         "stop_rollback_contracts": execution_control.get("stop_rollback_contracts", {}),
+        "stop_rollback_v2": stop_rollback_v2,
         "local_runtime": local_runtime_status,
         "local_daemon": local_daemon_status,
+        "local_controller": local_controller,
         "tray_readiness": tray_status,
         "trusted_approval_channels": trusted_approval_channels,
+        "trusted_devices": trusted_devices,
+        "remote_pairing": remote_pairing,
+        "telegram_bridge": telegram_bridge,
         "browser_verification": browser_verification,
         "memory_brain_v2": memory_brain_v2_status,
         "memory_brain": memory_brain,
@@ -718,8 +789,14 @@ def build_mark_3_dashboard_status(
                 "execution_state",
                 "phase_2_state",
                 "phase_3_state",
+                "phase_4_state",
                 "daemon_state",
+                "local_controller_state",
                 "trusted_channels_state",
+                "trusted_devices_state",
+                "remote_pairing_state",
+                "telegram_bridge_state",
+                "stop_rollback_v2_state",
                 "action_catalog_state",
                 "execution_history_state",
                 "audit_event",
@@ -793,10 +870,13 @@ def build_mark_3_dashboard_status(
             "no_email_send": True,
             "phase_2_allowlisted_actions_only": True,
             "phase_3_trusted_approval_channels": True,
+            "phase_4_local_controller_opt_in": True,
             "double_approval_real": True,
-            "triple_approval_supported": False,
+            "triple_approval_supported": bool((phase_4_status.get("triple_approval_readiness") or {}).get("can_grant_triple")),
             "remote_approval_allowed": False,
             "remote_execution_allowed": False,
+            "remote_pairing_enabled": False,
+            "telegram_bridge_enabled": False,
             "execution_history_metadata_only": True,
             "background_listening_enabled": False,
             "auto_start_enabled": False,
@@ -840,15 +920,45 @@ def build_mark_3_dashboard_status(
                 "read_only": True,
             },
             {
+                "event": "Phase 4 local controller and remote pairing readiness loaded",
+                "source": "/mark-3/phase-4/status",
+                "status": phase_4_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
                 "event": "Local daemon contract loaded",
                 "source": "/mark-3/local-daemon/status",
                 "status": local_daemon_status.get("daemon_status", UNKNOWN),
                 "read_only": True,
             },
             {
+                "event": "Local controller contract loaded",
+                "source": "/mark-3/local-controller/status",
+                "status": local_controller.get("controller_status", UNKNOWN),
+                "read_only": True,
+            },
+            {
                 "event": "Trusted approval channels loaded",
                 "source": "/mark-3/trusted-approval-channels/status",
                 "status": "ready" if trusted_approval_channels.get("can_grant_strong") else UNKNOWN,
+                "read_only": True,
+            },
+            {
+                "event": "Trusted devices model loaded",
+                "source": "/mark-3/trusted-devices/status",
+                "status": "ready" if trusted_devices.get("default_remote_devices_zero_untrusted") else UNKNOWN,
+                "read_only": True,
+            },
+            {
+                "event": "Remote pairing disabled readiness loaded",
+                "source": "/mark-3/remote-pairing/status",
+                "status": remote_pairing.get("pairing_status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Telegram bridge disabled readiness loaded",
+                "source": "/mark-3/telegram-bridge/status",
+                "status": telegram_bridge.get("telegram_bridge_status", UNKNOWN),
                 "read_only": True,
             },
             {

@@ -110,19 +110,28 @@ export function JarvisDebugDrawer({
   const timeline = dashboard.timeline?.length ? dashboard.timeline : fallbackOffline.timeline ?? [];
   const phase2Status = (dashboard.phase_2_status ?? {}) as Record<string, unknown>;
   const phase3Status = (dashboard.phase_3_status ?? {}) as Record<string, unknown>;
+  const phase4Status = (dashboard.phase_4_status ?? {}) as Record<string, unknown>;
   const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 8);
   const executionHistoryStatus: JarvisExecutionHistoryStatus = dashboard.execution_history?.status ?? dashboard.governed_execution?.execution_history ?? {};
   const executionHistoryItems: JarvisExecutionHistoryItem[] = (dashboard.execution_history?.items ?? dashboard.governed_execution?.execution_history?.recent ?? []).slice(0, 5);
   const localRuntime: JarvisLocalRuntimeStatus = dashboard.local_runtime ?? dashboard.governed_execution?.local_runtime ?? {};
   const localDaemon = (dashboard.local_daemon ?? localRuntime.daemon ?? {}) as Record<string, unknown>;
+  const localController = (dashboard.local_controller ?? phase4Status.local_controller ?? {}) as Record<string, unknown>;
   const trayReadiness = (dashboard.tray_readiness ?? localRuntime.tray ?? {}) as Record<string, unknown>;
   const trustedChannels = (dashboard.trusted_approval_channels ?? localRuntime.trusted_approval_channels ?? {}) as Record<string, unknown>;
   const trustedChannelItems = (trustedChannels.channels as Record<string, unknown>[] | undefined ?? []).slice(0, 7);
+  const trustedDevices = (dashboard.trusted_devices ?? phase4Status.trusted_devices ?? {}) as Record<string, unknown>;
+  const trustedDeviceItems = (trustedDevices.devices as Record<string, unknown>[] | undefined ?? []).slice(0, 8);
+  const tripleReadiness = (phase4Status.triple_approval_readiness ?? {}) as Record<string, unknown>;
+  const remotePairing = (dashboard.remote_pairing ?? phase4Status.remote_pairing ?? {}) as Record<string, unknown>;
+  const telegramBridge = (dashboard.telegram_bridge ?? phase4Status.telegram_bridge ?? {}) as Record<string, unknown>;
   const remoteBridgeFuture = (localRuntime.remote_bridge_future ?? phase3Status.remote_bridge_future ?? {}) as Record<string, unknown>;
   const browserVerification: JarvisBrowserVerificationStatus = dashboard.browser_verification ?? dashboard.governed_execution?.browser_verification ?? {};
   const phase3Pilot = (browserVerification.phase_3_pilot ?? phase3Status.browser_local_pilot ?? {}) as Record<string, unknown>;
+  const phase4Pilot = (browserVerification.phase_4_pilot ?? phase4Status.pilot ?? {}) as Record<string, unknown>;
   const browserChecks: JarvisBrowserVerificationCheck[] = (browserVerification.checks ?? []).slice(0, 8);
   const stopRollbackContracts = (dashboard.stop_rollback_contracts ?? dashboard.governed_execution?.stop_rollback_contracts ?? {}) as Record<string, unknown>;
+  const stopRollbackV2 = (dashboard.stop_rollback_v2 ?? phase4Status.stop_rollback_v2 ?? {}) as Record<string, unknown>;
   const voicePhase2Runtime: JarvisPhase2VoiceRuntime = voiceRuntimePack.phase_2_runtime ?? {};
   const voiceDiagnostics = voicePhase2Runtime.voice_runtime_diagnostics ?? {};
   const wakeRuntimeReadiness = voicePhase2Runtime.wake_runtime_readiness ?? {};
@@ -154,6 +163,16 @@ export function JarvisDebugDrawer({
     ["remote approval", yesNo((phase3Status.security_gates as Record<string, unknown> | undefined)?.remote_approval_allowed, "allowed", "false")],
   ] as const;
 
+  const phase4Rows = [
+    ["phase", valueText(phase4Status.phase, "Phase 4")],
+    ["status", valueText(phase4Status.status, "readiness")],
+    ["local controller", yesNo((phase4Status.implemented_blocks as Record<string, unknown> | undefined)?.real_local_controller_opt_in, "implemented", "unknown")],
+    ["trusted devices", yesNo((phase4Status.implemented_blocks as Record<string, unknown> | undefined)?.trusted_device_controller_identity, "implemented", "unknown")],
+    ["triple readiness", valueText(tripleReadiness.triple_status, "blocked_no_three_verified_channels")],
+    ["remote pairing", yesNo((phase4Status.security_gates as Record<string, unknown> | undefined)?.remote_pairing_enabled, "enabled", "false")],
+    ["Telegram API", yesNo((phase4Status.security_gates as Record<string, unknown> | undefined)?.telegram_api_called, "called", "false")],
+  ] as const;
+
   const localRuntimeRows = [
     ["daemon", valueText(localRuntime.daemon_status, "not_running")],
     ["tray", valueText(localRuntime.tray_status, "not_running")],
@@ -180,6 +199,21 @@ export function JarvisDebugDrawer({
     ["restart", yesNo(localDaemon.restart_supported, "supported", "unsupported")],
   ] as const;
 
+  const localControllerRows = [
+    ["controller_id", valueText(localController.controller_id)],
+    ["status", valueText(localController.controller_status, "not_registered")],
+    ["mode", valueText(localController.controller_mode, "local_opt_in_readiness")],
+    ["bind", `${valueText(localController.bind_host, "127.0.0.1")}:${valueText(localController.bind_port, "9119")}`],
+    ["local_only", yesNo(localController.local_only, "true", "false")],
+    ["verified", yesNo(localController.verified, "true", "false")],
+    ["auto_start", yesNo(localController.auto_start_enabled, "true", "false")],
+    ["system service", yesNo(localController.installed_as_system_service, "true", "false")],
+    ["startup integration", yesNo(localController.startup_integration_enabled, "true", "false")],
+    ["no background capture", yesNo(localController.no_background_capture, "true", "false")],
+    ["last seen", valueText(localController.last_seen_at, "none")],
+    ["health", valueText(localController.health_status, "healthy")],
+  ] as const;
+
   const trayRows = [
     ["available", yesNo(trayReadiness.tray_available, "true", "false")],
     ["installed", yesNo(trayReadiness.tray_installed, "true", "false")],
@@ -202,6 +236,28 @@ export function JarvisDebugDrawer({
     ["remote approval", yesNo(trustedChannels.remote_approval_allowed, "allowed", "false")],
   ] as const;
 
+  const trustedDeviceRows = [
+    ["trusted devices", valueText(trustedDevices.trusted_device_count, "0")],
+    ["paired devices", valueText(trustedDevices.paired_devices_count, "0")],
+    ["remote devices", valueText(trustedDevices.remote_devices_count, "0")],
+    ["remote trusted", valueText(trustedDevices.remote_trusted_devices_count, "0")],
+    ["remote default", yesNo(trustedDevices.default_remote_devices_zero_untrusted, "zero/untrusted", "unknown")],
+    ["terminal challenge", yesNo(trustedDevices.terminal_trust_requires_challenge, "required", "unknown")],
+    ["controller verification", yesNo(trustedDevices.controller_trust_requires_registration_and_verification, "required", "unknown")],
+    ["triple", yesNo(trustedDevices.can_grant_triple, "ready", "blocked")],
+  ] as const;
+
+  const tripleApprovalRows = [
+    ["status", valueText(tripleReadiness.triple_status, "blocked_no_three_verified_channels")],
+    ["steps", valueText(tripleReadiness.required_step_count, "3")],
+    ["ready channels", valueText((tripleReadiness.ready_channel_ids as unknown[] | undefined)?.join?.(", "), "none")],
+    ["channel separation", yesNo(tripleReadiness.channel_separation_required, "required", "unknown")],
+    ["challenge per step", yesNo(tripleReadiness.challenge_per_step, "required", "unknown")],
+    ["readback per step", yesNo(tripleReadiness.readback_per_step, "required", "unknown")],
+    ["anti-reuse", yesNo(tripleReadiness.anti_reuse, "enabled", "unknown")],
+    ["policy recalc final", yesNo(tripleReadiness.policy_recalculation_before_final_decision, "required", "unknown")],
+  ] as const;
+
   const doubleApprovalRows = [
     ["step 1", "strong local browser/terminal"],
     ["step 2", "separate trusted channel"],
@@ -211,6 +267,28 @@ export function JarvisDebugDrawer({
     ["confirmation phrase", "required"],
     ["anti-reuse", "enabled"],
     ["triple", valueText(trustedChannels.triple_status, "triple_requires_additional_trusted_channel_not_configured")],
+  ] as const;
+
+  const remotePairingRows = [
+    ["status", valueText(remotePairing.pairing_status, "disabled_readiness_only")],
+    ["remote pairing", yesNo(remotePairing.remote_pairing_enabled, "enabled", "false")],
+    ["remote approval", yesNo(remotePairing.remote_approval_allowed, "allowed", "false")],
+    ["remote execution", yesNo(remotePairing.remote_execution_allowed, "allowed", "false")],
+    ["pairing code", yesNo(remotePairing.pairing_code_created, "created", "false")],
+    ["TTL", valueText(remotePairing.pairing_code_ttl_seconds, "300")],
+    ["pending", valueText(remotePairing.pending_pairing_count, "0")],
+    ["revoked", valueText(remotePairing.revoked_pairing_count, "0")],
+  ] as const;
+
+  const telegramBridgeRows = [
+    ["status", valueText(telegramBridge.telegram_bridge_status, "disabled_not_configured")],
+    ["Hermes Telegram", valueText(telegramBridge.hermes_telegram_available_unknown_or_detected, "unknown_not_imported_not_called")],
+    ["token", valueText(telegramBridge.token_present, "unknown_redacted")],
+    ["token read", yesNo(telegramBridge.token_read, "true", "false")],
+    ["API called", yesNo(telegramBridge.telegram_api_called, "true", "false")],
+    ["bot started", yesNo(telegramBridge.bot_started, "true", "false")],
+    ["remote approval", yesNo(telegramBridge.remote_approval_allowed, "allowed", "false")],
+    ["remote execution", yesNo(telegramBridge.remote_execution_allowed, "allowed", "false")],
   ] as const;
 
   const browserVerificationRows = [
@@ -229,6 +307,18 @@ export function JarvisDebugDrawer({
     ["rollback never faked", yesNo(stopRollbackContracts.rollback_never_faked, "true", "unknown")],
     ["read-only rollback", valueText(stopRollbackContracts.read_only_rollback_status, "not_required")],
     ["prepare-only rollback", valueText(stopRollbackContracts.prepare_only_rollback_status, "discard_preview")],
+  ] as const;
+
+  const stopRollbackV2Rows = [
+    ["status", valueText(stopRollbackV2.status, "observable_metadata_only")],
+    ["stop reason", valueText(stopRollbackV2.stop_reason, "none")],
+    ["stop actor", valueText(stopRollbackV2.stop_actor, "none")],
+    ["stop channel", valueText(stopRollbackV2.stop_channel, "none")],
+    ["cooperative signal", yesNo(stopRollbackV2.cooperative_stop_signal, "true", "false")],
+    ["bridge attempt", valueText(stopRollbackV2.bridge_stop_attempt, "not_attempted")],
+    ["result observed", yesNo(stopRollbackV2.result_observed, "true", "false")],
+    ["rollback dry-run", yesNo(stopRollbackV2.rollback_dry_run_mode, "true", "false")],
+    ["destructive rollback", yesNo(stopRollbackV2.destructive_rollback_executed, "true", "false")],
   ] as const;
 
   const voiceRows = [
@@ -1190,6 +1280,82 @@ export function JarvisDebugDrawer({
                   </CardContent>
                 </Card>
 
+                <Card data-testid="jarvis-phase-4-status">
+                  <CardHeader>
+                    <CardTitle>Phase 4 Status</CardTitle>
+                    <CardDescription>Local controller + remote pairing readiness, sin ejecución remota peligrosa.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase4Rows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>JARVIS gobierna; Hermes ejecuta solo detrás de gates válidos.</SafetyLine>
+                      <SafetyLine>Remote pairing, remote approval y remote execution siguen false.</SafetyLine>
+                      <SafetyLine>No se lee .env ni tokens.</SafetyLine>
+                      <SafetyLine>No hay servicio del sistema, autostart ni puerto externo.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-local-controller-status">
+                  <CardHeader>
+                    <CardTitle>Local Controller</CardTitle>
+                    <CardDescription>Controller local opt-in; contrato realista sin instalación nativa.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={localControllerRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>local_only=true y bind_host=127.0.0.1.</SafetyLine>
+                      <SafetyLine>auto_start_enabled=false.</SafetyLine>
+                      <SafetyLine>installed_as_system_service=false.</SafetyLine>
+                      <SafetyLine>startup_integration_enabled=false.</SafetyLine>
+                      <SafetyLine>user_opt_in_required=true.</SafetyLine>
+                      <SafetyLine>no_background_capture=true.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-trusted-devices-status">
+                  <CardHeader>
+                    <CardTitle>Trusted Devices</CardTitle>
+                    <CardDescription>Identidad de controller/dispositivo; remoto cero/untrusted por defecto.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={trustedDeviceRows} />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {trustedDeviceItems.map((device) => (
+                        <div key={valueText(device.device_id)} className="border border-border/70 bg-background/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-display text-xs uppercase tracking-[0.12em]">{valueText(device.display_name ?? device.device_id)}</p>
+                            <Badge variant={Boolean(device.trusted) ? "success" : "outline"}>{yesNo(device.trusted, "trusted", "untrusted")}</Badge>
+                          </div>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                            {valueText(device.channel_type)} · paired {yesNo(device.paired)} · verified {yesNo(device.verified)} · risk {valueText(device.risk_limit)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid gap-2">
+                      <SafetyLine>Revoked devices cannot approve.</SafetyLine>
+                      <SafetyLine>Voz y wake no conceden permisos.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-triple-approval-readiness">
+                  <CardHeader>
+                    <CardTitle>Triple Approval Readiness</CardTitle>
+                    <CardDescription>Tres pasos/canales separados, challenge, readback, expiry y anti-reuse.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={tripleApprovalRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Un solo canal repetido no satisface triple approval.</SafetyLine>
+                      <SafetyLine>Critical queda blocked si no existen tres canales locales verificados.</SafetyLine>
+                      <SafetyLine>La policy se recalcula antes de la decisión final.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card data-testid="jarvis-local-daemon-status">
                   <CardHeader>
                     <CardTitle>Local Daemon</CardTitle>
@@ -1247,6 +1413,52 @@ export function JarvisDebugDrawer({
                       <SafetyLine>remote_approval_allowed=false.</SafetyLine>
                       <SafetyLine>remote_execution_allowed=false.</SafetyLine>
                       <SafetyLine>trusted_pairing_required=true para una fase futura.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-remote-pairing-readiness">
+                  <CardHeader>
+                    <CardTitle>Remote Pairing Readiness</CardTitle>
+                    <CardDescription>Pairing remoto preparado, pero desactivado por defecto.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={remotePairingRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>remote_pairing_enabled=false.</SafetyLine>
+                      <SafetyLine>remote_approval_allowed=false.</SafetyLine>
+                      <SafetyLine>remote_execution_allowed=false.</SafetyLine>
+                      <SafetyLine>prepare solo crea challenge local efímero y metadata-only.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-telegram-bridge-readiness">
+                  <CardHeader>
+                    <CardTitle>Telegram / Hermes Bridge Readiness</CardTitle>
+                    <CardDescription>Bridge futuro disabled/not_configured; no bot, no webhook, no token read.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={telegramBridgeRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>token_present=unknown_redacted.</SafetyLine>
+                      <SafetyLine>No se llama Telegram y no se inicia bot.</SafetyLine>
+                      <SafetyLine>No puede pedir approval ni ejecutar hasta pairing + policy + approval futuro.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-stop-rollback-v2">
+                  <CardHeader>
+                    <CardTitle>Stop / Rollback v2</CardTitle>
+                    <CardDescription>Observabilidad metadata-only; rollback destructivo no se ejecuta ni se finge.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={stopRollbackV2Rows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Stop registra actor, canal, scope, deadline y estado final.</SafetyLine>
+                      <SafetyLine>Rollback destructivo requiere preconditions y approval; aquí solo dry-run metadata.</SafetyLine>
+                      <SafetyLine>No se finge rollback si no hay soporte real.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>
@@ -1353,6 +1565,40 @@ export function JarvisDebugDrawer({
                         <SafetyLine>El frontend no puede saltarse gates.</SafetyLine>
                       </div>
                     </article>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="jarvis-phase-4-pilot-checklist">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-warning" />
+                      <CardTitle>Phase 4 Pilot Checklist</CardTitle>
+                    </div>
+                    <CardDescription>Automated/build/manual/unsupported split para controller y pairing.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList
+                      items={[
+                        ["backend start", valueText(phase4Pilot.backend_start_command, "uvicorn jarvis.api.app:app --host 127.0.0.1 --port 9119")],
+                        ["frontend start", valueText(phase4Pilot.frontend_start_command, "cd web && npm run dev -- --host 127.0.0.1")],
+                        ["source document", valueText(phase4Pilot.source_document, "docs/jarvis-phase-4-local-controller-remote-pairing-pilot-report.md")],
+                      ]}
+                    />
+                    <div className="grid gap-2 sm:grid-cols-4">
+                      {["validated_by_automated_tests", "validated_by_build", "pending_manual_browser_pilot", "unsupported_honestly"].map((key) => (
+                        <div key={key} className="border border-border/70 bg-background/35 p-3">
+                          <p className="font-display text-xs uppercase tracking-[0.12em]">{key}</p>
+                          <p className="mt-2 font-mono-ui text-[0.7rem] text-muted-foreground">
+                            {Array.isArray(phase4Pilot[key]) ? (phase4Pilot[key] as unknown[]).length : 0} items
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <SafetyLine>Status endpoints cubren phase4/controller/devices/pairing/telegram/stop-rollback.</SafetyLine>
+                      <SafetyLine>Pending manual browser pilot: abrir /jarvis y confirmar esfera idle calmada.</SafetyLine>
+                      <SafetyLine>Unsupported se muestra honestamente: native tray/service/autostart/remote pairing/Telegram.</SafetyLine>
+                    </div>
                   </CardContent>
                 </Card>
 
