@@ -162,6 +162,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_4_local_controller.phase_4_status(route_paths=route_path_list),
         timeline,
     )
+    phase_5_status = _source(
+        "/mark-3/phase-5/status",
+        lambda: app_state.phase_5_local_identity_voice.phase_5_status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -205,6 +210,21 @@ def build_mark_3_dashboard_status(
     trusted_devices = _source(
         "/mark-3/trusted-devices/status",
         lambda: app_state.phase_4_local_controller.trusted_devices_status(),
+        timeline,
+    )
+    local_pairing = _source(
+        "/mark-3/local-pairing/status",
+        lambda: app_state.phase_5_local_identity_voice.local_pairing_status(),
+        timeline,
+    )
+    voice_approval = _source(
+        "/mark-3/voice-approval/status",
+        lambda: app_state.phase_5_local_identity_voice.voice_approval_status(),
+        timeline,
+    )
+    notifications = _source(
+        "/mark-3/notifications/status",
+        lambda: app_state.phase_5_local_identity_voice.notifications_status(),
         timeline,
     )
     remote_pairing = _source(
@@ -565,6 +585,13 @@ def build_mark_3_dashboard_status(
                 "Local controller opt-in, trusted device identity, triple gate readiness, remote pairing disabled and Telegram bridge disabled.",
             ),
             _module(
+                "Phase 5 Trust",
+                "ready" if phase_5_status.get("status") else UNKNOWN,
+                "/mark-3/phase-5/status",
+                "persistent_identity_pairing_voice_approval",
+                "Persistent trusted device identity, hardened local pairing, governed voice approval and notification readiness.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -605,6 +632,27 @@ def build_mark_3_dashboard_status(
                 "/mark-3/remote-pairing/status",
                 "remote_pairing_readiness_disabled",
                 "Pairing challenge readiness is local/ephemeral only; remote approval and execution remain false.",
+            ),
+            _module(
+                "Local Pairing",
+                "ready" if local_pairing.get("pairing_status") else UNKNOWN,
+                "/mark-3/local-pairing/status",
+                "short_lived_one_time_pairing",
+                "Local pairing uses nonce, exact scope, rate limiting, trusted device binding and audit; no remote execution.",
+            ),
+            _module(
+                "Voice Approval",
+                "gated" if voice_approval.get("voice_approval_available") else UNKNOWN,
+                "/mark-3/voice-approval/status",
+                "trusted_device_readback_challenge",
+                "Spoken approval requires active session, trusted device, exact readback, challenge, scope, expiry, anti-replay and audit.",
+            ),
+            _module(
+                "Notifications",
+                "ready" if notifications.get("status") else UNKNOWN,
+                "/mark-3/notifications/status",
+                "local_notification_readiness",
+                "Notification contracts cover approval, pairing, device trust/revoke, blocked action, expiry and voice decisions without remote execution.",
             ),
             _module(
                 "Telegram Bridge",
@@ -712,6 +760,7 @@ def build_mark_3_dashboard_status(
         "phase_2_status": phase_2_status,
         "phase_3_status": phase_3_status,
         "phase_4_status": phase_4_status,
+        "phase_5_status": phase_5_status,
         "governed_execution": execution_control,
         "action_catalog": action_catalog,
         "execution_history": execution_history,
@@ -723,6 +772,9 @@ def build_mark_3_dashboard_status(
         "tray_readiness": tray_status,
         "trusted_approval_channels": trusted_approval_channels,
         "trusted_devices": trusted_devices,
+        "local_pairing": local_pairing,
+        "voice_approval": voice_approval,
+        "notifications": notifications,
         "remote_pairing": remote_pairing,
         "telegram_bridge": telegram_bridge,
         "browser_verification": browser_verification,

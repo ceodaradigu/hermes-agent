@@ -27,12 +27,16 @@ export const api = {
   getJarvisPhase2Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-2/status"),
   getJarvisPhase3Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-3/status"),
   getJarvisPhase4Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-4/status"),
+  getJarvisPhase5Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-5/status"),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
   getJarvisLocalDoctorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-doctor/status"),
   getJarvisTrustedApprovalChannels: () => fetchJSON<Record<string, unknown>>("/mark-3/trusted-approval-channels/status"),
   getJarvisTrustedDevices: () => fetchJSON<Record<string, unknown>>("/mark-3/trusted-devices/status"),
+  getJarvisLocalPairingStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-pairing/status"),
+  getJarvisVoiceApprovalStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/voice-approval/status"),
+  getJarvisNotificationsStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/notifications/status"),
   getJarvisRemotePairingStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/remote-pairing/status"),
   getJarvisTelegramBridgeStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/telegram-bridge/status"),
   getJarvisStopRollbackStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/stop-rollback/status"),
@@ -1711,6 +1715,7 @@ export interface JarvisDashboardStatus {
   phase_2_status?: Record<string, unknown>;
   phase_3_status?: Record<string, unknown>;
   phase_4_status?: Record<string, unknown>;
+  phase_5_status?: Record<string, unknown>;
   action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
   execution_history?: JarvisExecutionHistoryResponse;
   stop_rollback_contracts?: Record<string, unknown>;
@@ -1721,6 +1726,9 @@ export interface JarvisDashboardStatus {
   tray_readiness?: Record<string, unknown>;
   trusted_approval_channels?: Record<string, unknown>;
   trusted_devices?: Record<string, unknown>;
+  local_pairing?: Record<string, unknown>;
+  voice_approval?: Record<string, unknown>;
+  notifications?: Record<string, unknown>;
   remote_pairing?: Record<string, unknown>;
   telegram_bridge?: Record<string, unknown>;
   browser_verification?: JarvisBrowserVerificationStatus;

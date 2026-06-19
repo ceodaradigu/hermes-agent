@@ -214,6 +214,7 @@ export const fallbackModules: JarvisDashboardModule[] = [
   ["Voice", "browser_controlled", "sensor_privacy", "Local Voice Loop manual; sin audio bruto al backend."],
   ["Conversational Brain", "preview", "intent_risk_preview", "Bridge local determinista; sin LLM real, sin memoria automática, sin Hermes."],
   ["Wake Listener", "disabled", "sensor_privacy", "Wake phrase no aprueba, no ejecuta y no escucha por defecto."],
+  ["Phase 5 Trust", "ready", "persistent_identity_pairing_voice_approval", "Trusted identity, local pairing, voice approval and notifications are backend-gated."],
   ["Camera/Vision", "disabled", "sensor_privacy", "Cámara opt-in futura; sin captura ni permisos al cargar."],
   ["Mobile Companion", "preview", "remote_surface", "Mobile/Telegram futuros serán canales gobernados, no bypass."],
   ["Memory/Learning", "preview", "memory_never_grants_permission", "Memoria visible futura; memoria nunca concede permisos."],
