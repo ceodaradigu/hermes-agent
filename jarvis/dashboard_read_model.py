@@ -122,6 +122,21 @@ def build_mark_3_dashboard_status(
         lambda: app_state.personal_memory_control.status(),
         timeline,
     )
+    persistent_audit = _source(
+        "/mark-3/audit/status",
+        lambda: app_state.persistent_audit_ledger.status(),
+        timeline,
+    )
+    memory_brain_v2_status = _source(
+        "/mark-3/memory-brain/status",
+        lambda: app_state.memory_brain_v2.status(),
+        timeline,
+    )
+    memory_brain_v2_preview = _source(
+        "/mark-3/memory-brain/preview",
+        lambda: app_state.memory_brain_v2.preview(),
+        timeline,
+    )
     conversational_brain = _source(
         "/mark-3/conversational-brain/status",
         lambda: app_state.conversational_brain_bridge.status(),
@@ -215,8 +230,11 @@ def build_mark_3_dashboard_status(
         memory_status=memory_status,
         learning_status=learning_status,
         personal_memory_status=personal_memory_status,
+        memory_brain_v2_status=memory_brain_v2_status,
+        memory_brain_v2_preview=memory_brain_v2_preview,
     )
     memory_brain_timeline = _memory_brain_timeline_events(memory_brain)
+    persistent_audit_timeline = _persistent_audit_timeline_events(persistent_audit)
     mobile_companion = _mobile_companion_projection(
         mobile_status=mobile_status,
         mobile_permissions=mobile_permissions,
@@ -374,10 +392,17 @@ def build_mark_3_dashboard_status(
             ),
             _module(
                 "Memory/Learning",
-                "preview" if memory_status.get("available") and learning_status.get("available") else UNKNOWN,
-                "/mark-3/outcomes + /mark-3/learning/proposals",
+                "ready" if memory_brain_v2_status.get("state", {}).get("available") else UNKNOWN,
+                "/mark-3/memory-brain/status",
                 "memory_never_grants_permission",
-                "Outcome/failure memory and learning proposals are in-memory and never authorize execution.",
+                "Persistent Memory Brain v2 is local/read-only from dashboard; proposals never authorize execution.",
+            ),
+            _module(
+                "Persistent Audit",
+                "ready" if persistent_audit.get("state", {}).get("available") else UNKNOWN,
+                "/mark-3/audit/status",
+                "metadata_audit",
+                "Local metadata-only hash-chain ledger for voice, sensors, intake, brain, memory and approval events.",
             ),
             _module(
                 "Sensor Ledger",
@@ -453,8 +478,10 @@ def build_mark_3_dashboard_status(
         },
         "camera_vision": camera_vision,
         "raw_audio_recording": raw_audio_recording,
+        "persistent_audit": persistent_audit,
         "sensor_ledger": sensor_ledger,
         "policy_status": policy_status,
+        "memory_brain_v2": memory_brain_v2_status,
         "memory_brain": memory_brain,
         "mobile_companion": mobile_companion,
         "mobile": {
@@ -516,6 +543,8 @@ def build_mark_3_dashboard_status(
                 "risk_state",
                 "execution_state",
                 "audit_event",
+                "persistent_audit_state",
+                "memory_brain_v2_state",
                 "remote_state",
                 "doctor_state",
                 "performance_state",
@@ -594,6 +623,7 @@ def build_mark_3_dashboard_status(
         + local_voice_loop_timeline
         + camera_vision_timeline
         + raw_audio_recording_timeline
+        + persistent_audit_timeline
         + memory_brain_timeline
         + mobile_companion_timeline
         + finance_roi_timeline
@@ -811,6 +841,9 @@ def build_local_doctor_status(
             "conversational_intake_endpoint": _route_exists(route_path_set, "/mark-3/conversational-intake/status"),
             "brain_adapter_endpoint": _route_exists(route_path_set, "/mark-3/brain-adapter/status"),
             "voice_runtime_pack_endpoint": _route_exists(route_path_set, "/mark-3/voice-runtime/status"),
+            "persistent_audit_endpoint": _route_exists(route_path_set, "/mark-3/audit/status"),
+            "memory_brain_v2_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/status"),
+            "memory_brain_v2_preview_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/preview"),
             "hermes_status_endpoint": _route_exists(route_path_set, "/mark-3/hermes-runtime/status"),
             "hermes_status": "ok" if hermes_status.get("available") is True else "not_connected" if hermes_status.get("available") is False else UNKNOWN,
             "local_doctor_endpoint": _route_exists(route_path_set, "/mark-3/local-doctor/status"),
@@ -845,6 +878,16 @@ def build_local_doctor_status(
                 "voice_runtime_pack",
                 "ok" if _route_exists(route_path_set, "/mark-3/voice-runtime/status") else "missing",
                 "GET /mark-3/voice-runtime/status",
+            ),
+            _doctor_check(
+                "persistent_audit",
+                "ok" if _route_exists(route_path_set, "/mark-3/audit/status") else "missing",
+                "GET /mark-3/audit/status",
+            ),
+            _doctor_check(
+                "memory_brain_v2",
+                "ok" if _route_exists(route_path_set, "/mark-3/memory-brain/status") else "missing",
+                "GET /mark-3/memory-brain/status",
             ),
             _doctor_check(
                 "hermes_status",
@@ -902,6 +945,8 @@ def build_local_doctor_status(
             "no_hermes_execution": True,
             "no_voice_provider_install": True,
             "no_voice_model_download": True,
+            "persistent_audit_metadata_only": True,
+            "memory_brain_v2_no_autoload": True,
         },
         "source_endpoint": "/mark-3/local-doctor/status",
         "preview_only": False,
@@ -2527,38 +2572,71 @@ def _memory_brain_projection(
     memory_status: Dict[str, Any],
     learning_status: Dict[str, Any],
     personal_memory_status: Dict[str, Any],
+    memory_brain_v2_status: Dict[str, Any] | None = None,
+    memory_brain_v2_preview: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     outcome_count = _int(memory_status.get("outcome_count"), default=0) or 0
     failure_count = _int(memory_status.get("failure_count"), default=0) or 0
     proposal_count = _int(learning_status.get("proposal_count"), default=0) or 0
+    v2_status = dict(memory_brain_v2_status or {})
+    v2_preview = dict(memory_brain_v2_preview or {})
+    v2_counts = dict(v2_status.get("counts", {}) or v2_preview.get("counts", {}) or {})
+    explanation = dict(v2_preview.get("explanation_preview", {}) or {})
     return {
         "state": {
             "mode": "visible_read_only_brain",
+            "memory_brain_v2_mode": v2_status.get("state", {}).get("mode", "in_memory_explainable_memory_brain_v2"),
             "outcome_memory_available": bool(memory_status.get("available", False)),
             "learning_proposals_available": bool(learning_status.get("available", False)),
             "personal_memory_control_available": bool(personal_memory_status.get("approved_memory_records_available", False)),
-            "in_memory_only": bool(memory_status.get("in_memory_only", False) and learning_status.get("in_memory_only", False)),
+            "memory_brain_v2_available": bool(v2_status.get("state", {}).get("available", False)),
+            "persistent": bool(v2_status.get("state", {}).get("persistent", False)),
+            "storage_configured": bool(v2_status.get("state", {}).get("storage_configured", False)),
+            "storage_path": v2_status.get("state", {}).get("storage_path", ".jarvis/memory_brain_v2/memory_brain_v2.sqlite3"),
+            "in_memory_only": not bool(v2_status.get("state", {}).get("persistent", False)),
             "compaction_available": False,
             "forget_delete_available": "future_gated",
+            "memory_brain_v2_store_forget_delete_available": "python_store_audited",
             "memory_autoload_enabled": False,
             "memory_grants_permission": False,
         },
-        "entities": [],
-        "preferences": [],
-        "decisions": [],
-        "contradictions": [],
+        "entities": list(v2_preview.get("entities", [])),
+        "facts": list(v2_preview.get("facts", [])),
+        "preferences": list(v2_preview.get("preferences", [])),
+        "decisions": list(v2_preview.get("decisions", [])),
+        "projects": list(v2_preview.get("projects", [])),
+        "contradictions": list(v2_preview.get("contradictions", [])),
+        "active_memories": list(v2_preview.get("active_memories", [])),
+        "pending_review": list(v2_preview.get("pending_review", [])),
+        "forgotten_deleted": list(v2_preview.get("forgotten_deleted", [])),
         "counts": {
             "outcomes": outcome_count,
             "failures": failure_count,
             "learning_proposals": proposal_count,
             "audit_events": (_int(memory_status.get("audit_event_count"), default=0) or 0)
-            + (_int(learning_status.get("audit_event_count"), default=0) or 0),
+            + (_int(learning_status.get("audit_event_count"), default=0) or 0)
+            + (_int(v2_counts.get("audit_events"), default=0) or 0),
+            "entities": _int(v2_counts.get("entities"), default=0) or 0,
+            "facts": _int(v2_counts.get("facts"), default=0) or 0,
+            "preferences": _int(v2_counts.get("preferences"), default=0) or 0,
+            "decisions": _int(v2_counts.get("decisions"), default=0) or 0,
+            "projects": _int(v2_counts.get("projects"), default=0) or 0,
+            "contradictions": _int(v2_counts.get("contradictions"), default=0) or 0,
+            "active_memories": _int(v2_counts.get("active_memories"), default=0) or 0,
+            "pending_review": _int(v2_counts.get("pending_review"), default=0) or 0,
+            "forgotten_deleted": _int(v2_counts.get("forgotten_deleted"), default=0) or 0,
         },
-        "why_jarvis_remembers": [
-            "JARVIS muestra outcome/failure memory y learning proposals existentes para explicar aprendizaje operativo.",
-            "No hay entidades, preferencias o decisiones personales persistidas por defecto en este read model.",
+        "why_jarvis_remembers": list(explanation.get("why_jarvis_remembers", []))[:5]
+        or [
+            "JARVIS muestra outcome/failure memory, learning proposals y Memory Brain v2 para explicar aprendizaje operativo.",
+            "Si no hay evidencia, los campos quedan en unknown.",
             "La memoria nunca concede permisos ni autoriza ejecución.",
         ],
+        "explanation_preview": {
+            "why_jarvis_remembers": list(explanation.get("why_jarvis_remembers", []))[:5],
+            "what_memory_influenced": list(explanation.get("what_memory_influenced", []))[:5],
+            "pending_approval": list(explanation.get("pending_approval", []))[:5],
+        },
         "compaction": {
             "status": "contract_only",
             "available_now": False,
@@ -2568,7 +2646,8 @@ def _memory_brain_projection(
         },
         "forget_delete": {
             "status": "future_gated",
-            "available_now": False,
+            "memory_brain_v2_store_status": "audited_python_store",
+            "available_now": True,
             "requires_operator_review": True,
             "audit_required": True,
         },
@@ -2579,6 +2658,8 @@ def _memory_brain_projection(
             "no_external_persistence": True,
             "memory_is_not_permission": True,
             "active_memory_does_not_authorize_sensitive_actions": True,
+            "memory_brain_v2_autoload_enabled": False,
+            "memory_brain_v2_external_persistence_enabled": False,
             "execution_enabled": False,
             "side_effects_enabled": False,
         },
@@ -2586,11 +2667,14 @@ def _memory_brain_projection(
             "/mark-3/outcomes",
             "/mark-3/learning/proposals",
             "/personal-memory/status",
+            "/mark-3/memory-brain/status",
+            "/mark-3/memory-brain/preview",
         ],
         "source_status": {
             "outcome_memory": _status_summary(memory_status),
             "learning_proposals": _status_summary(learning_status),
             "personal_memory": _status_summary(personal_memory_status),
+            "memory_brain_v2": _status_summary(v2_status),
         },
         "preview_only": False,
         "read_only": True,
@@ -2601,8 +2685,20 @@ def _memory_brain_timeline_events(memory_brain: Dict[str, Any]) -> List[Dict[str
     return [
         {
             "event": "Memory brain read model generated",
-            "source": "/mark-3/dashboard/status",
+            "source": "/mark-3/outcomes + /mark-3/learning/proposals + /personal-memory/status",
             "status": "visible_read_only_brain",
+            "read_only": True,
+        },
+        {
+            "event": "Memory Brain v2 read model generated",
+            "source": "/mark-3/memory-brain/status",
+            "status": str(memory_brain.get("state", {}).get("memory_brain_v2_mode", "in_memory_explainable_memory_brain_v2")),
+            "read_only": True,
+        },
+        {
+            "event": "Memory Brain v2 counts read",
+            "source": "/mark-3/memory-brain/preview",
+            "status": str(memory_brain.get("counts", {}).get("active_memories", UNKNOWN)),
             "read_only": True,
         },
         {
@@ -2615,6 +2711,30 @@ def _memory_brain_timeline_events(memory_brain: Dict[str, Any]) -> List[Dict[str
             "event": "Memory cannot authorize execution",
             "source": "/personal-memory/status",
             "status": "blocked",
+            "read_only": True,
+        },
+    ]
+
+
+def _persistent_audit_timeline_events(persistent_audit: Dict[str, Any]) -> List[Dict[str, Any]]:
+    chain = dict(persistent_audit.get("chain", {}) or {})
+    return [
+        {
+            "event": "Persistent Audit status read",
+            "source": "/mark-3/audit/status",
+            "status": persistent_audit.get("state", {}).get("mode", "metadata_audit_ledger"),
+            "read_only": True,
+        },
+        {
+            "event": "Persistent Audit hash-chain verified",
+            "source": "/mark-3/audit/status",
+            "status": "valid" if chain.get("valid", True) else "tamper_detected",
+            "read_only": True,
+        },
+        {
+            "event": "Persistent Audit stores metadata only",
+            "source": "/mark-3/audit/status",
+            "status": "metadata_only",
             "read_only": True,
         },
     ]

@@ -119,6 +119,8 @@ export type JarvisEventType =
   | "risk_state"
   | "execution_state"
   | "audit_event"
+  | "persistent_audit_state"
+  | "memory_brain_v2_state"
   | "remote_state"
   | "doctor_state"
   | "performance_state"

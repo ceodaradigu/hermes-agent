@@ -25,6 +25,8 @@ ALLOWED_EVENT_TYPES = (
     "risk_state",
     "execution_state",
     "audit_event",
+    "persistent_audit_state",
+    "memory_brain_v2_state",
     "remote_state",
     "doctor_state",
     "performance_state",
@@ -290,19 +292,46 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         _event(
             generated_at,
             "memory_state",
-            "/mark-3/outcomes + /mark-3/learning/proposals + /personal-memory/status",
+            "/mark-3/memory-brain/status",
             _get(dashboard_status, "memory_brain.state.mode", "visible_read_only_brain"),
             {
                 "visible_brain": True,
-                "entity_count": len(_get(dashboard_status, "memory_brain.entities", [])),
-                "decision_count": len(_get(dashboard_status, "memory_brain.decisions", [])),
-                "preference_count": len(_get(dashboard_status, "memory_brain.preferences", [])),
-                "contradiction_count": len(_get(dashboard_status, "memory_brain.contradictions", [])),
+                "entity_count": _get(dashboard_status, "memory_brain.counts.entities", 0),
+                "fact_count": _get(dashboard_status, "memory_brain.counts.facts", 0),
+                "decision_count": _get(dashboard_status, "memory_brain.counts.decisions", 0),
+                "preference_count": _get(dashboard_status, "memory_brain.counts.preferences", 0),
+                "contradiction_count": _get(dashboard_status, "memory_brain.counts.contradictions", 0),
+                "active_memory_count": _get(dashboard_status, "memory_brain.counts.active_memories", 0),
+                "pending_review_count": _get(dashboard_status, "memory_brain.counts.pending_review", 0),
+                "forgotten_deleted_count": _get(dashboard_status, "memory_brain.counts.forgotten_deleted", 0),
                 "outcome_count": _get(dashboard_status, "memory_brain.counts.outcomes", 0),
                 "learning_proposal_count": _get(dashboard_status, "memory_brain.counts.learning_proposals", 0),
                 "compaction": _get(dashboard_status, "memory_brain.compaction.status", "contract_only"),
-                "forget_delete": _get(dashboard_status, "memory_brain.forget_delete.status", "future_gated"),
+                "forget_delete": _get(dashboard_status, "memory_brain.forget_delete.status", "audited_python_store"),
                 "memory_never_grants_permission": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "memory_brain_v2_state",
+            "/mark-3/memory-brain/preview",
+            _get(dashboard_status, "memory_brain_v2.state.mode", "in_memory_explainable_memory_brain_v2"),
+            {
+                "schema_version": _get(dashboard_status, "memory_brain_v2.schema_version", "jarvis.memory_brain_v2.v1"),
+                "persistent": _bool(_get(dashboard_status, "memory_brain_v2.state.persistent", False)),
+                "storage_configured": _bool(_get(dashboard_status, "memory_brain_v2.state.storage_configured", False)),
+                "entities": _get(dashboard_status, "memory_brain.counts.entities", 0),
+                "facts": _get(dashboard_status, "memory_brain.counts.facts", 0),
+                "preferences": _get(dashboard_status, "memory_brain.counts.preferences", 0),
+                "decisions": _get(dashboard_status, "memory_brain.counts.decisions", 0),
+                "projects": _get(dashboard_status, "memory_brain.counts.projects", 0),
+                "contradictions": _get(dashboard_status, "memory_brain.counts.contradictions", 0),
+                "active_memories": _get(dashboard_status, "memory_brain.counts.active_memories", 0),
+                "pending_review": _get(dashboard_status, "memory_brain.counts.pending_review", 0),
+                "forgotten_deleted": _get(dashboard_status, "memory_brain.counts.forgotten_deleted", 0),
+                "memory_autoload_enabled": False,
+                "memory_grants_permission": False,
+                "hermes_dispatch_allowed": False,
             },
         ),
         _event(
@@ -394,6 +423,28 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "sensors_require_opt_in": True,
                 "visible_indicator_required": True,
                 "stop_cancel_required": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "persistent_audit_state",
+            "/mark-3/audit/status",
+            _get(dashboard_status, "persistent_audit.state.mode", "in_memory_metadata_audit_ledger"),
+            {
+                "schema_version": _get(dashboard_status, "persistent_audit.schema_version", "jarvis.persistent_audit.v1"),
+                "persistent": _bool(_get(dashboard_status, "persistent_audit.state.persistent", False)),
+                "storage_configured": _bool(_get(dashboard_status, "persistent_audit.state.storage_configured", False)),
+                "event_count": _get(dashboard_status, "persistent_audit.state.event_count", 0),
+                "tamper_evident": True,
+                "hash_chain_valid": _bool(_get(dashboard_status, "persistent_audit.chain.valid", True)),
+                "checked_count": _get(dashboard_status, "persistent_audit.chain.checked_count", 0),
+                "metadata_only": True,
+                "contains_raw_audio": False,
+                "contains_camera_frame": False,
+                "contains_secret": False,
+                "contains_credential": False,
+                "contains_full_transcript": False,
+                "hermes_dispatch_allowed": False,
             },
         ),
         _event(
@@ -578,6 +629,14 @@ def _sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in payload.items():
         lowered = key.lower()
         if any(blocked in lowered for blocked in ("secret", "token", "credential", "cookie", "password", "audio_bytes", "raw_audio_bytes", "frame_bytes", "image_bytes", "video_bytes")):
+            if isinstance(value, bool) and (
+                lowered.startswith("no_")
+                or lowered.startswith("contains_")
+                or "blocked" in lowered
+                or lowered.endswith("_included")
+            ):
+                sanitized[key] = value
+                continue
             sanitized[key] = "redacted"
             continue
         sanitized[key] = _sanitize_value(value)
@@ -635,6 +694,8 @@ def _risk_level_for_event(event_type: str) -> str:
         return "approval_gate"
     if event_type == "remote_state":
         return "remote_surface"
-    if event_type == "memory_state":
+    if event_type in {"memory_state", "memory_brain_v2_state"}:
         return "memory_privacy"
+    if event_type == "persistent_audit_state":
+        return "metadata_audit"
     return "low"

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BadgeCheck, Brain, Camera, CircleDollarSign, Cpu, Radar, Smartphone, Stethoscope, TerminalSquare, Workflow, ZapOff } from "lucide-react";
+import { Activity, AlertTriangle, BadgeCheck, Brain, Camera, CircleDollarSign, Cpu, Radar, ScrollText, Smartphone, Stethoscope, TerminalSquare, Workflow, ZapOff } from "lucide-react";
 import type { JarvisDashboardStatus } from "@/lib/api";
 import type { JarvisEvent } from "./types";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +90,7 @@ export function JarvisDebugDrawer({
   const frontendPilot = dashboard.frontend_pilot ?? fallbackOffline.frontend_pilot!;
   const visualPilot = dashboard.visual_command_center_pilot ?? fallbackOffline.visual_command_center_pilot!;
   const memoryBrain = dashboard.memory_brain ?? {};
+  const persistentAudit = dashboard.persistent_audit ?? {};
   const localDoctor = dashboard.local_doctor ?? {};
   const rawAudioRecording = dashboard.raw_audio_recording ?? {};
   const sensorLedger = dashboard.sensor_ledger ?? {};
@@ -207,13 +208,41 @@ export function JarvisDebugDrawer({
     ["outcomes", valueText(memoryBrain.counts?.outcomes, "0")],
     ["failures", valueText(memoryBrain.counts?.failures, "0")],
     ["learning proposals", valueText(memoryBrain.counts?.learning_proposals, "0")],
-    ["entidades", valueText(memoryBrain.entities?.length, "0")],
-    ["preferencias", valueText(memoryBrain.preferences?.length, "0")],
-    ["decisiones", valueText(memoryBrain.decisions?.length, "0")],
-    ["contradicciones", valueText(memoryBrain.contradictions?.length, "0")],
+    ["entidades", valueText(memoryBrain.counts?.entities ?? memoryBrain.entities?.length, "0")],
+    ["facts", valueText(memoryBrain.counts?.facts ?? memoryBrain.facts?.length, "0")],
+    ["preferencias", valueText(memoryBrain.counts?.preferences ?? memoryBrain.preferences?.length, "0")],
+    ["decisiones", valueText(memoryBrain.counts?.decisions ?? memoryBrain.decisions?.length, "0")],
+    ["proyectos", valueText(memoryBrain.counts?.projects ?? memoryBrain.projects?.length, "0")],
+    ["contradicciones", valueText(memoryBrain.counts?.contradictions ?? memoryBrain.contradictions?.length, "0")],
+    ["active memories", valueText(memoryBrain.counts?.active_memories, "0")],
+    ["pending review", valueText(memoryBrain.counts?.pending_review, "0")],
+    ["forgotten/deleted", valueText(memoryBrain.counts?.forgotten_deleted, "0")],
     ["compactación", valueText(memoryBrain.compaction?.status, "contract_only")],
     ["forget/delete", valueText(memoryBrain.forget_delete?.status, "future_gated")],
+    ["autoload", yesNo(memoryBrain.state?.memory_autoload_enabled, "enabled", "disabled")],
   ] as const;
+
+  const persistentAuditRows = [
+    ["modo", valueText(persistentAudit.state?.mode, "in_memory_metadata_audit_ledger")],
+    ["persistente", yesNo(persistentAudit.state?.persistent, "true", "false")],
+    ["storage configured", yesNo(persistentAudit.state?.storage_configured, "true", "false")],
+    ["eventos", valueText(persistentAudit.state?.event_count, "0")],
+    ["tamper evident", yesNo(persistentAudit.state?.tamper_evident, "true", "false")],
+    ["hash-chain", persistentAudit.chain?.valid === false ? "tamper_detected" : "valid"],
+    ["checked", valueText(persistentAudit.chain?.checked_count, "0")],
+    ["raw audio", yesNo(persistentAudit.safety?.contains_raw_audio, "present", "false")],
+    ["camera frames", yesNo(persistentAudit.safety?.contains_camera_frame, "present", "false")],
+    ["credentials", yesNo(persistentAudit.safety?.contains_credential, "present", "false")],
+    ["full transcript", yesNo(persistentAudit.safety?.contains_full_transcript, "present", "false")],
+    ["Hermes dispatch", yesNo(persistentAudit.safety?.hermes_dispatch_allowed, "allowed", "false")],
+  ] as const;
+
+  const safeAuditEntries = (persistentAudit.recent_entries ?? []).slice(0, 4);
+  const memoryWhy = memoryBrain.explanation_preview?.why_jarvis_remembers?.length
+    ? memoryBrain.explanation_preview.why_jarvis_remembers
+    : memoryBrain.why_jarvis_remembers ?? ["JARVIS no tiene memoria personal persistida por defecto."];
+  const memoryInfluence = memoryBrain.explanation_preview?.what_memory_influenced ?? ["No active memory influenced this preview."];
+  const memoryPendingApproval = memoryBrain.explanation_preview?.pending_approval ?? [];
 
   const conversationalBrainRows = [
     ["modo", valueText(conversationalBrain.state?.mode, "local_deterministic_bridge")],
@@ -508,17 +537,44 @@ export function JarvisDebugDrawer({
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <Brain className="h-5 w-5 text-cyan-200/70" />
-                      <CardTitle>Memory Brain</CardTitle>
+                      <CardTitle>Memory Brain v2</CardTitle>
                     </div>
-                    <CardDescription>visible read-only brain · memoria nunca concede permisos.</CardDescription>
+                    <CardDescription>persistente/explicable · memoria nunca concede permisos.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList items={brainRows} />
-                    <div className="grid gap-2">
-                      {(memoryBrain.why_jarvis_remembers ?? ["JARVIS no tiene memoria personal persistida por defecto."]).slice(0, 3).map((reason) => (
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {memoryWhy.slice(0, 3).map((reason) => (
                         <SafetyLine key={reason}>{reason}</SafetyLine>
                       ))}
+                      {memoryInfluence.slice(0, 2).map((reason) => (
+                        <SafetyLine key={reason}>{reason}</SafetyLine>
+                      ))}
+                      <SafetyLine>Pendiente approval/review: {memoryPendingApproval.length}</SafetyLine>
                       <SafetyLine>Memorias sensibles requieren approval; no hay autosave sensible.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <ScrollText className="h-5 w-5 text-cyan-200/70" />
+                      <CardTitle>Persistent Audit</CardTitle>
+                    </div>
+                    <CardDescription>metadata-only hash-chain · voz / sensores / brain / intake.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={persistentAuditRows} />
+                    <div className="grid gap-2">
+                      {safeAuditEntries.length === 0 ? (
+                        <SafetyLine>No hay entradas persistentes recientes en este read model.</SafetyLine>
+                      ) : safeAuditEntries.map((entry, index) => (
+                        <SafetyLine key={`${valueText(entry["audit_id"])}-${index}`}>
+                          {valueText(entry["event_type"])} · {valueText(entry["surface"])} · {valueText(entry["risk_level"])} · metadata_only
+                        </SafetyLine>
+                      ))}
+                      <SafetyLine>No guarda audio bruto, frames, secretos, credenciales ni transcripción completa.</SafetyLine>
+                      <SafetyLine>Hash-chain tamper-evident: previous_hash + entry_hash.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>

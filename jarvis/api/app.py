@@ -118,6 +118,7 @@ from jarvis.future_moonshot.foundation import (
     SmartGlassesIntegrationPreview,
 )
 from jarvis.llm_brain_adapter import LLMBrainAdapter
+from jarvis.memory_brain_v2 import MemoryBrainV2Store
 from jarvis.mission_control import MissionControl
 from jarvis.marketing_distribution.foundation import (
     AudienceSegmentPreview,
@@ -231,6 +232,7 @@ from jarvis.operator_console import (
     build_operator_console_snapshot,
 )
 from jarvis.personal_memory import PersonalMemoryControlPlane
+from jarvis.persistent_audit import PersistentAuditLedger
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -1926,6 +1928,8 @@ def create_app(
     voice_adapter: Optional[VoiceAdapter] = None,
     voice_audio_storage: Optional[VoiceAudioStorage] = None,
     voice_runtime: Optional[VoiceRuntime] = None,
+    persistent_audit_ledger: Optional[PersistentAuditLedger] = None,
+    memory_brain_v2: Optional[MemoryBrainV2Store] = None,
 ) -> FastAPI:
     app = FastAPI(title="JARVIS Gateway API", version="0.1.0")
 
@@ -1935,6 +1939,10 @@ def create_app(
     app.state.mark_3_mission_loop = Mark3MissionLoop(approval_service=app.state.approval_hardening)
     app.state.mark_3_outcome_memory = OutcomeMemoryStore()
     app.state.mark_3_learning_proposals = LearningProposalEngine()
+    app.state.persistent_audit_ledger = persistent_audit_ledger or PersistentAuditLedger.from_environment()
+    app.state.memory_brain_v2 = memory_brain_v2 or MemoryBrainV2Store.from_environment(
+        audit_ledger=app.state.persistent_audit_ledger,
+    )
     app.state.mark_3_research_radar = ResearchRadar()
     app.state.mark_3_research_execution_bridge = ResearchExecutionControlPlane(
         approval_service=app.state.approval_hardening,
@@ -2327,6 +2335,18 @@ def create_app(
     @app.get("/mark-3/brain-adapter/status")
     def mark_3_brain_adapter_status() -> dict:
         return app.state.llm_brain_adapter.status()
+
+    @app.get("/mark-3/audit/status")
+    def mark_3_audit_status() -> dict:
+        return app.state.persistent_audit_ledger.status()
+
+    @app.get("/mark-3/memory-brain/status")
+    def mark_3_memory_brain_status() -> dict:
+        return app.state.memory_brain_v2.status()
+
+    @app.get("/mark-3/memory-brain/preview")
+    def mark_3_memory_brain_preview() -> dict:
+        return app.state.memory_brain_v2.preview()
 
     @app.get("/mark-3/voice-runtime/status")
     def mark_3_voice_runtime_status() -> dict:
