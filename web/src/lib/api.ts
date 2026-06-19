@@ -1716,6 +1716,7 @@ export interface JarvisDashboardStatus {
   phase_3_status?: Record<string, unknown>;
   phase_4_status?: Record<string, unknown>;
   phase_5_status?: Record<string, unknown>;
+  phase_6_status?: Record<string, any>;
   action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
   execution_history?: JarvisExecutionHistoryResponse;
   stop_rollback_contracts?: Record<string, unknown>;
@@ -1728,6 +1729,10 @@ export interface JarvisDashboardStatus {
   trusted_devices?: Record<string, unknown>;
   local_pairing?: Record<string, unknown>;
   voice_approval?: Record<string, unknown>;
+  voice_provider_registry?: Record<string, any>;
+  voice_session_v2?: Record<string, any>;
+  wake_runtime?: Record<string, any>;
+  sensor_runtime?: Record<string, any>;
   notifications?: Record<string, unknown>;
   remote_pairing?: Record<string, unknown>;
   telegram_bridge?: Record<string, unknown>;
@@ -1759,6 +1764,8 @@ export interface JarvisDashboardStatus {
   event_bus?: Record<string, any>;
   policy_status?: Record<string, any>;
   memory_brain_v2?: Record<string, any>;
+  memory_brain_v3?: Record<string, any>;
+  memory_brain_v3_compaction?: Record<string, any>;
   memory_brain?: JarvisMemoryBrain;
   mobile_companion?: JarvisMobileCompanion;
   finance_roi?: JarvisFinanceRoi;

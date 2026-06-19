@@ -29,12 +29,18 @@ ALLOWED_EVENT_TYPES = (
     "phase_3_state",
     "phase_4_state",
     "phase_5_state",
+    "phase_6_state",
     "daemon_state",
     "local_controller_state",
     "trusted_channels_state",
     "trusted_devices_state",
     "local_pairing_state",
     "voice_approval_state",
+    "voice_provider_state",
+    "wake_runtime_state",
+    "sensor_runtime_state",
+    "memory_brain_v3_state",
+    "spoken_approval_state",
     "remote_pairing_state",
     "telegram_bridge_state",
     "stop_rollback_v2_state",
@@ -182,6 +188,10 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "wake_listening_state": _get(dashboard_status, "voice_session.state.wake_listening_state", "wake_listening_disabled"),
                 "conversation_active": _bool(_get(dashboard_status, "voice_session.state.conversation_active", False)),
                 "manual_push_to_talk_active": _bool(_get(dashboard_status, "voice_session.state.manual_push_to_talk_active", False)),
+                "phase_6_current_state": _get(dashboard_status, "voice_session_v2.state.current_state", "idle"),
+                "phase_6_active_session_count": _get(dashboard_status, "voice_session_v2.state.active_session_count", 0),
+                "awaiting_approval_supported": _bool(_get(dashboard_status, "voice_session_v2.state.awaiting_approval_supported", True)),
+                "awaiting_spoken_challenge_supported": _bool(_get(dashboard_status, "voice_session_v2.state.awaiting_spoken_challenge_supported", True)),
                 "raw_audio_sent_to_backend": False,
                 "transcript_persistence": False,
                 "background_transcription": False,
@@ -189,6 +199,56 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "microphone_auto_start": False,
                 "voice_approval_enabled": False,
                 "hermes_dispatch_allowed": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "voice_provider_state",
+            "/mark-3/voice-providers/status",
+            _get(dashboard_status, "voice_provider_registry.state.mode", "honest_local_provider_diagnostics"),
+            {
+                "schema_version": _get(dashboard_status, "voice_provider_registry.schema_version", "jarvis.voice_provider_registry.v1"),
+                "ready_provider_count": _get(dashboard_status, "voice_provider_registry.diagnostics.ready_provider_count", 0),
+                "browser_fallback_status": _get(dashboard_status, "voice_provider_registry.diagnostics.browser_fallback_status", "client_side_unknown_until_browser_checks"),
+                "no_fake_provider_success": True,
+                "model_download_performed": False,
+                "provider_install_performed": False,
+                "external_api_calls_enabled": False,
+                "hidden_microphone": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "wake_runtime_state",
+            "/mark-3/wake-runtime/status",
+            _get(dashboard_status, "wake_runtime.state.mode", "manual_fixture_wake_runtime_opt_in"),
+            {
+                "schema_version": _get(dashboard_status, "wake_runtime.schema_version", "jarvis.wake_runtime_opt_in.v1"),
+                "enabled": _bool(_get(dashboard_status, "wake_runtime.state.enabled", False)),
+                "configured_phrase": _get(dashboard_status, "wake_runtime.state.configured_phrase", "hola jarvis"),
+                "visible_indicator": _bool(_get(dashboard_status, "wake_runtime.state.visible_indicator", False)),
+                "continuous_transcription": False,
+                "raw_audio_storage": False,
+                "wake_phrase_can_approve": False,
+                "wake_phrase_can_execute": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "spoken_approval_state",
+            "/mark-3/voice-approval/status",
+            _get(dashboard_status, "voice_approval.schema_version", "jarvis.voice_approval_contract.v1"),
+            {
+                "voice_approval_enabled": _bool(_get(dashboard_status, "voice_approval.voice_approval_enabled", False)),
+                "requires_active_voice_session": True,
+                "requires_trusted_device": True,
+                "requires_exact_readback": True,
+                "requires_spoken_challenge": True,
+                "wake_phrase_can_approve": False,
+                "risk_never_downgraded": True,
+                "active_session_count": _get(dashboard_status, "voice_approval.active_session_count", 0),
+                "raw_audio_stored_by_default": False,
+                "transcript_fixture_testable": True,
             },
         ),
         _event(
@@ -355,6 +415,24 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         ),
         _event(
             generated_at,
+            "memory_brain_v3_state",
+            "/mark-3/memory-brain-v3/status",
+            _get(dashboard_status, "memory_brain_v3.state.mode", "controlled_useful_memory_runtime_v3"),
+            {
+                "schema_version": _get(dashboard_status, "memory_brain_v3.schema_version", "jarvis.memory_brain_v3.v1"),
+                "review_required": _bool(_get(dashboard_status, "memory_brain_v3.state.review_required", True)),
+                "compaction_preview_available": _bool(_get(dashboard_status, "memory_brain_v3.state.compaction_preview_available", True)),
+                "influence_explanation_available": _bool(_get(dashboard_status, "memory_brain_v3.state.influence_explanation_available", True)),
+                "memory_autoload_enabled": False,
+                "memory_auto_activation_enabled": False,
+                "memory_grants_permission": False,
+                "memory_never_downgrades_risk": True,
+                "secret_indexing_default": False,
+                "hermes_dispatch_allowed": False,
+            },
+        ),
+        _event(
+            generated_at,
             "risk_state",
             "/mark-3/dashboard/status",
             _get(dashboard_status, "mission_control.intent_preview.risk_level", "preview"),
@@ -469,6 +547,27 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "memory_grants_permission": False,
                 "remote_execution_allowed": False,
                 "frontend_can_execute_hermes_directly": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "phase_6_state",
+            "/mark-3/phase-6/status",
+            _get(dashboard_status, "phase_6_status.status", "implemented_as_local_runtime_pilot_contracts"),
+            {
+                "schema_version": _get(dashboard_status, "phase_6_status.schema_version", "jarvis.phase_6_voice_wake_memory_sensor_runtime.v1"),
+                "voice_provider_registry_v1": _bool(_get(dashboard_status, "phase_6_status.implemented_blocks.voice_provider_registry_v1", True)),
+                "voice_session_manager_v2": _bool(_get(dashboard_status, "phase_6_status.implemented_blocks.voice_session_manager_v2", True)),
+                "wake_runtime_opt_in_v1": _bool(_get(dashboard_status, "phase_6_status.implemented_blocks.wake_runtime_opt_in_v1", True)),
+                "memory_brain_v3_contract": _bool(_get(dashboard_status, "phase_6_status.implemented_blocks.memory_brain_v3_contract", True)),
+                "sensor_runtime_opt_in_v1": _bool(_get(dashboard_status, "phase_6_status.implemented_blocks.sensor_runtime_opt_in_v1", True)),
+                "browser_stt_tts": _get(dashboard_status, "phase_6_status.real_vs_readiness.browser_stt_tts", "client_side_unknown"),
+                "local_stt_tts_vad_wake": _get(dashboard_status, "phase_6_status.real_vs_readiness.local_stt_tts_vad_wake", "readiness_only"),
+                "wake_phrase_can_approve": False,
+                "memory_grants_permission": False,
+                "frontend_direct_hermes": False,
+                "no_hidden_microphone": True,
+                "no_hidden_camera": True,
             },
         ),
         _event(
@@ -749,6 +848,26 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         ),
         _event(
             generated_at,
+            "sensor_runtime_state",
+            "/mark-3/sensor-runtime/status",
+            _get(dashboard_status, "sensor_runtime.state.mode", "metadata_only_sensor_runtime_opt_in"),
+            {
+                "schema_version": _get(dashboard_status, "sensor_runtime.schema_version", "jarvis.sensor_runtime_opt_in.v1"),
+                "active_sensor_count": _get(dashboard_status, "sensor_runtime.state.active_sensor_count", 0),
+                "recording_active": _bool(_get(dashboard_status, "sensor_runtime.state.recording_active", False)),
+                "defaults_off": True,
+                "visible_indicator_required": True,
+                "stop_cancel_supported": True,
+                "delete_clear_supported": True,
+                "no_hidden_microphone": True,
+                "no_hidden_camera": True,
+                "no_biometric_identification": True,
+                "no_cloud_upload": True,
+                "metadata_only_audit_default": True,
+            },
+        ),
+        _event(
+            generated_at,
             "persistent_audit_state",
             "/mark-3/audit/status",
             _get(dashboard_status, "persistent_audit.state.mode", "in_memory_metadata_audit_ledger"),
@@ -1008,12 +1127,26 @@ def _stable_event_id(generated_at: str, event_type: str, source: str, payload: D
 def _risk_level_for_event(event_type: str) -> str:
     if event_type in {"intake_state", "brain_adapter_state"}:
         return "intent_risk_preview"
-    if event_type in {"camera_state", "recording_state", "voice_runtime_state", "voice_state", "voice_session_state", "wake_state", "tts_state", "sensor_ledger_state"}:
+    if event_type in {
+        "camera_state",
+        "recording_state",
+        "voice_runtime_state",
+        "voice_state",
+        "voice_session_state",
+        "voice_provider_state",
+        "wake_state",
+        "wake_runtime_state",
+        "tts_state",
+        "sensor_ledger_state",
+        "sensor_runtime_state",
+    }:
         return "sensor_privacy"
     if event_type == "brain_state":
         return "intent_risk_preview"
-    if event_type in {"approval_state", "risk_state", "execution_state", "phase_2_state", "action_catalog_state", "policy_state"}:
+    if event_type in {"approval_state", "spoken_approval_state", "risk_state", "execution_state", "phase_2_state", "phase_6_state", "action_catalog_state", "policy_state"}:
         return "approval_gate"
+    if event_type == "memory_brain_v3_state":
+        return "memory_privacy"
     if event_type == "execution_history_state":
         return "metadata_audit"
     if event_type == "remote_state":

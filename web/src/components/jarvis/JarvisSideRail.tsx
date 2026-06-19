@@ -12,6 +12,12 @@ export function JarvisSideRail({
   voiceState,
   cameraEnabled,
   localSystemContract,
+  phase6Status,
+  voiceProviderRegistry,
+  voiceSessionV2,
+  wakeRuntime,
+  sensorRuntime,
+  memoryBrainV3,
 }: {
   system: NonNullable<JarvisDashboardStatus["system"]>;
   approvals: NonNullable<JarvisDashboardStatus["approvals"]>;
@@ -19,7 +25,18 @@ export function JarvisSideRail({
   voiceState: string;
   cameraEnabled: boolean;
   localSystemContract: NonNullable<JarvisDashboardStatus["local_system_contract"]>;
+  phase6Status?: Record<string, any>;
+  voiceProviderRegistry?: Record<string, any>;
+  voiceSessionV2?: Record<string, any>;
+  wakeRuntime?: Record<string, any>;
+  sensorRuntime?: Record<string, any>;
+  memoryBrainV3?: Record<string, any>;
 }) {
+  const providerDiagnostics = voiceProviderRegistry?.diagnostics ?? {};
+  const voiceSessionV2State = voiceSessionV2?.state ?? {};
+  const wakeRuntimeState = wakeRuntime?.state ?? {};
+  const sensorRuntimeState = sensorRuntime?.state ?? {};
+  const memoryBrainV3State = memoryBrainV3?.state ?? {};
   const essentialRows = [
     ["estado general", valueText(system.api_status, UNKNOWN)],
     ["approvals pendientes", valueText(approvals.pending_count)],
@@ -36,6 +53,15 @@ export function JarvisSideRail({
     ["Hermes direct", localSystemContract.frontend_executes_hermes_directly ? "unexpected allowed" : "false"],
     ["voice", localSystemContract.real_browser_voice_loop_in_this_pr ? "local loop manual" : UNKNOWN],
     ["camera", localSystemContract.frontend_can_activate_real_camera ? "preview local manual" : UNKNOWN],
+  ] as const;
+
+  const phase6Rows = [
+    ["fase", valueText(phase6Status?.status, UNKNOWN)],
+    ["providers ready", valueText(providerDiagnostics.ready_provider_count, "0")],
+    ["session v2", valueText(voiceSessionV2State.current_state, "idle")],
+    ["wake opt-in", yesNo(wakeRuntimeState.enabled, "on", "off")],
+    ["sensors active", valueText(sensorRuntimeState.active_sensor_count, "0")],
+    ["memory v3", valueText(memoryBrainV3State.mode, UNKNOWN)],
   ] as const;
 
   return (
@@ -77,6 +103,18 @@ export function JarvisSideRail({
           <SafetyLine>El dashboard mira, no toca.</SafetyLine>
         </div>
       </article>
+
+      <details className="border border-cyan-100/10 bg-[#000711]/44 p-3 backdrop-blur" data-testid="jarvis-phase-6-runtime">
+        <summary className="cursor-pointer font-display text-[0.68rem] uppercase tracking-[0.14em] text-cyan-100/54">Phase 6 runtime</summary>
+        <div className="mt-3">
+          <StatusList items={phase6Rows} />
+        </div>
+        <div className="mt-3 grid gap-2">
+          <SafetyLine>Providers report readiness honestly.</SafetyLine>
+          <SafetyLine>Wake starts sessions; wake never approves.</SafetyLine>
+          <SafetyLine>Memory never grants permission.</SafetyLine>
+        </div>
+      </details>
 
       <details className="border border-cyan-100/10 bg-[#000711]/48 p-3 backdrop-blur" data-testid="jarvis-local-system-contract" data-panel-style="contract-folded-premium">
         <summary className="flex cursor-pointer items-center gap-2 font-expanded text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/76">

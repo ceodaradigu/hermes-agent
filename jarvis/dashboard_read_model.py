@@ -137,6 +137,26 @@ def build_mark_3_dashboard_status(
         lambda: app_state.memory_brain_v2.preview(),
         timeline,
     )
+    memory_brain_v3_status = _source(
+        "/mark-3/memory-brain-v3/status",
+        lambda: app_state.memory_brain_v3.status(),
+        timeline,
+    )
+    memory_brain_v3_compaction = _source(
+        "/mark-3/memory-brain-v3/compaction-preview",
+        lambda: app_state.memory_brain_v3.compaction_preview(),
+        timeline,
+    )
+    if memory_brain_v3_status:
+        memory_brain_v3_status = dict(memory_brain_v3_status)
+        memory_brain_v3_status["compaction"] = {
+            "status": memory_brain_v3_compaction.get("status", "preview_only_not_applied"),
+            "preview_only_not_applied": memory_brain_v3_compaction.get("status") == "preview_only_not_applied",
+            "permission_effect": memory_brain_v3_compaction.get("rules", {}).get("permission_effect", "none"),
+            "risk_downgrade_allowed": bool(memory_brain_v3_compaction.get("rules", {}).get("risk_downgrade_allowed", False)),
+            "summary_preview_count": len(memory_brain_v3_compaction.get("summary_preview", []) or []),
+            "source_endpoint": memory_brain_v3_compaction.get("source_endpoint", "/mark-3/memory-brain-v3/compaction-preview"),
+        }
     execution_control = _source(
         "/mark-3/execution/status",
         lambda: app_state.phase_1_governed_execution.status(),
@@ -165,6 +185,11 @@ def build_mark_3_dashboard_status(
     phase_5_status = _source(
         "/mark-3/phase-5/status",
         lambda: app_state.phase_5_local_identity_voice.phase_5_status(route_paths=route_path_list),
+        timeline,
+    )
+    phase_6_status = _source(
+        "/mark-3/phase-6/status",
+        lambda: app_state.phase_6_runtime.status(),
         timeline,
     )
     action_catalog = _source(
@@ -285,6 +310,26 @@ def build_mark_3_dashboard_status(
         ),
         timeline,
     )
+    voice_provider_registry = _source(
+        "/mark-3/voice-providers/status",
+        lambda: app_state.phase_6_voice_provider_registry.status(),
+        timeline,
+    )
+    voice_session_v2 = _source(
+        "/mark-3/voice-session-v2/status",
+        lambda: app_state.phase_6_voice_session_manager.status(),
+        timeline,
+    )
+    wake_runtime_opt_in = _source(
+        "/mark-3/wake-runtime/status",
+        lambda: app_state.phase_6_wake_runtime.status(),
+        timeline,
+    )
+    sensor_runtime_opt_in = _source(
+        "/mark-3/sensor-runtime/status",
+        lambda: app_state.phase_6_sensor_runtime.status(),
+        timeline,
+    )
     camera_control = _source(
         "/camera-control/status",
         lambda: app_state.camera_control_runtime.status(),
@@ -343,6 +388,8 @@ def build_mark_3_dashboard_status(
         personal_memory_status=personal_memory_status,
         memory_brain_v2_status=memory_brain_v2_status,
         memory_brain_v2_preview=memory_brain_v2_preview,
+        memory_brain_v3_status=memory_brain_v3_status,
+        memory_brain_v3_compaction=memory_brain_v3_compaction,
     )
     memory_brain_timeline = _memory_brain_timeline_events(memory_brain)
     persistent_audit_timeline = _persistent_audit_timeline_events(persistent_audit)
@@ -592,6 +639,13 @@ def build_mark_3_dashboard_status(
                 "Persistent trusted device identity, hardened local pairing, governed voice approval and notification readiness.",
             ),
             _module(
+                "Phase 6 Runtime",
+                "pilot" if phase_6_status.get("status") else UNKNOWN,
+                "/mark-3/phase-6/status",
+                "voice_wake_memory_sensor_runtime",
+                "Provider diagnostics, voice session v2, wake opt-in, Memory Brain v3 and sensor opt-in are visible without hidden capture.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -761,6 +815,11 @@ def build_mark_3_dashboard_status(
         "phase_3_status": phase_3_status,
         "phase_4_status": phase_4_status,
         "phase_5_status": phase_5_status,
+        "phase_6_status": phase_6_status,
+        "voice_provider_registry": voice_provider_registry,
+        "voice_session_v2": voice_session_v2,
+        "wake_runtime": wake_runtime_opt_in,
+        "sensor_runtime": sensor_runtime_opt_in,
         "governed_execution": execution_control,
         "action_catalog": action_catalog,
         "execution_history": execution_history,
@@ -779,6 +838,8 @@ def build_mark_3_dashboard_status(
         "telegram_bridge": telegram_bridge,
         "browser_verification": browser_verification,
         "memory_brain_v2": memory_brain_v2_status,
+        "memory_brain_v3": memory_brain_v3_status,
+        "memory_brain_v3_compaction": memory_brain_v3_compaction,
         "memory_brain": memory_brain,
         "mobile_companion": mobile_companion,
         "mobile": {
@@ -842,10 +903,19 @@ def build_mark_3_dashboard_status(
                 "phase_2_state",
                 "phase_3_state",
                 "phase_4_state",
+                "phase_5_state",
+                "phase_6_state",
                 "daemon_state",
                 "local_controller_state",
                 "trusted_channels_state",
                 "trusted_devices_state",
+                "local_pairing_state",
+                "voice_approval_state",
+                "voice_provider_state",
+                "wake_runtime_state",
+                "sensor_runtime_state",
+                "memory_brain_v3_state",
+                "spoken_approval_state",
                 "remote_pairing_state",
                 "telegram_bridge_state",
                 "stop_rollback_v2_state",
@@ -1245,6 +1315,12 @@ def build_local_doctor_status(
             "persistent_audit_endpoint": _route_exists(route_path_set, "/mark-3/audit/status"),
             "memory_brain_v2_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/status"),
             "memory_brain_v2_preview_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain/preview"),
+            "memory_brain_v3_endpoint": _route_exists(route_path_set, "/mark-3/memory-brain-v3/status"),
+            "phase_6_status_endpoint": _route_exists(route_path_set, "/mark-3/phase-6/status"),
+            "voice_provider_registry_endpoint": _route_exists(route_path_set, "/mark-3/voice-providers/status"),
+            "voice_session_v2_endpoint": _route_exists(route_path_set, "/mark-3/voice-session-v2/status"),
+            "wake_runtime_endpoint": _route_exists(route_path_set, "/mark-3/wake-runtime/status"),
+            "sensor_runtime_endpoint": _route_exists(route_path_set, "/mark-3/sensor-runtime/status"),
             "governed_execution_status_endpoint": _route_exists(route_path_set, "/mark-3/execution/status"),
             "phase_1_status_endpoint": _route_exists(route_path_set, "/mark-3/phase-1/status"),
             "governed_execution_preview_endpoint": _route_exists(route_path_set, "/mark-3/execution/preview"),
@@ -1295,6 +1371,21 @@ def build_local_doctor_status(
                 "memory_brain_v2",
                 "ok" if _route_exists(route_path_set, "/mark-3/memory-brain/status") else "missing",
                 "GET /mark-3/memory-brain/status",
+            ),
+            _doctor_check(
+                "phase_6_runtime",
+                "ok" if _route_exists(route_path_set, "/mark-3/phase-6/status") else "missing",
+                "GET /mark-3/phase-6/status",
+            ),
+            _doctor_check(
+                "voice_provider_registry",
+                "ok" if _route_exists(route_path_set, "/mark-3/voice-providers/status") else "missing",
+                "GET /mark-3/voice-providers/status",
+            ),
+            _doctor_check(
+                "sensor_runtime",
+                "ok" if _route_exists(route_path_set, "/mark-3/sensor-runtime/status") else "missing",
+                "GET /mark-3/sensor-runtime/status",
             ),
             _doctor_check(
                 "governed_execution",
@@ -2993,28 +3084,34 @@ def _memory_brain_projection(
     personal_memory_status: Dict[str, Any],
     memory_brain_v2_status: Dict[str, Any] | None = None,
     memory_brain_v2_preview: Dict[str, Any] | None = None,
+    memory_brain_v3_status: Dict[str, Any] | None = None,
+    memory_brain_v3_compaction: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     outcome_count = _int(memory_status.get("outcome_count"), default=0) or 0
     failure_count = _int(memory_status.get("failure_count"), default=0) or 0
     proposal_count = _int(learning_status.get("proposal_count"), default=0) or 0
     v2_status = dict(memory_brain_v2_status or {})
     v2_preview = dict(memory_brain_v2_preview or {})
+    v3_status = dict(memory_brain_v3_status or {})
+    v3_compaction = dict(memory_brain_v3_compaction or {})
     v2_counts = dict(v2_status.get("counts", {}) or v2_preview.get("counts", {}) or {})
     explanation = dict(v2_preview.get("explanation_preview", {}) or {})
     return {
         "state": {
             "mode": "visible_read_only_brain",
             "memory_brain_v2_mode": v2_status.get("state", {}).get("mode", "in_memory_explainable_memory_brain_v2"),
+            "memory_brain_v3_mode": v3_status.get("state", {}).get("mode", "controlled_useful_memory_runtime_v3"),
             "outcome_memory_available": bool(memory_status.get("available", False)),
             "learning_proposals_available": bool(learning_status.get("available", False)),
             "personal_memory_control_available": bool(personal_memory_status.get("approved_memory_records_available", False)),
             "memory_brain_v2_available": bool(v2_status.get("state", {}).get("available", False)),
+            "memory_brain_v3_available": bool(v3_status.get("state", {}).get("available", False)),
             "persistent": bool(v2_status.get("state", {}).get("persistent", False)),
             "storage_configured": bool(v2_status.get("state", {}).get("storage_configured", False)),
             "storage_path": v2_status.get("state", {}).get("storage_path", ".jarvis/memory_brain_v2/memory_brain_v2.sqlite3"),
             "in_memory_only": not bool(v2_status.get("state", {}).get("persistent", False)),
-            "compaction_available": False,
-            "forget_delete_available": "future_gated",
+            "compaction_available": bool(v3_status.get("state", {}).get("compaction_preview_available", False)),
+            "forget_delete_available": "audited_store",
             "memory_brain_v2_store_forget_delete_available": "python_store_audited",
             "memory_autoload_enabled": False,
             "memory_grants_permission": False,
@@ -3062,13 +3159,31 @@ def _memory_brain_projection(
             "requires_policy": True,
             "must_explain_source_records": True,
             "must_preserve_contradictions": True,
+            "phase_6_preview_available": bool(v3_status.get("state", {}).get("compaction_preview_available", False)),
+        },
+        "phase_6_compaction_preview": {
+            "status": v3_compaction.get("status", "preview_only_not_applied"),
+            "preview_only_not_applied": v3_compaction.get("status") == "preview_only_not_applied",
+            "available_now": bool(v3_status.get("state", {}).get("compaction_preview_available", False)),
+            "permission_effect": v3_compaction.get("rules", {}).get("permission_effect", "none"),
+            "risk_downgrade_allowed": bool(v3_compaction.get("rules", {}).get("risk_downgrade_allowed", False)),
+            "summary_preview_count": len(v3_compaction.get("summary_preview", []) or []),
+            "source_endpoint": v3_compaction.get("source_endpoint", "/mark-3/memory-brain-v3/compaction-preview"),
         },
         "forget_delete": {
             "status": "future_gated",
-            "memory_brain_v2_store_status": "audited_python_store",
-            "available_now": True,
+            "available_now": False,
+            "phase_6_audited_store_available": bool(v3_status.get("state", {}).get("available", False)),
             "requires_operator_review": True,
             "audit_required": True,
+        },
+        "phase_6_forget_delete": {
+            "status": "audited_store",
+            "memory_brain_v2_store_status": "audited_python_store",
+            "available_now": bool(v3_status.get("state", {}).get("available", False)),
+            "requires_operator_review": True,
+            "audit_required": True,
+            "permission_effect": "none",
         },
         "safety": {
             "sensitive_memory_requires_approval": True,
@@ -3088,12 +3203,15 @@ def _memory_brain_projection(
             "/personal-memory/status",
             "/mark-3/memory-brain/status",
             "/mark-3/memory-brain/preview",
+            "/mark-3/memory-brain-v3/status",
+            "/mark-3/memory-brain-v3/compaction-preview",
         ],
         "source_status": {
             "outcome_memory": _status_summary(memory_status),
             "learning_proposals": _status_summary(learning_status),
             "personal_memory": _status_summary(personal_memory_status),
             "memory_brain_v2": _status_summary(v2_status),
+            "memory_brain_v3": _status_summary(v3_status),
         },
         "preview_only": False,
         "read_only": True,

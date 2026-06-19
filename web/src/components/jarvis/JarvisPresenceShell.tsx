@@ -127,6 +127,12 @@ export function JarvisPresenceShell({
   const hermesRuntime = hermes.runtime_status ?? hermes;
   const voiceCore = dashboard.voice_core ?? fallbackOffline.voice_core!;
   const voiceSession = dashboard.voice_session ?? fallbackOffline.voice_session;
+  const phase6Status = dashboard.phase_6_status ?? {};
+  const voiceProviderRegistry = dashboard.voice_provider_registry ?? {};
+  const voiceSessionV2 = dashboard.voice_session_v2 ?? {};
+  const wakeRuntime = dashboard.wake_runtime ?? {};
+  const sensorRuntime = dashboard.sensor_runtime ?? {};
+  const memoryBrainV3 = dashboard.memory_brain_v3 ?? {};
   const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow;
   const voiceCoreState = voiceCore.state ?? {};
   const ttsState = voiceCore.tts_state ?? {};
@@ -254,6 +260,12 @@ export function JarvisPresenceShell({
           voiceState={voiceState}
           cameraEnabled={Boolean(cameraVisionState.camera_enabled) || localCameraActive}
           localSystemContract={localSystemContract}
+          phase6Status={phase6Status}
+          voiceProviderRegistry={voiceProviderRegistry}
+          voiceSessionV2={voiceSessionV2}
+          wakeRuntime={wakeRuntime}
+          sensorRuntime={sensorRuntime}
+          memoryBrainV3={memoryBrainV3}
         />
 
         <JarvisOrb3D

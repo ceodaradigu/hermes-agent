@@ -43,6 +43,8 @@ VOICE_APPROVAL_PHRASES = (
     "jarvis autorizo",
     "jarvis confirmo",
     "jarvis apruebo esta accion",
+    "jarvis autorizo con limite de x euros",
+    "jarvis autorizo durante x minutos",
 )
 VOICE_DENY_PHRASES = (
     "jarvis cancela",
@@ -56,12 +58,14 @@ class VoiceApprovalSession:
     session_id: str
     approval_id: str
     device_id: str
+    voice_session_id: str
     action_id: str
     action_key: str
     risk_level: str
     approval_level: str
     scope_fingerprint: str
     cost_summary: str
+    cost_limit_eur: Optional[float]
     duration_seconds: int
     readback_text_hash: str
     expected_challenge: str
@@ -70,6 +74,8 @@ class VoiceApprovalSession:
     expires_at: str
     active: bool = True
     readback_presented: bool = False
+    active_voice_session_verified: bool = True
+    opened_by_wake_only: bool = False
     consumed_at: Optional[str] = None
     denied_at: Optional[str] = None
     audit_ids: List[str] = field(default_factory=list)
@@ -1113,6 +1119,10 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
             "raw_audio_stored_by_default": False,
             "transcript_fixture_testable": True,
             "allowed_phrases": list(VOICE_APPROVAL_PHRASES),
+            "spanish_spoken_limit_phrases": [
+                "JARVIS, autorizo con limite de X euros",
+                "JARVIS, autorizo durante X minutos",
+            ],
             "deny_phrases": list(VOICE_DENY_PHRASES),
             "allowed_approval_levels": sorted(VOICE_APPROVAL_ALLOWED_LEVELS),
             "allowed_risk_levels": sorted(VOICE_APPROVAL_ALLOWED_RISKS),
@@ -1131,8 +1141,15 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
         readback_text: str,
         scope: Optional[List[str]] = None,
         cost_summary: str = "unknown; operator review required",
+        cost_limit_eur: Optional[float] = None,
         duration_seconds: int = VOICE_APPROVAL_TTL_SECONDS,
+        voice_session_active: bool = True,
+        opened_by_wake_only: bool = False,
     ) -> Dict[str, Any]:
+        if not voice_session_active:
+            raise ValueError("active voice session is required for voice approval")
+        if opened_by_wake_only:
+            raise ValueError("wake phrase alone cannot approve")
         device = self.phase5_store.get_device(device_id)
         if not _device_is_trusted(device):
             raise ValueError("trusted non-revoked device is required for voice approval")
@@ -1159,12 +1176,14 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
                 session_id=f"voice-approval-{uuid4()}",
                 approval_id=approval_id,
                 device_id=device_id,
+                voice_session_id=_safe_text(voice_session_id, limit=160),
                 action_id=str(envelope.get("action_id") or ""),
                 action_key=str(envelope.get("action_key") or ""),
                 risk_level=risk,
                 approval_level=level,
                 scope_fingerprint=scope_fingerprint,
                 cost_summary=_safe_text(cost_summary, limit=160),
+                cost_limit_eur=_safe_money_limit(cost_limit_eur),
                 duration_seconds=max(10, min(int(duration_seconds or VOICE_APPROVAL_TTL_SECONDS), VOICE_APPROVAL_TTL_SECONDS)),
                 readback_text_hash=_hash_text(_normalize_readback(readback_text)),
                 expected_challenge=expected,
@@ -1172,6 +1191,8 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
                 created_at=self.clock(),
                 expires_at=_after_seconds(max(10, min(int(duration_seconds or VOICE_APPROVAL_TTL_SECONDS), VOICE_APPROVAL_TTL_SECONDS))),
                 readback_presented=True,
+                active_voice_session_verified=True,
+                opened_by_wake_only=False,
             )
             self._voice_sessions[session.session_id] = session
         audit = self._audit_v2(
@@ -1180,7 +1201,16 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
             surface="voice_approval",
             risk_level=session.risk_level,
             approval_level=session.approval_level,
-            metadata={"approval_id": approval_id, "session_id": session.session_id, "device_id": device_id, "readback_presented": True},
+            metadata={
+                "approval_id": approval_id,
+                "session_id": session.session_id,
+                "voice_session_id": session.voice_session_id,
+                "device_id": device_id,
+                "readback_presented": True,
+                "active_voice_session_verified": True,
+                "cost_limit_eur": session.cost_limit_eur,
+                "duration_seconds": session.duration_seconds,
+            },
         )
         self._audit_v2(
             "voice_approval_readback_presented",
@@ -1231,7 +1261,9 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
         if normalized in VOICE_DENY_PHRASES:
             return self._voice_decision(session, "denied", "operator_denied_by_voice", transcript_hash)
         accepted = [_normalize_phrase(item) for item in session.accepted_phrases]
-        if normalized not in accepted:
+        spoken_limit = _parse_spoken_limit_phrase(normalized)
+        limit_accepted = bool(spoken_limit and not session.expected_challenge and _spoken_limit_matches(session, spoken_limit))
+        if normalized not in accepted and not limit_accepted:
             return self._voice_decision(session, "denied", "spoken_confirmation_phrase_mismatch", transcript_hash)
         if not self.phase5_store.record_voice_decision(session_id=session_id, approval_id=session.approval_id, transcript_hash=transcript_hash, decision="accepted"):
             return self._voice_decision(session, "replay_rejected", "spoken_approval_replay_detected", transcript_hash)
@@ -1251,7 +1283,14 @@ class Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(Phase4LocalC
             surface="voice_approval",
             risk_level=session.risk_level,
             approval_level=session.approval_level,
-            metadata={"approval_id": session.approval_id, "session_id": session_id, "device_id": device_id, "transcript_hash": transcript_hash},
+            metadata={
+                "approval_id": session.approval_id,
+                "session_id": session_id,
+                "voice_session_id": session.voice_session_id,
+                "device_id": device_id,
+                "transcript_hash": transcript_hash,
+                "spoken_limit": spoken_limit or {},
+            },
         )
         self._notification("voice_approval_accepted", "accepted", {"approval_id": session.approval_id, "session_id": session_id})
         return {
@@ -1505,6 +1544,38 @@ def _redacted_metadata(values: Mapping[str, Any]) -> Dict[str, Any]:
         if any(marker in lowered for marker in ("secret", "token", "password", "credential", "audio", "transcript", "raw")):
             safe[key] = "[redacted]"
     return safe
+
+
+def _safe_money_limit(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed != parsed or parsed in {float("inf"), float("-inf")} or not parsed >= 0:
+        return None
+    return round(parsed, 2)
+
+
+def _parse_spoken_limit_phrase(normalized: str) -> Optional[Dict[str, Any]]:
+    cost_match = re.fullmatch(r"jarvis autorizo con limite de ([0-9]+) euros?", normalized)
+    if cost_match:
+        return {"kind": "cost_eur", "amount": float(cost_match.group(1))}
+    duration_match = re.fullmatch(r"jarvis autorizo durante ([0-9]+) minutos?", normalized)
+    if duration_match:
+        return {"kind": "duration_minutes", "minutes": int(duration_match.group(1))}
+    return None
+
+
+def _spoken_limit_matches(session: VoiceApprovalSession, spoken_limit: Mapping[str, Any]) -> bool:
+    if spoken_limit.get("kind") == "cost_eur":
+        if session.cost_limit_eur is None:
+            return False
+        return float(spoken_limit.get("amount") or 0) <= float(session.cost_limit_eur)
+    if spoken_limit.get("kind") == "duration_minutes":
+        return int(spoken_limit.get("minutes") or 0) * 60 <= int(session.duration_seconds)
+    return False
 
 
 def _json_dumps(value: Any) -> str:
