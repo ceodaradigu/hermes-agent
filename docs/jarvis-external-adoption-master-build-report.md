@@ -532,3 +532,31 @@ always-on ni ejecución:
     `getUserMedia` automático.
 
 Documento de cierre: `docs/jarvis-pr-158-conversational-brain-voice-session-wake-architecture.md`.
+
+## PR #164 — External Adoption Notes: Persistent Audit + Memory Brain v2
+
+Repos revisadas para esta PR:
+
+| Repo | Licencia visible | Decision |
+|---|---|---|
+| `TheStack-ai/jarvis-orb` | MIT | Reimplementar patrones de memoria local, contradicciones, entidades y visibilidad. No copiar MCP/orb/runtime. |
+| `getzep/graphiti` | Apache-2.0 | Tomar solo patron conceptual de temporal/provenance memory. No adoptar Neo4j/graph runtime. |
+| `mem0ai/mem0` | Apache-2.0 | Tomar patron conceptual de lifecycle de memoria. No copiar algoritmo ni dependencia. |
+| `chroma-core/chroma` | Apache-2.0 | No adoptar vector DB obligatoria en Fase 1. |
+| `codenotary/immudb` | Business Source License 1.1; Change License Apache 2.0 | Reimplementar hash-chain local simple; no servidor ni libreria. |
+| `sigstore/rekor` | Apache-2.0 | Reimplementar idea metadata transparency log local; no servidor externo. |
+| `google/trillian` | Apache-2.0 | No adoptar infraestructura distribuida; solo referencia de log verificable. |
+| `Yelp/detect-secrets` | Apache-2.0 | Reimplementar marcadores locales de redaccion; no scanner externo. |
+| `trufflesecurity/trufflehog` | AGPL-3.0 | No copiar ni instalar; solo referencia conceptual de clases de credenciales. |
+| `semgrep/semgrep` | LGPL-2.1 | No integrar runtime/ruleset; solo referencia conceptual de reglas. |
+
+Resultado:
+
+- Se prefirio SQLite local primero.
+- No se agregaron dependencias nuevas.
+- No se metio graph DB, vector DB, cloud memory ni servidor externo.
+- Codigo copiado/adaptado desde repos externas: ninguno.
+- Patrones reimplementados: hash-chain, lifecycle de memoria explicable,
+  superseding/contradiction, redaccion basica metadata-only.
+
+Documento: `docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.

@@ -1153,3 +1153,35 @@ despacha Hermes directamente y la wake phrase nunca aprueba.
 No implementa wake real always-on, STT/TTS local backend serio, aprobación real
 desde voz/frontend, dispatch Hermes end-to-end, lectura de secretos ni memoria
 automática.
+
+## PR #164 — Persistent Sensor/Voice Audit + Memory Brain v2
+
+PR #164 añade auditoria persistente metadata-only y Memory Brain v2 local antes
+de activar Hermes end-to-end.
+
+- `jarvis/persistent_audit.py` implementa `PersistentAuditLedger` con SQLite
+  opcional, `schema_version=jarvis.persistent_audit.v1`, hash-chain SHA-256
+  (`previous_hash` + `entry_hash`) y `verify_chain()` para tamper detection
+  basica.
+- `jarvis/memory_brain_v2.py` implementa `MemoryBrainV2Store` con entities,
+  facts, preferences, decisions, projects, contradictions, provenance,
+  confidence, sensitivity, approval/review flags, active/forgotten/deleted,
+  `reason_to_remember`, `influence_summary` y `why_used`.
+- Los stores escriben bajo `.jarvis/audit/persistent_audit.sqlite3` y
+  `.jarvis/memory_brain_v2/memory_brain_v2.sqlite3` solo cuando hay
+  `base_dir`/`db_path` explicito o `JARVIS_LOCAL_STATE_DIR`/`JARVIS_STATE_DIR`;
+  `create_app()` por defecto no crea `.jarvis` en el repo.
+- Nuevos GET read-only:
+  `/mark-3/audit/status`, `/mark-3/memory-brain/status`,
+  `/mark-3/memory-brain/preview`.
+- `/mark-3/dashboard/status`, `/events` y `/stream` exponen
+  `persistent_audit_state` y `memory_brain_v2_state`, metadata-only.
+- `/jarvis` muestra audit/memory en drawer `Sistemas`; no añade `/execute`,
+  Hermes directo, POST/PUT/DELETE peligrosos ni approvals reales.
+
+Sigue bloqueado: audio bruto, frames, secretos, `.env`, tokens, passwords,
+cookies, session material, full transcripts, sensores nuevos, providers
+externos, graph/vector DB obligatoria, cloud memory, dinero, deploy y email.
+
+Documento de cierre:
+`docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.

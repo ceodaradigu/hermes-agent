@@ -1137,24 +1137,61 @@ export interface JarvisRawAudioRecording {
 }
 
 export interface JarvisMemoryBrain {
-  state?: Record<string, string | boolean>;
+  state?: Record<string, string | boolean | number>;
   entities?: Array<Record<string, unknown>>;
+  facts?: Array<Record<string, unknown>>;
   preferences?: Array<Record<string, unknown>>;
   decisions?: Array<Record<string, unknown>>;
+  projects?: Array<Record<string, unknown>>;
   contradictions?: Array<Record<string, unknown>>;
+  active_memories?: Array<Record<string, unknown>>;
+  pending_review?: Array<Record<string, unknown>>;
+  forgotten_deleted?: Array<Record<string, unknown>>;
   counts?: {
     outcomes?: number | string;
     failures?: number | string;
     learning_proposals?: number | string;
     audit_events?: number | string;
+    entities?: number | string;
+    facts?: number | string;
+    preferences?: number | string;
+    decisions?: number | string;
+    projects?: number | string;
+    contradictions?: number | string;
+    active_memories?: number | string;
+    pending_review?: number | string;
+    forgotten_deleted?: number | string;
   };
   why_jarvis_remembers?: string[];
+  explanation_preview?: {
+    why_jarvis_remembers?: string[];
+    what_memory_influenced?: string[];
+    pending_approval?: Array<Record<string, unknown>>;
+  };
   compaction?: Record<string, string | boolean>;
   forget_delete?: Record<string, string | boolean>;
   safety?: Record<string, boolean>;
   source_endpoints?: string[];
   source_status?: Record<string, unknown>;
   preview_only?: boolean;
+  read_only?: boolean;
+}
+
+export interface JarvisPersistentAudit {
+  schema_version?: string;
+  state?: Record<string, string | boolean | number | null>;
+  chain?: {
+    valid?: boolean;
+    checked_count?: number | string;
+    first_invalid_audit_id?: string | null;
+    first_invalid_reason?: string | null;
+    last_entry_hash?: string | null;
+  };
+  supported_event_types?: string[];
+  recent_entries?: Array<Record<string, unknown>>;
+  retention?: Record<string, string | boolean>;
+  safety?: Record<string, boolean>;
+  source_endpoint?: string;
   read_only?: boolean;
 }
 
@@ -1261,9 +1298,11 @@ export interface JarvisDashboardStatus {
   };
   camera_vision?: JarvisCameraVision;
   raw_audio_recording?: JarvisRawAudioRecording;
+  persistent_audit?: JarvisPersistentAudit;
   sensor_ledger?: JarvisSensorLedger;
   event_bus?: Record<string, any>;
   policy_status?: Record<string, any>;
+  memory_brain_v2?: Record<string, any>;
   memory_brain?: JarvisMemoryBrain;
   mobile_companion?: JarvisMobileCompanion;
   finance_roi?: JarvisFinanceRoi;

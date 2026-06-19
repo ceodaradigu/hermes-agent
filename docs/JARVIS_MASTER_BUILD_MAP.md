@@ -1665,3 +1665,35 @@ PR #158 formaliza la siguiente base segura:
 Sigue fuera de alcance: wake listener persistente real, always-on STT, STT/TTS
 local backend serio, aprobación real por voz, ejecución Hermes end-to-end y
 lectura de secretos/credenciales.
+
+## PR #164 — Persistent Sensor/Voice Audit + Memory Brain v2
+
+Estado: implementado en control-plane local/read-only.
+
+Incluye:
+
+- `PersistentAuditLedger` en `jarvis/persistent_audit.py`.
+- `MemoryBrainV2Store` en `jarvis/memory_brain_v2.py`.
+- SQLite local opcional bajo `.jarvis/` solo con instancia explicita o
+  `JARVIS_LOCAL_STATE_DIR`/`JARVIS_STATE_DIR`.
+- Hash-chain metadata-only para voz/sensores/intake/brain/memory/approval.
+- Memory lifecycle prepare-only: propose, review, approve, activate,
+  deactivate, supersede contradiction, forget/delete metadata.
+- Nuevos GET read-only:
+  - `/mark-3/audit/status`
+  - `/mark-3/memory-brain/status`
+  - `/mark-3/memory-brain/preview`
+- Dashboard/event stream:
+  - `persistent_audit`
+  - `memory_brain_v2`
+  - `persistent_audit_state`
+  - `memory_brain_v2_state`
+- `/jarvis` muestra ambos en `Sistemas`, no en la experiencia central.
+
+No incluye ejecucion Hermes, `/execute`, approvals reales desde UI, sensores
+nuevos, auto mic/camera, raw audio/frame storage, LLM externo, cloud memory ni
+graph/vector DB obligatoria.
+
+Siguiente recomendado: PR #165 consola gobernada de review de memoria + rotacion/export auditado.
+
+Documento: `docs/jarvis-pr-164-persistent-audit-memory-brain-v2.md`.
