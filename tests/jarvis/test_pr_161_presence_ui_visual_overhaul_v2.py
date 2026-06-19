@@ -266,7 +266,7 @@ def test_pr_161_smart_bar_human_first_and_panels_are_folded_premium_not_dashboar
     for marker in (
         'data-panel-style="premium-minimal-presence"',
         'data-panel-style="contract-folded-premium"',
-        'data-panel-style="compact-approval-not-dashboard"',
+        'data-panel-style="compact-governed-approval-not-dashboard"',
         'data-side-panel-style="premium-quiet-not-dashboard"',
         'data-panel-style="premium-camera-opt-in-no-upload"',
         'data-panel-style="folded-raw-audio-local-only"',

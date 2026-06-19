@@ -20,7 +20,11 @@ import {
   selectPreferredSpanishVoice,
 } from "./useJarvisSpeechSynthesis";
 
-export function useLocalVoiceLoop(): LocalVoiceLoopController {
+interface LocalVoiceLoopOptions {
+  onIntentSubmitted?: (text: string) => void;
+}
+
+export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoiceLoopController {
   const defaultIntentPreview: JarvisIntentPreview = {
     intent_detected: "idle",
     confidence: 0,
@@ -59,6 +63,11 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
   const ttsQueueRef = useRef<Array<{ text: string; tone: JarvisVoiceTone }>>([]);
   const ttsTurnRef = useRef(0);
   const lastSpokenTextRef = useRef("");
+  const onIntentSubmittedRef = useRef(options.onIntentSubmitted);
+
+  useEffect(() => {
+    onIntentSubmittedRef.current = options.onIntentSubmitted;
+  }, [options.onIntentSubmitted]);
 
   function setConversationActiveFlag(active: boolean) {
     conversationActiveRef.current = active;
@@ -227,6 +236,7 @@ export function useLocalVoiceLoop(): LocalVoiceLoopController {
       return;
     }
     setLocalVoiceState("transcribing");
+    onIntentSubmittedRef.current?.(finalText);
     scheduleLocalVoiceStep(() => {
       if (cancelledRef.current) return;
       const response = buildLocalJarvisResponse(finalText);

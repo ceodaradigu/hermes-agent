@@ -65,6 +65,26 @@ AUDIT_EVENT_TYPES = {
     "memory_proposal_deactivated",
     "memory_proposal_forgotten",
     "memory_proposal_deleted",
+    "intake_created",
+    "preview_created",
+    "risk_classified",
+    "approval_requested",
+    "approval_approved",
+    "approval_rejected",
+    "approval_cancelled",
+    "approval_expired",
+    "dispatch_requested",
+    "dispatch_started",
+    "dispatch_blocked",
+    "dispatch_completed",
+    "dispatch_failed",
+    "stop_requested",
+    "stop_completed",
+    "stop_unsupported",
+    "rollback_plan_created",
+    "memory_influence_used",
+    "voice_session_intent_submitted",
+    "ui_approval_action",
     "approval_required",
     "approval_blocked",
     "approval_expired",
@@ -213,7 +233,12 @@ class PersistentAuditLedger:
         safe_metadata, redaction_summary = sanitize_audit_metadata(metadata or {})
         if contains_full_transcript:
             redaction_summary = _merge_redaction_summary(redaction_summary, blocked_field_count=1, category="raw_text_payload")
-        if hermes_dispatch_allowed:
+        governed_dispatch_allowed = (
+            bool(hermes_dispatch_allowed)
+            and normalized_event_type in {"dispatch_started", "dispatch_completed"}
+            and safe_metadata.get("governed_dispatch") is True
+        )
+        if hermes_dispatch_allowed and not governed_dispatch_allowed:
             redaction_summary = _merge_redaction_summary(redaction_summary, blocked_field_count=1, category="dispatch_gate_forced_closed")
 
         with self._lock:
@@ -237,7 +262,7 @@ class PersistentAuditLedger:
                 "contains_secret": False,
                 "contains_credential": False,
                 "contains_full_transcript": False,
-                "hermes_dispatch_allowed": False,
+                "hermes_dispatch_allowed": governed_dispatch_allowed,
                 "previous_hash": previous_hash,
                 "tamper_evident": True,
             }
@@ -272,7 +297,7 @@ class PersistentAuditLedger:
                     0,
                     0,
                     0,
-                    0,
+                    int(governed_dispatch_allowed),
                     row["previous_hash"],
                     row["entry_hash"],
                     1,

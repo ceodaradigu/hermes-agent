@@ -124,16 +124,18 @@ def test_mark_3_dashboard_status_contains_required_modules_and_sources():
         assert modules[name]["notes"]
 
 
-def test_mark_3_dashboard_status_keeps_approvals_sensors_and_execution_disabled():
+def test_mark_3_dashboard_status_keeps_sensors_and_direct_execution_disabled_while_approvals_are_backend_gated():
     payload, _ = _payload()
 
     assert payload["approvals"]["pending_count"] == 0
-    assert payload["approvals"]["action_buttons_enabled"] is False
-    assert payload["approvals"]["all_actions_read_only"] is True
+    assert payload["approvals"]["action_buttons_enabled"] is True
+    assert payload["approvals"]["all_actions_read_only"] is False
     assert payload["approvals"]["wake_phrase_can_approve"] is False
-    assert payload["approvals"]["frontend_can_approve"] is False
-    assert payload["approvals"]["frontend_can_reject"] is False
+    assert payload["approvals"]["frontend_can_approve"] is True
+    assert payload["approvals"]["frontend_can_reject"] is True
     assert payload["approvals"]["frontend_can_modify_scope"] is False
+    assert payload["approvals"]["governed_backend_only"] is True
+    assert payload["approvals"]["frontend_direct_hermes_allowed"] is False
     assert payload["approvals"]["critical_actions_require_strong_approval"] is True
     assert payload["hermes_execution"]["frontend_direct_execution_allowed"] is False
     assert payload["voice_wake"]["wake_phrase_can_approve"] is False
@@ -966,8 +968,8 @@ def test_mark_3_dashboard_status_contains_enriched_approval_summary_and_cards():
     assert approvals["blocked_count"] >= 1
     assert approvals["expired_count"] == 0
     assert approvals["preview_count"] == len(cards)
-    assert approvals["cards_state"] == "preview/read-only"
-    assert approvals["preview_only"] is True
+    assert approvals["cards_state"] == "governed/backend-gated"
+    assert approvals["preview_only"] is False
 
     required_fields = {
         "id",
@@ -1218,11 +1220,11 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
     hardening = pilot["hardening_notes"]
     limitations = pilot["pilot_limitations"]
 
-    assert state["mode"] == "read_only_pilot"
+    assert state["mode"] == "governed_pilot"
     assert state["dashboard_route"] == "/jarvis"
     assert state["backend_status_endpoint"] == "/mark-3/dashboard/status"
     assert state["frontend_can_execute"] is False
-    assert state["frontend_can_approve"] is False
+    assert state["frontend_can_approve"] is True
     assert state["frontend_can_activate_sensors"] is True
     assert state["sensor_activation_scope"] == "explicit local voice, camera preview, local video recording and raw audio recording controls only"
     assert state["frontend_can_move_money"] is False
@@ -1251,7 +1253,7 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
         "no_fake_metrics",
         "no_frontend_execute",
         "no_uncontrolled_sensor_activation",
-        "no_post_put_delete",
+        "governed_post_only",
     ):
         assert name in checks
         assert checks[name]["status"] in {"passed", "preview", "unknown", "failed"}
@@ -1265,9 +1267,9 @@ def test_mark_3_dashboard_status_contains_frontend_pilot_hardening_contract():
     assert hardening["full_pytest_required_before_merge"] is True
 
     for limitation in (
-        "no real approvals",
-        "no real mission submit",
-        "no real Hermes execution",
+        "critical double/triple approval is not configured",
+        "mission submit is limited to governed preview/approval/dispatch",
+        "Hermes execution is limited to exact local read via governed bridge",
         "browser voice support depends on SpeechRecognition/speechSynthesis",
         "browser camera preview is local-only and has no backend vision analysis",
         "browser raw audio recorder is local-only and has no backend upload",
@@ -1322,7 +1324,7 @@ def test_mark_3_dashboard_status_contains_local_system_contract():
     assert visual["folded_history"] == "collapsed preview"
 
     for key in (
-        "no_post_put_delete_from_jarvis_page",
+        "governed_execution_post_only",
         "no_execute_route",
         "no_frontend_hermes_execution",
         "browser_voice_permission_manual_only",
@@ -1350,7 +1352,7 @@ def test_mark_3_dashboard_status_declares_safety_boundaries():
     hermes_safety = payload["hermes_execution"]["safety"]
 
     assert safety["frontend_can_execute"] is False
-    assert safety["frontend_can_approve"] is False
+    assert safety["frontend_can_approve"] is True
     assert safety["no_frontend_execute"] is True
     assert safety["no_duplicate_hermes_runtime"] is True
     assert safety["no_get_user_media"] is False
@@ -1371,7 +1373,8 @@ def test_mark_3_dashboard_status_declares_safety_boundaries():
     assert safety["no_direct_hermes_call_from_voice"] is True
     assert safety["no_direct_hermes_call_from_camera"] is True
     assert safety["no_frontend_hermes_execution"] is True
-    assert safety["no_post_put_delete_from_jarvis_page"] is True
+    assert safety["no_post_put_delete_from_jarvis_page"] is False
+    assert safety["governed_execution_post_only"] is True
     assert safety["approval_required_before_execution"] is True
     assert safety["wake_phrase_is_not_permission"] is True
     assert safety["audit_required"] is True
@@ -1457,8 +1460,9 @@ def test_mark_3_dashboard_status_sources_are_declared_get_read_only_routes():
         assert endpoint in methods_by_path
         assert methods_by_path[endpoint] == {"GET"}
 
-    assert payload["read_only_contract"]["allowed_http_methods_for_frontend"] == ["GET"]
-    assert payload["read_only_contract"]["internal_sources_are_read_only_status_or_audit"] is True
+    assert payload["read_only_contract"]["allowed_http_methods_for_frontend"] == ["GET", "POST /mark-3/execution/* governed only"]
+    assert payload["read_only_contract"]["internal_sources_are_read_only_status_or_audit"] is False
+    assert "/mark-3/execution/dispatch" in payload["read_only_contract"]["governed_mutation_sources"]
     assert payload["read_only_contract"]["frontend_must_not_request_sensor_permissions"] is False
     assert payload["read_only_contract"]["frontend_sensor_permission_scope"] == "manual browser SpeechRecognition, manual camera preview, manual local raw audio recorder"
     assert payload["read_only_contract"]["frontend_must_not_request_camera_permissions"] is False
@@ -1538,7 +1542,8 @@ def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract()
     assert state["status_endpoint"] == "/mark-3/dashboard/status"
     assert state["backend_read_model_connected"] is True
     assert state["frontend_execution_enabled"] is False
-    assert state["approvals_real_enabled"] is False
+    assert state["approvals_real_enabled"] is True
+    assert state["governed_execution_enabled"] is True
     assert state["hermes_direct_execution_enabled"] is False
     assert state["voice_real_enabled"] is True
     assert state["browser_local_voice_loop_enabled"] is True
@@ -1552,7 +1557,8 @@ def test_mark_3_dashboard_status_contains_visual_command_center_pilot_contract()
     assert state["credentials_enabled"] is False
 
     assert safety["pilot_is_read_only"] is True
-    assert safety["dashboard_may_read_status_only"] is True
+    assert safety["dashboard_may_read_status_only"] is False
+    assert safety["dashboard_may_call_governed_execution_endpoints"] is True
     assert safety["no_side_effects"] is True
     assert safety["no_real_world_actions"] is True
     assert safety["no_background_workers"] is True
@@ -1595,7 +1601,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_required_panels_are
     for panel in panels.values():
         assert panel["expected"] is True
         assert panel["source"]
-        assert panel["status"] in {"ready", "preview", "disabled", "unknown"}
+        assert panel["status"] in {"ready", "preview", "gated", "disabled", "unknown"}
         assert panel["can_execute"] is False
         assert panel["notes"]
 
@@ -1633,7 +1639,7 @@ def test_mark_3_dashboard_status_visual_command_center_pilot_read_only_checks_an
         assert name in checks
 
     assert pilot["pilot_findings"]["findings"] == []
-    assert "real approvals not wired" in pilot["pilot_findings"]["known_limitations"]
+    assert "critical double/triple approval is not configured and blocks execution" in pilot["pilot_findings"]["known_limitations"]
     assert "dependency hardening may need separate PR due npm audit vulnerabilities" in pilot["pilot_findings"]["known_limitations"]
 
 
