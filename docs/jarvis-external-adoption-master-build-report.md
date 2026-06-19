@@ -1,6 +1,47 @@
 # JARVIS External Adoption Master Build Report
 
-Fecha: 2026-06-18
+Fecha: 2026-06-19
+
+## Actualizacion PR #166 - Phase 2 Local Assistant Runtime
+
+Repos revisadas para esta PR:
+
+| Repo | Licencia visible | Decision |
+|---|---|---|
+| `langchain-ai/langgraph` | MIT | Reimplementar patron conceptual de state/checkpoint, durable execution, HITL y memory provenance; no dependencia. |
+| `OpenInterpreter/open-interpreter` | Apache-2.0 | Usar riesgos de ejecucion local como referencia; no shell libre ni runtime externo. |
+| `Significant-Gravitas/AutoGPT` | Polyform Shield para `autogpt_platform`; MIT fuera de platform | Referencia de agent loop/safety; no adoptar runtime. |
+| `crewAIInc/crewAI` | MIT | Referencia de task orchestration; no dependencia. |
+| `microsoft/autogen` | MIT para codigo; CC-BY-4.0 para docs | Referencia de approval/tool execution; no dependencia. |
+| `OpenVoiceOS/ovos-core` | Apache-2.0 | Referencia de separacion intent/skills y stop/deactivate; no runtime de voz. |
+| `OpenVoiceOS/ovos-audio` | Apache-2.0 | Referencia de separacion de servicio de audio; no runtime adoptado. |
+| `dscripka/openWakeWord` | Apache-2.0 | Wake readiness conceptual; no activar always-on. |
+| `SYSTRAN/faster-whisper` | MIT | STT local readiness; no instalar ni descargar modelos. |
+| `ggml-org/whisper.cpp` | MIT | STT local readiness; no compilar. |
+| `OHF-Voice/piper1-gpl` | GPL-3.0 | TTS local readiness/licencia; no copiar ni instalar. |
+| `getzep/graphiti` | Apache-2.0 | Memory provenance conceptual; no graph DB. |
+| `mem0ai/mem0` | Apache-2.0 | Memory influence/lifecycle conceptual; no cloud/vector DB. |
+| `sigstore/rekor` | Apache-2.0 | Transparency/audit metadata-only conceptual; no servidor externo. |
+| `google/trillian` | Apache-2.0 | Verifiable log conceptual; no infraestructura distribuida. |
+| `Yelp/detect-secrets` | Apache-2.0 | Categorias de secrets/redaccion; no scanner pesado. |
+| `trufflesecurity/trufflehog` | AGPL-3.0 | Riesgos/clases de credenciales; no copiar ni instalar. |
+| `semgrep/semgrep` | LGPL-2.1 | Guardrails estaticos conceptuales; no dependencia ni ruleset. |
+
+Resultado:
+
+- No se copio codigo externo.
+- No se adoptaron runtimes, agentes externos, graph DB, vector DB, cloud
+  memory, servidores externos ni dependencias pesadas.
+- Patrones reimplementados localmente: approval state machine v2,
+  allowlisted action catalog, execution history metadata-only, stop/rollback
+  contracts, voice/wake readiness, browser verification checklist, daemon/tray
+  readiness y secret-deny/redaction gates.
+- `repo.file.read_safe` reutiliza el Hermes real existente
+  `Mark3HermesRuntimeBridge`; el resto son acciones locales allowlisted con
+  argv fijo o status/read model.
+- Documentacion completa:
+  `docs/jarvis-pr-166-phase-2-local-assistant-runtime.md` y
+  `docs/jarvis-phase-2-local-assistant-runtime-report.md`.
 
 ## Actualizacion PR #165 - Phase 1 Completion: Governed Execution Pilot
 
