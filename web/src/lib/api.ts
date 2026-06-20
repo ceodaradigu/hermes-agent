@@ -38,6 +38,30 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
+  classifyJarvisVoiceUiIntent: (payload: JarvisPhase10TextRequest) =>
+    fetchJSON<JarvisPhase10VoiceUiDecision>("/mark-3/phase-10/voice-ui/intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  prepareJarvisAppLaunch: (payload: JarvisPhase10AppLaunchRequest) =>
+    fetchJSON<Record<string, unknown>>("/mark-3/phase-10/app-launcher/prepare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  prepareJarvisBrowserIntent: (payload: JarvisPhase10TextRequest) =>
+    fetchJSON<Record<string, unknown>>("/mark-3/phase-10/browser-intent/prepare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  decideJarvisModelRoute: (payload: JarvisModelRouterDecisionRequest) =>
+    fetchJSON<Record<string, unknown>>("/mark-3/model-router/decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
@@ -856,6 +880,56 @@ export interface JarvisConversationTurnRequest {
   context_flags?: Record<string, unknown> | null;
 }
 
+export interface JarvisPhase10TextRequest {
+  text: string;
+  confidence?: number;
+  actor?: string;
+}
+
+export interface JarvisPhase10AppLaunchRequest {
+  app_name: string;
+  actor?: string;
+}
+
+export interface JarvisModelRouterDecisionRequest {
+  task_type?: string;
+  quality_required?: string;
+  estimated_input_tokens?: number;
+  estimated_output_tokens?: number;
+  max_cost_eur?: number | null;
+}
+
+export interface JarvisPhase10VoiceUiDecision {
+  schema_version?: string;
+  intent_type?: string;
+  intent_name: string;
+  normalized_text?: string;
+  confidence?: number | string;
+  reason?: string;
+  risk_level?: string;
+  requires_approval?: boolean;
+  requires_exact_phrase?: boolean;
+  required_phrase?: string;
+  trusted_active_session_required?: boolean;
+  action_id?: string;
+  ui_action?: {
+    type?: string;
+    command?: string;
+    enabled?: boolean;
+    tab?: string;
+    mode?: "jarvis" | "utron" | string;
+  };
+  fallback_question?: string;
+  spanish_response?: string;
+  would_execute?: boolean;
+  hermes_dispatch_allowed?: boolean;
+  frontend_direct_hermes_allowed?: boolean;
+  raw_audio_stored?: boolean;
+  raw_audio_sent_to_backend?: boolean;
+  wake_phrase_can_approve?: boolean;
+  audit_metadata?: Record<string, unknown>;
+}
+
 export interface JarvisConversationTurnResponse {
   schema_version?: string;
   turn_id: string;
@@ -917,6 +991,7 @@ export interface JarvisConversationTurnResponse {
     raw_text_omitted?: boolean;
     approval_is_not_execution?: boolean;
   };
+  phase_10?: Record<string, unknown>;
 }
 
 export interface JarvisConversationalBrain {
@@ -1837,6 +1912,16 @@ export interface JarvisDashboardStatus {
   phase_8_status?: Record<string, any>;
   phase_9_status?: Record<string, any>;
   product_operator?: Record<string, any>;
+  phase_10_status?: Record<string, any>;
+  phase_10?: Record<string, any>;
+  persona?: Record<string, any>;
+  model_router?: Record<string, any>;
+  api_model_router?: Record<string, any>;
+  voice_ui_intent_router?: Record<string, any>;
+  app_launcher?: Record<string, any>;
+  browser_intents?: Record<string, any>;
+  phase_10_approval_v2?: Record<string, any>;
+  phase_10_voice_provider_architecture?: Record<string, any>;
   phase_7_adapters?: Record<string, any>;
   filesystem_adapter?: Record<string, unknown>;
   github_worktree_adapter?: Record<string, unknown>;

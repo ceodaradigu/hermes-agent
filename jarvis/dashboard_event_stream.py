@@ -33,6 +33,13 @@ ALLOWED_EVENT_TYPES = (
     "phase_7_state",
     "phase_8_state",
     "phase_9_state",
+    "phase_10_state",
+    "persona_state",
+    "model_router_state",
+    "voice_ui_intent_state",
+    "app_launcher_state",
+    "browser_intent_state",
+    "voice_provider_architecture_state",
     "product_operator_state",
     "product_mission_state",
     "product_builder_state",
@@ -649,6 +656,92 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "external_provider_calls": False,
                 "fake_revenue_allowed": False,
                 "no_hidden_scheduler": True,
+            },
+        ),
+        _event(
+            generated_at,
+            "phase_10_state",
+            "/mark-3/phase-10/status",
+            _get(dashboard_status, "phase_10_status.status", "implemented_as_governed_hands_free_contracts_and_browser_pilot"),
+            {
+                "schema_version": _get(dashboard_status, "phase_10_status.schema_version", "jarvis.phase_10_hands_free_runtime_persona_api_brain_router.v1"),
+                "wake_stop_phrase_contracts": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.wake_stop_phrase_contracts", True)),
+                "continuous_browser_conversation_loop": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.continuous_browser_conversation_loop", True)),
+                "voice_ui_intent_router": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.voice_ui_intent_router", True)),
+                "app_launcher_intents": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.governed_app_launcher_intents", True)),
+                "browser_navigation_intents": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.governed_browser_navigation_intents", True)),
+                "persona_mode": _get(dashboard_status, "phase_10_status.persona.state.mode", "jarvis"),
+                "model_router": _bool(_get(dashboard_status, "phase_10_status.implemented_blocks.model_api_router_v1", True)),
+                "frontend_direct_hermes": False,
+                "wake_phrase_can_approve": False,
+                "raw_audio_stored": False,
+                "provider_keys_exposed": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "persona_state",
+            "/mark-3/phase-10/persona/status",
+            _get(dashboard_status, "persona.state.mode", "jarvis"),
+            {
+                "visible_name": _get(dashboard_status, "persona.state.visible_name", "JARVIS"),
+                "theme": _get(dashboard_status, "persona.state.theme", "cyan"),
+                "voice_preference": _get(dashboard_status, "persona.state.voice_preference", "browser fallback"),
+                "utron_can_bypass_approvals": False,
+                "risk_hidden_or_downgraded": False,
+                "severe_abuse_toward_david_allowed": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "model_router_state",
+            "/mark-3/model-router/status",
+            _get(dashboard_status, "model_router.state.mode", "model_api_router_v1_readiness"),
+            {
+                "monthly_budget_eur": _get(dashboard_status, "model_router.state.monthly_budget_eur", 30.0),
+                "remaining_eur": _get(dashboard_status, "model_router.state.remaining_eur", 30.0),
+                "default_policy": _get(dashboard_status, "model_router.state.default_policy", "local_when_good_enough_paid_when_quality_matters"),
+                "local_ready": _bool(_get(dashboard_status, "model_router.providers.local.ready", False)),
+                "openrouter_configured": _bool(_get(dashboard_status, "model_router.providers.openrouter.configured", False)),
+                "external_call_performed": False,
+                "provider_keys_exposed": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "voice_ui_intent_state",
+            "/mark-3/phase-10/voice-ui/intent",
+            _get(dashboard_status, "voice_ui_intent_router.schema_version", "jarvis.phase_10.voice_ui_intent_router.v1"),
+            {
+                "deterministic_spanish_matching": True,
+                "fallback_question_on_ambiguity": True,
+                "sensitive_actions_requiring_confirmation": _get(dashboard_status, "voice_ui_intent_router.sensitive_actions_requiring_confirmation", []),
+                "frontend_direct_hermes": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "app_launcher_state",
+            "/mark-3/phase-10/app-launcher/status",
+            _get(dashboard_status, "app_launcher.state.mode", "governed_app_launch_intent_readiness"),
+            {
+                "known_app_count": _get(dashboard_status, "app_launcher.state.known_app_count", 0),
+                "real_launch_enabled": False,
+                "freeform_shell_allowed": False,
+                "frontend_direct_launch_allowed": False,
+            },
+        ),
+        _event(
+            generated_at,
+            "browser_intent_state",
+            "/mark-3/phase-10/browser-intent/status",
+            _get(dashboard_status, "browser_intents.state.mode", "governed_browser_navigation_intents"),
+            {
+                "real_browser_adapter_available": False,
+                "preview_first_for_forms": True,
+                "submits_without_approval": False,
+                "credential_handling_enabled": False,
+                "frontend_direct_browser_execution": False,
             },
         ),
         _event(
@@ -1419,7 +1512,7 @@ def _risk_level_for_event(event_type: str) -> str:
         return "sensor_privacy"
     if event_type == "brain_state":
         return "intent_risk_preview"
-    if event_type in {"approval_state", "spoken_approval_state", "risk_state", "execution_state", "phase_2_state", "phase_6_state", "phase_7_state", "phase_8_state", "phase_9_state", "product_operator_state", "product_mission_state", "product_builder_state", "money_roi_state", "experiment_state", "revenue_tracker_state", "self_improvement_state", "operator_report_state", "remote_channel_state", "external_operation_state", "budget_guard_state", "payment_provider_state", "action_catalog_state", "policy_state"}:
+    if event_type in {"approval_state", "spoken_approval_state", "risk_state", "execution_state", "phase_2_state", "phase_6_state", "phase_7_state", "phase_8_state", "phase_9_state", "phase_10_state", "model_router_state", "voice_ui_intent_state", "app_launcher_state", "browser_intent_state", "persona_state", "product_operator_state", "product_mission_state", "product_builder_state", "money_roi_state", "experiment_state", "revenue_tracker_state", "self_improvement_state", "operator_report_state", "remote_channel_state", "external_operation_state", "budget_guard_state", "payment_provider_state", "action_catalog_state", "policy_state"}:
         return "approval_gate"
     if event_type == "memory_brain_v3_state":
         return "memory_privacy"

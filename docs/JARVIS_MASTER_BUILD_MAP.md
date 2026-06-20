@@ -138,6 +138,24 @@ Piezas relevantes ya documentadas:
   real en esta PR. PR #176 queda como Voice Identity, Wake Pilot & Natural
   Conversation Loop. No añade `/execute`, Hermes directo,
   proveedores externos, memoria automatica ni side effects.
+- Phase 10 Hands-Free JARVIS Runtime + Persona + API Brain Router de PR #176:
+  agrega contratos y piloto browser para que JARVIS empiece a operar manos
+  libres sin duplicar Hermes. `jarvis/phase_10_hands_free_runtime_persona_api_router.py`
+  centraliza wake/stop phrases (`Hola JARVIS`, `JARVIS`, `para`, `cállate`),
+  estado visible de escucha/conversación/habla/stop/fallback, router
+  determinista de comandos de UI en español, app launcher gobernado, intents de
+  navegación/browser, approval v2 por texto/voz con frase exacta `confirmo y
+  autorizo`, persona JARVIS/UTRON, arquitectura de voz browser/local/premium y
+  Model/API Router v1 local + OpenRouter con presupuesto mensual por defecto de
+  30 EUR. `/jarvis` consume el router de UI por voz para controles locales
+  permitidos y exige confirmación exacta antes de cámara/grabación/sensores. Lo
+  real: conversación continua de navegador cuando `SpeechRecognition` funciona,
+  historial escrito, TTS browser, repeat/stop, comandos UI locales y tema/estado
+  UTRON rojo. Readiness: wake always-on de sistema, abrir Chrome si `/jarvis` no
+  está abierto, lanzamiento real de apps, navegación real con adaptador y APIs
+  pagadas. Sigue sin `/execute`, shell libre, frontend directo a Hermes,
+  aprobación por wake phrase, memoria como permiso, secretos, pagos,
+  publicación, compras, envío de formularios sin aprobación ni fake execution.
 - Presence UI de PR #160: `/jarvis` queda reorientado a una experiencia
   orb-first, menos dashboard/admin console y mas presencia viva. Header, rails,
   smart bar, camara lateral y detalles tecnicos fueron compactados/plegados.

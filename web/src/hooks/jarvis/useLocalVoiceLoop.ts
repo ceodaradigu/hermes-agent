@@ -25,6 +25,20 @@ interface LocalVoiceLoopOptions {
   onIntentSubmitted?: (text: string) => LocalJarvisVoiceResponse | null | void | Promise<LocalJarvisVoiceResponse | null | void>;
 }
 
+function normalizeVoiceControlPhrase(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("es-ES");
+}
+
+function isStopVoicePhrase(value: string): boolean {
+  return ["para", "jarvis para", "callate", "jarvis callate"].includes(normalizeVoiceControlPhrase(value));
+}
+
 export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoiceLoopController {
   const defaultIntentPreview: JarvisIntentPreview = {
     intent_detected: "idle",
@@ -304,6 +318,18 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
 
   function finishLocalVoiceTranscript(finalText: string) {
     clearLocalVoiceTimers();
+    if (isStopVoicePhrase(finalText)) {
+      cancelLocalVoiceLoop();
+      setTranscript(finalText);
+      setLocalVoiceResponse("Escucha y voz detenidas por orden de David.");
+      setLocalVoiceIntent("voice_stop_phrase");
+      setIntentPreview({
+        ...defaultIntentPreview,
+        intent_detected: "voice_stop_phrase",
+        suggested_next_action: "Sesión de voz cerrada por frase de stop.",
+      });
+      return;
+    }
     if (isLikelyTtsEcho(finalText)) {
       setLocalVoiceState("transcribing");
       setLocalVoiceResponse("He ignorado un posible eco de mi propia voz. Te escucho de nuevo.");
@@ -338,6 +364,10 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
           setIntentPreview(response.intentPreview);
           scheduleLocalVoiceStep(() => {
             if (cancelledRef.current) return;
+            if (response.suppressSpeech) {
+              queueNextLocalVoiceTurn(response.text, 700);
+              return;
+            }
             speakResponseOrContinue(response.text, response.tone);
           }, 520);
         })

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   type JarvisDashboardStatus,
@@ -6,9 +6,10 @@ import {
   type JarvisExecutionApprovalEnvelope,
   type JarvisExecutionDispatchResult,
   type JarvisExecutionPreview,
+  type JarvisPhase10VoiceUiDecision,
 } from "@/lib/api";
-import { fallbackDashboard, type CommandCenterTabId } from "@/components/jarvis/contracts";
-import type { JarvisConversationMessage, JarvisConversationMessageStatus, LocalJarvisVoiceResponse } from "@/components/jarvis/types";
+import { commandCenterTabs, fallbackDashboard, type CommandCenterTabId } from "@/components/jarvis/contracts";
+import type { JarvisConversationMessage, JarvisConversationMessageStatus, LocalJarvisVoiceResponse, LocalVoiceLoopController } from "@/components/jarvis/types";
 import { JarvisPresenceShell } from "@/components/jarvis/JarvisPresenceShell";
 import { useJarvisAudioRecorder } from "@/hooks/jarvis/useJarvisAudioRecorder";
 import { useJarvisCameraControl } from "@/hooks/jarvis/useJarvisCameraControl";
@@ -16,6 +17,7 @@ import { useJarvisEventStream } from "@/hooks/jarvis/useJarvisEventStream";
 import { useLocalVoiceLoop } from "@/hooks/jarvis/useLocalVoiceLoop";
 
 const CONVERSATION_HISTORY_LIMIT = 18;
+const PHASE_10_APPROVAL_PHRASE = "confirmo y autorizo";
 
 function newId(prefix: string): string {
   return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
@@ -32,9 +34,24 @@ function appendLimited(messages: JarvisConversationMessage[], next: JarvisConver
   return [...messages, next].slice(-CONVERSATION_HISTORY_LIMIT);
 }
 
+function normalizeApprovalPhrase(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("es-ES");
+}
+
 function turnToVoiceResponse(turn: JarvisConversationTurnResponse): LocalJarvisVoiceResponse {
   const status = conversationStatus(turn.status);
-  const tone = status === "blocked" || status === "unsupported" || status === "approval_required" || status === "error" ? "alerta" : status === "preview" ? "concentrado" : "calmado";
+  const tone = turn.display?.tone === "utron"
+    ? "intenso"
+    : status === "blocked" || status === "unsupported" || status === "approval_required" || status === "error"
+      ? "alerta"
+      : status === "preview"
+        ? "concentrado"
+        : "calmado";
   return {
     text: turn.assistant_text,
     tone,
@@ -64,6 +81,8 @@ export default function JarvisCommandCenterPage() {
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationError, setConversationError] = useState("");
   const [typedSpeechRequest, setTypedSpeechRequest] = useState<{ id: string; text: string; tone: LocalJarvisVoiceResponse["tone"] } | null>(null);
+  const [pendingSensitiveUiAction, setPendingSensitiveUiAction] = useState<JarvisPhase10VoiceUiDecision | null>(null);
+  const localVoiceRef = useRef<LocalVoiceLoopController | null>(null);
   const [executionPreview, setExecutionPreview] = useState<JarvisExecutionPreview | null>(null);
   const [executionApprovalEnvelope, setExecutionApprovalEnvelope] = useState<JarvisExecutionApprovalEnvelope | null>(null);
   const [executionDispatchResult, setExecutionDispatchResult] = useState<JarvisExecutionDispatchResult | null>(null);
@@ -157,6 +176,7 @@ export default function JarvisCommandCenterPage() {
           tone: voiceResponse.tone,
         });
       }
+      void refreshDashboard().catch(() => undefined);
       return voiceResponse;
     } catch {
       const message = "No pude responder ahora. El servicio local de conversación no aceptó el turno; prueba otra vez en unos segundos.";
@@ -190,21 +210,235 @@ export default function JarvisCommandCenterPage() {
     } finally {
       setConversationBusy(false);
     }
-  }, [conversationBusy, conversationId]);
+  }, [conversationBusy, conversationId, refreshDashboard]);
+
+  const legacyVoiceConversationFallback = useCallback((text: string) => {
+    return submitConversationTurn(text, "voice_transcript", "jarvis_voice");
+  }, [submitConversationTurn]);
+
+  const cameraControl = useJarvisCameraControl();
+  const audioRecorder = useJarvisAudioRecorder();
+  const validTabs = useMemo(() => new Set(commandCenterTabs.map((tab) => tab.id)), []);
+
+  const recordLocalVoiceCommandTurn = useCallback(({
+    userText,
+    responseText,
+    status = "normal",
+    tone = "concentrado",
+    intent = "voice_ui_control",
+    risk = "low",
+    suppressSpeech = false,
+  }: {
+    userText: string;
+    responseText: string;
+    status?: JarvisConversationMessageStatus;
+    tone?: LocalJarvisVoiceResponse["tone"];
+    intent?: string;
+    risk?: string;
+    suppressSpeech?: boolean;
+  }): LocalJarvisVoiceResponse => {
+    const timestamp = new Date().toISOString();
+    setConversationMessages((current) => appendLimited(appendLimited(current, {
+      id: newId("user_voice_ui"),
+      role: "user",
+      content: userText,
+      status: "normal",
+      timestamp,
+      source: "voice_transcript",
+    }), {
+      id: newId("jarvis_voice_ui"),
+      role: "assistant",
+      content: responseText,
+      status,
+      timestamp: new Date().toISOString(),
+      source: "system",
+    }));
+    return {
+      text: responseText,
+      tone,
+      intent,
+      risk,
+      operatorSummary: "Comando de UI por voz aplicado localmente; no hubo ejecución Hermes.",
+      intentPreview: {
+        intent_detected: intent,
+        confidence: 1,
+        risk_level: risk,
+        approval_level: status === "approval_required" ? "strong" : "direct",
+        requires_approval: status === "approval_required",
+        can_prepare_preview: status === "approval_required",
+        cannot_execute_reason: "El frontend solo aplicó controles locales permitidos; no llamó a Hermes.",
+        suggested_next_action: responseText,
+        hermes_dispatch_allowed: false,
+      },
+      suppressSpeech,
+    };
+  }, []);
+
+  const applySensitiveUiAction = useCallback((decision: JarvisPhase10VoiceUiDecision) => {
+    const action = decision.ui_action ?? {};
+    const confirmedStartActions: Record<string, () => void> = {
+      "camera.start": () => cameraControl.startCameraPreview?.(),
+      "audio_recording.start": () => audioRecorder.startRecording?.(),
+      "video_recording.start": () => cameraControl.startVideoRecording?.(),
+    };
+    confirmedStartActions[`${action.type}.${action.command}`]?.();
+  }, [audioRecorder, cameraControl]);
+
+  const applyVoiceUiDecision = useCallback((decision: JarvisPhase10VoiceUiDecision, originalText: string, confirmed = false): LocalJarvisVoiceResponse | null => {
+    if (decision.intent_name === "ambiguous") return null;
+    if (decision.intent_name.startsWith("persona.")) return null;
+
+    const action = decision.ui_action ?? {};
+    const response = decision.spanish_response || decision.reason || "Comando de UI reconocido.";
+
+    if (decision.requires_approval && !confirmed) {
+      setPendingSensitiveUiAction(decision);
+      return recordLocalVoiceCommandTurn({
+        userText: originalText,
+        responseText: `${response} Frase exacta requerida: ${decision.required_phrase || PHASE_10_APPROVAL_PHRASE}.`,
+        status: "approval_required",
+        tone: "alerta",
+        intent: decision.intent_name,
+        risk: decision.risk_level || "medium",
+      });
+    }
+
+    if (confirmed && decision.requires_approval) {
+      applySensitiveUiAction(decision);
+      setPendingSensitiveUiAction(null);
+      return recordLocalVoiceCommandTurn({
+        userText: originalText,
+        responseText: "Confirmado y autorizado. He aplicado el control sensible en el navegador local con indicador visible. No he llamado a Hermes.",
+        status: "normal",
+        tone: "concentrado",
+        intent: decision.intent_name,
+        risk: decision.risk_level || "medium",
+      });
+    }
+
+    if (action.type === "tab" && action.tab && validTabs.has(action.tab as CommandCenterTabId)) {
+      setActiveTab(action.tab as CommandCenterTabId);
+    }
+    if (action.type === "voice_output" && typeof action.enabled === "boolean") {
+      localVoiceRef.current?.setVoiceOutputEnabled(action.enabled);
+      if (!action.enabled) {
+        return recordLocalVoiceCommandTurn({
+          userText: originalText,
+          responseText: response,
+          status: "normal",
+          tone: "calmado",
+          intent: decision.intent_name,
+          risk: decision.risk_level || "low",
+          suppressSpeech: true,
+        });
+      }
+    }
+    if (action.type === "voice_output" && action.command === "repeat") {
+      const latestAssistant = [...conversationMessages].reverse().find((message) => message.role === "assistant");
+      return recordLocalVoiceCommandTurn({
+        userText: originalText,
+        responseText: latestAssistant?.content || "Todavía no tengo una respuesta anterior para repetir.",
+        status: latestAssistant?.content ? "normal" : "error",
+        tone: "calmado",
+        intent: decision.intent_name,
+        risk: decision.risk_level || "low",
+      });
+    }
+    if (action.type === "voice_output" && action.command === "stop") {
+      localVoiceRef.current?.stopJarvisSpeech();
+      return recordLocalVoiceCommandTurn({
+        userText: originalText,
+        responseText: "Voz detenida. La respuesta completa sigue por escrito.",
+        status: "normal",
+        tone: "calmado",
+        intent: decision.intent_name,
+        risk: decision.risk_level || "low",
+        suppressSpeech: true,
+      });
+    }
+    if (action.type === "camera" && action.command === "stop") cameraControl.stopCameraPreview();
+    if (action.type === "audio_recording" && action.command === "stop") audioRecorder.stopRecording();
+    if (action.type === "video_recording" && action.command === "stop") cameraControl.stopVideoRecording();
+    if (action.type === "conversation" && action.command === "cancel") localVoiceRef.current?.cancelLocalVoiceLoop();
+
+    return recordLocalVoiceCommandTurn({
+      userText: originalText,
+      responseText: response,
+      status: "normal",
+      tone: decision.risk_level === "medium" ? "concentrado" : "calmado",
+      intent: decision.intent_name,
+      risk: decision.risk_level || "low",
+    });
+  }, [
+    applySensitiveUiAction,
+    audioRecorder,
+    cameraControl,
+    conversationMessages,
+    recordLocalVoiceCommandTurn,
+    validTabs,
+  ]);
+
+  const handleVoiceIntentSubmitted = useCallback(async (text: string): Promise<LocalJarvisVoiceResponse | null> => {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+
+    if (pendingSensitiveUiAction) {
+      if (normalizeApprovalPhrase(trimmed) === PHASE_10_APPROVAL_PHRASE) {
+        return applyVoiceUiDecision(pendingSensitiveUiAction, trimmed, true);
+      }
+      if (normalizeApprovalPhrase(trimmed) === "cancela" || normalizeApprovalPhrase(trimmed) === "para") {
+        setPendingSensitiveUiAction(null);
+        return recordLocalVoiceCommandTurn({
+          userText: trimmed,
+          responseText: "Acción sensible cancelada. No he pedido permisos del navegador ni he ejecutado nada.",
+          status: "normal",
+          tone: "calmado",
+          intent: "sensitive_ui_action_cancelled",
+          risk: "none",
+        });
+      }
+      return recordLocalVoiceCommandTurn({
+        userText: trimmed,
+        responseText: `No coincide con la frase exacta. Para autorizar di: ${PHASE_10_APPROVAL_PHRASE}.`,
+        status: "approval_required",
+        tone: "alerta",
+        intent: "sensitive_ui_action_phrase_mismatch",
+        risk: pendingSensitiveUiAction.risk_level || "medium",
+      });
+    }
+
+    try {
+      const decision = await api.classifyJarvisVoiceUiIntent({
+        text: trimmed,
+        confidence: 1,
+        actor: "David",
+      });
+      const localResult = applyVoiceUiDecision(decision, trimmed);
+      if (localResult) return localResult;
+    } catch {
+      // Fall through to the safe conversation route when the classifier is unavailable.
+    }
+    return legacyVoiceConversationFallback(trimmed);
+  }, [
+    applyVoiceUiDecision,
+    legacyVoiceConversationFallback,
+    pendingSensitiveUiAction,
+    recordLocalVoiceCommandTurn,
+  ]);
 
   const localVoice = useLocalVoiceLoop({
-    onIntentSubmitted: (text) => {
-      return submitConversationTurn(text, "voice_transcript", "jarvis_voice");
-    },
+    onIntentSubmitted: handleVoiceIntentSubmitted,
   });
+
+  useEffect(() => {
+    localVoiceRef.current = localVoice;
+  }, [localVoice]);
 
   useEffect(() => {
     if (!typedSpeechRequest) return;
     localVoice.speakJarvisText(typedSpeechRequest.text, typedSpeechRequest.tone);
     setTypedSpeechRequest(null);
   }, [localVoice, typedSpeechRequest]);
-  const cameraControl = useJarvisCameraControl();
-  const audioRecorder = useJarvisAudioRecorder();
   const localSensors = useMemo(() => ({
     camera: {
       state: cameraControl.cameraState,
