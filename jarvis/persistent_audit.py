@@ -150,6 +150,18 @@ AUDIT_EVENT_TYPES = {
     "external_operation_candidate_prepared",
     "budget_guard_evaluated",
     "revenue_event_recorded",
+    "phase_9_status_read",
+    "product_mission_envelope_created",
+    "product_builder_candidate_prepared",
+    "product_roi_decision_recorded",
+    "product_experiment_plan_prepared",
+    "product_revenue_event_recorded",
+    "product_revenue_summary_read",
+    "product_budget_guard_evaluated",
+    "self_improvement_candidate_prepared",
+    "operator_report_generated",
+    "product_operating_loop_prepared",
+    "product_voice_approval_checked",
 }
 
 _SENSITIVE_KEY_MARKERS: Iterable[str] = (

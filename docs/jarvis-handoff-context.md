@@ -1466,3 +1466,78 @@ Siguiente recomendado: persistir envelopes/remote decisions, conectar remote
 approval intent como senal pendiente hacia ApprovalGateway, implementar
 Telegram notification-only con arranque manual explicito y pilotar un unico
 provider test-mode sin live money.
+
+## PR #174 - Phase 9 Autonomous Product Operator, Money Engine & Self-Improvement
+
+Nota de handoff: Phase 9 esta documentado en
+`docs/jarvis-pr-174-phase-9-autonomous-product-operator-money-engine-self-improvement.md`
+y resumido en `docs/JARVIS_MASTER_BUILD_MAP.md`.
+
+PR #174 anade un control plane prepare-only para que JARVIS pueda planear,
+preparar, validar, empaquetar, medir y proponer iteraciones sobre misiones
+pequenas de producto/negocio bajo control de David. No anade ejecucion externa
+libre ni duplica Hermes.
+
+Puntos clave:
+
+- `jarvis/phase_9_product_operator.py` es el control plane nuevo.
+- Product mission envelopes requieren scope, budget, time limit, stop
+  conditions, expiration, approval/risk, audit y forbidden actions.
+- No hay unlimited mission ni approve-all-forever.
+- Product Builder genera candidatos prepare-only: brief, landing, MVP,
+  scaffold preview, pricing, deploy/email/payment candidates y checklist.
+- Archivos locales van por previews Phase 7 `filesystem.file.write_safe`; Phase
+  9 no escribe directamente.
+- Deploy/email/payment se conectan a Phase 8 como candidatos, sin provider
+  calls, sends, deploys, checkout ni money movement.
+- Money/ROI separa projected revenue, confirmed revenue, gross, fees, costs,
+  net, evidence/source y confidence.
+- Confirmed revenue sin evidence queda unconfirmed y no cuenta.
+- Budget Guard v2 bloquea unknown cost y over-limit spend; memory/preferences
+  no expanden presupuesto.
+- Experiment Planner prepara pruebas, drafts y checklists; no postea, scrapea,
+  publica, envia email ni gasta por defecto.
+- Self-Improvement prepara patch plans/tests/PR descriptions y bloquea debilitar
+  PolicyEngine, ApprovalGateway, audit, tests, permisos, self-merge y
+  self-deploy.
+- Operator reports son manual/readiness-only; no hay scheduler oculto.
+- Product operating loop es stoppable y scoped; no corre para siempre.
+- Voice approval para operaciones de producto solo es eligible con trusted
+  device, active voice session, exact readback, challenge, scope, expiration y
+  audit; wake phrase nunca aprueba.
+- Dashboard/event stream y `/jarvis` exponen Phase 9 como cockpit read-only.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-9/status`
+- `GET /mark-3/product-operator/status`
+- `POST /mark-3/product-operator/missions`
+- `POST /mark-3/product-operator/builder`
+- `POST /mark-3/product-operator/roi-decision`
+- `POST /mark-3/product-operator/experiments`
+- `POST /mark-3/product-operator/revenue-events`
+- `GET /mark-3/product-operator/revenue-summary`
+- `POST /mark-3/product-operator/budget-guard`
+- `POST /mark-3/product-operator/self-improvement`
+- `POST /mark-3/product-operator/reports`
+- `POST /mark-3/product-operator/operating-loop`
+- `POST /mark-3/product-operator/voice-approval-readiness`
+
+Validacion recomendada:
+
+```bash
+source venv/bin/activate
+PYTHONPATH=. python -m pytest tests/jarvis/test_pr_174_phase_9_product_operator.py -q
+PYTHONPATH=. python -m pytest \
+  tests/jarvis/test_pr_170_phase_5_local_controller_identity_voice.py \
+  tests/jarvis/test_pr_171_phase_6_real_voice_wake_memory_sensor_runtime.py \
+  tests/jarvis/test_pr_172_phase_7_governed_actions.py \
+  tests/jarvis/test_pr_173_phase_8_governed_remote_external_ops.py -q
+cd web && npm run build
+```
+
+Siguiente recomendado: estabilizar persistencia durable de misiones/candidatos,
+crear handoff explicito hacia ApprovalGateway para candidatos seleccionados,
+anadir E2E UI, pilotar un provider test-mode sin live money y mantener toda
+automatizacion apagada por defecto hasta que budget/evidence/audit/rollback
+esten validados extremo a extremo.
