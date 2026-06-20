@@ -104,10 +104,50 @@ class ActionContract:
     rollback_status: str
     rollback_limitations: List[str] = field(default_factory=list)
     execution_backend: str = "jarvis_control_plane"
+    title: str = ""
+    category: str = "local"
+    side_effects: List[str] = field(default_factory=list)
+    filesystem: bool = False
+    github: bool = False
+    browser: bool = False
+    sandbox: bool = False
+    dry_run_available: bool = True
+    voice_approval_eligible: Optional[bool] = None
+    default_enabled: bool = True
+    default_disabled_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
+        data["action_id"] = "catalog-" + hashlib.sha256(self.action_key.encode("utf-8")).hexdigest()[:16]
+        data["title"] = self.title or self.action_key.replace(".", " ").title()
         data["approval_level_required"] = self.approval_required
+        data["side_effects"] = list(self.side_effects)
+        data["flags"] = {
+            "filesystem": self.filesystem,
+            "network": self.network_allowed,
+            "github": self.github,
+            "browser": self.browser,
+            "sandbox": self.sandbox,
+        }
+        data["dry_run_available"] = self.dry_run_available
+        data["audit_requirements"] = {
+            "metadata_only": True,
+            "event_types": list(self.audit_event_types),
+            "redaction": self.output_redaction,
+        }
+        if self.voice_approval_eligible is None:
+            data["voice_approval_eligible"] = bool(
+                self.approval_required in {"normal", "strong"}
+                and not self.network_allowed
+                and not self.external_side_effects
+                and self.risk_level in {"low", "medium", "high"}
+            )
+        else:
+            data["voice_approval_eligible"] = bool(self.voice_approval_eligible)
+        data["default_state"] = {
+            "enabled": self.default_enabled,
+            "disabled_reason": self.default_disabled_reason,
+        }
         data["contract"] = {
             "stop_supported": self.stop_supported,
             "stop_method": self.stop_method,

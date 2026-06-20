@@ -28,6 +28,7 @@ export const api = {
   getJarvisPhase3Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-3/status"),
   getJarvisPhase4Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-4/status"),
   getJarvisPhase5Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-5/status"),
+  getJarvisPhase7Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-7/status"),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
@@ -506,7 +507,10 @@ export interface JarvisGovernedExecutionStatus {
 }
 
 export interface JarvisActionContract {
+  action_id?: string;
   action_key: string;
+  title?: string;
+  category?: string;
   description: string;
   allowed_inputs_schema?: Record<string, unknown>;
   risk_level: string;
@@ -528,6 +532,21 @@ export interface JarvisActionContract {
   rollback_status?: string;
   rollback_limitations?: string[];
   execution_backend?: string;
+  side_effects?: string[];
+  flags?: {
+    filesystem?: boolean;
+    network?: boolean;
+    github?: boolean;
+    browser?: boolean;
+    sandbox?: boolean;
+  };
+  dry_run_available?: boolean;
+  audit_requirements?: Record<string, unknown>;
+  voice_approval_eligible?: boolean;
+  default_state?: {
+    enabled?: boolean;
+    disabled_reason?: string;
+  };
   contract?: Record<string, unknown>;
 }
 
@@ -1717,7 +1736,14 @@ export interface JarvisDashboardStatus {
   phase_4_status?: Record<string, unknown>;
   phase_5_status?: Record<string, unknown>;
   phase_6_status?: Record<string, any>;
-  action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; source_endpoint?: string };
+  phase_7_status?: Record<string, any>;
+  phase_7_adapters?: Record<string, any>;
+  filesystem_adapter?: Record<string, unknown>;
+  github_worktree_adapter?: Record<string, unknown>;
+  browser_automation?: Record<string, unknown>;
+  sandbox_execution?: Record<string, unknown>;
+  preflight?: Record<string, unknown>;
+  action_catalog?: { actions?: JarvisActionContract[]; denied_actions?: string[]; allowlist_only?: boolean; catalog_version?: number; categories?: Record<string, number>; source_endpoint?: string };
   execution_history?: JarvisExecutionHistoryResponse;
   stop_rollback_contracts?: Record<string, unknown>;
   stop_rollback_v2?: Record<string, unknown>;

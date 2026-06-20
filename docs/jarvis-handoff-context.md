@@ -176,6 +176,40 @@ Actualizacion PR #169 / Phase 4 Real Local Controller + Remote Pairing Readiness
   `docs/jarvis-pr-169-phase-4-real-local-controller-remote-pairing-readiness.md`
   y `docs/jarvis-phase-4-local-controller-remote-pairing-pilot-report.md`.
 
+Actualizacion PR #172 / Phase 7 Governed Actions, Browser, Filesystem, GitHub
+& Sandbox:
+
+- JARVIS agrega `Phase7GovernedActionsControlPlane` encima del control plane
+  existente. No crea otro Hermes y no habilita frontend directo a Hermes.
+- Action Catalog v2 es allowlist-only y expone riesgo, approval, inputs,
+  side effects, filesystem/network/GitHub/browser/sandbox flags, stop/rollback,
+  dry-run, audit, voice approval eligibility y default state.
+- Filesystem real queda limitado a allowed roots explicitos: safe text read,
+  directory metadata list y write safe file con diff preview, approval y
+  backup-before-overwrite. `.env`, secrets, tokens, private keys, credentials,
+  traversal, home-wide paths, out-of-root paths y symlinks quedan bloqueados por
+  defecto.
+- Git/worktree real queda read-only con fixed argv: status, worktree status,
+  changed files y diff summary. Branch names y PR descriptions son
+  prepare-only; commit, push, open PR, merge y branch/worktree mutation siguen
+  disabled o dry-run-only en este workflow.
+- Browser automation es readiness/plan-only. No hidden browser, credential
+  entry, purchase, posting, publishing ni private scraping. Click/submit queda
+  strong-gated y no ejecuta side effects.
+- Sandbox v1 es guarded local command runner, no OS sandbox. Acepta command IDs
+  allowlisted con `shell=False`, sanitized env, timeout, allowed cwd y redacted
+  stdout/stderr. No raw shell desde UI/API.
+- Preflight v1 redacts and blocks secret/destructive findings and audits
+  metadata only.
+- Spoken approval can authorize eligible Phase 7 actions only through Phase 5/6
+  gates: trusted non-revoked device, active voice session/readback, challenge
+  where required, exact scope/action/cost, expiry, anti-replay and audit. Wake
+  phrase and memory never approve.
+- New status endpoint: `/mark-3/phase-7/status`. Dashboard/event stream and
+  `/jarvis` expose Phase 7 state without secrets or execution shortcuts.
+- Detailed report:
+  `docs/jarvis-pr-172-phase-7-governed-actions-browser-filesystem-github-sandbox.md`.
+
 Actualización PR #166 / Phase 2 Local Assistant Runtime:
 
 - JARVIS pasa de base local gobernada a asistente local usable con runtime

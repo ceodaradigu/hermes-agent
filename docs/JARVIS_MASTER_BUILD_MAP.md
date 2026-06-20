@@ -1993,3 +1993,79 @@ Real vs readiness:
 Documento:
 
 - `docs/jarvis-pr-171-phase-6-real-voice-wake-memory-sensor-runtime.md`
+
+## PR #172 - Phase 7 Governed Actions, Browser, Filesystem, GitHub & Sandbox
+
+Estado: implementado como piloto local gobernado para acciones utiles, con
+browser marcado honestamente como readiness y sandbox declarado como guarded
+local command runner, no OS-level sandbox.
+
+Incluye:
+
+- control plane Phase 7 en `jarvis/phase_7_governed_actions.py`, montado sobre
+  Phase 5/Phase 2 sin crear otro Hermes;
+- Action Catalog v2 con `action_id`, titulo, categoria, riesgo, approval,
+  allowed inputs, side effects, flags filesystem/network/GitHub/browser/sandbox,
+  stop/rollback, dry-run, audit, voice approval eligibility y default state;
+- filesystem adapter real para read safe text, list directory metadata y
+  write safe project file con diff preview, approval y backup-before-overwrite;
+- path traversal, home-wide paths, symlinks, out-of-root access, `.env`,
+  secrets, tokens, private keys y credentials bloqueados por defecto;
+- Git/worktree adapter real read-only para status, worktree status, changed
+  files y diff summary con fixed argv y sin GitHub API/network;
+- branch name y PR description prepare-only; branch creation, commit, push,
+  open PR y merge siguen disabled/dry-run-only en este workflow;
+- browser adapter v1 como Playwright-compatible plan/readiness: open URL plan,
+  screenshot metadata, form-fill dry-run y click/submit plan strong-gated sin
+  hidden browser, credentials, purchase, posting ni external side effects;
+- sandbox execution v1 como command IDs allowlisted con `shell=False`,
+  sanitized env, timeout, working directory allowlist, stdout/stderr redaction y
+  no inherited secrets;
+- preflight v1 con findings redacted, severity, blocking reason, approval
+  recommendation y audit metadata-only;
+- Phase 5/6 spoken approval integrado para acciones elegibles: trusted
+  non-revoked device, active session/readback/challenge/scope/expiry/
+  anti-replay/audit; wake phrase y memory no aprueban;
+- `/mark-3/phase-7/status`, dashboard read model, event stream y drawer
+  `/jarvis` exponen Phase 7 sin controles directos Hermes ni secretos.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-7/status`
+- `GET /mark-3/execution/action-catalog`
+- `POST /mark-3/execution/preview`
+- `POST /mark-3/execution/request-approval`
+- `POST /mark-3/execution/approval-decision`
+- `POST /mark-3/execution/dispatch`
+- `GET /mark-3/dashboard/status`
+- `GET /mark-3/dashboard/events`
+
+Invariantes:
+
+- no `/execute`;
+- no shell libre;
+- no frontend directo a Hermes, GitHub ni filesystem;
+- no hidden filesystem writes;
+- no secret reads by default;
+- no credential storage;
+- no hidden browser;
+- no arbitrary browser actions;
+- no money, Stripe live, deploy, email, purchase, publish or production action;
+- no commit/push/PR/merge by JARVIS in this workflow;
+- no fake browser automation;
+- no fake sandbox or fake rollback;
+- memory never grants permission;
+- wake phrase never approves.
+
+Real vs readiness:
+
+- Real: catalog classification, safe filesystem read/list/write with backup,
+  preflight scanning/redaction, read-only git helpers, branch/PR text prep,
+  guarded command IDs, voice approval gates, audit/dashboard/event stream/UI
+  visibility.
+- Readiness: browser execution is plan-only, delete is dry-run-only, branch
+  creation/worktree mutation is disabled, sandbox is not OS-level isolation.
+
+Documento:
+
+- `docs/jarvis-pr-172-phase-7-governed-actions-browser-filesystem-github-sandbox.md`

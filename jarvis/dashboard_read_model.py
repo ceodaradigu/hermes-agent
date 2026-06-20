@@ -192,6 +192,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_6_runtime.status(),
         timeline,
     )
+    phase_7_status = _source(
+        "/mark-3/phase-7/status",
+        lambda: app_state.phase_7_governed_actions.phase_7_status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -646,6 +651,13 @@ def build_mark_3_dashboard_status(
                 "Provider diagnostics, voice session v2, wake opt-in, Memory Brain v3 and sensor opt-in are visible without hidden capture.",
             ),
             _module(
+                "Phase 7 Actions",
+                "pilot" if phase_7_status.get("status") else UNKNOWN,
+                "/mark-3/phase-7/status",
+                "governed_action_catalog_filesystem_github_browser_sandbox",
+                "Governed local action pilot: safe filesystem, read-only Git helpers, browser plans, guarded command IDs and preflight scanning.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -816,6 +828,13 @@ def build_mark_3_dashboard_status(
         "phase_4_status": phase_4_status,
         "phase_5_status": phase_5_status,
         "phase_6_status": phase_6_status,
+        "phase_7_status": phase_7_status,
+        "phase_7_adapters": phase_7_status.get("adapters", {}),
+        "filesystem_adapter": (phase_7_status.get("adapters", {}) or {}).get("filesystem", {}),
+        "github_worktree_adapter": (phase_7_status.get("adapters", {}) or {}).get("github_worktree", {}),
+        "browser_automation": (phase_7_status.get("adapters", {}) or {}).get("browser", {}),
+        "sandbox_execution": (phase_7_status.get("adapters", {}) or {}).get("sandbox", {}),
+        "preflight": (phase_7_status.get("adapters", {}) or {}).get("preflight", {}),
         "voice_provider_registry": voice_provider_registry,
         "voice_session_v2": voice_session_v2,
         "wake_runtime": wake_runtime_opt_in,
@@ -905,6 +924,7 @@ def build_mark_3_dashboard_status(
                 "phase_4_state",
                 "phase_5_state",
                 "phase_6_state",
+                "phase_7_state",
                 "daemon_state",
                 "local_controller_state",
                 "trusted_channels_state",
@@ -993,6 +1013,10 @@ def build_mark_3_dashboard_status(
             "phase_2_allowlisted_actions_only": True,
             "phase_3_trusted_approval_channels": True,
             "phase_4_local_controller_opt_in": True,
+            "phase_7_governed_action_catalog_v2": True,
+            "phase_7_safe_filesystem_actions": True,
+            "phase_7_browser_readiness_only": True,
+            "phase_7_sandbox_no_freeform_shell": True,
             "double_approval_real": True,
             "triple_approval_supported": bool((phase_4_status.get("triple_approval_readiness") or {}).get("can_grant_triple")),
             "remote_approval_allowed": False,
@@ -1045,6 +1069,12 @@ def build_mark_3_dashboard_status(
                 "event": "Phase 4 local controller and remote pairing readiness loaded",
                 "source": "/mark-3/phase-4/status",
                 "status": phase_4_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 7 governed actions pilot loaded",
+                "source": "/mark-3/phase-7/status",
+                "status": phase_7_status.get("status", UNKNOWN),
                 "read_only": True,
             },
             {
