@@ -132,6 +132,38 @@ git status --short
 
 `JARVIS_MASTER_BUILD_MAP.md` is the source of truth for master phase names and order.
 
+Actualización PR #175 / Conversational UX Hardening + Send Button Fix:
+
+- `/jarvis` ya tiene conversación básica usable desde la smart bar: escribir,
+  click en enviar, Enter para enviar, Shift+Enter para salto de línea,
+  historial local de últimos turnos y estados visuales `normal`, `preview`,
+  `approval_required`, `blocked`, `unsupported` y `error`.
+- La respuesta completa ya no depende de una tira truncada: hay historial
+  legible con wrap/scroll/copia, y la tira inferior queda como preview corta.
+- Las respuestas escritas intentan TTS con `speechSynthesis` del navegador
+  cuando existe y la voz está activada. Hay controles `voz on/off`, `repetir`
+  y `detener voz`; si TTS no existe, la UI deja la respuesta por escrito con
+  aviso humano.
+- `Repetir` solo debe hablar la última respuesta de JARVIS; `detener voz`
+  cancela la utterance local sin borrar la respuesta escrita ni el historial.
+- La UI declara voz manual: hay que pulsar el micrófono para hablar y decir
+  "Hola JARVIS" no inicia la conversación en PR175.
+- PR #176 recomendado: Voice Identity, Wake Pilot & Natural Conversation Loop
+  para wake phrase real, selección de voz/persona cinematográfica sin clonar
+  actor/diálogo, conversación manual/continua más natural e interrupción mejor.
+- Nuevo endpoint seguro `POST /mark-3/conversation/turn` para turnos
+  conversacionales. Reutiliza `ConversationalIntakePipeline` y
+  `LLMBrainAdapter` local determinista; formatea la respuesta con
+  `jarvis/conversation_turn.py` para mostrar español humano y no dumps técnicos.
+- La voz manual, cuando el navegador produce transcripción, usa el mismo turno
+  conversacional que el texto. Si STT/TTS no está disponible, la UI lo explica
+  en lenguaje simple y no finge escucha.
+- El contrato sigue siendo: no `/execute`, no shell libre, no Hermes directo
+  desde frontend, no side effects, no memoria automática, no proveedores
+  externos, no deploy/email/pagos/publicación y no fake completion.
+- Documento de cierre:
+  `docs/jarvis-pr-175-conversational-ux-hardening-send-button.md`.
+
 Actualizacion PR #169 / Phase 4 Real Local Controller + Remote Pairing Readiness:
 
 - JARVIS convierte la readiness de Phase 3 en una macro-fase local mas realista

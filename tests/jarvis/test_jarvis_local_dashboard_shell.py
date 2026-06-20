@@ -292,13 +292,13 @@ def test_jarvis_local_voice_loop_has_conversational_brain_not_transcript_echo():
 
     for text in (
         "buildLocalJarvisResponse",
-        "Sí, David. Te escucho.",
-        "Ahora puedo escucharte, responder en local",
+        "Sí, David. Estoy contigo en modo local.",
+        "Ahora puedo conversar contigo, mostrar el estado visible de JARVIS",
         "esa misión",
-        "Puedo preparar ${noun} como preview",
+        "Puedo preparar ${noun} como vista previa",
         "No puedo hacer eso, David. Las credenciales y secretos están protegidos.",
-        "No lo ejecutaré ni lo aprobaré por voz.",
-        "Wake phrase nunca aprueba ni ejecuta.",
+        "No aprobaré ni ejecutaré por voz",
+        "La frase de activación no es permiso",
         "intent_detected",
         "risk_level",
         "requires_approval",

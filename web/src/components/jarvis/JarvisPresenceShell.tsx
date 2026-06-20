@@ -6,7 +6,7 @@ import type {
   JarvisExecutionDispatchResult,
   JarvisExecutionPreview,
 } from "@/lib/api";
-import type { JarvisEvent, JarvisOrbVisualState, LocalVoiceLoopController } from "./types";
+import type { JarvisConversationMessage, JarvisEvent, JarvisOrbVisualState, LocalVoiceLoopController } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +70,10 @@ interface JarvisPresenceShellProps {
   };
   events: JarvisEvent[];
   eventConnectionState: string;
+  conversationMessages: JarvisConversationMessage[];
+  conversationBusy?: boolean;
+  conversationError?: string;
+  onSubmitConversation?: (text: string) => void;
   executionPreview?: JarvisExecutionPreview | null;
   executionApprovalEnvelope?: JarvisExecutionApprovalEnvelope | null;
   executionDispatchResult?: JarvisExecutionDispatchResult | null;
@@ -95,6 +99,10 @@ export function JarvisPresenceShell({
   audioRecorder,
   events,
   eventConnectionState,
+  conversationMessages,
+  conversationBusy,
+  conversationError,
+  onSubmitConversation,
   executionPreview,
   executionApprovalEnvelope,
   executionDispatchResult,
@@ -364,6 +372,14 @@ export function JarvisPresenceShell({
         onBegin={localVoice.beginLocalVoiceLoop}
         onCancel={localVoice.cancelLocalVoiceLoop}
         onDraftActivity={handleSmartBarDraftActivity}
+        voiceOutputEnabled={localVoice.voiceOutputEnabled}
+        onVoiceOutputEnabledChange={localVoice.setVoiceOutputEnabled}
+        onSpeakResponse={(text) => localVoice.speakJarvisText(text, localVoice.jarvisTone)}
+        onStopVoiceOutput={localVoice.stopJarvisSpeech}
+        conversationMessages={conversationMessages}
+        conversationBusy={conversationBusy}
+        conversationError={conversationError}
+        onSubmitConversation={onSubmitConversation}
       />
 
       <JarvisDebugDrawer

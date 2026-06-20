@@ -121,6 +121,23 @@ Piezas relevantes ya documentadas:
   `conversational_intake` y `brain_adapter`; `/mark-3/dashboard/events` y
   `/stream` exponen `intake_state` y `brain_adapter_state` con metadata segura,
   sin raw text sensible, audio bruto, frames ni comandos ejecutables.
+- Conversational UX Hardening de PR #175: `/jarvis` pasa de smart bar
+  decorativa a cockpit conversacional basico usable. `POST
+  /mark-3/conversation/turn` acepta texto o transcripción de voz manual,
+  reutiliza intake/brain adapter local determinista, devuelve una respuesta
+  humana en español y estados `normal/preview/approval_required/blocked/
+  unsupported/error`. La UI mantiene historial local en memoria, Enter envia,
+  Shift+Enter inserta salto de linea y el boton de enviar solo se deshabilita
+  con mensaje vacio o turno activo. La respuesta completa queda en un historial
+  legible con wrap/scroll/copia, mientras la tira inferior muestra solo preview.
+  Las respuestas escritas intentan TTS via `speechSynthesis` del navegador
+  cuando existe y la voz esta activada; hay controles de voz on/off, repetir y
+  detener, con fallback escrito si TTS no esta disponible. Repetir habla solo la
+  ultima respuesta de JARVIS; detener cancela la utterance local sin borrar el
+  texto. La UI declara modo voz manual y que decir "Hola JARVIS" no activa wake
+  real en esta PR. PR #176 queda como Voice Identity, Wake Pilot & Natural
+  Conversation Loop. No añade `/execute`, Hermes directo,
+  proveedores externos, memoria automatica ni side effects.
 - Presence UI de PR #160: `/jarvis` queda reorientado a una experiencia
   orb-first, menos dashboard/admin console y mas presencia viva. Header, rails,
   smart bar, camara lateral y detalles tecnicos fueron compactados/plegados.

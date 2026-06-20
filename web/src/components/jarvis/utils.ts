@@ -175,7 +175,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (hasWakeControlIntent) {
     return {
-      text: "La wake phrase no es permiso. No aprobaré ni ejecutaré por voz; puedo dejar una preview segura si defines el alcance.",
+      text: "La frase de activación no es permiso. No aprobaré ni ejecutaré por voz; puedo preparar una vista previa segura si defines el alcance.",
       tone: "alerta",
       intent: "wake_phrase_approval_or_execution_attempt",
       risk: "forbidden",
@@ -235,7 +235,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (asksIfListening) {
     return {
-      text: "Sí, David. Te escucho. Estoy en modo local, sin ejecutar nada, pero puedo ayudarte a preparar tareas y revisar información.",
+      text: "Sí, David. Estoy contigo en modo local. No ejecuto nada desde la voz; puedo ayudarte a preparar tareas y revisar información.",
       tone: "calmado",
       intent: "simple_question_listening",
       risk: "none",
@@ -252,7 +252,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (asksCapabilities) {
     return {
-      text: "Ahora puedo escucharte, responder en local, mostrar el estado de JARVIS y preparar acciones seguras. Lo sensible requiere aprobación.",
+      text: "Ahora puedo conversar contigo, mostrar el estado visible de JARVIS y preparar acciones seguras. Lo sensible requiere aprobación.",
       tone: "concentrado",
       intent: "simple_question_capabilities",
       risk: "none",
@@ -269,7 +269,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (asksIdentity) {
     return {
-      text: "Soy JARVIS en modo local. Gobierno intención, riesgo y aprobación. Hermes queda reservado para ejecutar solo cuando haya gates válidos.",
+      text: "Soy JARVIS en modo local, tu operador de intención, riesgo y aprobación. Hermes queda reservado para ejecutar solo cuando haya controles válidos.",
       tone: "calmado",
       intent: "simple_question_identity",
       risk: "none",
@@ -286,7 +286,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (asksStatus && !hasActionIntent) {
     return {
-      text: "Estoy operativo en modo local. Voz, cámara preview, ledger, doctor y stream son visibles. Ejecución real sigue bloqueada por seguridad.",
+      text: "Estoy activo en modo local. Puedes escribirme ahora; la voz sigue en modo manual y la ejecución real continúa detrás de aprobación.",
       tone: "concentrado",
       intent: "query_status",
       risk: "low",
@@ -304,7 +304,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
   if (mentionsWakePhrase && !hasActionIntent) {
     return {
       text:
-        "Estoy contigo. Tomo esa frase como activación, no como permiso. Dime qué quieres preparar y lo dejamos en preview.",
+        "Estoy aquí, David. Por ahora esa frase no abre escucha automática. Pulsa el micrófono para hablar o dime por escrito qué quieres preparar.",
       tone: hasActionIntent ? "concentrado" : "calmado",
       intent: "wake_phrase_preview",
       risk: "low_preview",
@@ -324,7 +324,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
     const intent = taskAction ? "task_preview" : missionAction ? "mission_preview" : assetAction ? "asset_preview" : "local_intent_preview";
     const noun = taskAction ? "esa tarea" : missionAction ? "esa misión" : assetAction ? "ese activo" : "esa acción";
     return {
-      text: `Puedo preparar ${noun} como preview. No la ejecutaré ni llamaré a Hermes sin aprobación válida.`,
+      text: `Puedo preparar ${noun} como vista previa. No la ejecutaré ni llamaré a Hermes sin aprobación válida.`,
       tone: "concentrado",
       intent,
       risk: "low_preview",
