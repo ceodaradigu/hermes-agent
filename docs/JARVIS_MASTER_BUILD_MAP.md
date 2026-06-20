@@ -2162,3 +2162,97 @@ Real vs readiness:
 Documento:
 
 - `docs/jarvis-pr-173-phase-8-governed-remote-deploy-email-payments.md`
+
+## PR #174 - Phase 9 Autonomous Product Operator, Money Engine & Self-Improvement
+
+Estado: implementado como control plane gobernado prepare-only para operar
+misiones pequenas de producto/negocio bajo control de David. No anade un nuevo
+runtime, no duplica Hermes, no crea un SaaS publico y no habilita ejecucion
+externa por defecto.
+
+Incluye:
+
+- control plane Phase 9 en `jarvis/phase_9_product_operator.py`;
+- autonomous product mission envelope v1 con `mission_id`, title, goal,
+  expected outcome, target user/customer, hypothesis, success metric, budget,
+  time limit, scope, allowed/forbidden actions, approval, risk, status,
+  evidence, stop conditions, audit id y expiration;
+- rechazo de misiones sin scope/budget/time/stop conditions/expiration,
+  approve-all-forever, unlimited authority y requests falsas/ilegales;
+- Product Builder v1 para preparar brief, problem statement, customer, value
+  proposition, competitor notes, landing structure, MVP checklist, stack,
+  build plan, asset package, scaffold plan, deploy/email/payment candidates,
+  pricing y launch checklist;
+- integracion Phase 7 para previews `filesystem.file.write_safe` cuando hay
+  `local_project_path`, sin writes directos desde Phase 9;
+- integracion Phase 8 para candidatos deploy/email/payment, sin provider calls;
+- Money/ROI Engine v1 con opportunity score, upside, effort, cost,
+  time-to-market, confidence, risks, dependencies, David-hours y decision
+  state;
+- separacion estricta entre projected, confirmed, gross, fees, costs, net,
+  evidence/source y confidence;
+- Revenue Tracker v1 con confirmed revenue solo cuando hay evidence/source;
+- Budget Guard v2 para global monthly product budget, per-mission budget,
+  per-action limit, provider estimate, unknown-cost blocking y hard stop;
+- Experiment Planner v1 prepare-only para landing, Reddit draft, cold email
+  draft, research checklist, directory/listing, manual sales y local prototype
+  tests;
+- Self-Improvement Proposal System v1 que prepara patch plan/tests/PR
+  description pero bloquea debilitar PolicyEngine, ApprovalGateway, audit,
+  tests, permisos, self-merge y self-deploy;
+- Operator Scheduler/Report v1 manual/readiness-only, sin scheduler oculto;
+- Product Operating Loop v1 stoppable:
+  observe -> propose -> plan -> prepare_assets -> request_approval ->
+  execute_allowed_local_actions -> gather_evidence -> report -> learn ->
+  propose_next_step;
+- voice approval readiness para operaciones de producto elegibles solo con
+  trusted device, active voice session, exact readback, challenge, scope,
+  expiration y audit;
+- dashboard, event stream y `/jarvis` exponen Phase 9 como cockpit read-only,
+  no como consola de ejecucion.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-9/status`
+- `GET /mark-3/product-operator/status`
+- `POST /mark-3/product-operator/missions`
+- `POST /mark-3/product-operator/builder`
+- `POST /mark-3/product-operator/roi-decision`
+- `POST /mark-3/product-operator/experiments`
+- `POST /mark-3/product-operator/revenue-events`
+- `GET /mark-3/product-operator/revenue-summary`
+- `POST /mark-3/product-operator/budget-guard`
+- `POST /mark-3/product-operator/self-improvement`
+- `POST /mark-3/product-operator/reports`
+- `POST /mark-3/product-operator/operating-loop`
+- `POST /mark-3/product-operator/voice-approval-readiness`
+
+Invariantes:
+
+- no unlimited mission;
+- no approve-all-forever;
+- no memoria como permiso o presupuesto;
+- no wake phrase approval;
+- no frontend directo a Hermes;
+- no `/execute` ni shell libre;
+- no external publication, deploy production, DNS, email send, scraping,
+  checkout, charge, payout, refund o money movement por defecto;
+- no fake launch, fake customers, fake revenue, fake providers o fake rollback;
+- no self-merge, self-deploy, commit, push, PR o merge por Phase 9;
+- operaciones sensibles siguen requiriendo PolicyEngine, ApprovalGateway,
+  budget guard, readback/challenge, stop/rollback plan y audit.
+
+Real vs readiness:
+
+- Real: validacion deterministica de product mission envelopes, Product Builder
+  prepare-only, previews Phase 7, candidatos Phase 8, ROI scoring,
+  revenue tracker evidence-first, budget guard v2, experiment planner,
+  self-improvement proposals, reports manuales, operating-loop contract,
+  audit/dashboard/event stream/UI.
+- Readiness: persistencia durable de estado de producto, scheduler automatico,
+  provider execution, launch/deploy/email/payment live, rollback real,
+  ApprovalGateway handoff final y test-mode provider pilot.
+
+Documento:
+
+- `docs/jarvis-pr-174-phase-9-autonomous-product-operator-money-engine-self-improvement.md`

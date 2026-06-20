@@ -114,6 +114,8 @@ export function JarvisDebugDrawer({
   const phase5Status = (dashboard.phase_5_status ?? {}) as Record<string, unknown>;
   const phase7Status = (dashboard.phase_7_status ?? {}) as Record<string, unknown>;
   const phase8Status = (dashboard.phase_8_status ?? fallbackOffline.phase_8_status ?? {}) as Record<string, any>;
+  const phase9Status = (dashboard.phase_9_status ?? fallbackOffline.phase_9_status ?? {}) as Record<string, any>;
+  const productOperator = (dashboard.product_operator ?? phase9Status ?? {}) as Record<string, any>;
   const remoteChannels = (dashboard.remote_channels ?? fallbackOffline.remote_channels ?? {}) as Record<string, any>;
   const telegramReadiness = (dashboard.telegram_readiness ?? fallbackOffline.telegram_readiness ?? {}) as Record<string, any>;
   const mobileApprovalCenter = (dashboard.mobile_approval_center ?? fallbackOffline.mobile_approval_center ?? {}) as Record<string, any>;
@@ -286,6 +288,39 @@ export function JarvisDebugDrawer({
     ["estimates consume budget", yesNo(externalBudgetGuard.estimates_consume_budget, "true", "false")],
     ["approval required for spend", yesNo(externalBudgetGuard.explicit_approval_required_for_spending, "true", "unknown")],
     ["unknown cost gate", yesNo(externalBudgetGuard.unknown_cost_blocks_or_requires_strong_approval, "blocks", "not triggered")],
+  ] as const;
+
+  const productOperatorCounts = productOperator.counts ?? {};
+  const productOperatorRevenue = productOperator.revenue_tracker ?? {};
+  const productOperatorBudget = productOperator.budget_guard ?? {};
+  const productOperatorRows = [
+    ["phase", valueText(productOperator.phase, "Phase 9")],
+    ["status", valueText(productOperator.status, "governed product operator")],
+    ["missions", valueText(productOperatorCounts.mission_envelopes, "0")],
+    ["builder candidates", valueText(productOperatorCounts.builder_candidates, "0")],
+    ["ROI decisions", valueText(productOperatorCounts.roi_decisions, "0")],
+    ["experiments", valueText(productOperatorCounts.experiments, "0")],
+    ["revenue events", valueText(productOperatorCounts.revenue_events, "0")],
+    ["self-improvements", valueText(productOperatorCounts.self_improvement_proposals, "0")],
+  ] as const;
+
+  const productOperatorRevenueRows = [
+    ["projected", valueText(productOperatorRevenue.projected_revenue, "0")],
+    ["confirmed", valueText(productOperatorRevenue.confirmed_revenue, "0")],
+    ["gross", valueText(productOperatorRevenue.gross_revenue, "0")],
+    ["fees", valueText(productOperatorRevenue.fees, "0")],
+    ["costs", valueText(productOperatorRevenue.costs, "0")],
+    ["net", valueText(productOperatorRevenue.net_revenue, "0")],
+    ["confirmed evidence", yesNo(productOperatorRevenue.confirmed_revenue_requires_evidence, "required", "unknown")],
+    ["fake revenue", yesNo(productOperatorRevenue.no_fake_revenue, "blocked", "unknown")],
+  ] as const;
+
+  const productOperatorBudgetRows = [
+    ["budget decision", valueText(productOperatorBudget.last_decision, "not_evaluated")],
+    ["can spend", yesNo(productOperatorBudget.can_spend, "true", "false")],
+    ["spend approval", yesNo(productOperatorBudget.spending_requires_approval, "required", "unknown")],
+    ["unknown cost", yesNo(productOperatorBudget.unknown_cost_blocks_or_requires_strong_approval, "blocked/strong", "unknown")],
+    ["memory expands budget", yesNo(productOperatorBudget.memory_can_expand_budget, "allowed", "false")],
   ] as const;
 
   const localRuntimeRows = [
@@ -1457,6 +1492,28 @@ export function JarvisDebugDrawer({
 
             {activeTab === "finance" && (
               <div className="grid gap-4 xl:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Radar className="h-5 w-5 text-success" />
+                      <CardTitle>Phase 9 Product Operator</CardTitle>
+                    </div>
+                    <CardDescription>Product missions, builder candidates, ROI, experiments and reports stay governed.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={productOperatorRows} />
+                    <StatusList items={productOperatorRevenueRows} />
+                    <StatusList items={productOperatorBudgetRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Autonomous product missions require scope, budget, time limit, stop conditions and audit.</SafetyLine>
+                      <SafetyLine>Product Builder prepares candidates; it does not publish, deploy, send email or create checkout.</SafetyLine>
+                      <SafetyLine>Projected revenue is never counted as confirmed revenue.</SafetyLine>
+                      <SafetyLine>Self-improvement can prepare patch plans, tests and PR descriptions, but cannot self-merge or self-deploy.</SafetyLine>
+                      <SafetyLine>Reports are manual/readiness only; no hidden background scheduler.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <div className="flex items-center gap-2">

@@ -30,6 +30,8 @@ export const api = {
   getJarvisPhase5Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-5/status"),
   getJarvisPhase7Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-7/status"),
   getJarvisPhase8Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-8/status"),
+  getJarvisPhase9Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-9/status"),
+  getJarvisProductOperatorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/product-operator/status"),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
@@ -1743,6 +1745,8 @@ export interface JarvisDashboardStatus {
   phase_6_status?: Record<string, any>;
   phase_7_status?: Record<string, any>;
   phase_8_status?: Record<string, any>;
+  phase_9_status?: Record<string, any>;
+  product_operator?: Record<string, any>;
   phase_7_adapters?: Record<string, any>;
   filesystem_adapter?: Record<string, unknown>;
   github_worktree_adapter?: Record<string, unknown>;

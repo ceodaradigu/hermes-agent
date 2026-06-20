@@ -252,6 +252,7 @@ from jarvis.phase_6_voice_wake_sensor_runtime import (
 )
 from jarvis.phase_7_governed_actions import Phase7GovernedActionsControlPlane
 from jarvis.phase_8_governed_remote_external_ops import Phase8GovernedRemoteExternalOpsControlPlane
+from jarvis.phase_9_product_operator import Phase9ProductOperatorControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -900,6 +901,129 @@ class Mark3ExternalVoiceApprovalReadinessRequest(BaseModel):
     operation_id: str
     device_id: str = ""
     active_voice_session: bool = False
+
+
+class Mark3ProductOperatorRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    mission_id: Optional[str] = None
+    title: str = ""
+    goal: Optional[str] = None
+    objective: Optional[str] = None
+    expected_outcome: Optional[str] = None
+    target_user_customer: Optional[str] = None
+    target_customer: Optional[str] = None
+    hypothesis: Optional[str] = None
+    success_metric: Optional[str] = None
+    budget_limit: Optional[Any] = None
+    time_limit: Optional[Any] = None
+    time_limit_seconds: Optional[Any] = None
+    scope: Optional[List[str]] = None
+    allowed_tools_actions: Optional[List[str]] = None
+    allowed_actions: Optional[List[str]] = None
+    allowed_tools: Optional[List[str]] = None
+    forbidden_actions: Optional[List[str]] = None
+    approval_level: Optional[str] = None
+    risk: Optional[str] = None
+    status: Optional[str] = None
+    evidence: Optional[Any] = None
+    stop_conditions: Optional[List[str]] = None
+    expires_at: Optional[str] = None
+    candidate_id: Optional[str] = None
+    product_name: Optional[str] = None
+    idea: Optional[str] = None
+    problem: Optional[str] = None
+    problem_statement: Optional[str] = None
+    value_proposition: Optional[str] = None
+    audience: Optional[str] = None
+    competitor_alternative_notes: Optional[Any] = None
+    mvp_scope: Optional[List[str]] = None
+    out_of_scope: Optional[List[str]] = None
+    local_project_path: Optional[str] = None
+    headline: Optional[str] = None
+    sections: Optional[List[str]] = None
+    call_to_action: Optional[str] = None
+    price_amount: Optional[Any] = None
+    monthly_price: Optional[Any] = None
+    currency: str = "USD"
+    billing_interval: Optional[str] = None
+    projected_revenue: Optional[Any] = None
+    revenue_projection: Optional[Any] = None
+    confirmed_revenue: Optional[Any] = None
+    gross_revenue: Optional[Any] = None
+    fees: Optional[Any] = None
+    costs: Optional[Any] = None
+    cost_estimate: Optional[Any] = None
+    provider_cost_estimate: Optional[Any] = None
+    expected_upside: Optional[Any] = None
+    effort_estimate_hours: Optional[Any] = None
+    time_to_market_days: Optional[Any] = None
+    confidence: Optional[Any] = None
+    risks: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    dependency_list: Optional[List[str]] = None
+    human_time_required_hours: Optional[Any] = None
+    experiment_id: Optional[str] = None
+    channel: Optional[str] = None
+    target_audience: Optional[str] = None
+    asset_needed: Optional[str] = None
+    cost_cap: Optional[Any] = None
+    time_window: Optional[str] = None
+    expected_signal: Optional[str] = None
+    action_plan: Optional[Any] = None
+    next_step: Optional[str] = None
+    revenue_event_id: Optional[str] = None
+    type: Optional[str] = None
+    amount: Optional[Any] = None
+    source: Optional[Any] = None
+    timestamp: Optional[str] = None
+    linked_product: Optional[str] = None
+    linked_mission: Optional[str] = None
+    linked_experiment: Optional[str] = None
+    budget_check_id: Optional[str] = None
+    global_monthly_product_budget: Optional[Any] = None
+    monthly_budget: Optional[Any] = None
+    per_mission_budget: Optional[Any] = None
+    per_action_spending_limit: Optional[Any] = None
+    confirmed_spend_this_month: Optional[Any] = None
+    confirmed_spend_evidence: Optional[List[str]] = None
+    spending_requested: bool = False
+    explicit_approval_present: bool = False
+    proposal_id: Optional[str] = None
+    proposal_title: Optional[str] = None
+    proposal: Optional[str] = None
+    summary: Optional[str] = None
+    expected_value_score: Optional[Any] = None
+    patch_plan: Optional[List[str]] = None
+    tests: Optional[List[str]] = None
+    pr_description_preview: Optional[str] = None
+    report_id: Optional[str] = None
+    report_type: Optional[str] = None
+    recommended_next_actions: Optional[List[str]] = None
+    loop_id: Optional[str] = None
+    max_iterations: Optional[int] = None
+    operation_id: Optional[str] = None
+    device_id: str = ""
+    active_voice_session: bool = False
+    readback_text: str = ""
+    challenge_phrase: str = ""
+    production_requested: bool = False
+    deploy_requested: bool = False
+    publish_requested: bool = False
+    email_requested: bool = False
+    send_requested: bool = False
+    spend_requested: bool = False
+    provider_requested: bool = False
+    external_research_requested: bool = False
+    domain_requested: bool = False
+    dns_requested: bool = False
+    stripe_live_requested: bool = False
+    payment_requested: bool = False
+    charge_requested: bool = False
+    money_movement_requested: bool = False
+    refund_requested: bool = False
+    payout_requested: bool = False
+    identity_requested: bool = False
 
 
 class Mark3Phase6VoiceSessionStartRequest(BaseModel):
@@ -2456,6 +2580,12 @@ def create_app(
         identity_control=app.state.phase_2_local_assistant_runtime,
         audit_ledger=app.state.persistent_audit_ledger,
     )
+    app.state.phase_9_product_operator = Phase9ProductOperatorControlPlane(
+        phase_7_actions=app.state.phase_7_governed_actions,
+        phase_8_external_ops=app.state.phase_8_governed_remote_external_ops,
+        product_revenue_factory=app.state.mark_3_product_revenue_factory,
+        audit_ledger=app.state.persistent_audit_ledger,
+    )
 
     @app.get("/health")
     def health() -> dict:
@@ -2861,6 +2991,12 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-9/status")
+    def mark_3_phase_9_status() -> dict:
+        return app.state.phase_9_product_operator.status(
+            route_paths=(route.path for route in app.routes),
+        )
+
     @app.post("/mark-3/phase-6/stop-global")
     def mark_3_phase_6_stop_global(payload: Mark3Phase6StopGlobalRequest) -> dict:
         return app.state.phase_6_runtime.stop_global(**payload.model_dump())
@@ -3130,6 +3266,62 @@ def create_app(
     @app.post("/mark-3/external-operations/voice-approval-readiness")
     def mark_3_external_operations_voice_approval_readiness(payload: Mark3ExternalVoiceApprovalReadinessRequest) -> dict:
         return app.state.phase_8_governed_remote_external_ops.voice_approval_external_operation_readiness(**payload.model_dump())
+
+    def _product_operator_values(payload: Mark3ProductOperatorRequest) -> Dict[str, Any]:
+        return payload.model_dump(exclude_none=True, exclude_defaults=True)
+
+    @app.get("/mark-3/product-operator/status")
+    def mark_3_product_operator_status() -> dict:
+        return app.state.phase_9_product_operator.status(
+            route_paths=(route.path for route in app.routes),
+        )
+
+    @app.post("/mark-3/product-operator/missions")
+    def mark_3_product_operator_mission(payload: Mark3ProductOperatorRequest) -> dict:
+        try:
+            return app.state.phase_9_product_operator.create_mission_envelope(_product_operator_values(payload))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/product-operator/builder")
+    def mark_3_product_operator_builder(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.prepare_product_builder(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/roi-decision")
+    def mark_3_product_operator_roi_decision(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.evaluate_roi(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/experiments")
+    def mark_3_product_operator_experiment(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.plan_experiment(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/revenue-events")
+    def mark_3_product_operator_revenue_event(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.record_revenue_event(_product_operator_values(payload))
+
+    @app.get("/mark-3/product-operator/revenue-summary")
+    def mark_3_product_operator_revenue_summary() -> dict:
+        return app.state.phase_9_product_operator.revenue_summary()
+
+    @app.post("/mark-3/product-operator/budget-guard")
+    def mark_3_product_operator_budget_guard(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.evaluate_budget_guard(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/self-improvement")
+    def mark_3_product_operator_self_improvement(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.propose_self_improvement(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/reports")
+    def mark_3_product_operator_report(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.generate_operator_report(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/operating-loop")
+    def mark_3_product_operator_operating_loop(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.prepare_operating_loop(_product_operator_values(payload))
+
+    @app.post("/mark-3/product-operator/voice-approval-readiness")
+    def mark_3_product_operator_voice_approval_readiness(payload: Mark3ProductOperatorRequest) -> dict:
+        return app.state.phase_9_product_operator.voice_approval_readiness(_product_operator_values(payload))
 
     @app.get("/mark-3/execution/history/{execution_id}")
     def mark_3_execution_history_detail(execution_id: str) -> dict:
