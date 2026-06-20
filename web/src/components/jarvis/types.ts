@@ -123,6 +123,8 @@ export type JarvisEventType =
   | "phase_3_state"
   | "phase_4_state"
   | "phase_5_state"
+  | "phase_6_state"
+  | "phase_7_state"
   | "daemon_state"
   | "local_controller_state"
   | "trusted_channels_state"

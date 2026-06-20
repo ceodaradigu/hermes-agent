@@ -30,6 +30,7 @@ ALLOWED_EVENT_TYPES = (
     "phase_4_state",
     "phase_5_state",
     "phase_6_state",
+    "phase_7_state",
     "daemon_state",
     "local_controller_state",
     "trusted_channels_state",
@@ -572,6 +573,28 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
         ),
         _event(
             generated_at,
+            "phase_7_state",
+            "/mark-3/phase-7/status",
+            _get(dashboard_status, "phase_7_status.status", "implemented_as_governed_local_action_pilot"),
+            {
+                "schema_version": _get(dashboard_status, "phase_7_status.schema_version", "jarvis.phase_7_governed_actions_browser_filesystem_github_sandbox.v1"),
+                "catalog_v2": _bool(_get(dashboard_status, "phase_7_status.implemented_blocks.governed_action_catalog_v2", True)),
+                "filesystem_adapter": _get(dashboard_status, "filesystem_adapter.status", "unknown"),
+                "github_worktree_adapter": _get(dashboard_status, "github_worktree_adapter.status", "unknown"),
+                "browser_automation": _get(dashboard_status, "browser_automation.status", "readiness_and_plan_only"),
+                "sandbox_execution": _get(dashboard_status, "sandbox_execution.status", "guarded_local_command_runner_not_os_sandbox"),
+                "preflight": _get(dashboard_status, "preflight.status", "enabled"),
+                "safe_filesystem_allowed_roots_only": True,
+                "browser_hidden_allowed": False,
+                "sandbox_shell_freeform_allowed": False,
+                "commit_push_pr_merge_enabled": False,
+                "wake_phrase_can_approve": False,
+                "memory_grants_permission": False,
+                "frontend_direct_hermes": False,
+            },
+        ),
+        _event(
+            generated_at,
             "daemon_state",
             "/mark-3/local-daemon/status",
             _get(dashboard_status, "local_daemon.daemon_status", "unknown"),
@@ -756,6 +779,8 @@ def build_jarvis_event_snapshot(*, dashboard_status: Dict[str, Any], generated_a
                 "freeform_shell_allowed": False,
                 "arbitrary_command_allowed": False,
                 "action_count": len(_get(dashboard_status, "action_catalog.actions", [])),
+                "catalog_version": _get(dashboard_status, "action_catalog.catalog_version", 1),
+                "categories": _get(dashboard_status, "action_catalog.categories", {}),
                 "denied_action_count": len(_get(dashboard_status, "action_catalog.denied_actions", [])),
                 "network_allowed": False,
                 "external_side_effects": False,
@@ -1143,7 +1168,7 @@ def _risk_level_for_event(event_type: str) -> str:
         return "sensor_privacy"
     if event_type == "brain_state":
         return "intent_risk_preview"
-    if event_type in {"approval_state", "spoken_approval_state", "risk_state", "execution_state", "phase_2_state", "phase_6_state", "action_catalog_state", "policy_state"}:
+    if event_type in {"approval_state", "spoken_approval_state", "risk_state", "execution_state", "phase_2_state", "phase_6_state", "phase_7_state", "action_catalog_state", "policy_state"}:
         return "approval_gate"
     if event_type == "memory_brain_v3_state":
         return "memory_privacy"

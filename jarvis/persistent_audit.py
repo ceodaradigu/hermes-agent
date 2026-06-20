@@ -133,6 +133,9 @@ AUDIT_EVENT_TYPES = {
     "rollback_dry_run_recorded",
     "hermes_dispatch_blocked",
     "hermes_dispatch_disabled",
+    "preflight_completed",
+    "filesystem_backup_created",
+    "filesystem_write_completed",
 }
 
 _SENSITIVE_KEY_MARKERS: Iterable[str] = (

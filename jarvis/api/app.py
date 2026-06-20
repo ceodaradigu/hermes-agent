@@ -250,6 +250,7 @@ from jarvis.phase_6_voice_wake_sensor_runtime import (
     VoiceSessionManagerV2,
     WakeRuntimeOptIn,
 )
+from jarvis.phase_7_governed_actions import Phase7GovernedActionsControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -2304,7 +2305,7 @@ def create_app(
         adapter_factory=hermes_runtime_adapter_factory,
     )
     app.state.execution_history = ExecutionHistoryStore.from_environment()
-    app.state.phase_2_local_assistant_runtime = Phase5LocalControllerTrustedIdentityVoiceApprovalControlPlane(
+    app.state.phase_2_local_assistant_runtime = Phase7GovernedActionsControlPlane(
         intake_pipeline=app.state.conversational_intake_pipeline,
         policy_engine=app.state.policy_engine,
         mission_loop=app.state.mark_3_mission_loop,
@@ -2316,6 +2317,7 @@ def create_app(
     app.state.phase_3_local_runtime = app.state.phase_2_local_assistant_runtime
     app.state.phase_4_local_controller = app.state.phase_2_local_assistant_runtime
     app.state.phase_5_local_identity_voice = app.state.phase_2_local_assistant_runtime
+    app.state.phase_7_governed_actions = app.state.phase_2_local_assistant_runtime
     app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
 
     @app.get("/health")
@@ -2709,6 +2711,12 @@ def create_app(
     @app.get("/mark-3/phase-6/status")
     def mark_3_phase_6_status() -> dict:
         return app.state.phase_6_runtime.status()
+
+    @app.get("/mark-3/phase-7/status")
+    def mark_3_phase_7_status() -> dict:
+        return app.state.phase_7_governed_actions.phase_7_status(
+            route_paths=(route.path for route in app.routes),
+        )
 
     @app.post("/mark-3/phase-6/stop-global")
     def mark_3_phase_6_stop_global(payload: Mark3Phase6StopGlobalRequest) -> dict:

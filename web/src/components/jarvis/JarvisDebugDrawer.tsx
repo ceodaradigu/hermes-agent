@@ -112,7 +112,13 @@ export function JarvisDebugDrawer({
   const phase3Status = (dashboard.phase_3_status ?? {}) as Record<string, unknown>;
   const phase4Status = (dashboard.phase_4_status ?? {}) as Record<string, unknown>;
   const phase5Status = (dashboard.phase_5_status ?? {}) as Record<string, unknown>;
-  const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 8);
+  const phase7Status = (dashboard.phase_7_status ?? {}) as Record<string, unknown>;
+  const filesystemAdapter = (dashboard.filesystem_adapter ?? {}) as Record<string, unknown>;
+  const githubWorktreeAdapter = (dashboard.github_worktree_adapter ?? {}) as Record<string, unknown>;
+  const browserAutomation = (dashboard.browser_automation ?? {}) as Record<string, unknown>;
+  const sandboxExecution = (dashboard.sandbox_execution ?? {}) as Record<string, unknown>;
+  const preflight = (dashboard.preflight ?? {}) as Record<string, unknown>;
+  const actionCatalogItems: JarvisActionContract[] = (dashboard.action_catalog?.actions ?? dashboard.governed_execution?.action_catalog ?? []).slice(0, 18);
   const executionHistoryStatus: JarvisExecutionHistoryStatus = dashboard.execution_history?.status ?? dashboard.governed_execution?.execution_history ?? {};
   const executionHistoryItems: JarvisExecutionHistoryItem[] = (dashboard.execution_history?.items ?? dashboard.governed_execution?.execution_history?.recent ?? []).slice(0, 5);
   const localRuntime: JarvisLocalRuntimeStatus = dashboard.local_runtime ?? dashboard.governed_execution?.local_runtime ?? {};
@@ -187,6 +193,28 @@ export function JarvisDebugDrawer({
     ["notifications", yesNo((phase5Status.implemented_blocks as Record<string, unknown> | undefined)?.notification_readiness_contracts, "ready", "unknown")],
     ["wake approves", yesNo((phase5Status.security_gates as Record<string, unknown> | undefined)?.wake_phrase_can_approve, "allowed", "false")],
     ["remote execution", yesNo((phase5Status.security_gates as Record<string, unknown> | undefined)?.remote_execution_allowed, "allowed", "false")],
+  ] as const;
+
+  const phase7Rows = [
+    ["phase", valueText(phase7Status.phase, "Phase 7")],
+    ["status", valueText(phase7Status.status, "governed local action pilot")],
+    ["catalog v2", yesNo((phase7Status.implemented_blocks as Record<string, unknown> | undefined)?.governed_action_catalog_v2, "implemented", "unknown")],
+    ["filesystem", valueText(filesystemAdapter.status, "real_safe_local_adapter")],
+    ["Git/worktree", valueText(githubWorktreeAdapter.status, "read_only_helpers")],
+    ["browser", valueText(browserAutomation.status, "readiness_and_plan_only")],
+    ["sandbox", valueText(sandboxExecution.status, "guarded_runner")],
+    ["preflight", valueText(preflight.status, "enabled")],
+  ] as const;
+
+  const phase7AdapterRows = [
+    ["allowed roots", valueText((filesystemAdapter.allowed_roots as unknown[] | undefined)?.length, "0")],
+    ["backup overwrite", yesNo(filesystemAdapter.backup_before_overwrite, "enabled", "unknown")],
+    ["delete", yesNo(filesystemAdapter.delete_enabled, "enabled", "dry-run only")],
+    ["GitHub API", yesNo(githubWorktreeAdapter.github_api_called, "called", "false")],
+    ["commit/push/PR", yesNo(githubWorktreeAdapter.commit_enabled || githubWorktreeAdapter.push_enabled || githubWorktreeAdapter.open_pr_enabled, "enabled", "disabled")],
+    ["hidden browser", yesNo(browserAutomation.hidden_browser_allowed, "allowed", "blocked")],
+    ["shell freeform", yesNo(sandboxExecution.shell_freeform_allowed, "allowed", "blocked")],
+    ["secret scanning", yesNo(preflight.redaction, "redacts", "unknown")],
   ] as const;
 
   const localRuntimeRows = [
@@ -1126,10 +1154,12 @@ export function JarvisDebugDrawer({
                 <Card data-testid="jarvis-action-catalog-drawer">
                   <CardHeader>
                     <CardTitle>Action Catalog Allowlist</CardTitle>
-                    <CardDescription>Catálogo cerrado Phase 2; no shell libre ni comandos arbitrarios.</CardDescription>
+                    <CardDescription>Phase 7 action catalog status; no shell libre ni comandos arbitrarios.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <StatusList items={phase2Rows} />
+                    <StatusList items={phase7Rows} />
+                    <StatusList items={phase7AdapterRows} />
                     <StatusList items={stopRollbackRows} />
                     <div className="grid gap-2 lg:grid-cols-2">
                       {actionCatalogItems.length === 0 ? (
@@ -1154,6 +1184,9 @@ export function JarvisDebugDrawer({
                       <SafetyLine>Allowlist-only; UI no acepta comandos libres.</SafetyLine>
                       <SafetyLine>Outputs pasan por redacción antes de llegar al dashboard.</SafetyLine>
                       <SafetyLine>Secrets, tokens, cookies, passwords y .env quedan denied.</SafetyLine>
+                      <SafetyLine>Filesystem writes require backend approval and backup-before-overwrite.</SafetyLine>
+                      <SafetyLine>Browser automation is readiness/plan-only; no hidden browser.</SafetyLine>
+                      <SafetyLine>Sandbox uses command IDs only; no freeform shell.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>
@@ -1420,6 +1453,7 @@ export function JarvisDebugDrawer({
                   <CardContent className="space-y-4">
                     <StatusList items={phase2Rows} />
                     <StatusList items={phase3Rows} />
+                    <StatusList items={phase7Rows} />
                     <StatusList items={localRuntimeRows} />
                     <div className="grid gap-2 md:grid-cols-2">
                       <SafetyLine>Daemon local corre embebido en backend; no se instala servicio.</SafetyLine>
