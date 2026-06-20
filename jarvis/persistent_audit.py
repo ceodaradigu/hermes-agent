@@ -136,6 +136,20 @@ AUDIT_EVENT_TYPES = {
     "preflight_completed",
     "filesystem_backup_created",
     "filesystem_write_completed",
+    "phase_8_status_read",
+    "remote_channel_status_read",
+    "remote_channel_pairing_challenge_created",
+    "remote_channel_pairing_challenge_consumed",
+    "remote_channel_pairing_challenge_failed",
+    "remote_channel_revoked",
+    "remote_kill_switch_changed",
+    "remote_approval_intent_received",
+    "remote_approval_intent_rejected",
+    "telegram_readiness_checked",
+    "external_operation_envelope_created",
+    "external_operation_candidate_prepared",
+    "budget_guard_evaluated",
+    "revenue_event_recorded",
 }
 
 _SENSITIVE_KEY_MARKERS: Iterable[str] = (

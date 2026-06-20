@@ -1390,3 +1390,79 @@ Sigue bloqueado:
 Siguiente recomendado: Phase 4 como tray/local controller opt-in real, tercer
 canal confiable para triple approval y stop cooperativo mas profundo para
 procesos largos.
+
+## PR #173 - Phase 8 Governed Remote Channels, Deploy, Email & Payments
+
+Nota de handoff: este archivo seguia documentando contexto historico y no tenia
+todos los bloques PR168-PR172. Para Phase 8, la fuente detallada queda en
+`docs/jarvis-pr-173-phase-8-governed-remote-deploy-email-payments.md` y el
+resumen maestro en `docs/JARVIS_MASTER_BUILD_MAP.md`.
+
+PR #173 anade un piloto prepare-only gobernado para canales remotos, Telegram,
+mobile/PWA approval center, deploy, email, pagos/Stripe, revenue events y budget
+guard. No habilita ejecucion remota libre ni provider execution.
+
+Puntos clave:
+
+- `jarvis/phase_8_governed_remote_external_ops.py` es el control plane nuevo.
+- JARVIS recibe intents remotos; remote channels y frontend nunca llaman Hermes
+  directamente.
+- Remote execution esta disabled by default y no hay `/execute`.
+- Telegram readiness detecta token/config por env sin exponer token, no guarda
+  credenciales y no inicia bot automaticamente.
+- Pairing remoto usa el store de identidad Phase 5, trusted device binding,
+  challenge, scope, expiracion, revocacion y audit.
+- Remote approval intent solo llega a
+  `accepted_pending_local_approval_bridge`; no concede approval ni ejecuta.
+- Deploy/email/payment candidates crean external operation envelopes con
+  readback, challenge, cost, risk, approval level, rollback/compensation,
+  expiration, audit id y evidence.
+- Deploy es dry-run/prepare-only; production deploy requiere triple approval y
+  sigue disabled.
+- Email send queda disabled by default; recipients/content se redacted y
+  attachments son metadata-only.
+- Stripe live/money movement quedan blocked by default; no checkout, charge,
+  payout ni refund.
+- Revenue confirmed requiere evidence/source; fake revenue queda rejected.
+- Budget guard consume budget solo desde evidence confirmada, no estimates.
+- Voice approval readiness existe solo para external ops elegibles con trusted
+  device, active session, exact readback/challenge, expiration y audit; wake
+  phrase nunca aprueba.
+- Dashboard/event stream y `/jarvis` exponen Phase 8 como cockpit/readiness, no
+  como admin execution console.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-8/status`
+- `GET /mark-3/remote-channels/status`
+- `GET /mark-3/telegram-readiness/status`
+- `GET /mark-3/mobile-approval-center/status`
+- `POST /mark-3/remote-channels/pairing/challenge`
+- `POST /mark-3/remote-channels/pairing/verify`
+- `POST /mark-3/remote-channels/revoke`
+- `POST /mark-3/remote-channels/kill-switch`
+- `POST /mark-3/remote-channels/approval-intent`
+- `GET /mark-3/external-operations/status`
+- `POST /mark-3/external-operations/prepare-deploy`
+- `POST /mark-3/external-operations/prepare-email`
+- `POST /mark-3/external-operations/prepare-payment`
+- `POST /mark-3/external-operations/revenue-event`
+- `POST /mark-3/external-operations/budget-guard`
+- `POST /mark-3/external-operations/voice-approval-readiness`
+
+Validacion recomendada:
+
+```bash
+source ~/venvs/hermes-agent/bin/activate
+PYTHONPATH=. python -m pytest -c /dev/null \
+  tests/jarvis/test_pr_173_phase_8_governed_remote_external_ops.py -q
+PYTHONPATH=. python -m pytest -c /dev/null \
+  tests/jarvis/test_pr_170_phase_5_local_controller_identity_voice.py \
+  tests/jarvis/test_pr_171_phase_6_real_voice_wake_memory_sensor_runtime.py \
+  tests/jarvis/test_pr_172_phase_7_governed_actions.py -q
+```
+
+Siguiente recomendado: persistir envelopes/remote decisions, conectar remote
+approval intent como senal pendiente hacia ApprovalGateway, implementar
+Telegram notification-only con arranque manual explicito y pilotar un unico
+provider test-mode sin live money.

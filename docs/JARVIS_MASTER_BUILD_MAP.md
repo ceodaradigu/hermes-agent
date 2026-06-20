@@ -2069,3 +2069,96 @@ Real vs readiness:
 Documento:
 
 - `docs/jarvis-pr-172-phase-7-governed-actions-browser-filesystem-github-sandbox.md`
+
+## PR #173 - Phase 8 Governed Remote Channels, Deploy, Email & Payments
+
+Estado: implementado como piloto gobernado prepare-only para canales remotos,
+deploy, email, pagos y budget guard. No anade ejecucion remota libre ni llama
+providers externos.
+
+Incluye:
+
+- control plane Phase 8 en `jarvis/phase_8_governed_remote_external_ops.py`;
+- remote channel registry v1 para Telegram, mobile/PWA, local controller
+  notifications y future remote approval center;
+- pairing remoto sobre identidad Phase 5 con trusted device binding,
+  revocacion, scope, expiracion, challenge, anti-replay y audit;
+- remote kill switch para bloquear notificaciones/intentos remotos;
+- Telegram readiness v1 con deteccion de token/config sin exponer valores,
+  disabled-by-default, webhook/polling contract y sin bot autostart;
+- mobile approval center readiness v1 como preview/readback/challenge only;
+- deploy candidate model provider-agnostic con proyecto/app redacted,
+  ambiente, target, build/diff summary, secret names checklist, cost estimate,
+  rollback plan, risk y approval;
+- email draft/candidate con recipients redacted, body/subject preview,
+  attachment metadata only, identity-use warning, campaign checklist y send
+  disabled;
+- Stripe/payment candidate con test/live/unknown readiness sin exponer keys,
+  product/price candidate, amount/currency, recurring flag, live blocked y no
+  money movement;
+- revenue event model que separa projected y confirmed revenue; confirmed
+  requiere evidence/source y fake revenue queda rechazado;
+- budget guard v1 con monthly budget, per-action max, unknown/over-limit
+  blocking y budget consumed solo por evidence confirmada;
+- external operation envelope v1 con operation id, category, provider, actor,
+  channel, risk, side effects, cost, approval, readback, rollback/compensation,
+  status, audit id, expiration, challenge y evidence;
+- voice approval readiness para external ops elegibles solo con trusted device,
+  active session, exact readback/challenge, scope, expiracion y audit;
+- dashboard/event stream y drawer `/jarvis` con Phase 8 sin secretos ni
+  controles directos Hermes;
+- script manual `scripts/jarvis_phase8_telegram_pilot.py` que imprime readiness
+  redacted y no inicia bot.
+
+Endpoints principales:
+
+- `GET /mark-3/phase-8/status`
+- `GET /mark-3/remote-channels/status`
+- `GET /mark-3/telegram-readiness/status`
+- `GET /mark-3/mobile-approval-center/status`
+- `POST /mark-3/remote-channels/pairing/challenge`
+- `POST /mark-3/remote-channels/pairing/verify`
+- `POST /mark-3/remote-channels/revoke`
+- `POST /mark-3/remote-channels/kill-switch`
+- `POST /mark-3/remote-channels/approval-intent`
+- `GET /mark-3/external-operations/status`
+- `POST /mark-3/external-operations/prepare-deploy`
+- `POST /mark-3/external-operations/prepare-email`
+- `POST /mark-3/external-operations/prepare-payment`
+- `POST /mark-3/external-operations/revenue-event`
+- `POST /mark-3/external-operations/budget-guard`
+- `POST /mark-3/external-operations/voice-approval-readiness`
+
+Invariantes:
+
+- no `/execute`;
+- no shell libre;
+- no frontend directo a Hermes;
+- remote channels nunca llaman Hermes directamente;
+- remote execution disabled by default;
+- no public internet exposure by default;
+- no hidden remote listener;
+- no Telegram bot autostart;
+- no token/secret value exposed in API, audit, UI or tests;
+- no production deploy by default;
+- no DNS changes;
+- no provider calls or secret reads;
+- no email send or contact scraping;
+- no Stripe live charge, checkout, payout, refund or money movement;
+- no fake provider success, fake rollback or fake revenue;
+- memory never grants permission;
+- wake phrase never approves.
+
+Real vs readiness:
+
+- Real: deterministic readiness detection, Phase 5-backed remote pairing,
+  revocation, kill switch state, metadata-only audit, prepare-only envelopes,
+  budget/revenue validation, dashboard/event stream/UI exposure, manual
+  Telegram readiness script.
+- Readiness: Telegram runtime, standalone mobile approval center, provider
+  deploy/email/payment execution, durable pending envelope storage, real
+  rollback/compensation and final remote ApprovalGateway bridge.
+
+Documento:
+
+- `docs/jarvis-pr-173-phase-8-governed-remote-deploy-email-payments.md`

@@ -29,6 +29,7 @@ export const api = {
   getJarvisPhase4Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-4/status"),
   getJarvisPhase5Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-5/status"),
   getJarvisPhase7Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-7/status"),
+  getJarvisPhase8Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-8/status"),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
@@ -40,6 +41,10 @@ export const api = {
   getJarvisNotificationsStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/notifications/status"),
   getJarvisRemotePairingStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/remote-pairing/status"),
   getJarvisTelegramBridgeStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/telegram-bridge/status"),
+  getJarvisRemoteChannelsStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/remote-channels/status"),
+  getJarvisTelegramReadinessStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/telegram-readiness/status"),
+  getJarvisMobileApprovalCenterStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/mobile-approval-center/status"),
+  getJarvisExternalOperationsStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/external-operations/status"),
   getJarvisStopRollbackStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/stop-rollback/status"),
   getJarvisActionCatalog: () => fetchJSON<{ actions?: JarvisActionContract[] }>("/mark-3/execution/action-catalog"),
   getJarvisExecutionHistory: (limit = 25) =>
@@ -1737,6 +1742,7 @@ export interface JarvisDashboardStatus {
   phase_5_status?: Record<string, unknown>;
   phase_6_status?: Record<string, any>;
   phase_7_status?: Record<string, any>;
+  phase_8_status?: Record<string, any>;
   phase_7_adapters?: Record<string, any>;
   filesystem_adapter?: Record<string, unknown>;
   github_worktree_adapter?: Record<string, unknown>;
@@ -1762,6 +1768,11 @@ export interface JarvisDashboardStatus {
   notifications?: Record<string, unknown>;
   remote_pairing?: Record<string, unknown>;
   telegram_bridge?: Record<string, unknown>;
+  remote_channels?: Record<string, any>;
+  telegram_readiness?: Record<string, any>;
+  mobile_approval_center?: Record<string, any>;
+  external_operations?: Record<string, any>;
+  external_budget_guard?: Record<string, any>;
   browser_verification?: JarvisBrowserVerificationStatus;
   conversational_brain?: JarvisConversationalBrain;
   conversational_intake?: JarvisConversationalIntake;
