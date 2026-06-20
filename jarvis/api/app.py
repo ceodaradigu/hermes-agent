@@ -251,6 +251,7 @@ from jarvis.phase_6_voice_wake_sensor_runtime import (
     WakeRuntimeOptIn,
 )
 from jarvis.phase_7_governed_actions import Phase7GovernedActionsControlPlane
+from jarvis.phase_8_governed_remote_external_ops import Phase8GovernedRemoteExternalOpsControlPlane
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -767,6 +768,138 @@ class Mark3VoiceApprovalDecisionRequest(BaseModel):
     scope: Optional[List[str]] = None
     action_id: Optional[str] = None
     cost_summary: str = "unknown; operator review required"
+
+
+class Mark3RemoteChannelPairingChallengeRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    channel_id: str = "mobile_pwa"
+    display_name: str = "David remote device"
+    public_identifier: str = "remote-device-public-identifier"
+    scope: List[str] = ["notification", "approval_preview", "readback", "remote_approval_intent", "deny", "cancel"]
+    ttl_seconds: int = 180
+
+
+class Mark3RemoteChannelPairingVerifyRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    channel_id: str = "mobile_pwa"
+    challenge_id: str
+    nonce: str
+    response_phrase: str
+    public_identifier: str
+    display_name: str = "David remote device"
+    scope: List[str] = ["notification", "approval_preview", "readback", "remote_approval_intent", "deny", "cancel"]
+
+
+class Mark3RemoteChannelRevokeRequest(BaseModel):
+    device_id: str
+    actor: str = "David"
+    reason: str = "operator revoke"
+
+
+class Mark3RemoteKillSwitchRequest(BaseModel):
+    enabled: bool = True
+    actor: str = "David"
+    reason: str = "operator remote kill switch"
+
+
+class Mark3RemoteApprovalIntentRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    operation_id: str
+    channel_id: str = "mobile_pwa"
+    device_id: str
+    decision: str = "approve"
+    challenge_phrase: str
+    readback_text: str
+
+
+class Mark3ExternalDeployCandidateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    provider: str = "unknown"
+    project_id: Optional[str] = None
+    app_id: Optional[str] = None
+    project_name: str = "unnamed project"
+    environment: str = "preview"
+    target: str = "unspecified target"
+    diff_summary: str = ""
+    build_summary: str = ""
+    required_secrets_checklist: Optional[List[str]] = None
+    cost_estimate: Optional[Any] = None
+    currency: str = "USD"
+    rollback_plan: str = ""
+    rollback_available: bool = False
+    actor: str = "David"
+    requested_by_channel: str = "local_api"
+    production: bool = False
+
+
+class Mark3ExternalEmailCandidateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    provider: str = "unknown"
+    operation: str = "draft"
+    recipients: Optional[List[str]] = None
+    subject: str = ""
+    body: str = ""
+    attachments: Optional[List[Dict[str, Any]]] = None
+    personal_identity_use: bool = False
+    bulk_or_marketing: bool = False
+    send_requested: bool = False
+    cost_estimate: Optional[Any] = None
+    currency: str = "USD"
+    rate_limit: str = ""
+    actor: str = "David"
+    requested_by_channel: str = "local_api"
+
+
+class Mark3ExternalPaymentCandidateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    provider: str = "stripe"
+    stripe_mode: str = "unknown"
+    product_name: str = "unnamed product"
+    price_id: Optional[str] = None
+    amount: Optional[Any] = None
+    currency: str = "USD"
+    recurring: bool = False
+    billing_interval: str = "one_time"
+    money_movement_requested: bool = False
+    charge_requested: bool = False
+    actor: str = "David"
+    requested_by_channel: str = "local_api"
+
+
+class Mark3ExternalRevenueEventRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    projected_revenue: Optional[Any] = None
+    confirmed_revenue: Optional[Any] = None
+    gross: Optional[Any] = None
+    fees: Optional[Any] = None
+    net: Optional[Any] = None
+    evidence: Optional[List[str]] = None
+    source: Optional[Any] = None
+
+
+class Mark3ExternalBudgetGuardRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    monthly_budget: Optional[Any] = None
+    per_action_max_cost: Optional[Any] = None
+    provider_cost_estimate: Optional[Any] = None
+    confirmed_spend_this_month: Optional[Any] = None
+    confirmed_spend_evidence: Optional[List[str]] = None
+    spending_requested: bool = True
+    explicit_approval_present: bool = False
+
+
+class Mark3ExternalVoiceApprovalReadinessRequest(BaseModel):
+    operation_id: str
+    device_id: str = ""
+    active_voice_session: bool = False
 
 
 class Mark3Phase6VoiceSessionStartRequest(BaseModel):
@@ -2319,6 +2452,10 @@ def create_app(
     app.state.phase_5_local_identity_voice = app.state.phase_2_local_assistant_runtime
     app.state.phase_7_governed_actions = app.state.phase_2_local_assistant_runtime
     app.state.phase_1_governed_execution = app.state.phase_2_local_assistant_runtime
+    app.state.phase_8_governed_remote_external_ops = Phase8GovernedRemoteExternalOpsControlPlane(
+        identity_control=app.state.phase_2_local_assistant_runtime,
+        audit_ledger=app.state.persistent_audit_ledger,
+    )
 
     @app.get("/health")
     def health() -> dict:
@@ -2718,6 +2855,12 @@ def create_app(
             route_paths=(route.path for route in app.routes),
         )
 
+    @app.get("/mark-3/phase-8/status")
+    def mark_3_phase_8_status() -> dict:
+        return app.state.phase_8_governed_remote_external_ops.phase_8_status(
+            route_paths=(route.path for route in app.routes),
+        )
+
     @app.post("/mark-3/phase-6/stop-global")
     def mark_3_phase_6_stop_global(payload: Mark3Phase6StopGlobalRequest) -> dict:
         return app.state.phase_6_runtime.stop_global(**payload.model_dump())
@@ -2837,6 +2980,44 @@ def create_app(
     def mark_3_telegram_bridge_status() -> dict:
         return app.state.phase_4_local_controller.telegram_bridge_status()
 
+    @app.get("/mark-3/remote-channels/status")
+    def mark_3_remote_channels_status() -> dict:
+        return app.state.phase_8_governed_remote_external_ops.remote_channels_status()
+
+    @app.get("/mark-3/telegram-readiness/status")
+    def mark_3_telegram_readiness_status() -> dict:
+        return app.state.phase_8_governed_remote_external_ops.telegram_readiness_status()
+
+    @app.get("/mark-3/mobile-approval-center/status")
+    def mark_3_mobile_approval_center_status() -> dict:
+        return app.state.phase_8_governed_remote_external_ops.mobile_approval_center_status()
+
+    @app.post("/mark-3/remote-channels/pairing/challenge")
+    def mark_3_remote_channel_pairing_challenge(payload: Mark3RemoteChannelPairingChallengeRequest) -> dict:
+        try:
+            return app.state.phase_8_governed_remote_external_ops.create_remote_pairing_challenge(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/remote-channels/pairing/verify")
+    def mark_3_remote_channel_pairing_verify(payload: Mark3RemoteChannelPairingVerifyRequest) -> dict:
+        try:
+            return app.state.phase_8_governed_remote_external_ops.verify_remote_pairing_challenge(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/mark-3/remote-channels/revoke")
+    def mark_3_remote_channel_revoke(payload: Mark3RemoteChannelRevokeRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.revoke_remote_device(**payload.model_dump())
+
+    @app.post("/mark-3/remote-channels/kill-switch")
+    def mark_3_remote_channel_kill_switch(payload: Mark3RemoteKillSwitchRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.set_remote_kill_switch(**payload.model_dump())
+
+    @app.post("/mark-3/remote-channels/approval-intent")
+    def mark_3_remote_channel_approval_intent(payload: Mark3RemoteApprovalIntentRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.receive_remote_approval_intent(**payload.model_dump())
+
     @app.get("/mark-3/stop-rollback/status")
     def mark_3_stop_rollback_status() -> dict:
         return app.state.phase_4_local_controller.stop_rollback_status()
@@ -2921,6 +3102,34 @@ def create_app(
             stop_status=stop_status,
             rollback_status=rollback_status,
         )
+
+    @app.get("/mark-3/external-operations/status")
+    def mark_3_external_operations_status() -> dict:
+        return app.state.phase_8_governed_remote_external_ops.external_operations_status()
+
+    @app.post("/mark-3/external-operations/prepare-deploy")
+    def mark_3_external_operations_prepare_deploy(payload: Mark3ExternalDeployCandidateRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.prepare_deploy_candidate(**payload.model_dump())
+
+    @app.post("/mark-3/external-operations/prepare-email")
+    def mark_3_external_operations_prepare_email(payload: Mark3ExternalEmailCandidateRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.prepare_email_candidate(**payload.model_dump())
+
+    @app.post("/mark-3/external-operations/prepare-payment")
+    def mark_3_external_operations_prepare_payment(payload: Mark3ExternalPaymentCandidateRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.prepare_payment_candidate(**payload.model_dump())
+
+    @app.post("/mark-3/external-operations/revenue-event")
+    def mark_3_external_operations_revenue_event(payload: Mark3ExternalRevenueEventRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.record_revenue_event(**payload.model_dump())
+
+    @app.post("/mark-3/external-operations/budget-guard")
+    def mark_3_external_operations_budget_guard(payload: Mark3ExternalBudgetGuardRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.evaluate_budget_guard(**payload.model_dump())
+
+    @app.post("/mark-3/external-operations/voice-approval-readiness")
+    def mark_3_external_operations_voice_approval_readiness(payload: Mark3ExternalVoiceApprovalReadinessRequest) -> dict:
+        return app.state.phase_8_governed_remote_external_ops.voice_approval_external_operation_readiness(**payload.model_dump())
 
     @app.get("/mark-3/execution/history/{execution_id}")
     def mark_3_execution_history_detail(execution_id: str) -> dict:

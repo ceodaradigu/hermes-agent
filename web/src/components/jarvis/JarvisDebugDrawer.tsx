@@ -113,6 +113,13 @@ export function JarvisDebugDrawer({
   const phase4Status = (dashboard.phase_4_status ?? {}) as Record<string, unknown>;
   const phase5Status = (dashboard.phase_5_status ?? {}) as Record<string, unknown>;
   const phase7Status = (dashboard.phase_7_status ?? {}) as Record<string, unknown>;
+  const phase8Status = (dashboard.phase_8_status ?? fallbackOffline.phase_8_status ?? {}) as Record<string, any>;
+  const remoteChannels = (dashboard.remote_channels ?? fallbackOffline.remote_channels ?? {}) as Record<string, any>;
+  const telegramReadiness = (dashboard.telegram_readiness ?? fallbackOffline.telegram_readiness ?? {}) as Record<string, any>;
+  const mobileApprovalCenter = (dashboard.mobile_approval_center ?? fallbackOffline.mobile_approval_center ?? {}) as Record<string, any>;
+  const externalOperations = (dashboard.external_operations ?? fallbackOffline.external_operations ?? {}) as Record<string, any>;
+  const externalBudgetGuard = (dashboard.external_budget_guard ?? fallbackOffline.external_budget_guard ?? {}) as Record<string, any>;
+  const stripeReadiness = (externalOperations.payments?.stripe_readiness ?? {}) as Record<string, unknown>;
   const filesystemAdapter = (dashboard.filesystem_adapter ?? {}) as Record<string, unknown>;
   const githubWorktreeAdapter = (dashboard.github_worktree_adapter ?? {}) as Record<string, unknown>;
   const browserAutomation = (dashboard.browser_automation ?? {}) as Record<string, unknown>;
@@ -215,6 +222,70 @@ export function JarvisDebugDrawer({
     ["hidden browser", yesNo(browserAutomation.hidden_browser_allowed, "allowed", "blocked")],
     ["shell freeform", yesNo(sandboxExecution.shell_freeform_allowed, "allowed", "blocked")],
     ["secret scanning", yesNo(preflight.redaction, "redacts", "unknown")],
+  ] as const;
+
+  const phase8Rows = [
+    ["phase", valueText(phase8Status.phase, "Phase 8")],
+    ["status", valueText(phase8Status.status, "governed remote/external ops pilot")],
+    ["remote Hermes direct", yesNo(phase8Status.security_gates?.remote_channels_call_hermes_directly, "allowed", "false")],
+    ["remote execution default", yesNo(phase8Status.security_gates?.remote_execution_enabled_by_default, "enabled", "disabled")],
+    ["Telegram autostart", yesNo(phase8Status.security_gates?.telegram_bot_autostart, "enabled", "false")],
+    ["provider calls default", yesNo(phase8Status.security_gates?.provider_calls_enabled_by_default, "enabled", "disabled")],
+    ["live money movement", yesNo(phase8Status.security_gates?.live_money_movement_enabled, "enabled", "blocked")],
+    ["fake revenue", yesNo(phase8Status.security_gates?.fake_revenue_allowed, "allowed", "blocked")],
+  ] as const;
+
+  const remoteChannelRows = [
+    ["registry", valueText(remoteChannels.status, "remote_channels_registered_disabled_by_default")],
+    ["trusted remote devices", valueText(remoteChannels.trusted_remote_device_count, "0")],
+    ["kill switch", yesNo(remoteChannels.remote_kill_switch?.enabled, "enabled", "disabled")],
+    ["pairing required", yesNo(remoteChannels.requirements?.pairing_required, "required", "unknown")],
+    ["anti replay", yesNo(remoteChannels.requirements?.anti_replay, "required", "unknown")],
+    ["approve all forever", yesNo(remoteChannels.defaults?.approve_all_forever_allowed, "allowed", "forbidden")],
+    ["remote execution", yesNo(remoteChannels.defaults?.remote_execution_enabled, "enabled", "disabled")],
+    ["direct Hermes", yesNo(remoteChannels.defaults?.frontend_or_remote_direct_hermes, "allowed", "forbidden")],
+  ] as const;
+
+  const telegramReadinessRows = [
+    ["provider", valueText(telegramReadiness.provider, "telegram")],
+    ["status", valueText(telegramReadiness.provider_status, "disabled_by_default_or_incomplete")],
+    ["enabled by config", yesNo(telegramReadiness.enabled_by_config, "enabled", "disabled")],
+    ["token present", yesNo(telegramReadiness.token_present, "present redacted", "missing")],
+    ["token exposed", yesNo(telegramReadiness.token_value_exposed, "exposed", "false")],
+    ["bot started", yesNo(telegramReadiness.runtime?.bot_started, "started", "false")],
+    ["webhook opened", yesNo(telegramReadiness.runtime?.webhook_opened, "opened", "false")],
+    ["remote execution", "disabled"],
+  ] as const;
+
+  const mobileApprovalRows = [
+    ["mobile center", valueText(mobileApprovalCenter.status, "mobile_pwa_approval_center_readiness")],
+    ["mode", valueText(mobileApprovalCenter.mode, "preview_readback_challenge_only")],
+    ["readback", yesNo(mobileApprovalCenter.can_show_readback, "available", "unknown")],
+    ["risk/cost/scope", yesNo(mobileApprovalCenter.can_show_risk_cost_scope, "shown", "unknown")],
+    ["approve real actions", yesNo(mobileApprovalCenter.can_approve_real_actions, "enabled", "false")],
+    ["execute", yesNo(mobileApprovalCenter.can_execute, "enabled", "disabled")],
+    ["direct Hermes", yesNo(mobileApprovalCenter.can_call_hermes_directly, "allowed", "forbidden")],
+    ["expiration", yesNo(mobileApprovalCenter.requirements?.expiration_required, "required", "unknown")],
+  ] as const;
+
+  const externalOpsRows = [
+    ["status", valueText(externalOperations.status, "prepare_only_external_operation_contracts_ready")],
+    ["execution", yesNo(externalOperations.execution_enabled, "enabled", "disabled")],
+    ["provider calls", yesNo(externalOperations.provider_calls_enabled, "enabled", "disabled")],
+    ["deploy dry-run", yesNo(externalOperations.deploy?.dry_run_default, "default", "unknown")],
+    ["email send default", yesNo(externalOperations.email?.send_enabled_by_default, "enabled", "disabled")],
+    ["Stripe mode", valueText(stripeReadiness.mode_detected, "not_configured")],
+    ["Stripe key exposed", yesNo(stripeReadiness.api_key_value_exposed, "exposed", "false")],
+    ["money movement", yesNo(externalOperations.payments?.money_movement_enabled, "enabled", "disabled")],
+  ] as const;
+
+  const externalBudgetRows = [
+    ["decision", valueText(externalBudgetGuard.decision, "allowed_prepare_only")],
+    ["can spend", yesNo(externalBudgetGuard.can_spend, "true", "false")],
+    ["budget consumed by evidence", yesNo(externalBudgetGuard.budget_consumed_only_by_confirmed_evidence, "true", "unknown")],
+    ["estimates consume budget", yesNo(externalBudgetGuard.estimates_consume_budget, "true", "false")],
+    ["approval required for spend", yesNo(externalBudgetGuard.explicit_approval_required_for_spending, "true", "unknown")],
+    ["unknown cost gate", yesNo(externalBudgetGuard.unknown_cost_blocks_or_requires_strong_approval, "blocks", "not triggered")],
   ] as const;
 
   const localRuntimeRows = [
@@ -1356,6 +1427,31 @@ export function JarvisDebugDrawer({
                     </div>
                   </CardContent>
                 </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Radar className="h-5 w-5 text-warning" />
+                      <CardTitle>Phase 8 Remote Channels</CardTitle>
+                    </div>
+                    <CardDescription>Remote channels are governed interfaces, not Hermes runtimes.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={phase8Rows} />
+                    <StatusList items={remoteChannelRows} />
+                    <StatusList items={telegramReadinessRows} />
+                    <StatusList items={mobileApprovalRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Remote channels must send intent into JARVIS Gateway/control plane.</SafetyLine>
+                      <SafetyLine>Frontend and remote channels never call Hermes directly.</SafetyLine>
+                      <SafetyLine>Telegram readiness does not run a bot automatically.</SafetyLine>
+                      <SafetyLine>Telegram token presence is redacted; token value is never shown.</SafetyLine>
+                      <SafetyLine>Mobile approval center is preview/readback/challenge only; it does not execute or approve real actions directly.</SafetyLine>
+                      <SafetyLine>Remote approval intent requires paired trusted device, exact readback, challenge, expiration, anti-replay and audit.</SafetyLine>
+                      <SafetyLine>Remote execution is disabled by default.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -1406,6 +1502,28 @@ export function JarvisDebugDrawer({
                       <SafetyLine>Deploy real requiere aprobación fuerte.</SafetyLine>
                       <SafetyLine>Stripe/checkout real requiere aprobación fuerte.</SafetyLine>
                       <SafetyLine>Revenue real requiere confirmación.</SafetyLine>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck className="h-5 w-5 text-warning" />
+                      <CardTitle>Phase 8 External Ops</CardTitle>
+                    </div>
+                    <CardDescription>Deploy, email and payment candidates are prepare-only envelopes.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <StatusList items={externalOpsRows} />
+                    <StatusList items={externalBudgetRows} />
+                    <div className="grid gap-2">
+                      <SafetyLine>Deploy candidate is dry-run/prepare-only by default; no production deploy, DNS change or secret read.</SafetyLine>
+                      <SafetyLine>Email candidate previews recipients, subject, body and attachments as metadata only; real send is disabled by default.</SafetyLine>
+                      <SafetyLine>Stripe live mode is blocked by default; payment candidate does not move money.</SafetyLine>
+                      <SafetyLine>Projected revenue and confirmed revenue stay separate.</SafetyLine>
+                      <SafetyLine>Confirmed revenue requires evidence/source; fake revenue is blocked.</SafetyLine>
+                      <SafetyLine>Budget guard consumes budget only from confirmed evidence, not estimates.</SafetyLine>
                     </div>
                   </CardContent>
                 </Card>

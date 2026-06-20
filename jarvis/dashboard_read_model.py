@@ -197,6 +197,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_7_governed_actions.phase_7_status(route_paths=route_path_list),
         timeline,
     )
+    phase_8_status = _source(
+        "/mark-3/phase-8/status",
+        lambda: app_state.phase_8_governed_remote_external_ops.phase_8_status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -265,6 +270,31 @@ def build_mark_3_dashboard_status(
     telegram_bridge = _source(
         "/mark-3/telegram-bridge/status",
         lambda: app_state.phase_4_local_controller.telegram_bridge_status(),
+        timeline,
+    )
+    remote_channels = _source(
+        "/mark-3/remote-channels/status",
+        lambda: app_state.phase_8_governed_remote_external_ops.remote_channels_status(),
+        timeline,
+    )
+    telegram_readiness = _source(
+        "/mark-3/telegram-readiness/status",
+        lambda: app_state.phase_8_governed_remote_external_ops.telegram_readiness_status(),
+        timeline,
+    )
+    mobile_approval_center = _source(
+        "/mark-3/mobile-approval-center/status",
+        lambda: app_state.phase_8_governed_remote_external_ops.mobile_approval_center_status(),
+        timeline,
+    )
+    external_operations = _source(
+        "/mark-3/external-operations/status",
+        lambda: app_state.phase_8_governed_remote_external_ops.external_operations_status(),
+        timeline,
+    )
+    external_budget_guard = _source(
+        "/mark-3/external-operations/budget-guard",
+        lambda: app_state.phase_8_governed_remote_external_ops.evaluate_budget_guard(audit_read=False),
         timeline,
     )
     stop_rollback_v2 = _source(
@@ -658,6 +688,13 @@ def build_mark_3_dashboard_status(
                 "Governed local action pilot: safe filesystem, read-only Git helpers, browser plans, guarded command IDs and preflight scanning.",
             ),
             _module(
+                "Phase 8 Remote Ops",
+                "pilot" if phase_8_status.get("status") else UNKNOWN,
+                "/mark-3/phase-8/status",
+                "remote_deploy_email_payment_prepare_only",
+                "Remote channels, Telegram/mobile approval readiness, deploy/email/payment candidates and budget guard are governed and prepare-only by default.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -829,6 +866,7 @@ def build_mark_3_dashboard_status(
         "phase_5_status": phase_5_status,
         "phase_6_status": phase_6_status,
         "phase_7_status": phase_7_status,
+        "phase_8_status": phase_8_status,
         "phase_7_adapters": phase_7_status.get("adapters", {}),
         "filesystem_adapter": (phase_7_status.get("adapters", {}) or {}).get("filesystem", {}),
         "github_worktree_adapter": (phase_7_status.get("adapters", {}) or {}).get("github_worktree", {}),
@@ -855,6 +893,11 @@ def build_mark_3_dashboard_status(
         "notifications": notifications,
         "remote_pairing": remote_pairing,
         "telegram_bridge": telegram_bridge,
+        "remote_channels": remote_channels,
+        "telegram_readiness": telegram_readiness,
+        "mobile_approval_center": mobile_approval_center,
+        "external_operations": external_operations,
+        "external_budget_guard": external_budget_guard,
         "browser_verification": browser_verification,
         "memory_brain_v2": memory_brain_v2_status,
         "memory_brain_v3": memory_brain_v3_status,
@@ -1078,6 +1121,12 @@ def build_mark_3_dashboard_status(
                 "read_only": True,
             },
             {
+                "event": "Phase 8 governed remote/external operations loaded",
+                "source": "/mark-3/phase-8/status",
+                "status": phase_8_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
                 "event": "Local daemon contract loaded",
                 "source": "/mark-3/local-daemon/status",
                 "status": local_daemon_status.get("daemon_status", UNKNOWN),
@@ -1111,6 +1160,18 @@ def build_mark_3_dashboard_status(
                 "event": "Telegram bridge disabled readiness loaded",
                 "source": "/mark-3/telegram-bridge/status",
                 "status": telegram_bridge.get("telegram_bridge_status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 8 remote channel registry loaded",
+                "source": "/mark-3/remote-channels/status",
+                "status": remote_channels.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 8 external operation envelope readiness loaded",
+                "source": "/mark-3/external-operations/status",
+                "status": external_operations.get("status", UNKNOWN),
                 "read_only": True,
             },
             {
