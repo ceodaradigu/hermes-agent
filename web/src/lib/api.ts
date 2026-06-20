@@ -32,6 +32,12 @@ export const api = {
   getJarvisPhase8Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-8/status"),
   getJarvisPhase9Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-9/status"),
   getJarvisProductOperatorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/product-operator/status"),
+  createJarvisConversationTurn: (payload: JarvisConversationTurnRequest) =>
+    fetchJSON<JarvisConversationTurnResponse>("/mark-3/conversation/turn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   getJarvisLocalDaemonStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/status"),
   getJarvisLocalControllerStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/local-controller/status"),
   getJarvisLocalDaemonHealth: () => fetchJSON<Record<string, unknown>>("/mark-3/local-daemon/health"),
@@ -827,6 +833,90 @@ export interface JarvisConversationalBrainResult {
   transcript_persistence?: boolean;
   preview_only?: boolean;
   read_only?: boolean;
+}
+
+export type JarvisConversationTurnStatus =
+  | "normal"
+  | "preview"
+  | "approval_required"
+  | "blocked"
+  | "unsupported"
+  | "error"
+  | string;
+
+export interface JarvisConversationTurnRequest {
+  user_text: string;
+  channel?: "jarvis_ui" | "jarvis_voice" | string;
+  conversation_id?: string | null;
+  session_id?: string | null;
+  source?: "typed_text" | "voice_transcript" | "wake_phrase_command" | "remote_input" | "unknown" | string;
+  operator?: string;
+  voice_session_state?: string;
+  transcript_confidence?: number;
+  context_flags?: Record<string, unknown> | null;
+}
+
+export interface JarvisConversationTurnResponse {
+  schema_version?: string;
+  turn_id: string;
+  conversation_id: string;
+  created_at: string;
+  channel: string;
+  source: string;
+  status: JarvisConversationTurnStatus;
+  assistant_text: string;
+  display?: {
+    language?: string;
+    tone?: string;
+    label?: string;
+    summary?: string;
+  };
+  intent?: {
+    intent_detected?: string;
+    confidence?: number | string;
+    risk_level?: string;
+    approval_level?: string;
+    requires_approval?: boolean;
+    can_prepare_preview?: boolean;
+  };
+  preview?: {
+    available?: boolean;
+    title?: string;
+    goal_summary?: string;
+    requires_approval?: boolean;
+    next_safe_action?: string;
+    would_execute?: boolean;
+    would_call_hermes?: boolean;
+    hermes_dispatch_allowed?: boolean;
+    preview_only?: boolean;
+    read_only?: boolean;
+  };
+  safety?: {
+    preview_only?: boolean;
+    read_only?: boolean;
+    did_execute?: boolean;
+    would_execute?: boolean;
+    no_hermes_dispatch?: boolean;
+    hermes_dispatch_allowed?: boolean;
+    frontend_direct_hermes_allowed?: boolean;
+    external_provider_called?: boolean;
+    memory_read?: boolean;
+    memory_write?: boolean;
+    wake_phrase_can_approve?: boolean;
+    wake_phrase_can_execute?: boolean;
+    raw_audio_included?: boolean;
+    camera_frames_included?: boolean;
+  };
+  audit_metadata?: {
+    metadata_only?: boolean;
+    intake_id?: string;
+    response_id?: string;
+    sensitive_request?: boolean;
+    requires_clarification?: boolean;
+    blocked_reasons?: string[];
+    raw_text_omitted?: boolean;
+    approval_is_not_execution?: boolean;
+  };
 }
 
 export interface JarvisConversationalBrain {

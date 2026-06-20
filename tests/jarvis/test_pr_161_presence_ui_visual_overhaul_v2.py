@@ -248,7 +248,7 @@ def test_pr_161_smart_bar_human_first_and_panels_are_folded_premium_not_dashboar
     smart_bar = _read(JARVIS_COMPONENT_DIR / "JarvisSmartBar.tsx")
 
     for marker in (
-        'data-smart-bar-contract="human-response-visible-details-folded-send-disabled"',
+        'data-smart-bar-contract="human-response-visible-details-folded-send-enabled"',
         "respuesta humana corta",
         "transcripción temporal local",
         "details",

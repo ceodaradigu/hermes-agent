@@ -27,6 +27,23 @@ export type JarvisOrbVisualState =
 
 export type BrowserCapabilityState = "unknown" | "supported" | "not_supported";
 
+export type JarvisConversationMessageStatus =
+  | "normal"
+  | "preview"
+  | "approval_required"
+  | "blocked"
+  | "unsupported"
+  | "error";
+
+export interface JarvisConversationMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  status: JarvisConversationMessageStatus;
+  timestamp: string;
+  source: "typed_text" | "voice_transcript" | "system";
+}
+
 export interface LocalJarvisVoiceResponse {
   text: string;
   tone: JarvisVoiceTone;
@@ -219,8 +236,13 @@ export interface LocalVoiceLoopController {
   capabilityNotice: string;
   selectedVoiceName: string;
   voiceQualityNotice: string;
+  voiceOutputEnabled: boolean;
+  speechOutputActive: boolean;
   canInterrupt: boolean;
   canCancel: boolean;
+  speakJarvisText: (text: string, tone?: JarvisVoiceTone) => boolean;
+  stopJarvisSpeech: () => void;
+  setVoiceOutputEnabled: (enabled: boolean) => void;
   beginLocalVoiceLoop: () => void;
   cancelLocalVoiceLoop: () => void;
 }

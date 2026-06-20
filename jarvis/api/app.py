@@ -56,6 +56,7 @@ from jarvis.camera_control_runtime import CameraControlRuntime
 from jarvis.command_center import build_command_center_view_model
 from jarvis.conversational_brain_bridge import ConversationalBrainBridge
 from jarvis.conversational_intake import ConversationalIntakePipeline
+from jarvis.conversation_turn import build_conversation_turn, conversation_source_for
 from jarvis.controlled_runtime_bridge import ControlledRuntimeBridge
 from jarvis.dashboard_event_stream import build_jarvis_event_snapshot, encode_sse_event
 from jarvis.dashboard_read_model import build_local_doctor_status, build_mark_3_dashboard_status
@@ -374,6 +375,18 @@ class WakeVoicePreviewRequest(BaseModel):
     text: str = ""
     confidence: float = 1.0
     answer_mode: str = "text"
+
+
+class Mark3ConversationTurnRequest(BaseModel):
+    user_text: str = ""
+    channel: str = "jarvis_ui"
+    conversation_id: Optional[str] = None
+    session_id: Optional[str] = None
+    source: Optional[str] = None
+    operator: str = "David"
+    voice_session_state: str = "idle"
+    transcript_confidence: float = 1.0
+    context_flags: Optional[Dict[str, Any]] = None
 
 
 class Mark2VoiceApprovalRequest(BaseModel):
@@ -2912,6 +2925,25 @@ def create_app(
     @app.get("/mark-3/brain-adapter/status")
     def mark_3_brain_adapter_status() -> dict:
         return app.state.llm_brain_adapter.status()
+
+    @app.post("/mark-3/conversation/turn")
+    def mark_3_conversation_turn(payload: Mark3ConversationTurnRequest) -> dict:
+        source = conversation_source_for(payload.channel, payload.source)
+        adapter_result = app.state.llm_brain_adapter.process(
+            payload.user_text,
+            source=source,
+            operator=payload.operator or "David",
+            session_id=payload.session_id or payload.conversation_id,
+            voice_session_state=payload.voice_session_state,
+            transcript_confidence=payload.transcript_confidence,
+        )
+        return build_conversation_turn(
+            user_text=payload.user_text,
+            channel=payload.channel,
+            conversation_id=payload.conversation_id or payload.session_id,
+            source=source,
+            adapter_result=adapter_result,
+        )
 
     @app.get("/mark-3/audit/status")
     def mark_3_audit_status() -> dict:

@@ -382,7 +382,8 @@ def test_frontend_calls_only_governed_backend_not_hermes_direct_or_execute_route
     assert "/mark-3/execution/dispatch" in source
     assert "/mark-3/execution/stop" in source
     assert "onIntentSubmitted" in source
-    assert 'source: "voice_transcript"' in source
+    assert "/mark-3/conversation/turn" in source
+    assert 'return submitConversationTurn(text, "voice_transcript", "jarvis_voice");' in source
     assert "Backend-gated" in source or "backend-gated" in source
     assert PROTECTED_CREDENTIAL_MESSAGE in source
     assert "No puedo hacer eso, David. Las credenciales y secretos están protegidos." in source
