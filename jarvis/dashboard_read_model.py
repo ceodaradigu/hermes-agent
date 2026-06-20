@@ -207,6 +207,16 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_9_product_operator.status(route_paths=route_path_list),
         timeline,
     )
+    phase_10_status = _source(
+        "/mark-3/phase-10/status",
+        lambda: app_state.phase_10_runtime.status(route_paths=route_path_list),
+        timeline,
+    )
+    model_router_status = _source(
+        "/mark-3/model-router/status",
+        lambda: app_state.phase_10_runtime.model_router.status(),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -707,6 +717,20 @@ def build_mark_3_dashboard_status(
                 "Product missions, builder candidates, ROI decisions, experiments, revenue, budget, reports and self-improvement are governed and evidence-first.",
             ),
             _module(
+                "Phase 10 Hands-Free Runtime",
+                "browser_pilot" if phase_10_status.get("status") else UNKNOWN,
+                "/mark-3/phase-10/status",
+                "hands_free_voice_persona_api_router_governed",
+                "Wake/stop contracts, continuous browser voice, UI voice commands, app/browser intents, persona and API router remain governed and audit-first.",
+            ),
+            _module(
+                "Model/API Router",
+                "ready" if model_router_status.get("schema_version") else UNKNOWN,
+                "/mark-3/model-router/status",
+                "openrouter_local_budget_guard",
+                "Routes simple tasks locally when good enough, reserves paid OpenRouter for quality-critical work, and guards the 30 EUR monthly budget.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -881,6 +905,16 @@ def build_mark_3_dashboard_status(
         "phase_8_status": phase_8_status,
         "phase_9_status": phase_9_status,
         "product_operator": phase_9_status,
+        "phase_10_status": phase_10_status,
+        "phase_10": phase_10_status,
+        "persona": phase_10_status.get("persona", {}),
+        "model_router": model_router_status,
+        "api_model_router": model_router_status,
+        "voice_ui_intent_router": phase_10_status.get("voice_ui_intent_router", {}),
+        "app_launcher": phase_10_status.get("app_launcher", {}),
+        "browser_intents": phase_10_status.get("browser_intents", {}),
+        "phase_10_approval_v2": phase_10_status.get("approval_v2", {}),
+        "phase_10_voice_provider_architecture": phase_10_status.get("voice_provider_architecture", {}),
         "phase_7_adapters": phase_7_status.get("adapters", {}),
         "filesystem_adapter": (phase_7_status.get("adapters", {}) or {}).get("filesystem", {}),
         "github_worktree_adapter": (phase_7_status.get("adapters", {}) or {}).get("github_worktree", {}),
@@ -988,6 +1022,12 @@ def build_mark_3_dashboard_status(
                 "phase_7_state",
                 "phase_8_state",
                 "phase_9_state",
+                "phase_10_state",
+                "persona_state",
+                "model_router_state",
+                "voice_ui_intent_state",
+                "app_launcher_state",
+                "browser_intent_state",
                 "product_operator_state",
                 "product_mission_state",
                 "product_builder_state",

@@ -141,6 +141,11 @@ export function JarvisPresenceShell({
   const wakeRuntime = dashboard.wake_runtime ?? {};
   const sensorRuntime = dashboard.sensor_runtime ?? {};
   const memoryBrainV3 = dashboard.memory_brain_v3 ?? {};
+  const phase10Status = dashboard.phase_10_status ?? dashboard.phase_10 ?? {};
+  const personaState = (dashboard.persona as Record<string, any> | undefined)?.state ?? (phase10Status.persona as Record<string, any> | undefined)?.state ?? {};
+  const personaMode = valueText(personaState.mode, "jarvis");
+  const personaVisibleName = valueText(personaState.visible_name, personaMode === "utron" ? "UTRON" : "JARVIS");
+  const personaIsUtron = personaMode === "utron";
   const wakeWordFlow = dashboard.wake_word_flow ?? fallbackOffline.wake_word_flow;
   const voiceCoreState = voiceCore.state ?? {};
   const ttsState = voiceCore.tts_state ?? {};
@@ -210,8 +215,17 @@ export function JarvisPresenceShell({
       data-visual-qa-no-hermes="true"
       data-visual-qa-no-sensors="true"
       data-visual-qa-approval="backend-gated"
+      data-persona-mode={personaMode}
+      data-orb-theme={personaIsUtron ? "red" : "cyan"}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,182,212,0.105),transparent_35%),radial-gradient(circle_at_68%_48%,rgba(248,113,113,0.045),transparent_24%),radial-gradient(circle_at_35%_75%,rgba(250,204,21,0.025),transparent_29%),linear-gradient(180deg,rgba(0,3,10,0.08),rgba(0,3,10,0.98))]" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: personaIsUtron
+            ? "radial-gradient(circle at 50% 46%, rgba(248,113,113,0.14), transparent 35%), radial-gradient(circle at 68% 48%, rgba(185,28,28,0.12), transparent 24%), radial-gradient(circle at 35% 75%, rgba(250,204,21,0.025), transparent 29%), linear-gradient(180deg, rgba(8,0,0,0.12), rgba(8,0,0,0.98))"
+            : "radial-gradient(circle at 50% 46%, rgba(6,182,212,0.105), transparent 35%), radial-gradient(circle at 68% 48%, rgba(248,113,113,0.045), transparent 24%), radial-gradient(circle at 35% 75%, rgba(250,204,21,0.025), transparent 29%), linear-gradient(180deg, rgba(0,3,10,0.08), rgba(0,3,10,0.98))",
+        }}
+      />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(103,232,249,0.016)_1px,transparent_1px),linear-gradient(0deg,rgba(125,211,252,0.012)_1px,transparent_1px)] bg-[length:128px_128px]" />
       <div className="pointer-events-none absolute inset-x-0 top-[4.2rem] h-px bg-cyan-300/22 shadow-[0_0_18px_rgba(34,211,238,0.34)]" />
 
@@ -231,7 +245,9 @@ export function JarvisPresenceShell({
           </div>
 
           <div className="text-center">
-            <p className="font-expanded text-2xl font-bold uppercase tracking-[0.34em] text-[#e6fbff] blend-lighter drop-shadow-[0_0_22px_rgba(230,251,255,0.76)]">JARVIS</p>
+              <p className={personaIsUtron ? "font-expanded text-2xl font-bold uppercase tracking-[0.34em] text-red-100 blend-lighter drop-shadow-[0_0_24px_rgba(248,113,113,0.80)]" : "font-expanded text-2xl font-bold uppercase tracking-[0.34em] text-[#e6fbff] blend-lighter drop-shadow-[0_0_22px_rgba(230,251,255,0.76)]"}>
+                {personaVisibleName}
+              </p>
             <p className="mt-0.5 font-display text-[0.62rem] uppercase tracking-[0.24em] text-cyan-100/46">presence chamber</p>
             <span className="sr-only">Centro de Mando JARVIS</span>
             <span className="sr-only">JARVIS Presence UI + Local System Contract</span>
@@ -287,6 +303,7 @@ export function JarvisPresenceShell({
           textReactive={textReactive}
           textSignal={smartBarTextSignal || localVoice.interimTranscript || localVoice.transcript || localVoice.localVoiceResponse}
           visualQaPreviewState={visualQaPreviewState}
+          personaMode={personaMode}
         />
 
         <aside className="hidden min-h-0 content-start gap-3 overflow-auto pr-1 xl:grid" data-testid="jarvis-contextual-side-panel" data-side-panel-style="premium-quiet-not-dashboard">

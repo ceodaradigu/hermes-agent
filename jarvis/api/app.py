@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from threading import Lock
@@ -254,6 +255,10 @@ from jarvis.phase_6_voice_wake_sensor_runtime import (
 from jarvis.phase_7_governed_actions import Phase7GovernedActionsControlPlane
 from jarvis.phase_8_governed_remote_external_ops import Phase8GovernedRemoteExternalOpsControlPlane
 from jarvis.phase_9_product_operator import Phase9ProductOperatorControlPlane
+from jarvis.phase_10_hands_free_runtime_persona_api_router import (
+    PHASE_10_EXACT_APPROVAL_PHRASE,
+    Phase10HandsFreeRuntimePersonaApiRouter,
+)
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -1098,6 +1103,43 @@ class Mark3SensorRuntimeDeleteRequest(BaseModel):
 
 class Mark3Phase6StopGlobalRequest(BaseModel):
     reason: str = "operator stop global"
+
+
+class Mark3Phase10TextRequest(BaseModel):
+    text: str = ""
+    confidence: float = 1.0
+    actor: str = "David"
+
+
+class Mark3Phase10AppLaunchRequest(BaseModel):
+    app_name: str = ""
+    actor: str = "David"
+
+
+class Mark3Phase10ApprovalStartRequest(BaseModel):
+    action: str = ""
+    risk_level: str = "high"
+    cost_summary: str = "sin coste conocido; revisar antes de ejecutar"
+    change_summary: str = "puede tocar estado externo o local sensible"
+    rollback_or_stop_plan: str = "parar antes de ejecutar; rollback específico si aplica"
+    session_id: str = ""
+
+
+class Mark3Phase10ApprovalConfirmRequest(BaseModel):
+    approval_id: str = ""
+    phrase: str = ""
+    session_id: str = ""
+    channel: str = "text"
+    active_trusted_session: bool = False
+    current_action_fingerprint: str = ""
+
+
+class Mark3ModelRouterDecisionRequest(BaseModel):
+    task_type: str = "simple_chat"
+    quality_required: str = "balanced"
+    estimated_input_tokens: int = 1200
+    estimated_output_tokens: int = 700
+    max_cost_eur: Optional[float] = None
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2429,6 +2471,13 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _float_env(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _sanitize_voice_metadata(metadata: dict) -> dict:
     blocked_exact = {"base_url", "prompt_text"}
     blocked_substrings = ("secret", "token", "key", "password")
@@ -2598,6 +2647,10 @@ def create_app(
         phase_8_external_ops=app.state.phase_8_governed_remote_external_ops,
         product_revenue_factory=app.state.mark_3_product_revenue_factory,
         audit_ledger=app.state.persistent_audit_ledger,
+    )
+    app.state.phase_10_runtime = Phase10HandsFreeRuntimePersonaApiRouter(
+        monthly_budget_eur=_float_env("JARVIS_API_MONTHLY_BUDGET_EUR", 30.0),
+        spent_eur=_float_env("JARVIS_API_SPEND_EUR", 0.0),
     )
 
     @app.get("/health")
@@ -2929,6 +2982,7 @@ def create_app(
     @app.post("/mark-3/conversation/turn")
     def mark_3_conversation_turn(payload: Mark3ConversationTurnRequest) -> dict:
         source = conversation_source_for(payload.channel, payload.source)
+        phase_10 = app.state.phase_10_runtime.handle_conversation_text(payload.user_text)
         adapter_result = app.state.llm_brain_adapter.process(
             payload.user_text,
             source=source,
@@ -2937,13 +2991,91 @@ def create_app(
             voice_session_state=payload.voice_session_state,
             transcript_confidence=payload.transcript_confidence,
         )
-        return build_conversation_turn(
+        turn = build_conversation_turn(
             user_text=payload.user_text,
             channel=payload.channel,
             conversation_id=payload.conversation_id or payload.session_id,
             source=source,
             adapter_result=adapter_result,
         )
+        persona_response = phase_10.get("persona", {}).get("response") or ""
+        if persona_response:
+            turn["assistant_text"] = persona_response
+            turn["status"] = "normal"
+            turn["display"]["label"] = phase_10.get("persona", {}).get("state", {}).get("visible_name", "JARVIS")
+            turn["display"]["tone"] = phase_10.get("persona", {}).get("state", {}).get("mode", "jarvis")
+        elif app.state.phase_10_runtime.persona.state.mode == "utron" and turn.get("assistant_text"):
+            turn["assistant_text"] = app.state.phase_10_runtime.persona.format_response(turn["assistant_text"])
+            turn["display"]["label"] = "UTRON"
+            turn["display"]["tone"] = "utron"
+        turn["phase_10"] = {
+            "persona": phase_10.get("persona", {}),
+            "voice_ui_intent": phase_10.get("voice_ui_intent", {}),
+            "wake_stop": phase_10.get("wake_stop", {}),
+            "frontend_direct_hermes_allowed": False,
+            "required_approval_phrase": PHASE_10_EXACT_APPROVAL_PHRASE,
+        }
+        return turn
+
+    @app.get("/mark-3/phase-10/status")
+    def mark_3_phase_10_status() -> dict:
+        return app.state.phase_10_runtime.status(route_paths=(route.path for route in app.routes))
+
+    @app.post("/mark-3/phase-10/wake/preview")
+    def mark_3_phase_10_wake_preview(payload: Mark3Phase10TextRequest) -> dict:
+        return app.state.phase_10_runtime.wake_stop.preview(payload.text, confidence=payload.confidence)
+
+    @app.post("/mark-3/phase-10/voice-ui/intent")
+    def mark_3_phase_10_voice_ui_intent(payload: Mark3Phase10TextRequest) -> dict:
+        return app.state.phase_10_runtime.voice_ui.route(payload.text).to_dict()
+
+    @app.get("/mark-3/phase-10/app-launcher/status")
+    def mark_3_phase_10_app_launcher_status() -> dict:
+        return app.state.phase_10_runtime.app_launcher.status()
+
+    @app.post("/mark-3/phase-10/app-launcher/prepare")
+    def mark_3_phase_10_app_launcher_prepare(payload: Mark3Phase10AppLaunchRequest) -> dict:
+        return app.state.phase_10_runtime.app_launcher.prepare(payload.app_name, actor=payload.actor)
+
+    @app.get("/mark-3/phase-10/browser-intent/status")
+    def mark_3_phase_10_browser_intent_status() -> dict:
+        return app.state.phase_10_runtime.browser.status()
+
+    @app.post("/mark-3/phase-10/browser-intent/prepare")
+    def mark_3_phase_10_browser_intent_prepare(payload: Mark3Phase10TextRequest) -> dict:
+        return app.state.phase_10_runtime.browser.prepare(payload.text, actor=payload.actor)
+
+    @app.get("/mark-3/phase-10/approval/status")
+    def mark_3_phase_10_approval_status() -> dict:
+        return app.state.phase_10_runtime.approvals.status()
+
+    @app.post("/mark-3/phase-10/approval/start")
+    def mark_3_phase_10_approval_start(payload: Mark3Phase10ApprovalStartRequest) -> dict:
+        return app.state.phase_10_runtime.approvals.start(**payload.model_dump())
+
+    @app.post("/mark-3/phase-10/approval/confirm")
+    def mark_3_phase_10_approval_confirm(payload: Mark3Phase10ApprovalConfirmRequest) -> dict:
+        return app.state.phase_10_runtime.approvals.confirm(**payload.model_dump())
+
+    @app.get("/mark-3/phase-10/persona/status")
+    def mark_3_phase_10_persona_status() -> dict:
+        return app.state.phase_10_runtime.persona.status()
+
+    @app.post("/mark-3/phase-10/persona/preview")
+    def mark_3_phase_10_persona_preview(payload: Mark3Phase10TextRequest) -> dict:
+        return app.state.phase_10_runtime.persona.handle_text(payload.text)
+
+    @app.get("/mark-3/phase-10/voice-providers/status")
+    def mark_3_phase_10_voice_providers_status() -> dict:
+        return app.state.phase_10_runtime.voice_providers.status(app.state.phase_10_runtime.persona.state)
+
+    @app.get("/mark-3/model-router/status")
+    def mark_3_model_router_status() -> dict:
+        return app.state.phase_10_runtime.model_router.status()
+
+    @app.post("/mark-3/model-router/decision")
+    def mark_3_model_router_decision(payload: Mark3ModelRouterDecisionRequest) -> dict:
+        return app.state.phase_10_runtime.model_router.decide(**payload.model_dump())
 
     @app.get("/mark-3/audit/status")
     def mark_3_audit_status() -> dict:

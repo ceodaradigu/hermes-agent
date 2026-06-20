@@ -216,6 +216,8 @@ export const fallbackModules: JarvisDashboardModule[] = [
   ["Wake Listener", "disabled", "sensor_privacy", "Wake phrase no aprueba, no ejecuta y no escucha por defecto."],
   ["Phase 5 Trust", "ready", "persistent_identity_pairing_voice_approval", "Trusted identity, local pairing, voice approval and notifications are backend-gated."],
   ["Phase 8 Remote Ops", "pilot", "remote_deploy_email_payment_prepare_only", "Remote channels are governed interfaces; deploy/email/payment candidates are prepare-only by default."],
+  ["Phase 10 Hands-Free Runtime", "browser_pilot", "hands_free_voice_persona_api_router_governed", "Wake/stop, voice UI controls, app/browser intents, persona and model routing are governed contracts."],
+  ["Model/API Router", "ready", "openrouter_local_budget_guard", "Local when good enough; OpenRouter only when quality matters and budget/approval allow it."],
   ["Camera/Vision", "disabled", "sensor_privacy", "Cámara opt-in futura; sin captura ni permisos al cargar."],
   ["Mobile Companion", "preview", "remote_surface", "Mobile/Telegram futuros serán canales gobernados, no bypass."],
   ["Memory/Learning", "preview", "memory_never_grants_permission", "Memoria visible futura; memoria nunca concede permisos."],

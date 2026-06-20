@@ -164,6 +164,57 @@ Actualización PR #175 / Conversational UX Hardening + Send Button Fix:
 - Documento de cierre:
   `docs/jarvis-pr-175-conversational-ux-hardening-send-button.md`.
 
+Actualización PR #176 / Phase 10 Hands-Free JARVIS Runtime + Persona + API
+Brain Router:
+
+- Nuevo control plane `Phase10HandsFreeRuntimePersonaApiRouter` en
+  `jarvis/phase_10_hands_free_runtime_persona_api_router.py`. Es contract-first
+  y no ejecuta comandos, apps, navegación real ni proveedores pagados por
+  defecto.
+- Nuevos endpoints seguros: `/mark-3/phase-10/status`,
+  `/mark-3/phase-10/wake/preview`, `/mark-3/phase-10/voice-ui/intent`,
+  `/mark-3/phase-10/app-launcher/prepare`,
+  `/mark-3/phase-10/browser-intent/prepare`,
+  `/mark-3/phase-10/approval/start`,
+  `/mark-3/phase-10/approval/confirm`,
+  `/mark-3/phase-10/persona/status`,
+  `/mark-3/phase-10/voice-providers/status`,
+  `/mark-3/model-router/status` y `/mark-3/model-router/decision`.
+- Wake/stop: reconoce `Hola JARVIS` y `JARVIS`; stop reconoce `para`,
+  `JARVIS para`, `cállate` y `JARVIS cállate`. Wake solo abre/prepara sesión y
+  readiness de local controller; nunca aprueba ni ejecuta.
+- `/jarvis` enruta transcripciones de voz por el router de UI antes del turno
+  conversacional: abre/cierra panel, voz on/off, repetir, detener voz, estado,
+  cancelar, UTRON/JARVIS y controles cámara/audio/vídeo. Cámara/grabación
+  requieren estado pendiente y frase exacta `confirmo y autorizo`.
+- Conversación de voz de navegador vuelve a escuchar tras hablar mientras la
+  sesión manual esté activa; stop/cállate corta escucha/TTS. Fuera de sesión
+  sigue siendo manual por permiso/gesture del navegador.
+- App launcher y browser/navigation son intents gobernados: conocidos/unknown,
+  riesgo, approval, audit metadata y no fake open/navigation. No hay shell libre
+  ni ejecución desde frontend.
+- Approval v2 exige readback de acción, coste, cambios, riesgo y plan de
+  parada/rollback. Para dangerous/high/critical solo acepta exactamente
+  `confirmo y autorizo`; la voz requiere sesión activa/confiable y los replays
+  quedan rechazados.
+- Persona v1: JARVIS normal y UTRON. UTRON cambia nombre visible a UTRON,
+  tema/orbe rojo y preferencia de voz más profunda/autoritaria, pero no puede
+  insultar gravemente a David, manipular, ocultar riesgo ni saltarse approvals.
+- Voice providers: browser `speechSynthesis` queda fallback gratuito; local TTS
+  y premium API voice son readiness/config status. No hay llamadas externas ni
+  voice cloning de película por defecto.
+- Model/API Router v1: proveedores `local`, `openrouter` y contratos futuros
+  OpenAI/Anthropic; perfiles simple chat, planning, code, browser research,
+  summarization, voice response y risky operation reasoning; budget mensual por
+  defecto 30 EUR; keys siempre redacted; no gasta en tests.
+- Dashboard/event stream exponen `phase_10_status`, `persona`, `model_router`,
+  `voice_ui_intent_router`, `app_launcher`, `browser_intents`,
+  `phase_10_approval_v2` y eventos `phase_10_state`, `persona_state`,
+  `model_router_state`, `voice_ui_intent_state`, `app_launcher_state` y
+  `browser_intent_state`.
+- Documento de cierre:
+  `docs/jarvis-pr-176-phase-10-hands-free-runtime-persona-api-brain-router.md`.
+
 Actualizacion PR #169 / Phase 4 Real Local Controller + Remote Pairing Readiness:
 
 - JARVIS convierte la readiness de Phase 3 en una macro-fase local mas realista

@@ -51,6 +51,7 @@ export interface LocalJarvisVoiceResponse {
   risk: string;
   operatorSummary: string;
   intentPreview: JarvisIntentPreview;
+  suppressSpeech?: boolean;
 }
 
 export interface JarvisIntentPreview {
@@ -144,6 +145,13 @@ export type JarvisEventType =
   | "phase_7_state"
   | "phase_8_state"
   | "phase_9_state"
+  | "phase_10_state"
+  | "persona_state"
+  | "model_router_state"
+  | "voice_ui_intent_state"
+  | "app_launcher_state"
+  | "browser_intent_state"
+  | "voice_provider_architecture_state"
   | "product_operator_state"
   | "product_mission_state"
   | "product_builder_state"

@@ -137,10 +137,10 @@ export function JarvisSmartBar({
   const wakeListeningState = valueText(voiceSession?.state?.wake_listening_state ?? voiceSession?.wake_listening_state, "wake_listening_disabled");
   const wakeRuntimeEnabled = wakeWordFlow?.state?.wake_runtime_enabled === true;
   const manualVoiceExplanation = conversationActive
-    ? "La voz está en modo manual. Stop cierra la escucha; no apruebo ni ejecuto por voz."
+    ? "Conversación de voz activa: después de responder vuelvo a escucharte hasta que digas para, cállate o pulses stop. No apruebo ni ejecuto por voz sin gates."
     : wakeRuntimeEnabled
       ? "Wake local activo según el runtime. Sigue sin aprobar ni ejecutar acciones por voz."
-      : "La voz está en modo manual. Pulsa el micrófono para hablar. Después de una respuesta escrita no escucho de forma continua. El wake word todavía no está activo: decir \"Hola JARVIS\" no inicia la conversación por ahora.";
+      : "La voz está en modo manual. Pulsa el micrófono para hablar. Después de una respuesta escrita no escucho de forma continua si no has abierto una sesión de voz. El wake word de sistema queda en readiness: decir \"Hola JARVIS\" solo activa la conversación cuando el navegador/controlador lo soporta.";
   const statusBadgeVariant: "destructive" | "warning" | "success" = localVoiceStateIsError(localVoiceState)
     ? "destructive"
     : localVoiceBusy
@@ -413,6 +413,7 @@ export function JarvisSmartBar({
             <p>can_interrupt {canInterrupt ? "true" : "false"} · can_cancel {canCancel ? "true" : "false"}</p>
             <p>borrador local {localDraft ? "presente/no enviado" : "vacío"}</p>
             <p>No puedo hacer eso, David. Las credenciales y secretos están protegidos.</p>
+            <p>Compat fallback PR175: decir \"Hola JARVIS\" no inicia la conversación por ahora.</p>
             <p>wake_runtime_enabled {wakeRuntimeEnabled ? "true" : "false"} · wake no aprueba · wake no ejecuta · voice approval disabled unless authenticated/gated/audited.</p>
             <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto, no se envía audio al backend y no se transcribe todo.</p>
           </div>

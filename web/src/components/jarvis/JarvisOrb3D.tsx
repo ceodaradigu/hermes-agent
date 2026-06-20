@@ -14,6 +14,7 @@ interface JarvisOrb3DProps {
   textReactive?: boolean;
   textSignal?: string;
   visualQaPreviewState?: JarvisOrbVisualState | null;
+  personaMode?: "jarvis" | "utron" | string;
 }
 
 interface CanvasParticle {
@@ -147,7 +148,9 @@ export function JarvisOrb3D({
   textReactive = false,
   textSignal = "",
   visualQaPreviewState = null,
+  personaMode = "jarvis",
 }: JarvisOrb3DProps) {
+  const isUtron = personaMode === "utron";
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [canvasReady, setCanvasReady] = useState(true);
   const [canvasError, setCanvasError] = useState("");
@@ -280,8 +283,13 @@ export function JarvisOrb3D({
           (0.62 + clamp(radialLength, 0, 1) * 0.46) *
           (currentOrb.isStopped ? 0.36 : 0.78 + currentOrb.stateReactiveEnergy * 0.26 + radialEnergy * 0.22);
         const size = particle.size * pixelRatio * (0.38 + depth * 1.22 + radialEnergy * localAudio * 1.05 + turbulence * Math.abs(turbulenceWave) * 0.22);
-        const color =
-          particle.lane % 5 === 0
+        const color = isUtron
+          ? particle.lane % 5 === 0
+            ? `rgba(254,226,226,${clamp(alpha, 0.03, 0.96)})`
+            : particle.lane % 3 === 0
+              ? `rgba(252,165,165,${clamp(alpha, 0.03, 0.90)})`
+              : `rgba(248,113,113,${clamp(alpha, 0.03, 0.82)})`
+          : particle.lane % 5 === 0
             ? `rgba(230,251,255,${clamp(alpha, 0.03, 0.96)})`
             : particle.lane % 3 === 0
               ? `rgba(174,247,255,${clamp(alpha, 0.03, 0.90)})`
@@ -300,9 +308,9 @@ export function JarvisOrb3D({
       if (currentOrb.emergentCoreConcentration > 0.12) {
         const coreAlpha = currentOrb.emergentCoreConcentration * (0.08 + pseudoAudio * radialEnergy * 0.13);
         const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, sphereRadius * 0.17);
-        gradient.addColorStop(0, `rgba(230,251,255,${clamp(coreAlpha, 0, 0.18)})`);
-        gradient.addColorStop(0.52, `rgba(174,247,255,${clamp(coreAlpha * 0.30, 0, 0.08)})`);
-        gradient.addColorStop(1, "rgba(103,232,249,0)");
+        gradient.addColorStop(0, isUtron ? `rgba(254,226,226,${clamp(coreAlpha, 0, 0.18)})` : `rgba(230,251,255,${clamp(coreAlpha, 0, 0.18)})`);
+        gradient.addColorStop(0.52, isUtron ? `rgba(252,165,165,${clamp(coreAlpha * 0.30, 0, 0.08)})` : `rgba(174,247,255,${clamp(coreAlpha * 0.30, 0, 0.08)})`);
+        gradient.addColorStop(1, isUtron ? "rgba(248,113,113,0)" : "rgba(103,232,249,0)");
         context.fillStyle = gradient;
         context.beginPath();
         context.arc(centerX, centerY, sphereRadius * 0.18, 0, Math.PI * 2);
@@ -315,7 +323,7 @@ export function JarvisOrb3D({
 
     animationId = window.requestAnimationFrame(draw);
     return () => window.cancelAnimationFrame(animationId);
-  }, [particles]);
+  }, [isUtron, particles]);
 
   const sphereStyle = {
     "--sphere-scale-min": String(orb.sphereScaleMin),
@@ -342,6 +350,8 @@ export function JarvisOrb3D({
       data-visual-qa-forced-state={visualQaPreviewState ?? "auto"}
       data-visual-qa-safe="local-frontend-only-no-hermes-no-sensors-no-approval"
       data-jarvis-tone={jarvisTone}
+      data-persona-mode={personaMode}
+      data-orb-theme={isUtron ? "red" : "cyan"}
       data-conversation-active={conversationActive ? "true" : "false"}
       data-kill-switch-state={killSwitchState}
       data-read-model-voice-state={voiceState}
@@ -370,8 +380,15 @@ export function JarvisOrb3D({
       data-listening-motion-signature="subtle-focus-micro-pulse-attentive-not-agitated"
       data-performance-budget={`targetFrameMs:${orb.targetFrameMs};particleBudget:${orb.particleBudget};pixelRatio:max-1.65;renderer:canvas-2d`}
     >
-      <div className="absolute inset-0 bg-[#00030a]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(14,165,233,0.10)_0%,rgba(2,132,199,0.035)_30%,rgba(0,3,10,0)_68%),radial-gradient(circle_at_50%_88%,rgba(8,47,73,0.20),transparent_46%)]" />
+      <div className={isUtron ? "absolute inset-0 bg-[#080000]" : "absolute inset-0 bg-[#00030a]"} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isUtron
+            ? "radial-gradient(circle at 50% 45%, rgba(248,113,113,0.16) 0%, rgba(127,29,29,0.08) 30%, rgba(8,0,0,0) 68%), radial-gradient(circle at 50% 88%, rgba(69,10,10,0.26), transparent 46%)"
+            : "radial-gradient(circle at 50% 45%, rgba(14,165,233,0.10) 0%, rgba(2,132,199,0.035) 30%, rgba(0,3,10,0) 68%), radial-gradient(circle at 50% 88%, rgba(8,47,73,0.20), transparent 46%)",
+        }}
+      />
       <div className="relative flex h-full min-h-0 flex-col items-center justify-center px-4">
         <div className="sr-only">
           <span className="h-1.5 w-1.5 rounded-full bg-[#e6fbff] shadow-[0_0_16px_rgba(230,251,255,0.85)]" />
@@ -400,13 +417,15 @@ export function JarvisOrb3D({
               background:
                 orb.isError || orb.isAlert
                   ? "radial-gradient(circle, rgba(251,113,133,0.18), rgba(251,146,60,0.08) 34%, transparent 64%)"
-                  : "radial-gradient(circle, rgba(103,232,249,0.14), rgba(14,165,233,0.045) 38%, transparent 70%)",
+                  : isUtron
+                    ? "radial-gradient(circle, rgba(248,113,113,0.22), rgba(127,29,29,0.09) 38%, transparent 70%)"
+                    : "radial-gradient(circle, rgba(103,232,249,0.14), rgba(14,165,233,0.045) 38%, transparent 70%)",
             }}
           />
           <canvas
             ref={canvasRef}
             aria-label="Esfera viva de partículas renderizada en Canvas 2D; sin logo central, sin núcleo fijo y sin WebGL como visual principal."
-            className="absolute inset-0 h-full w-full opacity-95 [filter:drop-shadow(0_0_28px_rgba(103,232,249,0.36))]"
+            className={isUtron ? "absolute inset-0 h-full w-full opacity-95 [filter:drop-shadow(0_0_32px_rgba(248,113,113,0.48))]" : "absolute inset-0 h-full w-full opacity-95 [filter:drop-shadow(0_0_28px_rgba(103,232,249,0.36))]"}
             data-testid="jarvis-particle-sphere-canvas"
             data-renderer="canvas-2d-particle-sphere"
             data-particle-count={particles.length}
