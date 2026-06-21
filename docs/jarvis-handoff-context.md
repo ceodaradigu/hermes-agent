@@ -215,6 +215,48 @@ Brain Router:
 - Documento de cierre:
   `docs/jarvis-pr-176-phase-10-hands-free-runtime-persona-api-brain-router.md`.
 
+Actualización PR #177 / Phase 11 Real Provider Wiring + Local Controller +
+iPhone Companion:
+
+- Nuevo control plane `Phase11RealProviderControllerIPhoneCompanion` en
+  `jarvis/phase_11_real_provider_controller_iphone_companion.py`. Mantiene una
+  sola identidad JARVIS: el iPhone es cliente seguro, no segundo agente.
+- OpenRouter/local/futuros slots quedan expuestos como provider status
+  redacted. `OPENROUTER_API_KEY` o `JARVIS_OPENROUTER_API_KEY` solo cambia
+  readiness; llamadas pagadas siguen bloqueadas salvo
+  `JARVIS_OPENROUTER_LIVE_CALLS_ENABLED=true`, approval valida y adapter
+  gobernado.
+- Model/API Router v2 clasifica chat, planning, code, browser research,
+  summarization, risky operation reasoning y voice response. Usa presupuesto
+  mensual default 30 EUR, coste estimado, calidad requerida, preferencia local
+  cuando basta y rechazo de downgrade barato cuando la calidad alta/critica lo
+  haria inseguro.
+- Approval v3 cubre coste API, app launch, browser navigation, mobile approval
+  y UTRON intentando accion riesgosa. Riesgo alto/critico exige frase exacta
+  `confirmo y autorizo`, action id, scope, canal/device, expiracion y audit.
+- Local controller pilot abre `/jarvis` en navegador/Chrome por camino acotado.
+  Apps conocidas crean candidatos gobernados; unknown app responde exactamente:
+  `No sé dónde está esa aplicación. Dime la ruta una vez y la guardaré como app conocida.`
+  No hay raw shell.
+- Browser/navigation pilot abre URL/busqueda segura; form submit, compras,
+  pagos, publicacion y credenciales quedan gated/unsupported/manuales.
+- iPhone companion agrega `/iphone/companion/status`, state, pairing start/
+  verify/revoke, command y approval decision. Pairing es efimero, revocable y
+  required para control/aprobacion movil.
+- `/mobile` es alias del mismo cockpit `/jarvis`; `web/public/manifest.webmanifest`
+  habilita PWA installable en iPhone Safari. No hay app nativa iOS todavia; esa
+  queda como readiness futura.
+- Dashboard/event stream exponen `phase_11_status`, `provider_status`,
+  `model_router_v2` e `iphone_companion` sin secretos.
+- Real: status/redaction, router decisions, budget guard, OpenRouter adapter
+  mockeable disabled-by-default, abrir `/jarvis`, abrir URL segura, pairing/
+  revoke iPhone, mobile approvals bound y shared current-session state.
+- Readiness: remote fuera de LAN, native iOS/App Store, browser automation
+  avanzada, credentials/vault, public exposure, ejecucion de apps fuera del
+  camino seguro y conversacion persistente cross-device completa.
+- Documento de cierre:
+  `docs/jarvis-pr-177-phase-11-real-provider-controller-iphone-companion.md`.
+
 Actualizacion PR #169 / Phase 4 Real Local Controller + Remote Pairing Readiness:
 
 - JARVIS convierte la readiness de Phase 3 en una macro-fase local mas realista

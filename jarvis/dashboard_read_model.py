@@ -217,6 +217,26 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_10_runtime.model_router.status(),
         timeline,
     )
+    phase_11_status = _source(
+        "/mark-3/phase-11/status",
+        lambda: app_state.phase_11_runtime.status(route_paths=route_path_list),
+        timeline,
+    )
+    provider_status = _source(
+        "/mark-3/providers/status",
+        lambda: app_state.phase_11_runtime.providers.status(),
+        timeline,
+    )
+    model_router_v2_status = _source(
+        "/mark-3/model-router-v2/status",
+        lambda: app_state.phase_11_runtime.model_router.status(),
+        timeline,
+    )
+    iphone_companion_status = _source(
+        "/iphone/companion/status",
+        lambda: app_state.phase_11_runtime.iphone_status(),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -724,11 +744,25 @@ def build_mark_3_dashboard_status(
                 "Wake/stop contracts, continuous browser voice, UI voice commands, app/browser intents, persona and API router remain governed and audit-first.",
             ),
             _module(
+                "Phase 11 iPhone Companion",
+                "pilot" if phase_11_status.get("status") else UNKNOWN,
+                "/mark-3/phase-11/status",
+                "real_provider_local_controller_iphone_same_jarvis",
+                "OpenRouter/local provider wiring, budget guard, bounded local/browser pilots and iPhone Safari/PWA share the same governed JARVIS state.",
+            ),
+            _module(
                 "Model/API Router",
                 "ready" if model_router_status.get("schema_version") else UNKNOWN,
                 "/mark-3/model-router/status",
                 "openrouter_local_budget_guard",
                 "Routes simple tasks locally when good enough, reserves paid OpenRouter for quality-critical work, and guards the 30 EUR monthly budget.",
+            ),
+            _module(
+                "Model/API Router v2",
+                "ready" if model_router_v2_status.get("schema_version") else UNKNOWN,
+                "/mark-3/model-router-v2/status",
+                "provider_budget_quality_router_v2",
+                "Preserves quality for code/research/risky reasoning, blocks overspend and requires approval for meaningful OpenRouter cost.",
             ),
             _module(
                 "Local Daemon",
@@ -907,9 +941,28 @@ def build_mark_3_dashboard_status(
         "product_operator": phase_9_status,
         "phase_10_status": phase_10_status,
         "phase_10": phase_10_status,
+        "phase_11_status": phase_11_status,
+        "phase_11": phase_11_status,
         "persona": phase_10_status.get("persona", {}),
         "model_router": model_router_status,
         "api_model_router": model_router_status,
+        "provider_status": provider_status,
+        "providers": provider_status,
+        "model_router_v2": model_router_v2_status,
+        "api_model_router_v2": model_router_v2_status,
+        "iphone_companion": iphone_companion_status,
+        "iphone": {
+            "companion_state": iphone_companion_status.get("status", UNKNOWN),
+            "same_jarvis_brain": bool(iphone_companion_status.get("same_jarvis_brain", False)),
+            "separate_mobile_agent": bool(iphone_companion_status.get("separate_mobile_agent", True)),
+            "pairing_required": bool(iphone_companion_status.get("security", {}).get("pairing_required", True)),
+            "direct_hermes_call_allowed": False,
+            "direct_execution_allowed": False,
+            "pwa_installable": bool(iphone_companion_status.get("pwa_installable", False)),
+            "lan_access_first": bool(iphone_companion_status.get("lan_access_first", False)),
+            "remote_access": iphone_companion_status.get("remote_access", UNKNOWN),
+            "source_endpoints": ["/iphone/companion/status", "/mark-3/phase-11/status"],
+        },
         "voice_ui_intent_router": phase_10_status.get("voice_ui_intent_router", {}),
         "app_launcher": phase_10_status.get("app_launcher", {}),
         "browser_intents": phase_10_status.get("browser_intents", {}),
@@ -1023,8 +1076,12 @@ def build_mark_3_dashboard_status(
                 "phase_8_state",
                 "phase_9_state",
                 "phase_10_state",
+                "phase_11_state",
                 "persona_state",
                 "model_router_state",
+                "provider_status_state",
+                "model_router_v2_state",
+                "iphone_companion_state",
                 "voice_ui_intent_state",
                 "app_launcher_state",
                 "browser_intent_state",
@@ -1198,6 +1255,12 @@ def build_mark_3_dashboard_status(
                 "event": "Phase 9 product operator loaded",
                 "source": "/mark-3/product-operator/status",
                 "status": phase_9_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 11 real provider/controller/iPhone pilot loaded",
+                "source": "/mark-3/phase-11/status",
+                "status": phase_11_status.get("status", UNKNOWN),
                 "read_only": True,
             },
             {
