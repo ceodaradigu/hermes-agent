@@ -156,6 +156,24 @@ Piezas relevantes ya documentadas:
   pagadas. Sigue sin `/execute`, shell libre, frontend directo a Hermes,
   aprobación por wake phrase, memoria como permiso, secretos, pagos,
   publicación, compras, envío de formularios sin aprobación ni fake execution.
+- Phase 11 Real Provider Wiring + Local Controller + iPhone Companion de PR
+  #177: convierte la readiness de Phase 10 en un primer operator layer usable
+  sin crear un segundo JARVIS. `jarvis/phase_11_real_provider_controller_iphone_companion.py`
+  centraliza provider status real para OpenRouter/local/futuros slots,
+  Model/API Router v2 con presupuesto mensual por defecto de 30 EUR,
+  Approval v3 para coste/app/browser/mobile, piloto local para abrir `/jarvis`,
+  piloto de navegador para URL/busqueda segura, pairing efimero iPhone y shared
+  state de sesion/persona/approvals/budget/audit. `/mobile` apunta al mismo
+  cockpit `/jarvis` y se anade PWA manifest para iPhone Safari/LAN. Lo real:
+  status redacted, decisiones de router sin llamada externa, budget guard,
+  adapter OpenRouter mockeable y disabled-by-default para pago, apertura acotada
+  de `/jarvis`, apertura de URLs seguras, pairing/revocacion iPhone y approvals
+  enlazadas a action id/scope/device. Readiness: acceso remoto fuera de LAN,
+  app nativa iOS/App Store, automatizacion avanzada de navegador, credenciales,
+  compras/publicacion/form submit sin strong approval y ejecucion de apps fuera
+  del camino seguro. Sigue sin `/execute`, shell libre, mobile/frontend Hermes
+  directo, wake approval, UTRON bypass, secretos en status/audit/event stream ni
+  exposicion publica del PC por defecto.
 - Presence UI de PR #160: `/jarvis` queda reorientado a una experiencia
   orb-first, menos dashboard/admin console y mas presencia viva. Header, rails,
   smart bar, camara lateral y detalles tecnicos fueron compactados/plegados.

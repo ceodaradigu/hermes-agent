@@ -259,6 +259,10 @@ from jarvis.phase_10_hands_free_runtime_persona_api_router import (
     PHASE_10_EXACT_APPROVAL_PHRASE,
     Phase10HandsFreeRuntimePersonaApiRouter,
 )
+from jarvis.phase_11_real_provider_controller_iphone_companion import (
+    PHASE_11_SCHEMA_VERSION,
+    Phase11RealProviderControllerIPhoneCompanion,
+)
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -1140,6 +1144,96 @@ class Mark3ModelRouterDecisionRequest(BaseModel):
     estimated_input_tokens: int = 1200
     estimated_output_tokens: int = 700
     max_cost_eur: Optional[float] = None
+
+
+class Mark3ModelRouterV2DecisionRequest(BaseModel):
+    task_type: str = "simple_chat"
+    quality_required: str = "balanced"
+    estimated_input_tokens: int = 1200
+    estimated_output_tokens: int = 700
+    user_preference: str = "auto"
+    max_cost_eur: Optional[float] = None
+    allow_quality_downgrade: bool = False
+
+
+class Mark3ModelRouterV2ClassifyRequest(BaseModel):
+    text: str = ""
+
+
+class Mark3Phase11ApprovalStartRequest(BaseModel):
+    action_summary: str = ""
+    risk_level: str = "high"
+    scope: Optional[List[str]] = None
+    action_id: Optional[str] = None
+    cost_summary: str = "0 EUR estimados"
+    change_summary: str = "puede tocar estado local o externo"
+    rollback_or_stop_plan: str = "parar antes de ejecutar; rollback especifico si aplica"
+    channel: str = "desktop"
+    device_id: str = ""
+    ttl_seconds: int = 180
+
+
+class Mark3Phase11ApprovalConfirmRequest(BaseModel):
+    approval_id: str = ""
+    action_id: str = ""
+    scope: Optional[List[str]] = None
+    phrase: str = ""
+    channel: str = "text"
+    device_id: str = ""
+    active_trusted_session: bool = False
+    readback_confirmed: bool = True
+
+
+class Mark3Phase11AppLaunchCandidateRequest(BaseModel):
+    app_name: str = ""
+    actor: str = "David"
+    channel: str = "desktop"
+
+
+class Mark3Phase11LaunchRequest(BaseModel):
+    candidate_id: str = ""
+    actor: str = "David"
+    approval_id: str = ""
+    trusted_session: bool = False
+
+
+class Mark3Phase11BrowserPrepareRequest(BaseModel):
+    text: str = ""
+    actor: str = "David"
+    channel: str = "desktop"
+
+
+class Mark3Phase11BrowserOpenRequest(BaseModel):
+    candidate_id: str = ""
+    actor: str = "David"
+    approval_id: str = ""
+    trusted_session: bool = False
+
+
+class IPhonePairingStartRequest(BaseModel):
+    display_name: str = "David iPhone"
+    public_identifier: str = "iphone-safari"
+    ttl_seconds: int = 180
+
+
+class IPhonePairingVerifyRequest(BaseModel):
+    challenge_id: str = ""
+    pairing_code: str = ""
+    nonce: str = ""
+    public_identifier: str = "iphone-safari"
+    display_name: str = "David iPhone"
+
+
+class IPhonePairingRevokeRequest(BaseModel):
+    device_id: str = ""
+    actor: str = "David"
+    reason: str = "operator revoke"
+
+
+class IPhoneCommandRequest(BaseModel):
+    text: str = ""
+    device_id: str = ""
+    conversation_id: str = "iphone"
 
 
 class Mark3OutcomeRecordRequest(BaseModel):
@@ -2652,6 +2746,9 @@ def create_app(
         monthly_budget_eur=_float_env("JARVIS_API_MONTHLY_BUDGET_EUR", 30.0),
         spent_eur=_float_env("JARVIS_API_SPEND_EUR", 0.0),
     )
+    app.state.phase_11_runtime = Phase11RealProviderControllerIPhoneCompanion.from_environment(
+        phase10=app.state.phase_10_runtime,
+    )
 
     @app.get("/health")
     def health() -> dict:
@@ -3015,6 +3112,20 @@ def create_app(
             "frontend_direct_hermes_allowed": False,
             "required_approval_phrase": PHASE_10_EXACT_APPROVAL_PHRASE,
         }
+        if hasattr(app.state, "phase_11_runtime"):
+            turn["phase_11"] = {
+                "shared_turn": app.state.phase_11_runtime.shared_state.record_turn(
+                    conversation_id=payload.conversation_id or payload.session_id or "jarvis",
+                    user_text=payload.user_text,
+                    assistant_text=turn.get("assistant_text", ""),
+                    channel=payload.channel,
+                    source=source,
+                    status=turn.get("status", "normal"),
+                ),
+                "same_jarvis_brain": True,
+                "separate_mobile_agent": False,
+                "frontend_direct_hermes_allowed": False,
+            }
         return turn
 
     @app.get("/mark-3/phase-10/status")
@@ -3076,6 +3187,96 @@ def create_app(
     @app.post("/mark-3/model-router/decision")
     def mark_3_model_router_decision(payload: Mark3ModelRouterDecisionRequest) -> dict:
         return app.state.phase_10_runtime.model_router.decide(**payload.model_dump())
+
+    @app.get("/mark-3/phase-11/status")
+    def mark_3_phase_11_status() -> dict:
+        return app.state.phase_11_runtime.status(route_paths=(route.path for route in app.routes))
+
+    @app.get("/mark-3/providers/status")
+    def mark_3_providers_status() -> dict:
+        return app.state.phase_11_runtime.providers.status()
+
+    @app.get("/mark-3/model-router-v2/status")
+    def mark_3_model_router_v2_status() -> dict:
+        return app.state.phase_11_runtime.model_router.status()
+
+    @app.post("/mark-3/model-router-v2/classify")
+    def mark_3_model_router_v2_classify(payload: Mark3ModelRouterV2ClassifyRequest) -> dict:
+        return app.state.phase_11_runtime.model_router.classify_task(payload.text)
+
+    @app.post("/mark-3/model-router-v2/decision")
+    def mark_3_model_router_v2_decision(payload: Mark3ModelRouterV2DecisionRequest) -> dict:
+        return app.state.phase_11_runtime.model_router.decide(**payload.model_dump())
+
+    @app.get("/mark-3/phase-11/approval/status")
+    def mark_3_phase_11_approval_status() -> dict:
+        return app.state.phase_11_runtime.approvals.status()
+
+    @app.post("/mark-3/phase-11/approval/start")
+    def mark_3_phase_11_approval_start(payload: Mark3Phase11ApprovalStartRequest) -> dict:
+        return app.state.phase_11_runtime.approvals.start(**payload.model_dump())
+
+    @app.post("/mark-3/phase-11/approval/confirm")
+    def mark_3_phase_11_approval_confirm(payload: Mark3Phase11ApprovalConfirmRequest) -> dict:
+        return app.state.phase_11_runtime.approvals.confirm(**payload.model_dump())
+
+    @app.get("/mark-3/phase-11/local-controller/status")
+    def mark_3_phase_11_local_controller_status() -> dict:
+        return app.state.phase_11_runtime.local_controller.status()
+
+    @app.post("/mark-3/phase-11/local-controller/launch-candidate")
+    def mark_3_phase_11_local_controller_launch_candidate(payload: Mark3Phase11AppLaunchCandidateRequest) -> dict:
+        return app.state.phase_11_runtime.local_controller.prepare_launch(**payload.model_dump())
+
+    @app.post("/mark-3/phase-11/local-controller/launch")
+    def mark_3_phase_11_local_controller_launch(payload: Mark3Phase11LaunchRequest) -> dict:
+        return app.state.phase_11_runtime.local_controller.launch(**payload.model_dump())
+
+    @app.get("/mark-3/phase-11/browser/status")
+    def mark_3_phase_11_browser_status() -> dict:
+        return app.state.phase_11_runtime.browser.status()
+
+    @app.post("/mark-3/phase-11/browser/prepare")
+    def mark_3_phase_11_browser_prepare(payload: Mark3Phase11BrowserPrepareRequest) -> dict:
+        return app.state.phase_11_runtime.browser.prepare(**payload.model_dump())
+
+    @app.post("/mark-3/phase-11/browser/open")
+    def mark_3_phase_11_browser_open(payload: Mark3Phase11BrowserOpenRequest) -> dict:
+        return app.state.phase_11_runtime.browser.open_candidate(**payload.model_dump())
+
+    @app.get("/mark-3/phase-11/shared-state")
+    def mark_3_phase_11_shared_state() -> dict:
+        return app.state.phase_11_runtime.shared_state.to_dict(channel="desktop")
+
+    @app.get("/iphone/companion/status")
+    def iphone_companion_status() -> dict:
+        return app.state.phase_11_runtime.iphone_status()
+
+    @app.get("/iphone/companion/state")
+    def iphone_companion_state() -> dict:
+        return app.state.phase_11_runtime.shared_state.to_dict(channel="iphone_pwa")
+
+    @app.post("/iphone/pairing/start")
+    def iphone_pairing_start(payload: IPhonePairingStartRequest) -> dict:
+        return app.state.phase_11_runtime.pairing.start_pairing(**payload.model_dump())
+
+    @app.post("/iphone/pairing/verify")
+    def iphone_pairing_verify(payload: IPhonePairingVerifyRequest) -> dict:
+        return app.state.phase_11_runtime.pairing.verify_pairing(**payload.model_dump())
+
+    @app.post("/iphone/pairing/revoke")
+    def iphone_pairing_revoke(payload: IPhonePairingRevokeRequest) -> dict:
+        return app.state.phase_11_runtime.pairing.revoke(**payload.model_dump())
+
+    @app.post("/iphone/command")
+    def iphone_command(payload: IPhoneCommandRequest) -> dict:
+        return app.state.phase_11_runtime.shared_state.handle_iphone_command(**payload.model_dump())
+
+    @app.post("/iphone/approval/decision")
+    def iphone_approval_decision(payload: Mark3Phase11ApprovalConfirmRequest) -> dict:
+        data = payload.model_dump()
+        data["channel"] = "iphone_pwa"
+        return app.state.phase_11_runtime.approvals.confirm(**data)
 
     @app.get("/mark-3/audit/status")
     def mark_3_audit_status() -> dict:

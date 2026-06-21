@@ -26,6 +26,7 @@ type PageId = (typeof NAV_ITEMS)[number]["id"];
 
 const ROUTED_PAGE_BY_PATH: Partial<Record<string, PageId>> = {
   "/jarvis": "jarvis",
+  "/mobile": "jarvis",
 };
 
 function getInitialPage(): PageId {
