@@ -1747,3 +1747,36 @@ Limitaciones conocidas:
   posterior.
 - Browser form submit, compra, pago, publicacion, login y credenciales siguen
   preview/manual/approval-gated.
+
+## PR #179 - Hermes Total Capability Audit + JARVIS Control Map
+
+Nota de handoff: PR #179 cambia de direccion. No debe cerrar como otro Browser
+Operator dentro de JARVIS. Debe cerrar como auditoria clara de Hermes y mapa de
+control JARVIS -> Hermes.
+
+Documento principal:
+`docs/jarvis-pr-179-hermes-total-capability-audit.md`.
+
+Puntos clave:
+
+- Hermes ya tiene muchas manos reales: browser tools, file tools, terminal,
+  procesos, web research, messaging/gateway, Telegram, cron, Home Assistant,
+  MCP/plugins, TTS, memoria, skills y subagentes.
+- JARVIS no debe duplicar esas manos. JARVIS gobierna: entiende intención,
+  clasifica riesgo, pide aprobación, llama a Hermes con allowlist, audita y
+  responde.
+- Phase 12/PR #179 estaba duplicando mal el navegador al usar rutas estrechas
+  como `webbrowser.open`. Eso abre una web, pero no da control real de página.
+- El puente correcto ya existe como `HermesRuntimeAdapter` con `allowed_tools`,
+  `tool_guard`, `enabled_toolsets` y `governed_mode`.
+- El navegador Hermes es real para abrir, snapshot, click, type, scroll, back,
+  press, imágenes, visión y consola. Falta exponer cierre/forward/reload como
+  tools públicas si JARVIS las necesita.
+- Los archivos Hermes son reales para leer, buscar, escribir y patch. JARVIS
+  debe resolver paths humanos y aplicar política/aprobación, no crear otro file
+  operator.
+
+Siguiente recomendado: abrir una PR separada **JARVIS Governed Hermes Dispatcher
+MVP** para conectar comandos básicos de voz/texto a Hermes tools reales sin
+OpenRouter, empezando por browser y archivos simples, con strong approval para
+compras, pagos, formularios, credenciales, borrados y cambios persistentes.

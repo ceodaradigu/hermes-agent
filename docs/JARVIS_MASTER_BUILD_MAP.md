@@ -29,6 +29,12 @@ David / interfaces / dispositivos
   -> resultado auditado para JARVIS
 ```
 
+Nota PR #179: el mapa de capacidades Hermes y el control correcto
+JARVIS -> Hermes quedan auditados en
+`docs/jarvis-pr-179-hermes-total-capability-audit.md`. La regla práctica es no
+construir otro Hermes dentro de JARVIS: JARVIS resuelve intención, riesgo y
+aprobación; Hermes ejecuta con tools allowlisted y resultado auditado.
+
 ## Principio Central
 
 - Preparar no es ejecutar.
