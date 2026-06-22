@@ -286,7 +286,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
 
   if (asksStatus && !hasActionIntent) {
     return {
-      text: "Estoy activo en modo local. Puedes escribirme ahora; la voz sigue en modo manual y la ejecución real continúa detrás de aprobación.",
+      text: "Estoy activo en modo local. Voz activa. Puedes hablar con JARVIS; la ejecución real continúa detrás de aprobación.",
       tone: "concentrado",
       intent: "query_status",
       risk: "low",
@@ -304,7 +304,7 @@ export function buildLocalJarvisResponse(transcript: string): LocalJarvisVoiceRe
   if (mentionsWakePhrase && !hasActionIntent) {
     return {
       text:
-        "Estoy aquí, David. Por ahora esa frase no abre escucha automática. Pulsa el micrófono para hablar o dime por escrito qué quieres preparar.",
+        "Estoy aquí, David. Te escucho. La frase de activación no aprueba ni ejecuta acciones; dime qué quieres preparar.",
       tone: hasActionIntent ? "concentrado" : "calmado",
       intent: "wake_phrase_preview",
       risk: "low_preview",

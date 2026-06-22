@@ -150,7 +150,7 @@ no emparejado y cualquier intento no autenticado.
 Phase 11 esta pensada para LAN/iPhone Safari primero. Un arranque local tipico:
 
 ```bash
-python -m uvicorn jarvis.api.app:app --host 0.0.0.0 --port 8000
+python -m uvicorn jarvis.api.app:app --host 0.0.0.0 --port 9119
 ```
 
 David debe abrir desde el iPhone la IP LAN del PC y ruta `/mobile` o `/jarvis`.

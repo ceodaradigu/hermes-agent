@@ -237,6 +237,11 @@ def build_mark_3_dashboard_status(
         lambda: app_state.phase_11_runtime.iphone_status(),
         timeline,
     )
+    phase_12_status = _source(
+        "/mark-3/phase-12/status",
+        lambda: app_state.phase_12_runtime.status(route_paths=route_path_list),
+        timeline,
+    )
     action_catalog = _source(
         "/mark-3/execution/action-catalog",
         lambda: app_state.phase_2_local_assistant_runtime.action_catalog(),
@@ -765,6 +770,13 @@ def build_mark_3_dashboard_status(
                 "Preserves quality for code/research/risky reasoning, blocks overspend and requires approval for meaningful OpenRouter cost.",
             ),
             _module(
+                "Phase 12 Always-On JARVIS MVP",
+                phase_12_status.get("status", UNKNOWN),
+                "/mark-3/phase-12/status",
+                "real_always_on_local_operator_mvp",
+                "Adds a stateful local always-on controller, router-backed conversation, governed app/browser actions, optional Piper/OpenWakeWord readiness and secure remote bridge status.",
+            ),
+            _module(
                 "Local Daemon",
                 "ready" if local_daemon_status.get("local_only") else UNKNOWN,
                 "/mark-3/local-daemon/status",
@@ -943,6 +955,15 @@ def build_mark_3_dashboard_status(
         "phase_10": phase_10_status,
         "phase_11_status": phase_11_status,
         "phase_11": phase_11_status,
+        "phase_12_status": phase_12_status,
+        "phase_12": phase_12_status,
+        "always_on_runtime": phase_12_status.get("always_on", {}),
+        "phase_12_wake_listener": phase_12_status.get("always_on", {}).get("wake_listener", {}),
+        "phase_12_conversation": phase_12_status.get("conversation", {}),
+        "phase_12_actions": phase_12_status.get("actions", {}),
+        "phase_12_voice": phase_12_status.get("voice", {}),
+        "phase_12_remote": phase_12_status.get("remote", {}),
+        "phase_12_startup": phase_12_status.get("startup", {}),
         "persona": phase_10_status.get("persona", {}),
         "model_router": model_router_status,
         "api_model_router": model_router_status,
@@ -1077,6 +1098,13 @@ def build_mark_3_dashboard_status(
                 "phase_9_state",
                 "phase_10_state",
                 "phase_11_state",
+                "phase_12_state",
+                "always_on_runtime_state",
+                "phase_12_conversation_state",
+                "phase_12_action_state",
+                "phase_12_voice_state",
+                "secure_remote_bridge_state",
+                "phase_12_startup_state",
                 "persona_state",
                 "model_router_state",
                 "provider_status_state",
@@ -1261,6 +1289,12 @@ def build_mark_3_dashboard_status(
                 "event": "Phase 11 real provider/controller/iPhone pilot loaded",
                 "source": "/mark-3/phase-11/status",
                 "status": phase_11_status.get("status", UNKNOWN),
+                "read_only": True,
+            },
+            {
+                "event": "Phase 12 real always-on JARVIS MVP loaded",
+                "source": "/mark-3/phase-12/status",
+                "status": phase_12_status.get("status", UNKNOWN),
                 "read_only": True,
             },
             {

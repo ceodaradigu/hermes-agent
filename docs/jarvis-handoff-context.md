@@ -180,9 +180,11 @@ Brain Router:
   `/mark-3/phase-10/persona/status`,
   `/mark-3/phase-10/voice-providers/status`,
   `/mark-3/model-router/status` y `/mark-3/model-router/decision`.
-- Wake/stop: reconoce `Hola JARVIS` y `JARVIS`; stop reconoce `para`,
-  `JARVIS para`, `cállate` y `JARVIS cállate`. Wake solo abre/prepara sesión y
-  readiness de local controller; nunca aprueba ni ejecuta.
+- Wake/stop en fases previas reconocía `Hola JARVIS` y `JARVIS`; Phase 12
+  fija `JARVIS` como wake principal y deja `Hola JARVIS` como alias
+  experimental. Stop reconoce `para`, `JARVIS para`, `cállate` y
+  `JARVIS cállate`. Wake solo abre/prepara sesión y readiness de local
+  controller; nunca aprueba ni ejecuta.
 - `/jarvis` enruta transcripciones de voz por el router de UI antes del turno
   conversacional: abre/cierra panel, voz on/off, repetir, detener voz, estado,
   cancelar, UTRON/JARVIS y controles cámara/audio/vídeo. Cámara/grabación
@@ -1666,3 +1668,82 @@ crear handoff explicito hacia ApprovalGateway para candidatos seleccionados,
 anadir E2E UI, pilotar un provider test-mode sin live money y mantener toda
 automatizacion apagada por defecto hasta que budget/evidence/audit/rollback
 esten validados extremo a extremo.
+
+## PR #178 - Phase 12 Real Always-On JARVIS MVP
+
+Nota de handoff: Phase 12 esta documentado en
+`docs/jarvis-pr-178-phase-12-real-always-on-jarvis-mvp.md` y resumido en
+`docs/JARVIS_MASTER_BUILD_MAP.md`.
+
+Phase 12 prioriza comportamiento usable por encima de mas readiness: runtime
+local stateful, wake/stop por eventos de transcript, conversacion via router v2,
+acciones browser/app seguras, voz local opcional, startup simple y remote bridge
+Tailscale-first.
+
+Puntos clave:
+
+- Runtime: `Phase12RealAlwaysOnJarvisMVP`.
+- Startup: `scripts/jarvis-start`, `scripts/jarvis-stop`,
+  `scripts/jarvis-doctor`.
+- Puertos corregidos: backend `9119`, frontend `5173`, proxy `9119`.
+- Phase 11 local controller ahora abre la UI real:
+  `http://127.0.0.1:5173/jarvis`; backend `9119` queda como API/proxy.
+- Wake real por micrófono existe como script opcional
+  `scripts/jarvis-wake-listener`; `scripts/jarvis-wake-setup` comprueba e
+  instala dependencias Python bajo `--yes`. Backends: `openwakeword` con modelo
+  custom `JARVIS_OPENWAKEWORD_MODEL_PATH`, o `vosk` local STT con modelo español
+  `JARVIS_VOSK_MODEL_PATH`. Si faltan dependencias/modelo, doctor lo reporta
+  como no activo y da el comando de setup. `/always-on/ingest-transcript` es
+  prueba, no sustituto de wake real.
+  Persistencia Vosk diaria: `scripts/jarvis-wake-setup configure-env --backend
+  vosk --vosk-model-path "$HOME/.hermes/models/vosk/vosk-model-small-es-0.42"`
+  escribe solo variables no secretas de wake en el profile `.env`; `jarvis-start`
+  y `jarvis-doctor` las leen en terminales nuevas.
+  La frase wake principal real de Phase 12 es `JARVIS`, porque fue más fiable
+  en pruebas reales con Vosk. `Hola JARVIS` queda como alias experimental y
+  best-effort: el matcher puede aceptar variantes como `hola travis`,
+  `hola través`, `hola traves`, `hola travez`, `hola jarbi` o `hola yervis`
+  cuando el STT local las produce, pero no es requisito para cerrar Phase 12.
+  Futuro: modelo wake dedicado o STT mejorado para frases largas.
+  Wake ahora genera saludo visible/voz (`Estoy aquí, David. Te escucho.` o
+  saludo UTRON) y deja conversación activa, sin aprobar ni ejecutar acciones.
+  `/jarvis` envia heartbeat a `/mark-3/phase-12/always-on/ui-presence`; si hay
+  presencia reciente, wake no abre otra ventana/tab, pero la activacion backend
+  y la creacion de saludo siguen ocurriendo. La UI reclama el saludo pendiente
+  desde `/mark-3/phase-12/always-on/claim-greeting` y lo muestra/habla una sola
+  vez. Smoke sin microfono obligatorio: `scripts/jarvis-wake-listener simulate
+  "jarvis"` ejercita el mismo endpoint backend de activacion sin usar
+  `/ingest-transcript` manual.
+- Frontend `/jarvis` envia conversacion a
+  `/mark-3/phase-12/conversation/turn`.
+- OpenRouter usa `OPENROUTER_API_KEY`/`JARVIS_OPENROUTER_API_KEY`, pero no hace
+  llamadas pagadas salvo `JARVIS_OPENROUTER_LIVE_CALLS_ENABLED=true` y approval
+  cuando aplica.
+- Budget guard default: 30 EUR/mes.
+- Voz de salida esta activada por defecto. Piper CLI TTS existe como provider
+  opcional local; navegador sigue fallback. Si `speechSynthesis` bloquea autoplay
+  hasta una primera interaccion, `/jarvis` muestra el aviso en español.
+- Remote fuera de casa: camino seguro MVP via Tailscale; no puerto publico
+  crudo ni mobile direct Hermes.
+- Custom app paths se guardan en `HERMES_HOME/jarvis/known_apps.json`.
+
+Validacion recomendada:
+
+```bash
+PYTHONPATH=. python -m pytest -c /dev/null \
+  tests/jarvis/test_pr_178_phase_12_real_always_on_jarvis_mvp.py -q
+PYTHONPATH=. python -m pytest tests/jarvis/test_pr_177_phase_11_real_provider_controller_iphone_companion.py -q
+PYTHONPATH=. python -m pytest tests/jarvis/test_pr_176_phase_10_hands_free_runtime_persona_api_router.py -q
+npm --prefix web run build
+git diff --check
+```
+
+Limitaciones conocidas:
+
+- No se incluye modelo acustico dedicado para frases largas como `Hola JARVIS`;
+  ese alias queda experimental hasta tener modelo wake dedicado o STT mejorado.
+- No hay daemon de microfono instalado automaticamente.
+- Persistencia durable de resumen conversacional cross-device queda para fase
+  posterior.
+- Browser form submit, compra, pago, publicacion, login y credenciales siguen
+  preview/manual/approval-gated.

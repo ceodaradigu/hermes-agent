@@ -180,23 +180,23 @@ def _assistant_text(
 
     if status == "unsupported":
         if any(marker in folded for marker in ("escucha continua", "transcripcion continua", "transcripción continua", "wake continuo", "always on")):
-            return "La voz continua todavía no está conectada. Puedes usar texto o voz manual; no hay escucha permanente y decir 'Hola JARVIS' no inicia la conversación por ahora."
+            return "Wake activo con Vosk cuando el runtime local está arrancado. Di 'JARVIS'; 'Hola JARVIS' queda como alias experimental según reconocimiento local. No guardo audio bruto y la frase de activación no aprueba ni ejecuta acciones."
         return "Esa parte todavía no está conectada. Puedo prepararla como plan seguro o decirte qué falta, pero no voy a fingir que ya está disponible."
 
     if status == "approval_required":
         return "Eso necesita tu aprobación antes de hacerlo. Te mostraré exactamente qué haría, el alcance y cómo pararlo; podrás aceptar o cancelar."
 
     if folded in {"hola jarvis", "hola, jarvis", "jarvis"} or folded.startswith("hola jarvis "):
-        return "Estoy aquí, David. Por ahora esa frase no abre escucha automática. La voz está en modo manual: pulsa el micrófono para hablar o escríbeme."
+        return "Estoy aquí, David. Te escucho."
 
     if intent == "query_system_status" or "estado" in folded or "status" in folded:
-        return "Estoy activo, David. Puedes escribirme ahora. La voz sigue en modo manual y no escucha de forma continua; las acciones sensibles siguen pidiendo aprobación."
+        return "Estoy activo, David. Voz activa. Puedes hablar con JARVIS; las acciones sensibles siguen pidiendo aprobación."
 
     if "qué puedes hacer" in folded or "que puedes hacer" in folded or "capacidad" in folded or "capacidades" in folded:
-        return "Ahora puedo conversar contigo, revisar el estado visible y preparar próximos pasos seguros con calma. Si algo toca dinero, producción, correo, secretos o ejecución, pediré aprobación o lo bloquearé."
+        return "Ahora puedo conversar contigo por voz o texto, revisar el estado visible y preparar próximos pasos seguros con calma. Si algo toca dinero, producción, correo, secretos o ejecución, pediré aprobación o lo bloquearé."
 
     if "readiness" in folded or "reales" in folded or "real" in folded:
-        return "Lo real ahora es esta conversación local, el estado visible y las vistas previas seguras. Lo que implique voz continua, proveedores externos, dinero, deploy o envíos reales sigue en readiness o requiere aprobación."
+        return "Lo real ahora incluye conversación local, wake local con Vosk cuando el runtime está arrancado, estado visible y vistas previas seguras. Proveedores externos, dinero, deploy o envíos reales siguen bloqueados o requieren aprobación."
 
     if status == "preview":
         goal = _goal_summary(preview_candidate, text)
