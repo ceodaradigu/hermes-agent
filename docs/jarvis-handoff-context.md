@@ -8,6 +8,13 @@ No es código. No ejecuta nada. No conecta servicios. No cambia runtime, router,
 
 Debe mantenerse actualizado cuando cambie el flujo de trabajo, el estado real de JARVIS, los comandos locales, las validaciones confirmadas o el roadmap inmediato.
 
+## Contexto vivo para futuros loops Codex
+
+Antes de iniciar una nueva PR o sesion de Codex sobre JARVIS/Hermes, leer
+`docs/contexto/`. Ese paquete resume el contrato JARVIS gobierna/Hermes ejecuta,
+las capacidades reales, las decisiones pendientes y los criterios de cierre para
+no duplicar Hermes ni confundir READINESS con DONE.
+
 ## 2. Identidad del proyecto
 
 Repo:

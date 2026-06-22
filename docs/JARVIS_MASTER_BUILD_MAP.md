@@ -35,6 +35,13 @@ JARVIS -> Hermes quedan auditados en
 construir otro Hermes dentro de JARVIS: JARVIS resuelve intención, riesgo y
 aprobación; Hermes ejecuta con tools allowlisted y resultado auditado.
 
+## Contexto vivo para futuros loops Codex
+
+Las futuras sesiones de Codex deben empezar leyendo `docs/contexto/` antes de
+proponer cambios JARVIS/Hermes. Ese paquete resume arquitectura, convenciones,
+decisiones, capacidades reales, criterios de cierre y errores conocidos sin
+duplicar este mapa maestro.
+
 ## Principio Central
 
 - Preparar no es ejecutar.
