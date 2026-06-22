@@ -245,10 +245,13 @@ export interface LocalVoiceLoopController {
   selectedVoiceName: string;
   voiceQualityNotice: string;
   voiceOutputEnabled: boolean;
+  browserVoiceUnlockRequired: boolean;
   speechOutputActive: boolean;
   canInterrupt: boolean;
   canCancel: boolean;
   speakJarvisText: (text: string, tone?: JarvisVoiceTone) => boolean;
+  handleWakeGreeting: (text: string, tone?: JarvisVoiceTone) => boolean;
+  unlockBrowserVoice: () => void;
   stopJarvisSpeech: () => void;
   setVoiceOutputEnabled: (enabled: boolean) => void;
   beginLocalVoiceLoop: () => void;

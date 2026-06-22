@@ -6,6 +6,7 @@ from typing import Mapping, Optional
 from jarvis.voice.base import VoiceAdapter
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
+from jarvis.voice.piper_adapter import PiperCLIAdapter
 
 
 def create_voice_adapter_from_env(env: Optional[Mapping[str, str]] = None) -> VoiceAdapter:
@@ -32,6 +33,14 @@ def create_voice_adapter_from_env(env: Optional[Mapping[str, str]] = None) -> Vo
             timeout_seconds=timeout_seconds,
         )
 
+    if provider == "piper":
+        return PiperCLIAdapter(
+            binary_path=source.get("JARVIS_PIPER_BINARY", "piper"),
+            jarvis_model_path=source.get("JARVIS_PIPER_JARVIS_MODEL_PATH"),
+            utron_model_path=source.get("JARVIS_PIPER_UTRON_MODEL_PATH"),
+            speaker_id=source.get("JARVIS_PIPER_SPEAKER_ID"),
+        )
+
     raise ValueError(
-        f"Unknown JARVIS_VOICE_PROVIDER '{provider}'. Allowed values: mock, gpt-sovits"
+        f"Unknown JARVIS_VOICE_PROVIDER '{provider}'. Allowed values: mock, gpt-sovits, piper"
     )

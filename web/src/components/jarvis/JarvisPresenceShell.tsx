@@ -142,6 +142,19 @@ export function JarvisPresenceShell({
   const sensorRuntime = dashboard.sensor_runtime ?? {};
   const memoryBrainV3 = dashboard.memory_brain_v3 ?? {};
   const phase10Status = dashboard.phase_10_status ?? dashboard.phase_10 ?? {};
+  const phase12Status = dashboard.phase_12_status ?? dashboard.phase_12 ?? {};
+  const phase12AlwaysOn = dashboard.always_on_runtime ?? phase12Status.always_on ?? {};
+  const phase12Remote = dashboard.phase_12_remote ?? phase12Status.remote ?? {};
+  const phase12Startup = dashboard.phase_12_startup ?? phase12Status.startup ?? {};
+  const phase12Voice = dashboard.phase_12_voice ?? phase12Status.voice ?? {};
+  const phase12Ports = phase12Startup.ports ?? {};
+  const phase12WakeListener = dashboard.phase_12_wake_listener ?? phase12AlwaysOn.wake_listener ?? {};
+  const phase12RemoteState = phase12Remote.state ?? {};
+  const phase12AlwaysOnState = phase12AlwaysOn.state ?? {};
+  const phase12WakeListenerState = phase12WakeListener.state ?? {};
+  const phase12VoiceState = phase12Voice.state ?? {};
+  const phase12WakeGreeting = phase12AlwaysOn.last_wake_greeting ?? {};
+  const phase12WakeGreetingText = valueText(phase12WakeGreeting.assistant_text, "");
   const personaState = (dashboard.persona as Record<string, any> | undefined)?.state ?? (phase10Status.persona as Record<string, any> | undefined)?.state ?? {};
   const personaMode = valueText(personaState.mode, "jarvis");
   const personaVisibleName = valueText(personaState.visible_name, personaMode === "utron" ? "UTRON" : "JARVIS");
@@ -165,10 +178,25 @@ export function JarvisPresenceShell({
   const activeRisk = valueText(missionIntent.risk_level, cameraVisionState.camera_enabled || localCameraActive || localRecordingActive ? "sensor_privacy" : "none/unknown");
   const readModelVoiceState = valueText(voiceCoreState.current_state, "preview");
   const voiceState = localVoice.localVoiceState === "idle" ? readModelVoiceState : localVoice.localVoiceState;
-  const coreSubtitle = localVoice.localVoiceResponse || valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
+  const coreSubtitle = localVoice.localVoiceResponse || phase12WakeGreetingText || valueText(ttsState.preview_subtitle || ttsState.last_utterance, previewVoiceSubtitle);
   const brainProvider = valueText(brainAdapter.state?.current_provider, "deterministic_local");
   const externalBrainCalled = brainAdapter.state?.external_provider_called === true;
   const intakeRisk = valueText(conversationalIntake.sample?.classification?.risk_level, "unknown");
+  const phase12WakeState = phase12WakeListenerState.wake_active === true
+    ? "wake mic activo"
+    : phase12WakeListenerState.real_microphone_wake_available === true
+      ? "wake mic listo"
+      : phase12AlwaysOnState.wake_listening === true
+        ? "wake test activo"
+        : "wake mic no activo";
+  const phase12RemoteMode = phase12RemoteState.kill_switch_enabled === true
+    ? "remoto cerrado"
+    : phase12RemoteState.enabled === true
+      ? valueText(phase12RemoteState.mode, "tailscale")
+      : "solo local/LAN";
+  const phase12VoiceProvider = valueText(phase12VoiceState.selected_provider, "browser");
+  const phase12BackendPort = valueText(phase12Ports.backend, "9119");
+  const phase12FrontendPort = valueText(phase12Ports.frontend, "5173");
   const latestWakeEvent = events.find((event) => event.event_type === "wake_state");
   const approvalsPending = typeof approvals.pending_count === "number" ? approvals.pending_count > 0 : false;
   const handleSmartBarDraftActivity = useCallback((draft: string) => {
@@ -261,12 +289,19 @@ export function JarvisPresenceShell({
             <Badge className={approvalsPending ? "border-amber-300/40 bg-amber-400/12 text-amber-100" : "border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60"} variant="outline">
               {approvalsPending ? "approval required" : "backend-gated"}
             </Badge>
+            <Badge className="hidden border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60 md:inline-flex" variant="outline">
+              {phase12WakeState}
+            </Badge>
+            <Badge className="hidden border-cyan-100/14 bg-[#000711]/66 text-cyan-100/60 lg:inline-flex" variant="outline">
+              {phase12RemoteMode}
+            </Badge>
             <Button disabled aria-disabled="true" type="button" variant="destructive" size="sm" className="h-8 border-red-300/34 bg-red-950/28 px-3 text-red-100" data-testid="jarvis-header-kill-switch">
               <ShieldAlert className="h-3.5 w-3.5" />
               KILL SWITCH
             </Button>
             <span className="sr-only">Kill Switch {valueText(system.kill_switch_state, "not_wired")}</span>
             <span className="sr-only">brain {brainProvider} · ext {externalBrainCalled ? "true" : "false"} · risk {intakeRisk} · modo approval backend-gated</span>
+            <span className="sr-only">Phase 12 backend {phase12BackendPort} frontend {phase12FrontendPort} remote {phase12RemoteMode} voz {phase12VoiceProvider}</span>
             <span className="sr-only">POST solo a endpoints gobernados de execution. No execute. No sensores sin activación manual. No fake metrics.</span>
             <span className="sr-only">JARVIS gobierna. Hermes ejecuta solo por dispatch gobernado. El frontend no llama Hermes directo.</span>
           </div>
@@ -363,6 +398,19 @@ export function JarvisPresenceShell({
               <span>audio bruto {audioRecorder.recordingState}</span>
             </div>
           </details>
+          <details className="border border-cyan-100/10 bg-[#000711]/52 p-3 backdrop-blur" data-testid="jarvis-phase-12-status">
+            <summary className="cursor-pointer font-expanded text-xs font-bold uppercase tracking-[0.12em] text-cyan-100/58">Always-on / iPhone</summary>
+            <div className="mt-3 grid grid-cols-2 gap-2 font-mono-ui text-[0.7rem] text-cyan-100/65">
+              <span>backend {phase12BackendPort}</span>
+              <span>frontend {phase12FrontendPort}</span>
+              <span>wake {phase12WakeState}</span>
+              <span>remoto {phase12RemoteMode}</span>
+              <span>voz {phase12VoiceProvider}</span>
+              <span>raw audio no</span>
+              <span>OpenRouter {valueText((phase12Status.conversation ?? {}).state?.openrouter_configured, "unknown")}</span>
+              <span>Hermes directo no</span>
+            </div>
+          </details>
         </aside>
       </section>
 
@@ -384,6 +432,10 @@ export function JarvisPresenceShell({
         capabilityNotice={localVoice.capabilityNotice}
         selectedVoiceName={localVoice.selectedVoiceName}
         voiceQualityNotice={localVoice.voiceQualityNotice}
+        browserVoiceUnlockRequired={localVoice.browserVoiceUnlockRequired}
+        phase12WakeState={phase12WakeState}
+        phase12WakeBackend={valueText(phase12WakeListenerState.selected_backend, "")}
+        phase12WakeActive={phase12WakeListenerState.wake_active === true}
         canInterrupt={localVoice.canInterrupt}
         canCancel={localVoice.canCancel}
         onBegin={localVoice.beginLocalVoiceLoop}
@@ -392,6 +444,7 @@ export function JarvisPresenceShell({
         voiceOutputEnabled={localVoice.voiceOutputEnabled}
         onVoiceOutputEnabledChange={localVoice.setVoiceOutputEnabled}
         onSpeakResponse={(text) => localVoice.speakJarvisText(text, localVoice.jarvisTone)}
+        onUnlockBrowserVoice={localVoice.unlockBrowserVoice}
         onStopVoiceOutput={localVoice.stopJarvisSpeech}
         conversationMessages={conversationMessages}
         conversationBusy={conversationBusy}

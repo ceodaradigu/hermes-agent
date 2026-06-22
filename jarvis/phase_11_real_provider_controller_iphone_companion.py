@@ -17,6 +17,7 @@ from jarvis.phase_10_hands_free_runtime_persona_api_router import (
     Phase10HandsFreeRuntimePersonaApiRouter,
     normalize_spanish,
 )
+from jarvis.phase_12_ports import JARVIS_FRONTEND_URL
 
 
 PHASE_11_SCHEMA_VERSION = "jarvis.phase_11_real_provider_controller_iphone_companion.v1"
@@ -1252,11 +1253,11 @@ class LocalControllerPilot:
         *,
         audit: Phase11AuditLog,
         opener: Optional[Callable[[str], bool]] = None,
-        jarvis_url: str = "http://127.0.0.1:8000/jarvis",
+        jarvis_url: str = JARVIS_FRONTEND_URL,
     ) -> None:
         self.audit = audit
         self.opener = opener or _default_opener
-        self.jarvis_url = _safe_url(jarvis_url) or "http://127.0.0.1:8000/jarvis"
+        self.jarvis_url = _safe_url(jarvis_url) or JARVIS_FRONTEND_URL
         self._candidates: Dict[str, Dict[str, Any]] = {}
         self._apps = _known_apps()
 
@@ -1926,4 +1927,3 @@ class Phase11RealProviderControllerIPhoneCompanion:
             },
             "metadata_only": False,
         }
-

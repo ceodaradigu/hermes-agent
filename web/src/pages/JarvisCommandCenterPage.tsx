@@ -7,6 +7,7 @@ import {
   type JarvisExecutionDispatchResult,
   type JarvisExecutionPreview,
   type JarvisPhase10VoiceUiDecision,
+  type JarvisWakeGreeting,
 } from "@/lib/api";
 import { commandCenterTabs, fallbackDashboard, type CommandCenterTabId } from "@/components/jarvis/contracts";
 import type { JarvisConversationMessage, JarvisConversationMessageStatus, LocalJarvisVoiceResponse, LocalVoiceLoopController } from "@/components/jarvis/types";
@@ -77,6 +78,7 @@ export default function JarvisCommandCenterPage() {
   const [connectionState, setConnectionState] = useState<"loading" | "online" | "offline">("loading");
   const [activeTab, setActiveTab] = useState<CommandCenterTabId>("cockpit");
   const [conversationId] = useState(() => newId("jarvis_conversation"));
+  const [jarvisUiClientId] = useState(() => newId("jarvis_ui"));
   const [conversationMessages, setConversationMessages] = useState<JarvisConversationMessage[]>([]);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationError, setConversationError] = useState("");
@@ -88,6 +90,8 @@ export default function JarvisCommandCenterPage() {
   const [executionDispatchResult, setExecutionDispatchResult] = useState<JarvisExecutionDispatchResult | null>(null);
   const [executionBusy, setExecutionBusy] = useState(false);
   const [executionError, setExecutionError] = useState("");
+  const claimedWakeGreetingIdsRef = useRef<Set<string>>(new Set());
+  const wakeGreetingClaimInFlightRef = useRef(false);
 
   const refreshDashboard = useCallback(async () => {
     const payload = await api.getJarvisDashboardStatus();
@@ -439,6 +443,91 @@ export default function JarvisCommandCenterPage() {
     localVoice.speakJarvisText(typedSpeechRequest.text, typedSpeechRequest.tone);
     setTypedSpeechRequest(null);
   }, [localVoice, typedSpeechRequest]);
+
+  const deliverWakeGreeting = useCallback((greeting: JarvisWakeGreeting) => {
+    const greetingId = greeting.greeting_id;
+    const text = greeting.assistant_text?.trim();
+    if (!greetingId || !text || claimedWakeGreetingIdsRef.current.has(greetingId)) return;
+    claimedWakeGreetingIdsRef.current.add(greetingId);
+    setConversationMessages((current) => appendLimited(current, {
+      id: greetingId,
+      role: "assistant",
+      content: text,
+      status: "normal",
+      timestamp: greeting.delivered_at || greeting.created_at || new Date().toISOString(),
+      source: "system",
+    }));
+    const controller = localVoiceRef.current;
+    if (controller) {
+      controller.handleWakeGreeting(text, greeting.persona_mode === "utron" ? "intenso" : "calmado");
+    }
+    void refreshDashboard().catch(() => undefined);
+  }, [refreshDashboard]);
+
+  useEffect(() => {
+    let active = true;
+    const sendPresence = () => {
+      void api.sendJarvisPhase12UiPresence({
+        client_id: jarvisUiClientId,
+        surface: "jarvis",
+        path: typeof window === "undefined" ? "/jarvis" : window.location.pathname || "/jarvis",
+        visible: typeof document === "undefined" ? true : document.visibilityState !== "hidden",
+        channel: "jarvis_ui",
+      }).catch(() => undefined);
+    };
+    sendPresence();
+    const interval = window.setInterval(() => {
+      if (active) sendPresence();
+    }, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [jarvisUiClientId]);
+
+  useEffect(() => {
+    let active = true;
+    const claimGreeting = async () => {
+      if (wakeGreetingClaimInFlightRef.current) return;
+      wakeGreetingClaimInFlightRef.current = true;
+      try {
+        const result = await api.claimJarvisWakeGreeting({
+          client_id: jarvisUiClientId,
+          channel: "jarvis_ui",
+          speak_supported: localVoiceRef.current?.voiceOutputEnabled !== false && localVoiceRef.current?.ttsSupport === "supported",
+        });
+        if (!active || result.status !== "delivered" || !result.greeting) return;
+        deliverWakeGreeting(result.greeting);
+      } catch {
+        return;
+      } finally {
+        wakeGreetingClaimInFlightRef.current = false;
+      }
+    };
+    void claimGreeting();
+    const interval = window.setInterval(() => void claimGreeting(), 2000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [deliverWakeGreeting, jarvisUiClientId]);
+
+  useEffect(() => {
+    const alwaysOn = dashboard.always_on_runtime ?? dashboard.phase_12_status?.always_on ?? dashboard.phase_12?.always_on ?? {};
+    const state = alwaysOn.state ?? {};
+    const greeting = alwaysOn.last_wake_greeting as JarvisWakeGreeting | undefined;
+    if (state.pending_wake_greeting === true || greeting?.status === "pending") {
+      void api.claimJarvisWakeGreeting({
+        client_id: jarvisUiClientId,
+        channel: "jarvis_ui",
+        speak_supported: localVoiceRef.current?.voiceOutputEnabled !== false && localVoiceRef.current?.ttsSupport === "supported",
+      })
+        .then((result) => {
+          if (result.status === "delivered" && result.greeting) deliverWakeGreeting(result.greeting);
+        })
+        .catch(() => undefined);
+    }
+  }, [dashboard, deliverWakeGreeting, jarvisUiClientId]);
   const localSensors = useMemo(() => ({
     camera: {
       state: cameraControl.cameraState,

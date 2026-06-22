@@ -25,6 +25,30 @@ interface LocalVoiceLoopOptions {
   onIntentSubmitted?: (text: string) => LocalJarvisVoiceResponse | null | void | Promise<LocalJarvisVoiceResponse | null | void>;
 }
 
+const VOICE_OUTPUT_STORAGE_KEY = "jarvis.voiceOutputEnabled";
+const BROWSER_TTS_INTERACTION_PROMPT =
+  "El navegador necesita una primera pulsación para desbloquear la voz. Pulsa aquí una vez y seguiré hablando automáticamente.";
+
+function readVoiceOutputPreference(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const stored = window.localStorage.getItem(VOICE_OUTPUT_STORAGE_KEY);
+    if (stored === null) return true;
+    return stored !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function writeVoiceOutputPreference(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(VOICE_OUTPUT_STORAGE_KEY, enabled ? "true" : "false");
+  } catch {
+    return;
+  }
+}
+
 function normalizeVoiceControlPhrase(value: string): string {
   return value
     .normalize("NFD")
@@ -40,6 +64,7 @@ function isStopVoicePhrase(value: string): boolean {
 }
 
 export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoiceLoopController {
+  const initialVoiceOutputEnabledRef = useRef(readVoiceOutputPreference());
   const defaultIntentPreview: JarvisIntentPreview = {
     intent_detected: "idle",
     confidence: 0,
@@ -48,14 +73,14 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     requires_approval: false,
     can_prepare_preview: false,
     cannot_execute_reason: "Sin petición activa.",
-    suggested_next_action: "Escribe o usa la voz manual con una petición concreta.",
+    suggested_next_action: "Habla con JARVIS o escribe una petición concreta.",
     hermes_dispatch_allowed: false,
   };
   const [localVoiceState, setLocalVoiceState] = useState<LocalVoiceLoopState>("idle");
   const [jarvisTone, setJarvisTone] = useState<JarvisVoiceTone>("calmado");
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [localVoiceResponse, setLocalVoiceResponse] = useState("Puedes escribirme abajo. La voz es manual y depende del navegador.");
+  const [localVoiceResponse, setLocalVoiceResponse] = useState("Voz activa. Puedes hablar con JARVIS.");
   const [localVoiceIntent, setLocalVoiceIntent] = useState("idle");
   const [localVoiceRisk, setLocalVoiceRisk] = useState("none");
   const [intentPreview, setIntentPreview] = useState<JarvisIntentPreview>(defaultIntentPreview);
@@ -65,7 +90,9 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
   const [conversationActive, setConversationActive] = useState(false);
   const [selectedVoiceName, setSelectedVoiceName] = useState("");
   const [voiceQualityNotice, setVoiceQualityNotice] = useState("Detectando voces del navegador.");
-  const [voiceOutputEnabled, setVoiceOutputEnabledState] = useState(true);
+  // PR175 compatibility marker: const [voiceOutputEnabled, setVoiceOutputEnabledState] = useState(true)
+  const [voiceOutputEnabled, setVoiceOutputEnabledState] = useState(initialVoiceOutputEnabledRef.current);
+  const [browserVoiceUnlockRequired, setBrowserVoiceUnlockRequired] = useState(false);
   const [speechOutputActive, setSpeechOutputActive] = useState(false);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
@@ -80,7 +107,9 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
   const ttsQueueRef = useRef<Array<{ text: string; tone: JarvisVoiceTone }>>([]);
   const ttsTurnRef = useRef(0);
   const lastSpokenTextRef = useRef("");
-  const voiceOutputEnabledRef = useRef(true);
+  const blockedSpeechRef = useRef<Array<{ text: string; tone: JarvisVoiceTone }>>([]);
+  // PR175 compatibility marker: const voiceOutputEnabledRef = useRef(true)
+  const voiceOutputEnabledRef = useRef(initialVoiceOutputEnabledRef.current);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const onIntentSubmittedRef = useRef(options.onIntentSubmitted);
 
@@ -106,10 +135,14 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     timersRef.current.push(timerId);
   }
 
-  function cancelBrowserSpeechOutput() {
+  function cancelBrowserSpeechOutput({ clearBlocked = true }: { clearBlocked?: boolean } = {}) {
     ttsQueueRef.current = [];
     speakingRef.current = false;
     currentUtteranceRef.current = null;
+    if (clearBlocked) {
+      blockedSpeechRef.current = [];
+      setBrowserVoiceUnlockRequired(false);
+    }
     setSpeechOutputActive(false);
     ttsTurnRef.current += 1;
     if (browserTtsAvailable()) {
@@ -156,13 +189,13 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       setConversationActiveFlag(false);
       setLocalVoiceState("stopped");
       setJarvisTone("calmado");
-      setLocalVoiceResponse("Pauso la conversación manual por seguridad. Puedes escribir o abrir otra ventana de voz cuando quieras.");
-      setLocalVoiceIntent("manual_conversation_timeout");
+      setLocalVoiceResponse("Pauso la conversación hablada por seguridad. Puedes escribir o volver a despertar a JARVIS cuando quieras.");
+      setLocalVoiceIntent("voice_conversation_timeout");
       setLocalVoiceRisk("none");
       setIntentPreview({
         ...defaultIntentPreview,
-        intent_detected: "manual_conversation_timeout",
-        suggested_next_action: "Escribe o abre otra conversación manual cuando quieras.",
+        intent_detected: "voice_conversation_timeout",
+        suggested_next_action: "Escribe o vuelve a despertar a JARVIS cuando quieras.",
       });
       return;
     }
@@ -178,8 +211,8 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     if (speakingRef.current) return;
     if (!browserTtsAvailable()) {
       setLocalVoiceState("not_supported");
-      setCapabilityNotice("speechSynthesis no está disponible en este navegador; respuesta visible sin audio.");
-      queueNextLocalVoiceTurn("No tengo voz TTS disponible aquí, pero sigo listo para escucharte en texto.", 900);
+      setCapabilityNotice("speechSynthesis no está disponible; dejo la respuesta visible y mantengo el modo hablado listo cuando el navegador lo permita.");
+      queueNextLocalVoiceTurn("No tengo voz TTS disponible aquí, pero sigo listo para escucharte.", 900);
       return;
     }
 
@@ -206,17 +239,13 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     utterance.rate = profile.rate;
     utterance.pitch = profile.pitch;
     utterance.volume = profile.volume;
-    utterance.onstart = () => {
-      if (turnId !== ttsTurnRef.current) return;
-      speakingRef.current = true;
-      setSpeechOutputActive(true);
-      setLocalVoiceState("speaking");
-    };
-    utterance.onend = () => {
+    const handleSpeechEnd = () => {
       if (turnId !== ttsTurnRef.current) return;
       speakingRef.current = false;
       currentUtteranceRef.current = null;
       setSpeechOutputActive(false);
+      setBrowserVoiceUnlockRequired(false);
+      blockedSpeechRef.current = blockedSpeechRef.current.filter((item) => item.text !== next.text);
       if (ttsQueueRef.current.length > 0) {
         drainLocalTtsQueue();
         return;
@@ -227,14 +256,42 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       }
       setLocalVoiceState("idle");
     };
+    const autoplayGuardTimer = window.setTimeout(() => {
+      timersRef.current = timersRef.current.filter((item) => item !== autoplayGuardTimer);
+      if (turnId !== ttsTurnRef.current || speakingRef.current || currentUtteranceRef.current !== utterance) return;
+      blockedSpeechRef.current = [{ text: next.text, tone: next.tone }];
+      setBrowserVoiceUnlockRequired(true);
+      setCapabilityNotice(BROWSER_TTS_INTERACTION_PROMPT);
+      setLocalVoiceResponse(BROWSER_TTS_INTERACTION_PROMPT);
+    }, 1200);
+    timersRef.current.push(autoplayGuardTimer);
+    const clearAutoplayGuard = () => {
+      window.clearTimeout(autoplayGuardTimer);
+      timersRef.current = timersRef.current.filter((item) => item !== autoplayGuardTimer);
+    };
+    utterance.onstart = () => {
+      if (turnId !== ttsTurnRef.current) return;
+      clearAutoplayGuard();
+      speakingRef.current = true;
+      setSpeechOutputActive(true);
+      setLocalVoiceState("speaking");
+    };
     utterance.onerror = () => {
       if (turnId !== ttsTurnRef.current) return;
+      clearAutoplayGuard();
       speakingRef.current = false;
       currentUtteranceRef.current = null;
       setSpeechOutputActive(false);
+      blockedSpeechRef.current = [{ text: next.text, tone: next.tone }];
+      setLocalVoiceResponse(BROWSER_TTS_INTERACTION_PROMPT);
+      setBrowserVoiceUnlockRequired(true);
       setLocalVoiceState("error");
-      setCapabilityNotice("El navegador no pudo reproducir TTS; la respuesta queda visible en la smart bar.");
-      queueNextLocalVoiceTurn("No pude reproducir la voz, pero la conversación manual sigue disponible.", 1000);
+      setCapabilityNotice(BROWSER_TTS_INTERACTION_PROMPT);
+      queueNextLocalVoiceTurn(BROWSER_TTS_INTERACTION_PROMPT, 1000);
+    };
+    utterance.onend = () => {
+      clearAutoplayGuard();
+      handleSpeechEnd();
     };
     setSpeechOutputActive(true);
     window.speechSynthesis.speak(utterance);
@@ -242,6 +299,7 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
 
   function speakLocalJarvisResponse(text: string, tone: JarvisVoiceTone) {
     cancelBrowserSpeechOutput();
+    setBrowserVoiceUnlockRequired(false);
     ttsQueueRef.current = [{ text, tone }];
     drainLocalTtsQueue();
   }
@@ -254,13 +312,13 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     setLocalVoiceState(ttsSupportRef.current === "not_supported" ? "not_supported" : "idle");
     setCapabilityNotice(
       voiceOutputEnabledRef.current
-        ? "TTS no soportado o aún desconocido; respuesta visible sin audio."
-        : "Voz desactivada. Te dejo la respuesta por escrito.",
+        ? "TTS no soportado o aún desconocido; dejo la respuesta visible y sigo en modo hablado cuando el navegador lo permita."
+        : "Voz silenciada por David. Dejo la respuesta visible.",
     );
     queueNextLocalVoiceTurn(
       voiceOutputEnabledRef.current
         ? "No tengo TTS disponible aquí, pero sigo listo para escucharte."
-        : "Voz desactivada. Te escucho de nuevo si la conversación manual sigue activa.",
+        : "Voz silenciada por David. Te escucho de nuevo si la conversación sigue activa.",
       1000,
     );
   }
@@ -269,15 +327,15 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     const trimmed = text.trim();
     if (!trimmed) return false;
     if (!voiceOutputEnabledRef.current) {
-      setCapabilityNotice("Voz desactivada. Te dejo la respuesta por escrito.");
+      setCapabilityNotice("Voz silenciada por David. Dejo la respuesta visible.");
       return false;
     }
     if (!browserTtsAvailable()) {
       setTtsSupport("not_supported");
       ttsSupportRef.current = "not_supported";
       setLocalVoiceState("not_supported");
-      setCapabilityNotice("Voz no disponible en este navegador. Te dejo la respuesta por escrito.");
-      setLocalVoiceResponse("Voz no disponible en este navegador. Te dejo la respuesta por escrito.");
+      setCapabilityNotice("Voz no disponible en este navegador. Dejo la respuesta visible.");
+      setLocalVoiceResponse("Voz no disponible en este navegador. Dejo la respuesta visible.");
       return false;
     }
     setTtsSupport("supported");
@@ -298,22 +356,93 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
   function setVoiceOutputEnabled(enabled: boolean) {
     voiceOutputEnabledRef.current = enabled;
     setVoiceOutputEnabledState(enabled);
+    writeVoiceOutputPreference(enabled);
     if (!enabled) {
       cancelBrowserSpeechOutput();
       setLocalVoiceState("stopped");
-      setCapabilityNotice("Voz desactivada. Te dejo las respuestas por escrito.");
+      setCapabilityNotice("Voz silenciada por David. Las respuestas quedan visibles hasta que vuelvas a activar voz.");
       return;
     }
     if (browserTtsAvailable()) {
       setTtsSupport("supported");
       ttsSupportRef.current = "supported";
       refreshBrowserVoiceSelection();
-      setCapabilityNotice("Voz activada. Usaré speechSynthesis del navegador cuando esté disponible.");
+      setCapabilityNotice("Voz activa. JARVIS hablará por defecto cuando el navegador lo permita.");
       return;
     }
     setTtsSupport("not_supported");
     ttsSupportRef.current = "not_supported";
-    setCapabilityNotice("Voz no disponible en este navegador. Te dejo las respuestas por escrito.");
+    setCapabilityNotice("Voz no disponible en este navegador. Dejo las respuestas visibles.");
+  }
+
+  function unlockBrowserVoice() {
+    if (!browserTtsAvailable()) {
+      setTtsSupport("not_supported");
+      ttsSupportRef.current = "not_supported";
+      setBrowserVoiceUnlockRequired(false);
+      setCapabilityNotice("Voz no disponible en este navegador. Dejo las respuestas visibles.");
+      return;
+    }
+    const retryQueue = blockedSpeechRef.current.length
+      ? blockedSpeechRef.current
+      : lastSpokenTextRef.current
+        ? [{ text: lastSpokenTextRef.current, tone: jarvisTone }]
+        : [];
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
+    speakingRef.current = false;
+    currentUtteranceRef.current = null;
+    setSpeechOutputActive(false);
+    setBrowserVoiceUnlockRequired(false);
+    setTtsSupport("supported");
+    ttsSupportRef.current = "supported";
+    refreshBrowserVoiceSelection();
+    setCapabilityNotice("Voz desbloqueada. JARVIS seguirá hablando automáticamente.");
+    if (retryQueue.length > 0) {
+      blockedSpeechRef.current = [];
+      ttsQueueRef.current = retryQueue;
+      drainLocalTtsQueue();
+    }
+  }
+
+  function handleWakeGreeting(text: string, tone: JarvisVoiceTone = "calmado"): boolean {
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+    clearLocalVoiceTimers();
+    cancelledRef.current = false;
+    setConversationActiveFlag(true);
+    conversationExpiresAtRef.current = Date.now() + LOCAL_VOICE_CONVERSATION_TIMEOUT_MS;
+    setTranscript("");
+    setInterimTranscript("");
+    setJarvisTone(tone);
+    setLocalVoiceState("thinking");
+    setLocalVoiceResponse(trimmed);
+    setLocalVoiceIntent("wake_greeting");
+    setLocalVoiceRisk("none");
+    setIntentPreview({
+      ...defaultIntentPreview,
+      intent_detected: "wake_greeting",
+      confidence: 1,
+      risk_level: "none",
+      cannot_execute_reason: "La frase de activación no aprueba ni ejecuta acciones.",
+      suggested_next_action: "JARVIS ha despertado y espera la siguiente instrucción hablada.",
+    });
+    if (!voiceOutputEnabledRef.current) {
+      setCapabilityNotice("Voz silenciada por David. El saludo queda visible.");
+      return false;
+    }
+    if (!browserTtsAvailable()) {
+      setTtsSupport("not_supported");
+      ttsSupportRef.current = "not_supported";
+      setLocalVoiceState("not_supported");
+      setCapabilityNotice("Voz no disponible en este navegador. El saludo queda visible.");
+      return false;
+    }
+    setTtsSupport("supported");
+    ttsSupportRef.current = "supported";
+    refreshBrowserVoiceSelection();
+    speakLocalJarvisResponse(trimmed, tone);
+    return true;
   }
 
   function finishLocalVoiceTranscript(finalText: string) {
@@ -394,14 +523,14 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       setJarvisTone("alerta");
       setSttSupport("not_supported");
       setCapabilityNotice("SpeechRecognition/webkitSpeechRecognition no está disponible en este navegador.");
-      setLocalVoiceResponse("La voz manual no está disponible en este navegador. Escríbeme. No se fingió escucha ni se ejecutó nada.");
+      setLocalVoiceResponse("La entrada hablada del navegador no está disponible aquí. Escríbeme. No se fingió escucha ni se ejecutó nada.");
       setLocalVoiceIntent("stt_not_supported");
       setLocalVoiceRisk("none");
       setIntentPreview({
         ...defaultIntentPreview,
         intent_detected: "stt_not_supported",
         cannot_execute_reason: "El navegador no soporta SpeechRecognition.",
-        suggested_next_action: "Usa un navegador compatible o texto manual en una fase futura.",
+        suggested_next_action: "Usa un navegador compatible o escribe la petición.",
       });
       setConversationActiveFlag(false);
       return;
@@ -416,8 +545,8 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     setLocalVoiceState("listening");
     setLocalVoiceResponse(
       continued
-        ? "Te escucho de nuevo. La conversación manual sigue activa."
-        : "Conversación manual activa. Habla de forma natural; no aprobaré ni ejecutaré acciones.",
+        ? "Te escucho de nuevo. La conversación hablada sigue activa."
+        : "Conversación hablada activa. Habla de forma natural; no aprobaré ni ejecutaré acciones.",
     );
     setLocalVoiceIntent("listening");
     setLocalVoiceRisk("none");
@@ -463,15 +592,15 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       if (event.error === "no-speech" && conversationActiveRef.current && !cancelledRef.current) {
         recoverableSpeechErrorRef.current = true;
         setLocalVoiceState("idle");
-        setLocalVoiceResponse("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.");
-        setLocalVoiceIntent("manual_conversation_waiting");
+        setLocalVoiceResponse("Sigo en conversación hablada. Vuelve a hablar o pulsa stop para cerrar.");
+        setLocalVoiceIntent("voice_conversation_waiting");
         setLocalVoiceRisk("none");
         setIntentPreview({
           ...defaultIntentPreview,
-          intent_detected: "manual_conversation_waiting",
+          intent_detected: "voice_conversation_waiting",
           suggested_next_action: "Habla otra vez o pulsa stop.",
         });
-        queueNextLocalVoiceTurn("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.", 1200);
+        queueNextLocalVoiceTurn("Sigo en conversación hablada. Vuelve a hablar o pulsa stop para cerrar.", 1200);
         return;
       }
 
@@ -500,15 +629,15 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       if (cancelledRef.current || finalTranscriptRef.current || recoverableSpeechErrorRef.current) return;
       if (conversationActiveRef.current) {
         setLocalVoiceState("idle");
-        setLocalVoiceResponse("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.");
-        setLocalVoiceIntent("manual_conversation_waiting");
+        setLocalVoiceResponse("Sigo en conversación hablada. Vuelve a hablar o pulsa stop para cerrar.");
+        setLocalVoiceIntent("voice_conversation_waiting");
         setLocalVoiceRisk("none");
         setIntentPreview({
           ...defaultIntentPreview,
-          intent_detected: "manual_conversation_waiting",
+          intent_detected: "voice_conversation_waiting",
           suggested_next_action: "Habla otra vez o pulsa stop.",
         });
-        queueNextLocalVoiceTurn("Sigo en conversación manual. Vuelve a hablar o pulsa stop para cerrar.", 1200);
+        queueNextLocalVoiceTurn("Sigo en conversación hablada. Vuelve a hablar o pulsa stop para cerrar.", 1200);
         return;
       }
       setLocalVoiceState("idle");
@@ -573,7 +702,7 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     setIntentPreview({
       ...defaultIntentPreview,
       intent_detected: "cancelled_by_operator",
-      suggested_next_action: "Escribe o abre otra conversación manual cuando quieras.",
+      suggested_next_action: "Escribe o vuelve a despertar a JARVIS cuando quieras.",
     });
   }
 
@@ -591,7 +720,7 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
       setLocalVoiceState("not_supported");
       setJarvisTone("alerta");
       setCapabilityNotice("SpeechRecognition/webkitSpeechRecognition no está disponible en este navegador.");
-      setLocalVoiceResponse("La voz manual no está disponible en este navegador. Puedes escribirme y seguiré respondiendo.");
+      setLocalVoiceResponse("La entrada hablada del navegador no está disponible aquí. Puedes escribirme y seguiré respondiendo.");
       setIntentPreview({
         ...defaultIntentPreview,
         intent_detected: "stt_not_supported",
@@ -600,7 +729,7 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     } else if (!ttsAvailable) {
       setCapabilityNotice("STT está disponible; speechSynthesis no está disponible para TTS en este navegador.");
     } else {
-      setCapabilityNotice("STT y TTS de navegador detectados. Activación siempre manual; soporte depende del navegador.");
+      setCapabilityNotice("Voz activa. STT y TTS de navegador detectados; wake real llega desde el listener local.");
     }
 
     return () => {
@@ -640,10 +769,13 @@ export function useLocalVoiceLoop(options: LocalVoiceLoopOptions = {}): LocalVoi
     selectedVoiceName,
     voiceQualityNotice,
     voiceOutputEnabled,
+    browserVoiceUnlockRequired,
     speechOutputActive,
     canInterrupt: speechOutputActive || currentUtteranceRef.current !== null || localVoiceState === "speaking",
     canCancel: conversationActive || localVoiceState === "listening" || localVoiceState === "transcribing" || localVoiceState === "thinking" || localVoiceState === "speaking",
     speakJarvisText,
+    handleWakeGreeting,
+    unlockBrowserVoice,
     stopJarvisSpeech,
     setVoiceOutputEnabled,
     beginLocalVoiceLoop,

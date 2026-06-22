@@ -177,7 +177,7 @@ def test_local_controller_known_unknown_and_bounded_open_jarvis(monkeypatch):
     launched = runtime.local_controller.launch(candidate_id=jarvis["candidate_id"], trusted_session=True)
     assert launched["status"] == "executed"
     assert launched["did_open_browser"] is True
-    assert opened == ["http://127.0.0.1:8000/jarvis"]
+    assert opened == ["http://127.0.0.1:5173/jarvis"]
 
 
 def test_browser_navigation_pilot_opens_safe_url_and_gates_forms_payments_credentials(monkeypatch):

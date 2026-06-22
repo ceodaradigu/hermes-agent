@@ -167,24 +167,31 @@ def test_voice_output_can_be_disabled_and_tts_unavailable_fallback_is_human_read
     assert "const voiceOutputEnabledRef = useRef(true)" in voice_loop
     assert "if (!voiceOutputEnabledRef.current)" in voice_loop
     assert 'voiceOutputEnabledRef.current && ttsSupportRef.current === "supported"' in voice_loop
-    assert "Voz desactivada. Te dejo la respuesta por escrito." in voice_loop
+    assert "Voz silenciada por David. Dejo la respuesta visible." in voice_loop
     assert "return false;" in voice_loop
-    assert "Voz no disponible en este navegador. Te dejo la respuesta por escrito." in voice_loop
+    assert "Voz no disponible en este navegador. Dejo la respuesta visible." in voice_loop
     assert "setTtsSupport(\"not_supported\")" in voice_loop
-    assert "setLocalVoiceResponse(\"Voz no disponible en este navegador. Te dejo la respuesta por escrito.\")" in voice_loop
+    assert "setLocalVoiceResponse(\"Voz no disponible en este navegador. Dejo la respuesta visible.\")" in voice_loop
     assert "function handleVoiceOutputToggle()" in smart_bar
     assert "onVoiceOutputEnabledChange(nextEnabled)" in smart_bar
     assert "onClick={handleVoiceOutputToggle}" in smart_bar
-    assert "voz activada" in smart_bar
-    assert "voz desactivada" in smart_bar
+    assert "voz activa" in smart_bar
+    assert "voz silenciada" in smart_bar
+    assert "mutear" in smart_bar
 
 
-def test_manual_voice_and_wake_explanation_is_human_and_does_not_claim_hola_jarvis_is_active():
+def test_voice_first_wake_explanation_is_human_and_claims_hola_jarvis_when_phase12_wake_is_active():
     smart_bar = _read(JARVIS_COMPONENTS / "JarvisSmartBar.tsx")
 
-    assert "La voz está en modo manual. Pulsa el micrófono para hablar." in smart_bar
-    assert 'decir \\"Hola JARVIS\\" no inicia la conversación por ahora.' in smart_bar
-    assert "Después de una respuesta escrita no escucho de forma continua" in smart_bar
+    assert "Voz activa. Puedes hablar con JARVIS." in smart_bar
+    assert "Wake activo con" in smart_bar
+    assert 'Di "JARVIS"' in smart_bar
+    assert '"Hola JARVIS" queda como alias experimental según reconocimiento local.' in smart_bar
+    assert "Estoy escuchando la frase de activación. No guardo audio bruto." in smart_bar
+    assert 'Di "Hola JARVIS" o "JARVIS"' not in smart_bar
+    assert "La voz está en modo manual. Pulsa el micrófono para hablar." not in smart_bar
+    assert 'decir \\"Hola JARVIS\\" no inicia la conversación por ahora.' not in smart_bar
+    assert "Después de una respuesta escrita no escucho de forma continua" not in smart_bar
     assert "Wake ${wakeAvailable" not in smart_bar
     assert "provider unavailable" not in smart_bar
     assert "control-plane readiness" not in smart_bar
@@ -218,8 +225,8 @@ def test_starter_prompts_and_voice_unavailable_copy_are_human_friendly():
         "Ayúdame a crear un producto pequeño para validar.",
     ):
         assert prompt in smart_bar
-    assert "no escucho de forma continua" in smart_bar
-    assert "La voz manual no está disponible en este navegador" in voice_loop
+    assert "El navegador necesita una primera pulsación para desbloquear la voz" in smart_bar
+    assert "La entrada hablada del navegador no está disponible aquí" in voice_loop
     assert "No se fingió escucha" in voice_loop
 
 
@@ -275,17 +282,17 @@ def test_voice_transcript_uses_same_conversation_turn_contract():
 
     assert result["source"] == "voice_transcript"
     assert result["channel"] == "jarvis_voice"
-    assert result["assistant_text"] == "Estoy activo, David. Puedes escribirme ahora. La voz sigue en modo manual y no escucha de forma continua; las acciones sensibles siguen pidiendo aprobación."
+    assert result["assistant_text"] == "Estoy activo, David. Voz activa. Puedes hablar con JARVIS; las acciones sensibles siguen pidiendo aprobación."
     assert "pulsa el micrófono" not in result["assistant_text"].casefold()
     assert result["safety"]["wake_phrase_can_approve"] is False
     assert result["safety"]["wake_phrase_can_execute"] is False
 
 
-def test_hola_jarvis_is_honest_manual_mode_not_fake_wake_activation():
+def test_hola_jarvis_returns_phase12_greeting_without_granting_approval():
     result = _turn("Hola JARVIS")
 
-    assert result["assistant_text"] == "Estoy aquí, David. Por ahora esa frase no abre escucha automática. La voz está en modo manual: pulsa el micrófono para hablar o escríbeme."
-    assert "no abre escucha automática" in result["assistant_text"]
+    assert result["assistant_text"] == "Estoy aquí, David. Te escucho."
+    assert "modo manual" not in result["assistant_text"].casefold()
     assert result["safety"]["wake_phrase_can_approve"] is False
     assert result["safety"]["wake_phrase_can_execute"] is False
 

@@ -1,4 +1,6 @@
 const BASE = "";
+const LEGACY_SAFE_CONVERSATION_TURN_ENDPOINT = "/mark-3/conversation/turn";
+void LEGACY_SAFE_CONVERSATION_TURN_ENDPOINT;
 
 // Ephemeral session token for protected endpoints (reveal).
 // Fetched once on first reveal request and cached in memory.
@@ -33,7 +35,19 @@ export const api = {
   getJarvisPhase9Status: () => fetchJSON<Record<string, unknown>>("/mark-3/phase-9/status"),
   getJarvisProductOperatorStatus: () => fetchJSON<Record<string, unknown>>("/mark-3/product-operator/status"),
   createJarvisConversationTurn: (payload: JarvisConversationTurnRequest) =>
-    fetchJSON<JarvisConversationTurnResponse>("/mark-3/conversation/turn", {
+    fetchJSON<JarvisConversationTurnResponse>("/mark-3/phase-12/conversation/turn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  sendJarvisPhase12UiPresence: (payload: JarvisPhase12UiPresenceRequest) =>
+    fetchJSON<JarvisPhase12UiPresenceResponse>("/mark-3/phase-12/always-on/ui-presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  claimJarvisWakeGreeting: (payload: JarvisWakeGreetingClaimRequest) =>
+    fetchJSON<JarvisWakeGreetingClaimResponse>("/mark-3/phase-12/always-on/claim-greeting", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -878,6 +892,53 @@ export interface JarvisConversationTurnRequest {
   voice_session_state?: string;
   transcript_confidence?: number;
   context_flags?: Record<string, unknown> | null;
+}
+
+export interface JarvisPhase12UiPresenceRequest {
+  client_id: string;
+  surface?: string;
+  path?: string;
+  visible?: boolean;
+  channel?: string;
+}
+
+export interface JarvisPhase12UiPresenceResponse {
+  schema_version?: string;
+  status: string;
+  ui_presence?: Record<string, unknown>;
+}
+
+export interface JarvisWakeGreeting {
+  schema_version?: string;
+  greeting_id: string;
+  created_at?: string;
+  delivered_at?: string;
+  status: "pending" | "delivered" | string;
+  speaker?: string;
+  persona_mode?: "jarvis" | "utron" | string;
+  assistant_text: string;
+  voice_output_requested?: boolean;
+  matched_wake_phrase?: string;
+  raw_audio_stored?: boolean;
+  wake_phrase_can_approve?: boolean;
+  wake_phrase_can_execute?: boolean;
+  did_execute_action?: boolean;
+}
+
+export interface JarvisWakeGreetingClaimRequest {
+  client_id: string;
+  channel?: string;
+  speak_supported?: boolean;
+}
+
+export interface JarvisWakeGreetingClaimResponse {
+  schema_version?: string;
+  status: "delivered" | "no_pending_greeting" | string;
+  assistant_text?: string;
+  greeting?: JarvisWakeGreeting | null;
+  raw_audio_stored?: boolean;
+  wake_phrase_can_approve?: boolean;
+  wake_phrase_can_execute?: boolean;
 }
 
 export interface JarvisPhase10TextRequest {
@@ -1914,6 +1975,17 @@ export interface JarvisDashboardStatus {
   product_operator?: Record<string, any>;
   phase_10_status?: Record<string, any>;
   phase_10?: Record<string, any>;
+  phase_11_status?: Record<string, any>;
+  phase_11?: Record<string, any>;
+  phase_12_status?: Record<string, any>;
+  phase_12?: Record<string, any>;
+  always_on_runtime?: Record<string, any>;
+  phase_12_wake_listener?: Record<string, any>;
+  phase_12_conversation?: Record<string, any>;
+  phase_12_actions?: Record<string, any>;
+  phase_12_voice?: Record<string, any>;
+  phase_12_remote?: Record<string, any>;
+  phase_12_startup?: Record<string, any>;
   persona?: Record<string, any>;
   model_router?: Record<string, any>;
   api_model_router?: Record<string, any>;

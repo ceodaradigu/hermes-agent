@@ -263,6 +263,7 @@ from jarvis.phase_11_real_provider_controller_iphone_companion import (
     PHASE_11_SCHEMA_VERSION,
     Phase11RealProviderControllerIPhoneCompanion,
 )
+from jarvis.phase_12_real_always_on_jarvis_mvp import Phase12RealAlwaysOnJarvisMVP
 from jarvis.operational_consolidation import (
     build_capability_registry_view,
     build_operational_system_status,
@@ -1208,6 +1209,71 @@ class Mark3Phase11BrowserOpenRequest(BaseModel):
     actor: str = "David"
     approval_id: str = ""
     trusted_session: bool = False
+
+
+class Mark3Phase12TextRequest(BaseModel):
+    text: str = ""
+    confidence: float = 1.0
+    source: str = "typed_text"
+    open_jarvis: bool = True
+
+
+class Mark3Phase12LifecycleRequest(BaseModel):
+    actor: str = "David"
+    channel: str = "desktop"
+    reason: str = "operator_request"
+
+
+class Mark3Phase12UiPresenceRequest(BaseModel):
+    client_id: str = "jarvis_ui"
+    surface: str = "jarvis"
+    path: str = "/jarvis"
+    visible: bool = True
+    channel: str = "jarvis_ui"
+
+
+class Mark3Phase12WakeGreetingClaimRequest(BaseModel):
+    client_id: str = "jarvis_ui"
+    channel: str = "jarvis_ui"
+    speak_supported: bool = False
+
+
+class Mark3Phase12ConversationTurnRequest(BaseModel):
+    user_text: str = ""
+    conversation_id: str = "jarvis"
+    channel: str = "desktop"
+    source: str = "typed_text"
+    transcript_confidence: float = 1.0
+
+
+class Mark3Phase12ConversationClearRequest(BaseModel):
+    conversation_id: str = "jarvis"
+
+
+class Mark3Phase12ActionPrepareRequest(BaseModel):
+    text: str = ""
+    actor: str = "David"
+    channel: str = "desktop"
+
+
+class Mark3Phase12ActionDispatchRequest(BaseModel):
+    candidate_id: str = ""
+    actor: str = "David"
+    approval_id: str = ""
+    trusted_session: bool = False
+
+
+class Mark3Phase12RegisterAppRequest(BaseModel):
+    app_id: str = ""
+    display_name: str = ""
+    path: str = ""
+    aliases: Optional[List[str]] = None
+    actor: str = "David"
+
+
+class Mark3Phase12RemoteKillSwitchRequest(BaseModel):
+    enabled: bool = True
+    actor: str = "David"
 
 
 class IPhonePairingStartRequest(BaseModel):
@@ -2749,6 +2815,10 @@ def create_app(
     app.state.phase_11_runtime = Phase11RealProviderControllerIPhoneCompanion.from_environment(
         phase10=app.state.phase_10_runtime,
     )
+    app.state.phase_12_runtime = Phase12RealAlwaysOnJarvisMVP.from_environment(
+        phase10=app.state.phase_10_runtime,
+        phase11=app.state.phase_11_runtime,
+    )
 
     @app.get("/health")
     def health() -> dict:
@@ -3277,6 +3347,90 @@ def create_app(
         data = payload.model_dump()
         data["channel"] = "iphone_pwa"
         return app.state.phase_11_runtime.approvals.confirm(**data)
+
+    @app.get("/mark-3/phase-12/status")
+    def mark_3_phase_12_status() -> dict:
+        return app.state.phase_12_runtime.status(route_paths=(route.path for route in app.routes))
+
+    @app.get("/mark-3/phase-12/always-on/status")
+    def mark_3_phase_12_always_on_status() -> dict:
+        return app.state.phase_12_runtime.always_on.status()
+
+    @app.post("/mark-3/phase-12/always-on/start")
+    def mark_3_phase_12_always_on_start(payload: Mark3Phase12LifecycleRequest) -> dict:
+        return app.state.phase_12_runtime.always_on.start(actor=payload.actor, channel=payload.channel)
+
+    @app.post("/mark-3/phase-12/always-on/stop")
+    def mark_3_phase_12_always_on_stop(payload: Mark3Phase12LifecycleRequest) -> dict:
+        return app.state.phase_12_runtime.always_on.stop(
+            actor=payload.actor,
+            channel=payload.channel,
+            reason=payload.reason,
+        )
+
+    @app.post("/mark-3/phase-12/always-on/ingest-transcript")
+    def mark_3_phase_12_always_on_ingest_transcript(payload: Mark3Phase12TextRequest) -> dict:
+        return app.state.phase_12_runtime.always_on.ingest_transcript(
+            text=payload.text,
+            confidence=payload.confidence,
+            source=payload.source,
+            open_jarvis=payload.open_jarvis,
+        )
+
+    @app.post("/mark-3/phase-12/always-on/ui-presence")
+    def mark_3_phase_12_always_on_ui_presence(payload: Mark3Phase12UiPresenceRequest) -> dict:
+        return app.state.phase_12_runtime.always_on.record_ui_presence(**payload.model_dump())
+
+    @app.post("/mark-3/phase-12/always-on/claim-greeting")
+    def mark_3_phase_12_always_on_claim_greeting(payload: Mark3Phase12WakeGreetingClaimRequest) -> dict:
+        return app.state.phase_12_runtime.always_on.claim_pending_greeting(**payload.model_dump())
+
+    @app.get("/mark-3/phase-12/conversation/status")
+    def mark_3_phase_12_conversation_status() -> dict:
+        return app.state.phase_12_runtime.conversation.status()
+
+    @app.post("/mark-3/phase-12/conversation/turn")
+    def mark_3_phase_12_conversation_turn(payload: Mark3Phase12ConversationTurnRequest) -> dict:
+        return app.state.phase_12_runtime.conversation.turn(**payload.model_dump())
+
+    @app.post("/mark-3/phase-12/conversation/clear")
+    def mark_3_phase_12_conversation_clear(payload: Mark3Phase12ConversationClearRequest) -> dict:
+        return app.state.phase_12_runtime.conversation.clear(conversation_id=payload.conversation_id)
+
+    @app.get("/mark-3/phase-12/actions/status")
+    def mark_3_phase_12_actions_status() -> dict:
+        return app.state.phase_12_runtime.actions.status()
+
+    @app.post("/mark-3/phase-12/actions/prepare")
+    def mark_3_phase_12_actions_prepare(payload: Mark3Phase12ActionPrepareRequest) -> dict:
+        return app.state.phase_12_runtime.actions.prepare(**payload.model_dump())
+
+    @app.post("/mark-3/phase-12/actions/dispatch")
+    def mark_3_phase_12_actions_dispatch(payload: Mark3Phase12ActionDispatchRequest) -> dict:
+        return app.state.phase_12_runtime.actions.dispatch(**payload.model_dump())
+
+    @app.post("/mark-3/phase-12/actions/register-app")
+    def mark_3_phase_12_actions_register_app(payload: Mark3Phase12RegisterAppRequest) -> dict:
+        try:
+            return app.state.phase_12_runtime.actions.register_app_path(**payload.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/mark-3/phase-12/voice/status")
+    def mark_3_phase_12_voice_status() -> dict:
+        return app.state.phase_12_runtime.voice.status()
+
+    @app.get("/mark-3/phase-12/remote/status")
+    def mark_3_phase_12_remote_status() -> dict:
+        return app.state.phase_12_runtime.remote.status()
+
+    @app.post("/mark-3/phase-12/remote/kill-switch")
+    def mark_3_phase_12_remote_kill_switch(payload: Mark3Phase12RemoteKillSwitchRequest) -> dict:
+        return app.state.phase_12_runtime.remote.set_kill_switch(enabled=payload.enabled, actor=payload.actor)
+
+    @app.get("/mark-3/phase-12/startup/status")
+    def mark_3_phase_12_startup_status() -> dict:
+        return app.state.phase_12_runtime.startup.status()
 
     @app.get("/mark-3/audit/status")
     def mark_3_audit_status() -> dict:

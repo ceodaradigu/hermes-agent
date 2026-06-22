@@ -25,6 +25,10 @@ interface JarvisSmartBarProps {
   capabilityNotice: string;
   selectedVoiceName: string;
   voiceQualityNotice: string;
+  browserVoiceUnlockRequired: boolean;
+  phase12WakeState?: string;
+  phase12WakeBackend?: string;
+  phase12WakeActive?: boolean;
   canInterrupt: boolean;
   canCancel: boolean;
   onBegin: () => void;
@@ -33,6 +37,7 @@ interface JarvisSmartBarProps {
   voiceOutputEnabled: boolean;
   onVoiceOutputEnabledChange: (enabled: boolean) => void;
   onSpeakResponse: (text: string) => boolean;
+  onUnlockBrowserVoice: () => void;
   onStopVoiceOutput: () => void;
   conversationMessages: JarvisConversationMessage[];
   conversationBusy?: boolean;
@@ -82,6 +87,10 @@ export function JarvisSmartBar({
   capabilityNotice,
   selectedVoiceName,
   voiceQualityNotice,
+  browserVoiceUnlockRequired,
+  phase12WakeState = "",
+  phase12WakeBackend = "",
+  phase12WakeActive = false,
   canInterrupt,
   canCancel,
   onBegin,
@@ -90,6 +99,7 @@ export function JarvisSmartBar({
   voiceOutputEnabled,
   onVoiceOutputEnabledChange,
   onSpeakResponse,
+  onUnlockBrowserVoice,
   onStopVoiceOutput,
   conversationMessages,
   conversationBusy = false,
@@ -124,23 +134,30 @@ export function JarvisSmartBar({
   const latestStatus: JarvisConversationMessageStatus = latestAssistantMessage?.status ?? (conversationBusy ? "preview" : "normal");
   const voiceOutputLabel = voiceOutputEnabled
     ? ttsSupport === "supported"
-      ? "voz activada"
-      : "voz no disponible"
-    : "voz desactivada";
+      ? "voz activa"
+      : "voz pendiente"
+    : "voz silenciada";
   const voiceOutputNotice = voiceOutputEnabled
-    ? ttsSupport === "supported"
-      ? "Voz activada. Responderé por escrito y con audio del navegador."
-      : "Voz no disponible en este navegador. Te dejo la respuesta por escrito."
-    : "Voz desactivada. Te dejo las respuestas por escrito.";
+    ? browserVoiceUnlockRequired
+      ? "La voz del navegador está bloqueada hasta una primera pulsación."
+      : ttsSupport === "supported"
+        ? "Voz activa. JARVIS hablará por defecto."
+        : "Voz activa, pero este navegador todavía no expone TTS."
+    : "Voz silenciada por David. Las respuestas quedan visibles.";
   const stateLabel = localVoiceStateLabels[localVoiceState];
   const voiceSessionState = valueText(voiceSession?.state?.current_state ?? voiceSession?.current_state, "idle");
   const wakeListeningState = valueText(voiceSession?.state?.wake_listening_state ?? voiceSession?.wake_listening_state, "wake_listening_disabled");
-  const wakeRuntimeEnabled = wakeWordFlow?.state?.wake_runtime_enabled === true;
-  const manualVoiceExplanation = conversationActive
-    ? "Conversación de voz activa: después de responder vuelvo a escucharte hasta que digas para, cállate o pulses stop. No apruebo ni ejecuto por voz sin gates."
-    : wakeRuntimeEnabled
-      ? "Wake local activo según el runtime. Sigue sin aprobar ni ejecutar acciones por voz."
-      : "La voz está en modo manual. Pulsa el micrófono para hablar. Después de una respuesta escrita no escucho de forma continua si no has abierto una sesión de voz. El wake word de sistema queda en readiness: decir \"Hola JARVIS\" solo activa la conversación cuando el navegador/controlador lo soporta.";
+  const wakeRuntimeEnabled = phase12WakeActive || wakeWordFlow?.state?.wake_runtime_enabled === true;
+  const wakeBackendLabel = phase12WakeBackend && phase12WakeBackend !== "unavailable" ? phase12WakeBackend : "Vosk";
+  const voiceModeExplanation = browserVoiceUnlockRequired
+    ? "El navegador necesita una primera pulsación para desbloquear la voz. Pulsa aquí una vez y seguiré hablando automáticamente."
+      : conversationActive
+        ? "Conversación hablada activa: después de responder vuelvo a escucharte hasta que digas para, cállate o pulses stop. Wake no aprueba ni ejecuta acciones."
+      : wakeRuntimeEnabled
+        ? `Wake activo con ${wakeBackendLabel}. Di "JARVIS". "Hola JARVIS" queda como alias experimental según reconocimiento local. Estoy escuchando la frase de activación. No guardo audio bruto.`
+        : phase12WakeState
+          ? "Voz activa. Puedes hablar con JARVIS; si el wake local no está activo, el estado lo mostrará aquí."
+          : "Voz activa. Puedes hablar con JARVIS.";
   const statusBadgeVariant: "destructive" | "warning" | "success" = localVoiceStateIsError(localVoiceState)
     ? "destructive"
     : localVoiceBusy
@@ -194,8 +211,8 @@ export function JarvisSmartBar({
     onVoiceOutputEnabledChange(nextEnabled);
     setVoiceControlNotice(
       nextEnabled
-        ? "Voz activada. Usaré la voz del navegador cuando esté disponible."
-        : "Voz desactivada. Las respuestas quedan por escrito.",
+        ? "Voz activa. JARVIS volverá a hablar por defecto cuando el navegador lo permita."
+        : "Voz silenciada por David. Las respuestas quedan visibles.",
     );
   }
 
@@ -214,7 +231,7 @@ export function JarvisSmartBar({
       data-testid="jarvis-smart-bar"
       data-local-voice-loop="browser-controlled"
       data-local-voice-state={localVoiceState}
-      data-smart-bar-mode="local-draft-and-manual-voice"
+      data-smart-bar-mode="wake-first-voice-primary"
       data-smart-bar-contract="human-response-visible-details-folded-send-enabled"
     >
       {visibleHistory.length > 0 && (
@@ -294,14 +311,14 @@ export function JarvisSmartBar({
               }
             }}
             rows={1}
-            placeholder={conversationActive ? "Voz manual activa. También puedes escribir aquí." : "Escribe a JARVIS..."}
+            placeholder={conversationActive ? "Conversación hablada activa. También puedes escribir aquí." : "Escribe a JARVIS..."}
             className="max-h-24 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 font-mono-ui text-base leading-6 text-cyan-50 outline-none placeholder:text-cyan-100/36 sm:text-lg"
           />
           <Button
             disabled={startDisabled}
             aria-disabled={startDisabled}
-            aria-label="Activar conversación manual local de JARVIS"
-            title="Hablar con micrófono"
+            aria-label="Hablar ahora con JARVIS desde el navegador"
+            title="Hablar ahora"
             type="button"
             variant="outline"
             size="icon"
@@ -313,8 +330,8 @@ export function JarvisSmartBar({
           <Button
             disabled={stopDisabled}
             aria-disabled={stopDisabled}
-            aria-label={canInterrupt ? "Interrumpir voz de JARVIS y cerrar conversación manual" : "Detener conversación manual, escucha o habla de JARVIS"}
-            title={canInterrupt ? "Interrumpir voz" : "Stop/cancel conversación manual"}
+            aria-label={canInterrupt ? "Interrumpir voz de JARVIS y cerrar conversación hablada" : "Detener conversación, escucha o habla de JARVIS"}
+            title={canInterrupt ? "Interrumpir voz" : "Stop/cancel conversación"}
             type="button"
             variant="outline"
             size="icon"
@@ -343,7 +360,7 @@ export function JarvisSmartBar({
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant={conversationStatusVariant(latestStatus)}>{conversationBusy ? "pensando..." : statusLabels[latestStatus]}</Badge>
           <Badge variant={conversationActive ? "warning" : statusBadgeVariant}>
-            voz {conversationActive ? "manual activa" : "manual"}
+            voz {conversationActive ? "hablada activa" : "principal"}
           </Badge>
           <Badge variant={voiceOutputEnabled && ttsSupport === "supported" ? "success" : voiceOutputEnabled ? "warning" : "outline"}>
             {voiceOutputLabel}
@@ -354,10 +371,22 @@ export function JarvisSmartBar({
           {conversationError ||
             voiceControlNotice ||
             (conversationActive
-              ? manualVoiceExplanation
-              : `${voiceOutputNotice} ${manualVoiceExplanation}`)}
+              ? voiceModeExplanation
+              : `${voiceOutputNotice} ${voiceModeExplanation}`)}
         </p>
         <div className="flex items-center justify-end gap-1.5">
+          {browserVoiceUnlockRequired && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onUnlockBrowserVoice}
+              className="h-8 rounded-full border-amber-200/34 bg-amber-300/[0.08] px-2 text-amber-50"
+            >
+              <Volume2 className="h-3.5 w-3.5" />
+              desbloquear voz
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -366,7 +395,7 @@ export function JarvisSmartBar({
             className="h-8 rounded-full border-cyan-100/14 bg-cyan-300/[0.025] px-2 text-cyan-50/72"
           >
             {voiceOutputEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-            {voiceOutputEnabled ? "voz on" : "voz off"}
+            {voiceOutputEnabled ? "mutear" : "activar voz"}
           </Button>
           <Button
             type="button"
@@ -413,7 +442,6 @@ export function JarvisSmartBar({
             <p>can_interrupt {canInterrupt ? "true" : "false"} · can_cancel {canCancel ? "true" : "false"}</p>
             <p>borrador local {localDraft ? "presente/no enviado" : "vacío"}</p>
             <p>No puedo hacer eso, David. Las credenciales y secretos están protegidos.</p>
-            <p>Compat fallback PR175: decir \"Hola JARVIS\" no inicia la conversación por ahora.</p>
             <p>wake_runtime_enabled {wakeRuntimeEnabled ? "true" : "false"} · wake no aprueba · wake no ejecuta · voice approval disabled unless authenticated/gated/audited.</p>
             <p>Soporte depende del navegador; SpeechRecognition puede usar servicios del navegador. No se guarda audio bruto, no se envía audio al backend y no se transcribe todo.</p>
           </div>

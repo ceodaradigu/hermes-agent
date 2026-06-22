@@ -1,6 +1,7 @@
 from jarvis.voice.base import VoiceAdapter, VoiceSynthesisRequest, VoiceSynthesisResult
 from jarvis.voice.gpt_sovits_adapter import GPTSoVITSAdapter
 from jarvis.voice.mock_adapter import MockVoiceAdapter
+from jarvis.voice.piper_adapter import PiperCLIAdapter
 from jarvis.voice.factory import create_voice_adapter_from_env
 from jarvis.voice.storage import VoiceAudioStorage
 from jarvis.voice.companion import VoiceCompanionControlPolicy, VoiceCompanionIntentPreview, VoiceCompanionStatus
@@ -55,6 +56,7 @@ __all__ = [
     "VoiceSynthesisResult",
     "MockVoiceAdapter",
     "GPTSoVITSAdapter",
+    "PiperCLIAdapter",
     "create_voice_adapter_from_env",
     "VoiceAudioStorage",
     "VoiceCompanionControlPolicy",
